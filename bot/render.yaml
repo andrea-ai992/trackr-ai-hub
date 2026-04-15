@@ -1,5 +1,5 @@
 services:
-  - type: web
+  - type: worker
     name: trackr-andy-bot
     runtime: node
     rootDir: bot
@@ -8,6 +8,23 @@ services:
     envVars:
       - key: DISCORD_BOT_TOKEN
         sync: false
+      - key: DISCORD_GUILD_ID
+        value: "1492702672120447107"
+      - key: DISCORD_CH_APP_PULSE
+        value: "1492704457014640640"
+      - key: DISCORD_CH_CODE_REVIEW
+        value: "1492704488056684705"
+      - key: DISCORD_CH_CRYPTO
+        value: "1492704469526511746"
+      - key: DISCORD_CH_MARKET_SCANNER
+        value: "1492704464916713592"
+      - key: DISCORD_CH_PORTFOLIO
+        value: "1492704474022809630"
+      - key: DISCORD_CH_PRICE_ALERTS
+        value: "1492704471585656973"
+      - key: DISCORD_CH_REPORTS
+        value: "1492704547959996457"
+      - key: DISCORD_CH_UI_REVIEW
+        value: "1492704517366485085"
       - key: VERCEL_URL
         value: https://trackr-app-nu.vercel.app
-    autoDeploy: true

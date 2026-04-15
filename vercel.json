@@ -1,13 +1,16 @@
 {
   "crons": [
-    {
-      "path": "/api/discord-cron",
-      "schedule": "0 8 * * *"
-    }
+    { "path": "/api/discord-cron",         "schedule": "0 8 * * *" },
+    { "path": "/api/self-improve?focus=bugs",        "schedule": "0 6 * * *" },
+    { "path": "/api/self-improve?focus=security",    "schedule": "0 12 * * *" },
+    { "path": "/api/self-improve?focus=performance", "schedule": "0 18 * * *" },
+    { "path": "/api/self-improve?focus=features",    "schedule": "0 0 * * 1" }
   ],
   "functions": {
-    "api/andy.js":         { "maxDuration": 60 },
-    "api/discord.js":      { "maxDuration": 60 },
-    "api/discord-cron.js": { "maxDuration": 60 }
+    "api/andy.js":          { "maxDuration": 60 },
+    "api/discord.js":       { "maxDuration": 60 },
+    "api/discord-cron.js":  { "maxDuration": 60 },
+    "api/self-improve.js":  { "maxDuration": 60 },
+    "api/trigger-agent.js": { "maxDuration": 60 }
   }
 }

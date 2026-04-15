@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react'
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { useState } from 'react'
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { AppProvider } from './context/AppContext'
 import { SettingsProvider } from './context/SettingsContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import BottomNav from './components/BottomNav'
 import Toast from './components/Toast'
 import SearchOverlay from './components/SearchOverlay'
@@ -21,6 +22,8 @@ import Widget from './pages/Widget'
 import Sports from './pages/Sports'
 import Andy from './pages/Andy'
 import Agents from './pages/Agents'
+import Login from './pages/Login'
+import Admin from './pages/Admin'
 import { useAlerts } from './hooks/useAlerts'
 import { useNewsAlerts } from './hooks/useNewsAlerts'
 import { Search } from 'lucide-react'
@@ -116,6 +119,26 @@ function GlobalSearchButton({ onOpen }) {
   )
 }
 
+// ── Protected route — bypasses auth if Supabase not configured ───────────────
+function ProtectedRoute({ children }) {
+  const { user, loading } = useAuth()
+  // If Supabase not set up yet, let everyone through
+  if (!import.meta.env.VITE_SUPABASE_URL) return children
+  if (loading) return null
+  if (!user) return <Navigate to="/login" replace />
+  return children
+}
+
+// ── Admin-only route ──────────────────────────────────────────────────────────
+function AdminRoute({ children }) {
+  const { user, isAdmin, loading } = useAuth()
+  if (!import.meta.env.VITE_SUPABASE_URL) return children
+  if (loading) return null
+  if (!user) return <Navigate to="/login" replace />
+  if (!isAdmin) return <Navigate to="/" replace />
+  return children
+}
+
 // ── Inner app (needs Router context) ─────────────────────────────────────────
 function AppInner() {
   const [searchOpen, setSearchOpen] = useState(false)
@@ -137,22 +160,29 @@ function AppInner() {
         <main style={{ paddingBottom: 'calc(88px + env(safe-area-inset-bottom, 0px) + 8px)', position: 'relative', zIndex: 1 }}>
           <PageTransition>
             <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/flights" element={<FlightTracker />} />
-              <Route path="/markets" element={<Markets />} />
-              <Route path="/stocks/:id" element={<StockDetail />} />
-              <Route path="/crypto/:id" element={<CryptoDetail />} />
-              <Route path="/news" element={<News />} />
-              <Route path="/more" element={<More />} />
-              <Route path="/translator" element={<Translator />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/sneakers" element={<Sneakers />} />
-              <Route path="/portfolio" element={<Portfolio />} />
-              <Route path="/category/:id" element={<CategoryPage />} />
-              <Route path="/sports" element={<Sports />} />
-              <Route path="/widget" element={<Widget />} />
-              <Route path="/andy" element={<Andy />} />
-              <Route path="/agents" element={<Agents />} />
+              {/* Public */}
+              <Route path="/login" element={<Login />} />
+
+              {/* App routes — open if Supabase not configured, protected otherwise */}
+              <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/flights" element={<ProtectedRoute><FlightTracker /></ProtectedRoute>} />
+              <Route path="/markets" element={<ProtectedRoute><Markets /></ProtectedRoute>} />
+              <Route path="/stocks/:id" element={<ProtectedRoute><StockDetail /></ProtectedRoute>} />
+              <Route path="/crypto/:id" element={<ProtectedRoute><CryptoDetail /></ProtectedRoute>} />
+              <Route path="/news" element={<ProtectedRoute><News /></ProtectedRoute>} />
+              <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
+              <Route path="/translator" element={<ProtectedRoute><Translator /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/sneakers" element={<ProtectedRoute><Sneakers /></ProtectedRoute>} />
+              <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
+              <Route path="/category/:id" element={<ProtectedRoute><CategoryPage /></ProtectedRoute>} />
+              <Route path="/sports" element={<ProtectedRoute><Sports /></ProtectedRoute>} />
+              <Route path="/widget" element={<ProtectedRoute><Widget /></ProtectedRoute>} />
+              <Route path="/andy" element={<ProtectedRoute><Andy /></ProtectedRoute>} />
+              <Route path="/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
+
+              {/* Admin only */}
+              <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
             </Routes>
           </PageTransition>
         </main>
@@ -167,7 +197,9 @@ export default function App() {
     <SettingsProvider>
       <AppProvider>
         <BrowserRouter>
-          <AppInner />
+          <AuthProvider>
+            <AppInner />
+          </AuthProvider>
         </BrowserRouter>
       </AppProvider>
     </SettingsProvider>

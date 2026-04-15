@@ -219,6 +219,25 @@ async function runServerTool(name, input) {
     return { results, count: results.length, scannedAt: new Date().toISOString() }
   }
 
+  if (name === 'trigger_agent') {
+    try {
+      const baseUrl = process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : 'https://trackr-app-nu.vercel.app'
+      const r = await fetch(`${baseUrl}/api/trigger-agent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agent: input.agent, task: input.task, channelHint: input.channelHint }),
+      })
+      const d = await r.json()
+      return d.ok
+        ? { dispatched: true, agent: input.agent, channel: d.channel, message: `${input.agent} a reçu la tâche et les résultats ont été postés dans #${d.channel} sur Discord.` }
+        : { dispatched: false, error: 'Agent trigger failed' }
+    } catch (e) {
+      return { dispatched: false, error: e.message }
+    }
+  }
+
   return { error: `Unknown server tool: ${name}` }
 }
 
@@ -305,9 +324,22 @@ const TOOLS = [
     description: "Add sneaker to collection",
     input_schema: { type: 'object', properties: { brand: { type: 'string' }, model: { type: 'string' }, size: { type: 'string' }, buyPrice: { type: 'number' } }, required: ['brand', 'model', 'size', 'buyPrice'] }
   },
+  {
+    name: 'trigger_agent',
+    description: "Dispatch a task to one of the 45 specialized agents. Use when the user asks to run an agent, get a code review, scan the market, audit the UI, generate a report, or assign any task to a specific agent. The agent will execute and post results to Discord.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        agent: { type: 'string', description: "Agent name: 'MarketScanner', 'CryptoTracker', 'CodeReviewer', 'BugHunter', 'PerfOptimizer', 'SecurityAudit', 'UIInspector', 'UXAnalyst', 'ResponsiveBot', 'TechAnalyst', 'PortfolioGuard', 'Oracle', 'RiskMetrics', 'AlertBot', 'ReportGenerator', 'NewsAnalyst', 'WhaleAlert', 'DeFiScanner', 'MLPredictor', etc." },
+        task: { type: 'string', description: "The specific task or instruction to give the agent. Be precise." },
+        channelHint: { type: 'string', description: "Optional Discord channel: 'market-scanner', 'crypto', 'code-review', 'ui-review', 'reports', 'portfolio-watch', 'price-alerts', 'app-pulse'" }
+      },
+      required: ['agent', 'task']
+    }
+  },
 ]
 
-const SERVER_TOOLS = new Set(['fetch_price', 'fetch_crypto_price', 'technical_analysis', 'scan_market'])
+const SERVER_TOOLS = new Set(['fetch_price', 'fetch_crypto_price', 'technical_analysis', 'scan_market', 'trigger_agent'])
 
 // ─── System prompt ────────────────────────────────────────────────────────────
 const BASE_SYSTEM = `Tu es AnDy, l'administrateur central de l'application Trackr et coordinateur de 45 agents IA spécialisés.
@@ -426,14 +458,22 @@ const TOOL_LABELS = {
   add_crypto:         '📁 Ajout crypto…',
   create_alert:       '🔔 Création alerte…',
   add_to_watchlist:   '👁️ Watchlist…',
+  trigger_agent:      '🤖 Dispatch agent…',
 }
 
 // ─── Handler — Server-Sent Events streaming ───────────────────────────────────
+import { securityCheck } from './_security.js'
+
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
-  if (req.method === 'OPTIONS') { res.status(200).end(); return }
+  const blocked = securityCheck(req, res, {
+    route: '/api/andy',
+    rateMax: 40,          // 40 req/min per IP — generous for real users
+    rateWindowMs: 60_000,
+    maxBodyKB: 100,
+    checkInjection: true,
+  })
+  if (blocked) return
+
   if (req.method !== 'POST') { res.status(405).end(); return }
 
   const apiKey = process.env.ANTHROPIC_API_KEY
