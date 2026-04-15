@@ -1,0 +1,23 @@
+name: Trackr AnDy — Bot keep-alive
+
+on:
+  schedule:
+    # Toutes les 5 minutes — garde le bot "vivant" et vérifie la santé
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  keepalive:
+    name: 💓 App pulse
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - name: Ping Vercel app
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://trackr-app-nu.vercel.app/api/discord-cron")
+          echo "App status: HTTP $STATUS — $(date)"
+          if [ "$STATUS" != "200" ]; then
+            echo "⚠️ App returned HTTP $STATUS"
+          fi
