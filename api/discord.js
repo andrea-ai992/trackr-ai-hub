@@ -266,6 +266,134 @@ async function handleAskAgent(agentKey, options, interactionToken) {
   await patchReply(interactionToken, agentEmbed(agentKey, reply))
 }
 
+async function handleGuideCommand(options, interactionToken) {
+  const niveau = options.find(o => o.name === 'niveau')?.value || 'auto'
+
+  const guides = {
+    debutant: {
+      title: '🌱 Phase 1 — Éveil de la Galaxie (0–50 échanges)',
+      desc: 'L\'IA commence à apprendre qui tu es. La galaxie est petite mais elle grandit à chaque échange.',
+      fields: [
+        {
+          name: '🚀 Premières commandes à essayer',
+          value: [
+            '`/andy message:Bonjour, présente-toi` — Rencontre AnDy',
+            '`/price symbol:BTC-USD` — Premier prix en temps réel',
+            '`/scan symbols:BTC-USD,AAPL,NVDA` — Scan multi-actifs',
+            '`/help` — Voir tous les agents disponibles',
+          ].join('\n'),
+        },
+        {
+          name: '🌌 Ce qui se passe dans la galaxie',
+          value: 'Chaque message dans `/andy` ajoute une étoile. Plus tu échanges, plus la galaxie se densifie et la couleur évolue. Tu peux **glisser pour explorer** et **pincer pour zoomer** dans l\'app.',
+        },
+        {
+          name: '⏭️ Prochaine étape',
+          value: 'Atteins 50 échanges pour déverrouiller les agents de marché et voir les scans automatiques s\'activer dans `#market-scanner`.',
+        },
+      ],
+      color: 0x34d399,
+    },
+    intermediaire: {
+      title: '🌿 Phase 2 — Intelligence Marchés (50–200 échanges)',
+      desc: 'Les agents de marché sont actifs. Scans automatiques toutes les 15 min dans les canaux dédiés.',
+      fields: [
+        {
+          name: '📈 Commandes marché déverrouillées',
+          value: [
+            '`/analyze symbol:NVDA interval:1h` — Analyse technique complète',
+            '`/portfolio` — P&L et risque de ton portfolio',
+            '`/alert symbol:BTC-USD price:70000 direction:above` — Alertes prix',
+            '`/oracle question:Quelles actions surveiller?` — Analyse prédictive',
+            '`/sentiment` — Fear & Greed + sentiment général',
+          ].join('\n'),
+        },
+        {
+          name: '🤖 Agents actifs en arrière-plan',
+          value: [
+            '`#market-scanner` — MarketScanner scan 50+ tickers toutes les 15 min',
+            '`#crypto` — CryptoTracker BTC/ETH/SOL en continu',
+            '`#market-news` — NewsDigest actualités marché',
+            '`#app-pulse` — Pulse surveille l\'app 24/7',
+          ].join('\n'),
+        },
+        {
+          name: '⏭️ Prochaine étape',
+          value: 'Atteins 200 échanges pour activer les agents Dev et Design. CodeReviewer et UIInspector analysent automatiquement ton code à 8h, 12h, 16h et 20h UTC.',
+        },
+      ],
+      color: 0x00daf3,
+    },
+    avance: {
+      title: '🌳 Phase 3 — Orchestration Complète (200+ échanges)',
+      desc: 'Tous les 45 agents sont actifs. La galaxie est pleine, l\'IA optimise l\'app en temps réel.',
+      fields: [
+        {
+          name: '💻 Agents Dev & Design actifs',
+          value: [
+            '`/review focus:performance` — CodeReviewer analyse le code',
+            '`/ui page:portfolio` — UIInspector + UXAnalyst revue design',
+            '`/report type:weekly` — Rapport hebdomadaire complet',
+            '`/risk question:Quel est le drawdown max?` — RiskMetrics',
+            '`/analyze symbol:TSLA interval:4h` — TechAnalyst multi-timeframe',
+          ].join('\n'),
+        },
+        {
+          name: '🔄 Scans automatiques planifiés',
+          value: [
+            '**Toutes les 15 min** — MarketScanner + CryptoTracker',
+            '**8h, 12h, 16h, 20h UTC** — CodeReviewer revue code',
+            '**9h et 18h UTC** — UIInspector revue design',
+            '**8h UTC quotidien** — ReportBot rapport de marché',
+          ].join('\n'),
+        },
+        {
+          name: '🌌 Galaxie au maximum',
+          value: 'La galaxie affiche jusqu\'à **1000 étoiles**, avec des étoiles filantes, un noyau multi-couches violet→cyan→blanc, et tu peux naviguer librement dans cet univers. Chaque agent contribue à un système qui s\'auto-améliore.',
+        },
+        {
+          name: '🎯 Ce qui vient ensuite',
+          value: 'Les agents apprennent de tes préférences. Plus tu utilises `/andy`, plus les réponses sont personnalisées. Les agents Dev et Design commencent à suggérer des améliorations proactives sans que tu demandes.',
+        },
+      ],
+      color: 0x8b5cf6,
+    },
+  }
+
+  // Auto-detect: default to debutant guide with all phases summarized
+  if (niveau === 'auto') {
+    await patchReply(interactionToken, {
+      author: { name: '🧭 Guide AnDy — Progression de la Galaxie' },
+      description: 'L\'IA évolue avec toi. Voici les 3 phases de développement de ton système d\'agents.',
+      color: 0x6600ea,
+      fields: [
+        { name: '🌱 Phase 1 · Éveil (0–50 échanges)', value: 'Commence par `/andy`, `/price`, `/scan`. La galaxie grandit à chaque message. Glisse et explore dans l\'app.', inline: false },
+        { name: '🌿 Phase 2 · Marchés (50–200 échanges)', value: 'Agents marché actifs : analyse technique, alertes, portfolio. Scans automatiques dans `#market-scanner` toutes les 15 min.', inline: false },
+        { name: '🌳 Phase 3 · Orchestration (200+ échanges)', value: 'Tous les 45 agents actifs : code review auto, design inspection, rapports quotidiens. L\'IA s\'auto-améliore.', inline: false },
+        { name: '📖 Voir le guide détaillé', value: '`/guide niveau:debutant` · `/guide niveau:intermediaire` · `/guide niveau:avance`', inline: false },
+      ],
+      footer: { text: 'AnDy · Intelligence Centrale · Trackr AI Hub' },
+      timestamp: new Date().toISOString(),
+    })
+    return
+  }
+
+  const g = guides[niveau]
+  if (!g) {
+    await patchReply(interactionToken, agentEmbed('oracle', '❌ Niveau invalide. Utilise: `debutant`, `intermediaire`, ou `avance`.'))
+    return
+  }
+
+  await patchReply(interactionToken, {
+    author: { name: '🧭 Guide AnDy — ' + g.title },
+    description: g.desc,
+    color: g.color,
+    fields: g.fields,
+    footer: { text: 'AnDy · Trackr AI Hub · Tape /guide pour les autres phases' },
+    timestamp: new Date().toISOString(),
+  })
+}
+
 async function handleHelpCommand(interactionToken) {
   const categories = {
     'ai-core': '🧠 Intelligence Centrale',
@@ -308,6 +436,7 @@ async function processInteraction(body) {
     case 'alert':     return handleAlertCommand(opts, token)
     case 'report':    return handleReportCommand(opts, token)
     case 'help':      return handleHelpCommand(token)
+    case 'guide':     return handleGuideCommand(opts, token)
     // Generic agent commands (oracle, risk_metrics, etc.)
     default:
       if (AGENTS[cmd]) return handleAskAgent(cmd, opts, token)

@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: trackr-andy-bot
+    runtime: node
+    rootDir: bot
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: DISCORD_BOT_TOKEN
+        sync: false
+      - key: VERCEL_URL
+        value: https://trackr-app-nu.vercel.app
+    autoDeploy: true
