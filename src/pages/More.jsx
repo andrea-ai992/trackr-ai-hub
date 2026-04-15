@@ -2,11 +2,23 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Plane, Languages, Footprints, FolderOpen, Settings2, Plus, X,
-  TrendingUp, Bitcoin, ChevronRight, Sparkles, Lock, LayoutDashboard, Bot
+  TrendingUp, Bitcoin, ChevronRight, Sparkles, Lock, LayoutDashboard, Bot, Radio
 } from 'lucide-react'
 
 // All available modules
 const ALL_MODULES = [
+  {
+    id: 'agents',
+    to: '/agents',
+    icon: Radio,
+    label: 'Mission Control',
+    desc: '45 agents IA · activité live · scans auto',
+    color: '#00daf3',
+    glow: 'rgba(0,218,243,0.2)',
+    badge: '45 agents',
+    badgeColor: '#00daf3',
+    builtIn: true,
+  },
   {
     id: 'andy',
     to: '/andy',

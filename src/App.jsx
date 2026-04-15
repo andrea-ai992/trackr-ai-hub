@@ -20,6 +20,7 @@ import Portfolio from './pages/Portfolio'
 import Widget from './pages/Widget'
 import Sports from './pages/Sports'
 import Andy from './pages/Andy'
+import Agents from './pages/Agents'
 import { useAlerts } from './hooks/useAlerts'
 import { useNewsAlerts } from './hooks/useNewsAlerts'
 import { Search } from 'lucide-react'
@@ -46,7 +47,7 @@ function getTabIndex(path) {
   return -1
 }
 
-const DETAIL_PREFIXES = ['/stocks/', '/crypto/', '/translator', '/settings', '/sneakers', '/portfolio', '/category/', '/flights', '/andy']
+const DETAIL_PREFIXES = ['/stocks/', '/crypto/', '/translator', '/settings', '/sneakers', '/portfolio', '/category/', '/flights', '/andy', '/agents']
 
 // Module-level so it persists across PageTransition renders without remounting
 let _prevPath = '/'
@@ -151,6 +152,7 @@ function AppInner() {
               <Route path="/sports" element={<Sports />} />
               <Route path="/widget" element={<Widget />} />
               <Route path="/andy" element={<Andy />} />
+              <Route path="/agents" element={<Agents />} />
             </Routes>
           </PageTransition>
         </main>
