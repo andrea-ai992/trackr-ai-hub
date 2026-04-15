@@ -1,0 +1,461 @@
+// AnDy AI — Vercel serverless function
+// Claude Sonnet 4.6 · Agentic tool use · Technical Analysis
+
+const MODEL = 'claude-sonnet-4-6'
+const MAX_TOKENS = 4096
+const MAX_LOOP = 6
+
+// ─── Technical Analysis helpers ───────────────────────────────────────────────
+function computeRSI(closes, period = 14) {
+  if (closes.length < period + 1) return null
+  let gains = 0, losses = 0
+  for (let i = 1; i <= period; i++) {
+    const d = closes[i] - closes[i - 1]
+    if (d > 0) gains += d; else losses -= d
+  }
+  let ag = gains / period, al = losses / period
+  for (let i = period + 1; i < closes.length; i++) {
+    const d = closes[i] - closes[i - 1]
+    ag = (ag * (period - 1) + Math.max(d, 0)) / period
+    al = (al * (period - 1) + Math.max(-d, 0)) / period
+  }
+  return 100 - 100 / (1 + ag / (al || 0.0001))
+}
+
+function computeEMA(data, period) {
+  if (data.length < period) return null
+  const k = 2 / (period + 1)
+  let ema = data.slice(0, period).reduce((a, b) => a + b, 0) / period
+  for (let i = period; i < data.length; i++) ema = data[i] * k + ema * (1 - k)
+  return ema
+}
+
+function computeSMA(data, period) {
+  if (data.length < period) return null
+  return data.slice(-period).reduce((a, b) => a + b, 0) / period
+}
+
+function computeMACD(closes) {
+  if (closes.length < 26) return null
+  const ema12 = computeEMA(closes, 12)
+  const ema26 = computeEMA(closes, 26)
+  if (!ema12 || !ema26) return null
+  const line = ema12 - ema26
+  // Signal line: EMA9 of MACD values (simplified: use line direction)
+  const prevLine = computeEMA(closes.slice(0, -1), 12) - computeEMA(closes.slice(0, -1), 26)
+  return { line: line.toFixed(4), ema12: ema12.toFixed(2), ema26: ema26.toFixed(2), bullish: line > 0, crossingUp: line > 0 && (prevLine || 0) < 0, crossingDown: line < 0 && (prevLine || 0) > 0 }
+}
+
+function computeBollinger(closes, period = 20, mult = 2) {
+  if (closes.length < period) return null
+  const sma = computeSMA(closes, period)
+  const recent = closes.slice(-period)
+  const variance = recent.reduce((sum, v) => sum + Math.pow(v - sma, 2), 0) / period
+  const std = Math.sqrt(variance)
+  return { middle: sma.toFixed(2), upper: (sma + mult * std).toFixed(2), lower: (sma - mult * std).toFixed(2), bandwidth: ((2 * mult * std) / sma * 100).toFixed(1) }
+}
+
+function findPivots(highs, lows, period = 5) {
+  const supports = [], resistances = []
+  for (let i = period; i < highs.length - period; i++) {
+    const isHigh = highs.slice(i - period, i).every(v => highs[i] >= v) && highs.slice(i + 1, i + period + 1).every(v => highs[i] >= v)
+    const isLow  = lows.slice(i - period, i).every(v => lows[i] <= v)  && lows.slice(i + 1, i + period + 1).every(v => lows[i] <= v)
+    if (isHigh) resistances.push(highs[i])
+    if (isLow)  supports.push(lows[i])
+  }
+  return { supports: [...new Set(supports.map(v => +v.toFixed(2)))].slice(-5), resistances: [...new Set(resistances.map(v => +v.toFixed(2)))].slice(-5) }
+}
+
+function cleanArr(arr) { return (arr || []).filter(v => v !== null && !isNaN(v)) }
+
+// ─── Server-side tool execution ───────────────────────────────────────────────
+async function runServerTool(name, input) {
+
+  if (name === 'fetch_price') {
+    try {
+      const sym = encodeURIComponent(input.symbol)
+      const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`, { headers: { 'User-Agent': 'Mozilla/5.0' } })
+      const d = await r.json()
+      const meta = d?.chart?.result?.[0]?.meta
+      if (!meta?.regularMarketPrice) return { error: 'Symbol not found' }
+      const chg = meta.regularMarketPrice - meta.previousClose
+      const pct = (chg / meta.previousClose * 100).toFixed(2)
+      return { symbol: input.symbol, name: meta.shortName || input.symbol, price: meta.regularMarketPrice, change: chg.toFixed(2), changePct: pct, currency: meta.currency || 'USD', marketState: meta.marketState }
+    } catch (e) { return { error: e.message } }
+  }
+
+  if (name === 'fetch_crypto_price') {
+    try {
+      const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${input.coinId}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true`, { headers: { Accept: 'application/json' } })
+      const d = await r.json()
+      const coin = d[input.coinId]
+      if (!coin) return { error: 'Not found' }
+      return { coinId: input.coinId, price: coin.usd, change24h: coin.usd_24h_change?.toFixed(2), marketCap: coin.usd_market_cap }
+    } catch (e) { return { error: e.message } }
+  }
+
+  if (name === 'technical_analysis') {
+    try {
+      const { symbol, interval } = input
+      const intervalMap = {
+        '5m':  { interval: '5m',  range: '2d' },
+        '15m': { interval: '15m', range: '5d' },
+        '1h':  { interval: '60m', range: '1mo' },
+        '4h':  { interval: '60m', range: '3mo' },
+        '1d':  { interval: '1d',  range: '1y' },
+      }
+      const p = intervalMap[interval] || { interval: '1d', range: '6mo' }
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${p.interval}&range=${p.range}`
+      const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } })
+      const d = await r.json()
+      const res = d?.chart?.result?.[0]
+      if (!res) return { error: 'No data for ' + symbol }
+
+      const meta = res.meta
+      const q = res.indicators?.quote?.[0] || {}
+      const closes = cleanArr(q.close)
+      const highs  = cleanArr(q.high)
+      const lows   = cleanArr(q.low)
+      const vols   = cleanArr(q.volume)
+
+      if (closes.length < 20) return { error: 'Not enough data' }
+
+      const price   = meta.regularMarketPrice
+      const rsi     = computeRSI(closes)
+      const ema9    = computeEMA(closes, 9)
+      const ema21   = computeEMA(closes, 21)
+      const ema50   = computeEMA(closes, Math.min(50, closes.length - 1))
+      const ema200  = computeEMA(closes, Math.min(200, closes.length - 1))
+      const macd    = computeMACD(closes)
+      const bb      = computeBollinger(closes)
+      const pivots  = findPivots(highs, lows)
+
+      // Volume
+      const avgVol = vols.slice(-20).reduce((a, b) => a + b, 0) / 20
+      const lastVol = vols[vols.length - 1]
+      const volRatio = lastVol / avgVol
+
+      // Trend
+      let trend = 'Neutre'
+      if (ema21 && ema50) {
+        if (price > ema21 && ema21 > ema50) trend = 'Haussière'
+        else if (price < ema21 && ema21 < ema50) trend = 'Baissière'
+        else if (price > ema21) trend = 'Légèrement haussière'
+        else trend = 'Légèrement baissière'
+      }
+
+      // Signals
+      const signals = []
+      if (rsi !== null) {
+        if (rsi < 25) signals.push('🟢 RSI très survendu (' + rsi.toFixed(1) + ') — zone d\'achat fort')
+        else if (rsi < 35) signals.push('🟢 RSI survendu (' + rsi.toFixed(1) + ') — signal achat potentiel')
+        else if (rsi > 75) signals.push('🔴 RSI très suracheté (' + rsi.toFixed(1) + ') — zone de vente fort')
+        else if (rsi > 65) signals.push('🔴 RSI suracheté (' + rsi.toFixed(1) + ') — surveiller une sortie')
+        else signals.push('🟡 RSI neutre (' + rsi.toFixed(1) + ')')
+      }
+      if (macd?.crossingUp) signals.push('🟢 Croisement MACD haussier — signal d\'achat')
+      if (macd?.crossingDown) signals.push('🔴 Croisement MACD baissier — signal de vente')
+      if (ema200 && price > ema200 * 1.0) signals.push('🟢 Au-dessus de l\'EMA200 — tendance long terme haussière')
+      if (ema200 && price < ema200 * 1.0) signals.push('🔴 En dessous de l\'EMA200 — tendance long terme baissière')
+      if (volRatio > 2) signals.push('⚡ Volume x' + volRatio.toFixed(1) + ' — mouvement significatif')
+
+      // Key levels (closest to current price)
+      const nearSupports    = pivots.supports.filter(s => s < price).sort((a, b) => b - a).slice(0, 3)
+      const nearResistances = pivots.resistances.filter(s => s > price).sort((a, b) => a - b).slice(0, 3)
+
+      // R/R suggestion
+      const nextSupport    = nearSupports[0]
+      const nextResistance = nearResistances[0]
+      let rrSuggestion = null
+      if (nextSupport && nextResistance) {
+        const risk   = price - nextSupport
+        const reward = nextResistance - price
+        const rr     = (reward / risk).toFixed(1)
+        rrSuggestion = { entry: price.toFixed(2), stopLoss: nextSupport.toFixed(2), target: nextResistance.toFixed(2), rr, favorable: reward > risk }
+      }
+
+      return {
+        symbol, interval, assetName: meta.shortName || symbol, price: price.toFixed(2),
+        trend,
+        rsi: rsi?.toFixed(1),
+        ema9: ema9?.toFixed(2), ema21: ema21?.toFixed(2), ema50: ema50?.toFixed(2), ema200: ema200?.toFixed(2),
+        macd: macd ? { line: macd.line, bullish: macd.bullish } : null,
+        bollinger: bb,
+        supports: nearSupports.map(v => v.toFixed(2)),
+        resistances: nearResistances.map(v => v.toFixed(2)),
+        volume: { current: Math.round(lastVol / 1000) + 'K', avg20: Math.round(avgVol / 1000) + 'K', ratio: volRatio.toFixed(2) },
+        signals,
+        tradeSetup: rrSuggestion,
+        chartTag: `[CHART:${symbol}:${interval}]`,
+      }
+    } catch (e) { return { error: e.message } }
+  }
+
+  if (name === 'scan_market') {
+    const results = []
+    for (const sym of (input.symbols || []).slice(0, 10)) {
+      try {
+        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=1mo`
+        const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } })
+        const d = await r.json()
+        const res = d?.chart?.result?.[0]
+        if (!res) continue
+        const meta = res.meta
+        const closes = cleanArr(res.indicators?.quote?.[0]?.close)
+        const rsi = computeRSI(closes)
+        const ema20 = computeEMA(closes, 20)
+        const chg = meta.regularMarketPrice - meta.previousClose
+        const pct = (chg / meta.previousClose * 100).toFixed(2)
+        let signal = '🟡 Neutre'
+        if (rsi !== null) {
+          if (rsi < 30) signal = '🟢 Survendu — achat potentiel'
+          else if (rsi > 70) signal = '🔴 Suracheté — prudence'
+          else if (meta.regularMarketPrice > (ema20 || 0)) signal = '🟢 Au-dessus EMA20'
+          else signal = '🔴 En dessous EMA20'
+        }
+        results.push({ symbol: sym, name: meta.shortName || sym, price: meta.regularMarketPrice.toFixed(2), changePct: pct, rsi: rsi?.toFixed(1), trend: meta.regularMarketPrice > (ema20 || 0) ? 'Haussier' : 'Baissier', signal })
+      } catch {}
+    }
+    return { results, count: results.length, scannedAt: new Date().toISOString() }
+  }
+
+  return { error: `Unknown server tool: ${name}` }
+}
+
+// ─── Tools ────────────────────────────────────────────────────────────────────
+const TOOLS = [
+  {
+    name: 'navigate',
+    description: 'Navigate to a page in the Trackr app',
+    input_schema: { type: 'object', properties: { path: { type: 'string', description: "'/', '/markets', '/sports', '/news', '/flights', '/portfolio', '/sneakers', '/translator', '/settings'" } }, required: ['path'] }
+  },
+  {
+    name: 'fetch_price',
+    description: 'Fetch live price from Yahoo Finance. Use BEFORE giving any price info.',
+    input_schema: { type: 'object', properties: { symbol: { type: 'string', description: "Yahoo Finance symbol: 'AAPL', 'TSLA', 'NVDA', 'BTC-USD', 'ETH-USD', '^GSPC', '^DJI'" } }, required: ['symbol'] }
+  },
+  {
+    name: 'fetch_crypto_price',
+    description: 'Fetch live crypto price from CoinGecko',
+    input_schema: { type: 'object', properties: { coinId: { type: 'string', description: "CoinGecko ID: 'bitcoin', 'ethereum', 'solana', 'ripple', 'dogecoin'" } }, required: ['coinId'] }
+  },
+  {
+    name: 'technical_analysis',
+    description: "Full technical analysis: RSI, EMA, MACD, Bollinger, support/resistance, trade setup. Always use when doing market analysis or when user asks about a chart. Returns a chartTag to include in your response to display the chart.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        symbol: { type: 'string', description: "Yahoo Finance symbol: 'AAPL', 'BTC-USD', '^GSPC', etc." },
+        interval: { type: 'string', enum: ['5m', '15m', '1h', '4h', '1d'], description: "Timeframe. Default '1d' for general analysis. Use '1h' or '4h' for entry timing." }
+      },
+      required: ['symbol', 'interval']
+    }
+  },
+  {
+    name: 'scan_market',
+    description: "Scan multiple assets for trading signals. Use to give a market overview or when monitoring a watchlist.",
+    input_schema: {
+      type: 'object',
+      properties: { symbols: { type: 'array', items: { type: 'string' }, description: 'List of Yahoo Finance symbols to scan (max 10)' } },
+      required: ['symbols']
+    }
+  },
+  {
+    name: 'add_stock',
+    description: "Add stock position to portfolio",
+    input_schema: { type: 'object', properties: { symbol: { type: 'string' }, name: { type: 'string' }, quantity: { type: 'number' }, buyPrice: { type: 'number' }, buyDate: { type: 'string' } }, required: ['symbol', 'name', 'quantity', 'buyPrice'] }
+  },
+  {
+    name: 'remove_stock',
+    description: "Remove stock from portfolio by symbol",
+    input_schema: { type: 'object', properties: { symbol: { type: 'string' } }, required: ['symbol'] }
+  },
+  {
+    name: 'add_crypto',
+    description: "Add crypto position to portfolio",
+    input_schema: { type: 'object', properties: { coinId: { type: 'string' }, coinName: { type: 'string' }, symbol: { type: 'string' }, quantity: { type: 'number' }, buyPrice: { type: 'number' } }, required: ['coinId', 'coinName', 'symbol', 'quantity', 'buyPrice'] }
+  },
+  {
+    name: 'remove_crypto',
+    description: "Remove crypto from portfolio",
+    input_schema: { type: 'object', properties: { coinId: { type: 'string' } }, required: ['coinId'] }
+  },
+  {
+    name: 'create_alert',
+    description: "Create a price alert",
+    input_schema: { type: 'object', properties: { symbol: { type: 'string' }, name: { type: 'string' }, targetPrice: { type: 'number' }, direction: { type: 'string', enum: ['above', 'below'] } }, required: ['symbol', 'targetPrice', 'direction'] }
+  },
+  {
+    name: 'delete_alert',
+    description: "Delete a price alert",
+    input_schema: { type: 'object', properties: { symbol: { type: 'string' }, targetPrice: { type: 'number' }, direction: { type: 'string', enum: ['above', 'below'] } }, required: ['symbol', 'targetPrice', 'direction'] }
+  },
+  {
+    name: 'add_to_watchlist',
+    description: "Add stock to watchlist",
+    input_schema: { type: 'object', properties: { symbol: { type: 'string' }, name: { type: 'string' } }, required: ['symbol', 'name'] }
+  },
+  {
+    name: 'remove_from_watchlist',
+    description: "Remove from watchlist",
+    input_schema: { type: 'object', properties: { symbol: { type: 'string' } }, required: ['symbol'] }
+  },
+  {
+    name: 'add_sneaker',
+    description: "Add sneaker to collection",
+    input_schema: { type: 'object', properties: { brand: { type: 'string' }, model: { type: 'string' }, size: { type: 'string' }, buyPrice: { type: 'number' } }, required: ['brand', 'model', 'size', 'buyPrice'] }
+  },
+]
+
+const SERVER_TOOLS = new Set(['fetch_price', 'fetch_crypto_price', 'technical_analysis', 'scan_market'])
+
+// ─── System prompt ────────────────────────────────────────────────────────────
+const BASE_SYSTEM = `Tu es AnDy, l'assistant IA de trading et gestion de portfolio de l'application Trackr.
+Tu es un expert en analyse technique, analyse fondamentale, et gestion de portefeuille.
+
+## Tes outils — utilise-les activement et sans hésitation
+
+### Données de marché
+- **fetch_price(symbol)** — Prix live depuis Yahoo Finance. TOUJOURS utiliser avant de citer un prix.
+- **fetch_crypto_price(coinId)** — Prix live depuis CoinGecko.
+- **technical_analysis(symbol, interval)** — Analyse complète : RSI, EMA, MACD, Bollinger, supports/résistances, setup de trade. Retourne aussi un chartTag que tu dois inclure dans ta réponse pour afficher le graphique.
+- **scan_market(symbols)** — Scanner plusieurs actifs simultanément pour trouver des opportunités.
+
+### Actions dans l'app
+- **navigate(path)** — Naviguer vers une page
+- **add_stock / remove_stock** — Gérer le portfolio actions
+- **add_crypto / remove_crypto** — Gérer le portfolio crypto
+- **create_alert / delete_alert** — Créer/supprimer des alertes prix
+- **add_to_watchlist / remove_from_watchlist** — Gérer la watchlist
+- **add_sneaker** — Ajouter une sneaker
+
+## Méthode d'analyse
+
+Quand tu analyses un actif :
+1. **Appelle technical_analysis** avec l'interval approprié
+2. **Inclus le chartTag** dans ta réponse (ex: [CHART:AAPL:1d]) pour afficher le graphique
+3. **Multi-timeframe** : analyse 1d pour la tendance, 1h pour la structure, 15m pour l'entrée
+4. **Donne des niveaux précis** :
+   - Zone d'achat : "$X - $Y (support clé + RSI survendu)"
+   - Stop loss : "$X (sous le support)"
+   - Objectif 1 : "$X (résistance)" / Objectif 2 : "$X (extension)"
+   - Rapport R/R : "1:X — pour $1 de risque, $X de potentiel"
+5. **Propose des alertes** avec create_alert aux niveaux clés
+
+## Stratégie de base
+- Acheter près des supports avec confirmation (RSI < 40, volume, momentum)
+- Vendre/alléger près des résistances (RSI > 65, divergences)
+- Tendance EMA : prix > EMA9 > EMA21 > EMA50 = uptrend confirmé
+- MACD croisement = signal de changement de momentum
+- Bollinger : près de la bande inférieure + RSI bas = zone d'achat
+- Volume élevé sur un mouvement confirme la validité du signal
+
+## Style
+- Français uniquement
+- Direct et actionnable — pas de jargon inutile
+- Donne des prix précis (pas "environ $X")
+- 🟢 signal positif · 🔴 négatif · 🟡 neutre · ⚡ important
+- Propose systématiquement des alertes après une analyse
+- Ne garantis jamais des rendements — dis "signal potentiel", "zone intéressante"
+
+## Architecture Trackr
+Routes: /, /markets, /sports, /news, /flights, /portfolio, /sneakers, /translator, /settings, /andy
+APIs: Yahoo Finance (actions), CoinGecko (crypto), OpenSky (avions), ESPN (sports)
+localStorage trackr_v3: stocks, cryptoHoldings, sneakers, stockWatchlist, alerts`
+
+function buildSystem(portfolio, crypto, sneakers, alerts, watchlist) {
+  let sys = BASE_SYSTEM
+  if (portfolio?.length > 0) {
+    sys += '\n\n## Portfolio actions de l\'utilisateur\n'
+    portfolio.forEach(p => {
+      sys += `- ${p.symbol} (${p.name}): ${p.quantity} actions @ $${p.buyPrice}`
+      if (p.currentPrice) { const pnl = ((p.currentPrice - p.buyPrice) / p.buyPrice * 100).toFixed(1); sys += ` · Prix actuel: $${p.currentPrice.toFixed(2)} · P&L: ${pnl}%` }
+      if (p.buyDate) sys += ` · Acheté: ${p.buyDate}`
+      sys += '\n'
+    })
+  }
+  if (crypto?.length > 0) {
+    sys += '\n## Portfolio crypto\n'
+    crypto.forEach(c => { sys += `- ${c.coinName} (${c.symbol?.toUpperCase()}): ${c.quantity} @ $${c.buyPrice}\n` })
+  }
+  if (sneakers?.filter(s => !s.salePrice).length > 0) {
+    sys += '\n## Collection sneakers\n'
+    sneakers.filter(s => !s.salePrice).forEach(s => { sys += `- ${s.brand} ${s.model} T${s.size}: $${s.buyPrice}\n` })
+  }
+  if (watchlist?.length > 0) {
+    sys += '\n## Watchlist\n' + watchlist.map(w => `- ${w.symbol} (${w.name})`).join('\n') + '\n'
+  }
+  if (alerts?.length > 0) {
+    sys += '\n## Alertes actives\n'
+    alerts.forEach(a => { sys += `- ${a.symbol}: ${a.direction === 'above' ? '>' : '<'} $${a.targetPrice}\n` })
+  }
+  return sys
+}
+
+// ─── Handler ──────────────────────────────────────────────────────────────────
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  if (req.method === 'OPTIONS') { res.status(200).end(); return }
+  if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return }
+
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) { res.status(503).json({ error: 'API key not configured' }); return }
+
+  const { messages, portfolio, crypto, sneakers, alerts, watchlist } = req.body
+  if (!messages || !Array.isArray(messages)) { res.status(400).json({ error: 'messages array required' }); return }
+
+  const system = buildSystem(portfolio, crypto, sneakers, alerts, watchlist)
+  // Keep only last 12 messages to limit token consumption (~$0.01/conversation)
+  const trimmedMessages = messages.slice(-12)
+  let currentMessages = trimmedMessages.map(m => ({ role: m.role, content: m.content }))
+  const executedServerTools = []
+  const clientActions = []
+
+  try {
+    for (let iter = 0; iter < MAX_LOOP; iter++) {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+        body: JSON.stringify({ model: MODEL, max_tokens: MAX_TOKENS, system, tools: TOOLS, messages: currentMessages }),
+      })
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        res.status(response.status).json({ error: err.error?.message || 'Claude API error' }); return
+      }
+
+      const data = await response.json()
+
+      if (data.stop_reason === 'end_turn') {
+        const text = data.content.find(b => b.type === 'text')?.text || ''
+        res.status(200).json({ text, executedServerTools, clientActions }); return
+      }
+
+      if (data.stop_reason === 'tool_use') {
+        const toolUses = data.content.filter(b => b.type === 'tool_use')
+        currentMessages.push({ role: 'assistant', content: data.content })
+        const toolResults = []
+
+        for (const tu of toolUses) {
+          if (SERVER_TOOLS.has(tu.name)) {
+            const result = await runServerTool(tu.name, tu.input)
+            executedServerTools.push({ id: tu.id, name: tu.name, input: tu.input, result })
+            toolResults.push({ type: 'tool_result', tool_use_id: tu.id, content: JSON.stringify(result) })
+          } else {
+            clientActions.push({ id: tu.id, name: tu.name, input: tu.input })
+            toolResults.push({ type: 'tool_result', tool_use_id: tu.id, content: JSON.stringify({ status: 'success' }) })
+          }
+        }
+        currentMessages.push({ role: 'user', content: toolResults })
+      } else {
+        const text = data.content.find(b => b.type === 'text')?.text || ''
+        res.status(200).json({ text, executedServerTools, clientActions }); return
+      }
+    }
+    res.status(200).json({ text: 'Limite de traitement atteinte.', executedServerTools, clientActions })
+  } catch (e) {
+    res.status(500).json({ error: e.message || 'Server error' })
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "crons": [
+    {
+      "path": "/api/discord-cron",
+      "schedule": "0 8 * * *"
+    }
+  ],
+  "functions": {
+    "api/andy.js":         { "maxDuration": 60 },
+    "api/discord.js":      { "maxDuration": 60 },
+    "api/discord-cron.js": { "maxDuration": 60 }
+  }
+}
