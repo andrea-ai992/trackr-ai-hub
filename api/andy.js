@@ -415,50 +415,127 @@ function buildSystem(portfolio, crypto, sneakers, alerts, watchlist) {
   return sys
 }
 
-// ─── Handler ──────────────────────────────────────────────────────────────────
+// ─── Tool labels for status display ──────────────────────────────────────────
+const TOOL_LABELS = {
+  fetch_price:        '📊 Récupération prix…',
+  fetch_crypto_price: '₿ Prix crypto…',
+  technical_analysis: '📈 Analyse technique…',
+  scan_market:        '🔭 Scan marché…',
+  navigate:           '🧭 Navigation…',
+  add_stock:          '📁 Ajout portfolio…',
+  add_crypto:         '📁 Ajout crypto…',
+  create_alert:       '🔔 Création alerte…',
+  add_to_watchlist:   '👁️ Watchlist…',
+}
+
+// ─── Handler — Server-Sent Events streaming ───────────────────────────────────
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
   if (req.method === 'OPTIONS') { res.status(200).end(); return }
-  if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return }
+  if (req.method !== 'POST') { res.status(405).end(); return }
 
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) { res.status(503).json({ error: 'API key not configured' }); return }
 
   const { messages, portfolio, crypto, sneakers, alerts, watchlist } = req.body
-  if (!messages || !Array.isArray(messages)) { res.status(400).json({ error: 'messages array required' }); return }
+  if (!messages || !Array.isArray(messages)) { res.status(400).json({ error: 'messages required' }); return }
+
+  // ── SSE setup ───────────────────────────────────────────────────────────────
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache, no-transform')
+  res.setHeader('Connection', 'keep-alive')
+  res.setHeader('X-Accel-Buffering', 'no')
+
+  const emit = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`)
 
   const system = buildSystem(portfolio, crypto, sneakers, alerts, watchlist)
-  // Keep only last 12 messages to limit token consumption (~$0.01/conversation)
-  const trimmedMessages = messages.slice(-12)
-  let currentMessages = trimmedMessages.map(m => ({ role: m.role, content: m.content }))
+  let currentMessages = messages.slice(-12).map(m => ({ role: m.role, content: m.content }))
   const executedServerTools = []
   const clientActions = []
 
   try {
     for (let iter = 0; iter < MAX_LOOP; iter++) {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      // ── Stream from Anthropic API ────────────────────────────────────────────
+      const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-        body: JSON.stringify({ model: MODEL, max_tokens: MAX_TOKENS, system, tools: TOOLS, messages: currentMessages }),
+        body: JSON.stringify({ model: MODEL, max_tokens: MAX_TOKENS, system, tools: TOOLS, messages: currentMessages, stream: true }),
       })
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}))
-        res.status(response.status).json({ error: err.error?.message || 'Claude API error' }); return
+      if (!anthropicRes.ok) {
+        const err = await anthropicRes.json().catch(() => ({}))
+        emit({ type: 'error', message: err.error?.message || `API error ${anthropicRes.status}` })
+        res.end(); return
       }
 
-      const data = await response.json()
+      // ── Parse Anthropic SSE stream ───────────────────────────────────────────
+      const reader = anthropicRes.body.getReader()
+      const decoder = new TextDecoder()
+      let buf = ''
+      const contentBlocks = []
+      let stopReason = 'end_turn'
 
-      if (data.stop_reason === 'end_turn') {
-        const text = data.content.find(b => b.type === 'text')?.text || ''
-        res.status(200).json({ text, executedServerTools, clientActions }); return
+      outer: while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += decoder.decode(value, { stream: true })
+        const lines = buf.split('\n')
+        buf = lines.pop()
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const raw = line.slice(6).trim()
+          if (raw === '[DONE]') break outer
+          let ev
+          try { ev = JSON.parse(raw) } catch { continue }
+
+          if (ev.type === 'content_block_start') {
+            const blk = ev.content_block
+            if (blk.type === 'text') {
+              contentBlocks[ev.index] = { type: 'text', text: '' }
+            } else if (blk.type === 'tool_use') {
+              contentBlocks[ev.index] = { type: 'tool_use', id: blk.id, name: blk.name, input_str: '' }
+              emit({ type: 'tool_start', name: blk.name, label: TOOL_LABELS[blk.name] || blk.name })
+            }
+
+          } else if (ev.type === 'content_block_delta') {
+            const blk = contentBlocks[ev.index]
+            if (!blk) continue
+            if (ev.delta.type === 'text_delta' && blk.type === 'text') {
+              blk.text += ev.delta.text
+              // Stream each text chunk immediately to the client
+              emit({ type: 'token', text: ev.delta.text })
+            } else if (ev.delta.type === 'input_json_delta' && blk.type === 'tool_use') {
+              blk.input_str += ev.delta.partial_json
+            }
+
+          } else if (ev.type === 'content_block_stop') {
+            const blk = contentBlocks[ev.index]
+            if (blk?.type === 'tool_use') {
+              try { blk.input = JSON.parse(blk.input_str || '{}') } catch { blk.input = {} }
+            }
+
+          } else if (ev.type === 'message_delta' && ev.delta?.stop_reason) {
+            stopReason = ev.delta.stop_reason
+          }
+        }
       }
 
-      if (data.stop_reason === 'tool_use') {
-        const toolUses = data.content.filter(b => b.type === 'tool_use')
-        currentMessages.push({ role: 'assistant', content: data.content })
+      if (stopReason === 'end_turn') {
+        emit({ type: 'done', clientActions, executedServerTools })
+        res.end(); return
+      }
+
+      if (stopReason === 'tool_use') {
+        const toolUses = contentBlocks.filter(b => b?.type === 'tool_use')
+        const assistantContent = contentBlocks.filter(Boolean).map(b =>
+          b.type === 'text'
+            ? { type: 'text', text: b.text }
+            : { type: 'tool_use', id: b.id, name: b.name, input: b.input }
+        )
+        currentMessages.push({ role: 'assistant', content: assistantContent })
         const toolResults = []
 
         for (const tu of toolUses) {
@@ -470,15 +547,18 @@ export default async function handler(req, res) {
             clientActions.push({ id: tu.id, name: tu.name, input: tu.input })
             toolResults.push({ type: 'tool_result', tool_use_id: tu.id, content: JSON.stringify({ status: 'success' }) })
           }
+          emit({ type: 'tool_done', name: tu.name })
         }
         currentMessages.push({ role: 'user', content: toolResults })
-      } else {
-        const text = data.content.find(b => b.type === 'text')?.text || ''
-        res.status(200).json({ text, executedServerTools, clientActions }); return
+        // Loop continues — next iteration streams the final answer
       }
     }
-    res.status(200).json({ text: 'Limite de traitement atteinte.', executedServerTools, clientActions })
+
+    emit({ type: 'done', clientActions, executedServerTools })
+    res.end()
   } catch (e) {
-    res.status(500).json({ error: e.message || 'Server error' })
+    console.error('Andy handler error:', e)
+    emit({ type: 'error', message: e.message || 'Erreur serveur' })
+    res.end()
   }
 }

@@ -598,12 +598,15 @@ function Bubble({ msg, onSpeak }) {
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         {allTools.length > 0 && <div style={{ marginBottom: 6 }}>{allTools.map((t, i) => <ToolCard key={t.id || i} name={t.name} input={t.input} result={t.result} />)}</div>}
-        {msg.content && (
+        {(msg.content || msg.streaming) && (
           <div style={{ background: 'rgba(19,28,43,0.6)', border: '1px solid rgba(132,147,150,0.1)', borderRadius: '4px 16px 16px 16px', padding: '12px 15px', fontSize: 14.5, color: '#dbe2f8', lineHeight: 1.6, wordBreak: 'break-word', backdropFilter: 'blur(12px)' }}>
-            {renderContent(msg.content)}
+            {msg.content ? renderContent(msg.content) : null}
+            {msg.streaming && (
+              <span style={{ display: 'inline-block', width: 2, height: '1em', background: '#00daf3', marginLeft: 2, verticalAlign: 'text-bottom', animation: 'borderGlow 0.8s ease-in-out infinite alternate', borderRadius: 1 }} />
+            )}
           </div>
         )}
-        {msg.content && (
+        {msg.content && !msg.streaming && (
           <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
             <button onClick={() => { navigator.clipboard.writeText(msg.content); setCopied(true); setTimeout(() => setCopied(false), 1500) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4b6070', padding: '2px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
               {copied ? <><Check size={10} style={{ color: '#34d399' }} /> Copié</> : <><Copy size={10} /> Copier</>}
@@ -697,9 +700,11 @@ export default function Andy() {
   const [galaxyData, setGalaxyData] = useState(loadGalaxyData)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [toolStatus, setToolStatus] = useState('') // e.g. "📈 Analyse technique…"
   const [autoSpeak, setAutoSpeak] = useState(false)
   const [offline, setOffline] = useState(!navigator.onLine)
   const [view, setView] = useState('galaxy') // 'galaxy' | 'chat'
+  const streamTextRef = useRef('')
 
   const listRef = useRef(null)
   const textareaRef = useRef(null)
@@ -752,26 +757,83 @@ export default function Andy() {
 
     const userMsg = { role: 'user', content: trimmed }
     const newMsgs = [...messages, userMsg]
-    setMessages(newMsgs); setLoading(true)
+
+    // Add streaming placeholder immediately
+    const placeholder = { role: 'assistant', content: '', streaming: true, serverTools: [], clientActions: [] }
+    setMessages([...newMsgs, placeholder])
+    setLoading(true)
     setGalaxyData(prev => ({ ...prev, exchanges: prev.exchanges + 1 }))
+    streamTextRef.current = ''
 
     const apiMsgs = newMsgs.map(m => ({ role: m.role, content: m.content }))
 
     try {
       const res = await fetch('/api/andy', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: apiMsgs, portfolio: stocks.filter(s => !s.salePrice), crypto: cryptoHoldings.filter(c => !c.salePrice), sneakers, alerts, watchlist: stockWatchlist }),
       })
-      if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `HTTP ${res.status}`) }
-      const data = await res.json()
-      if (data.clientActions?.length > 0) await executeClientActions(data.clientActions)
-      const assistantMsg = { role: 'assistant', content: data.text || '', serverTools: data.executedServerTools || [], clientActions: data.clientActions || [] }
-      setMessages(prev => [...prev, assistantMsg])
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buf = ''
+      let finalClientActions = []
+      let finalServerTools = []
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += decoder.decode(value, { stream: true })
+        const lines = buf.split('\n')
+        buf = lines.pop()
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          let ev
+          try { ev = JSON.parse(line.slice(6)) } catch { continue }
+
+          if (ev.type === 'token') {
+            streamTextRef.current += ev.text
+            const t = streamTextRef.current
+            setMessages(prev => {
+              const copy = [...prev]
+              copy[copy.length - 1] = { ...copy[copy.length - 1], content: t }
+              return copy
+            })
+          } else if (ev.type === 'tool_start') {
+            setToolStatus(ev.label || ev.name)
+          } else if (ev.type === 'tool_done') {
+            setToolStatus('')
+          } else if (ev.type === 'done') {
+            finalClientActions = ev.clientActions || []
+            finalServerTools = ev.executedServerTools || []
+          } else if (ev.type === 'error') {
+            throw new Error(ev.message)
+          }
+        }
+      }
+
+      // Finalize message
+      const finalText = streamTextRef.current
+      if (finalClientActions.length > 0) await executeClientActions(finalClientActions)
+      setMessages(prev => {
+        const copy = [...prev]
+        copy[copy.length - 1] = { role: 'assistant', content: finalText, streaming: false, serverTools: finalServerTools, clientActions: finalClientActions }
+        return copy
+      })
       setGalaxyData(prev => ({ ...prev, exchanges: prev.exchanges + 1 }))
-      if (autoSpeak && data.text) speakText(data.text)
+      if (autoSpeak && finalText) speakText(finalText)
     } catch (e) {
-      setMessages(prev => [...prev, { role: 'assistant', content: `Erreur : ${e.message}`, serverTools: [], clientActions: [] }])
-    } finally { setLoading(false) }
+      setMessages(prev => {
+        const copy = [...prev]
+        copy[copy.length - 1] = { role: 'assistant', content: `Erreur : ${e.message}`, streaming: false, serverTools: [], clientActions: [] }
+        return copy
+      })
+    } finally {
+      setLoading(false)
+      setToolStatus('')
+    }
   }
 
   function clearAll() {
@@ -937,6 +999,12 @@ export default function Andy() {
 
           {/* Input */}
           <div style={{ borderTop: '1px solid rgba(132,147,150,0.08)', padding: '10px 16px', paddingBottom: 'max(14px, env(safe-area-inset-bottom, 0px))', background: 'rgba(6,10,22,0.92)', backdropFilter: 'blur(20px)', flexShrink: 0 }}>
+            {toolStatus && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, padding: '5px 10px', background: 'rgba(0,218,243,0.06)', border: '1px solid rgba(0,218,243,0.15)', borderRadius: 8 }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#00daf3', animation: 'ping 1.2s ease-in-out infinite', flexShrink: 0 }} />
+                <span style={{ fontSize: 11, color: '#00daf3' }}>{toolStatus}</span>
+              </div>
+            )}
             <InputBar
               input={input} onInput={handleInput}
               onSend={() => sendMessage()} onMic={toggleMic}
