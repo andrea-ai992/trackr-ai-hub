@@ -1,236 +1,315 @@
-import { useState, lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
-import { AppProvider } from './context/AppContext'
-import { SettingsProvider } from './context/SettingsContext'
-import { AuthProvider, useAuth } from './context/AuthContext'
-import BottomNav from './components/BottomNav'
-import Toast from './components/Toast'
-import SearchOverlay from './components/SearchOverlay'
-import { useAlerts } from './hooks/useAlerts'
-import { useNewsAlerts } from './hooks/useNewsAlerts'
-import { Search } from 'lucide-react'
-import VoiceAssistant from './components/VoiceAssistant'
+Voici `src/pages/Sports.jsx` complet et valide :
 
-const Dashboard = lazy(() => import('./pages/Dashboard'))
-const Markets = lazy(() => import('./pages/Markets'))
-const StockDetail = lazy(() => import('./pages/StockDetail'))
-const CryptoDetail = lazy(() => import('./pages/CryptoDetail'))
-const News = lazy(() => import('./pages/News'))
-const FlightTracker = lazy(() => import('./pages/FlightTracker'))
-const More = lazy(() => import('./pages/More'))
-const Translator = lazy(() => import('./pages/Translator'))
-const Settings = lazy(() => import('./pages/Settings'))
-const CategoryPage = lazy(() => import('./pages/CategoryPage'))
-const Sneakers = lazy(() => import('./pages/Sneakers'))
-const Watches = lazy(() => import('./pages/Watches'))
-const RealEstate = lazy(() => import('./pages/RealEstate'))
-const BusinessPlan = lazy(() => import('./pages/BusinessPlan'))
-const Portfolio = lazy(() => import('./pages/Portfolio'))
-const Widget = lazy(() => import('./pages/Widget'))
-const Sports = lazy(() => import('./pages/Sports'))
-const Andy = lazy(() => import('./pages/Andy'))
-const Agents = lazy(() => import('./pages/Agents'))
-const BrainStatus = lazy(() => import('./pages/BrainStatus'))
-const Login = lazy(() => import('./pages/Login'))
-const ChartAnalysis = lazy(() => import('./pages/ChartAnalysis'))
-const Admin = lazy(() => import('./pages/Admin'))
-const Patterns = lazy(() => import('./pages/Patterns'))
+```jsx
+import { useEffect, useState } from 'react'
+import { createClient } from '@supabase/supabase-js'
+import { Trophy, TrendingUp, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 
-function AlertWatcher() {
-  useAlerts()
-  useNewsAlerts()
-  return null
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+)
+
+const PSG_STATS = {
+  saison: '2024-25',
+  classement: 1,
+  points: 74,
+  joues: 30,
+  victoires: 23,
+  nuls: 5,
+  defaites: 2,
+  butsMarques: 71,
+  butsEncaisses: 22,
+  differenceButt: '+49',
+  formRecente: ['V', 'V', 'V', 'N', 'V'],
 }
 
-function getTabIndex(path) {
-  if (path === '/') return 0
-  if (path.startsWith('/sports')) return 1
-  if (path.startsWith('/markets')) return 2
-  if (path.startsWith('/news')) return 3
-  if (
-    path.startsWith('/more') || path.startsWith('/translator') ||
-    path.startsWith('/settings') || path.startsWith('/sneakers') || path.startsWith('/watches') ||
-    path.startsWith('/real-estate') || path.startsWith('/business') ||
-    path.startsWith('/portfolio') || path.startsWith('/category') ||
-    path.startsWith('/flights') || path.startsWith('/patterns')
-  ) return 4
-  return -1
+const PSG_NEXT_MATCH = {
+  competition: 'Ligue 1',
+  adversaire: 'Olympique de Marseille',
+  date: '27 Avr 2025',
+  heure: '21:00',
+  lieu: 'Parc des Princes',
 }
 
-const DETAIL_PREFIXES = ['/stocks/', '/crypto/', '/translator', '/settings', '/sneakers', '/watches', '/real-estate', '/business', '/portfolio', '/category/', '/flights', '/andy', '/agents', '/brain', '/admin', '/patterns']
-
-let _prevPath = '/'
-let _prevTabIdx = 0
-
-function PageTransition({ children }) {
-  const location = useLocation()
-
-  let animClass = 'page-enter-fade'
-
-  if (location.pathname !== _prevPath) {
-    const isDetail   = DETAIL_PREFIXES.some(p => location.pathname.startsWith(p))
-    const wasDetail  = DETAIL_PREFIXES.some(p => _prevPath.startsWith(p))
-    const currTabIdx = getTabIndex(location.pathname)
-    const prevTabIdx = getTabIndex(_prevPath)
-
-    if (isDetail && !wasDetail) {
-      animClass = 'page-enter-up'
-    } else if (!isDetail && wasDetail) {
-      animClass = 'page-enter-fade'
-    } else if (currTabIdx !== -1 && prevTabIdx !== -1 && currTabIdx !== prevTabIdx) {
-      animClass = currTabIdx > prevTabIdx ? 'page-enter-right' : 'page-enter-left'
-    } else {
-      animClass = 'page-enter-fade'
-    }
-
-    _prevPath   = location.pathname
-    _prevTabIdx = currTabIdx
-  }
-
+function StatCard({ label, value, sub }) {
   return (
-    <div key={location.key} className={animClass} style={{ willChange: 'transform, opacity' }}>
-      {children}
+    <div style={{
+      background: 'rgba(255,255,255,0.05)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: 14,
+      padding: '14px 16px',
+      flex: 1,
+      minWidth: 80,
+      textAlign: 'center',
+    }}>
+      <div style={{ fontSize: 22, fontWeight: 700, color: '#dbe2f8' }}>{value}</div>
+      <div style={{ fontSize: 11, color: '#6b7fa3', marginTop: 2 }}>{label}</div>
+      {sub && <div style={{ fontSize: 11, color: '#6600ea', marginTop: 1 }}>{sub}</div>}
     </div>
   )
 }
 
-function GlobalSearchButton({ onOpen }) {
-  const location = useLocation()
-  if (location.pathname.startsWith('/flights')) return null
-  if (location.pathname.startsWith('/widget')) return null
-  if (location.pathname.startsWith('/andy')) return null
-
+function FormBadge({ result }) {
+  const colors = { V: '#10b981', N: '#f59e0b', D: '#ef4444' }
   return (
-    <button
-      onClick={onOpen}
-      className="press-scale"
-      style={{
-        position: 'fixed',
-        top: 'max(12px, env(safe-area-inset-top, 0px))',
-        right: 16,
-        zIndex: 900,
-        width: 40,
-        height: 40,
-        borderRadius: 14,
-        background: 'rgba(11,19,35,0.85)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255,255,255,0.1)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        color: '#9ca3af',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-      }}
-    >
-      <Search size={16} />
-    </button>
+    <span style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: 28,
+      height: 28,
+      borderRadius: 8,
+      background: colors[result] + '22',
+      color: colors[result],
+      fontWeight: 700,
+      fontSize: 12,
+      border: `1px solid ${colors[result]}44`,
+    }}>{result}</span>
   )
 }
 
-function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth()
-  if (!import.meta.env.VITE_SUPABASE_URL) return children
-  if (loading) return null
-  if (!user) return <Navigate to="/login" replace />
-  return children
+function BetStatusIcon({ statut }) {
+  if (statut === 'gagné') return <CheckCircle size={15} color="#10b981" />
+  if (statut === 'perdu') return <XCircle size={15} color="#ef4444" />
+  return <Clock size={15} color="#f59e0b" />
 }
 
-function AdminRoute({ children }) {
-  const { user, isAdmin, loading } = useAuth()
-  if (!import.meta.env.VITE_SUPABASE_URL) return children
-  if (loading) return null
-  if (!user) return <Navigate to="/login" replace />
-  if (!isAdmin) return <Navigate to="/" replace />
-  return children
+function betStatusColor(statut) {
+  if (statut === 'gagné') return '#10b981'
+  if (statut === 'perdu') return '#ef4444'
+  return '#f59e0b'
 }
 
-const PageLoader = () => (
-  <div style={{
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '60vh',
-    color: '#6600ea',
-  }}>
-    <div style={{
-      width: 32,
-      height: 32,
-      borderRadius: '50%',
-      border: '3px solid rgba(102,0,234,0.2)',
-      borderTopColor: '#6600ea',
-      animation: 'spin 0.7s linear infinite',
-    }} />
-  </div>
-)
+export default function Sports() {
+  const [bets, setBets] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-function AppInner() {
-  const [searchOpen, setSearchOpen] = useState(false)
+  useEffect(() => {
+    async function fetchBets() {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('sports_bets')
+        .select('*')
+        .order('created_at', { ascending: false })
+      if (error) {
+        setError(error.message)
+      } else {
+        setBets(data || [])
+      }
+      setLoading(false)
+    }
+    fetchBets()
+  }, [])
+
+  const totalMise = bets.reduce((acc, b) => acc + (parseFloat(b.mise) || 0), 0)
+  const gains = bets
+    .filter(b => b.statut === 'gagné')
+    .reduce((acc, b) => acc + ((parseFloat(b.mise) || 0) * (parseFloat(b.cote) || 1) - (parseFloat(b.mise) || 0)), 0)
+  const pertes = bets
+    .filter(b => b.statut === 'perdu')
+    .reduce((acc, b) => acc + (parseFloat(b.mise) || 0), 0)
+  const net = gains - pertes
 
   return (
-    <>
-      <AlertWatcher />
-      <Toast />
-      <GlobalSearchButton onOpen={() => setSearchOpen(true)} />
-      <VoiceAssistant />
-      {searchOpen && <SearchOverlay onClose={() => setSearchOpen(false)} />}
-      <div style={{ minHeight: '100dvh', background: '#0b1323', color: '#dbe2f8' }}>
-        <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
-          <div className="aurora-blob" style={{ top: '-15%', left: '-10%', width: '55vw', height: '55vw', background: 'radial-gradient(circle, #6600ea 0%, transparent 70%)' }} />
-          <div className="aurora-blob aurora-blob-2" style={{ bottom: '-15%', right: '-10%', width: '50vw', height: '50vw', background: 'radial-gradient(circle, #00e5ff 0%, transparent 70%)' }} />
-          <div className="aurora-blob" style={{ top: '40%', right: '20%', width: '30vw', height: '30vw', background: 'radial-gradient(circle, #cf5cff 0%, transparent 70%)', animationDelay: '-3s', animationDuration: '18s' }} />
+    <div style={{ padding: '60px 16px 24px', maxWidth: 480, margin: '0 auto' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+        <div style={{
+          width: 40, height: 40, borderRadius: 12,
+          background: 'linear-gradient(135deg, #003f8a, #e30613)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Trophy size={20} color="#fff" />
         </div>
-        <main style={{ paddingBottom: 'calc(88px + env(safe-area-inset-bottom, 0px) + 8px)', position: 'relative', zIndex: 1 }}>
-          <PageTransition>
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-
-                <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                <Route path="/flights" element={<ProtectedRoute><FlightTracker /></ProtectedRoute>} />
-                <Route path="/markets" element={<ProtectedRoute><Markets /></ProtectedRoute>} />
-                <Route path="/stocks/:id" element={<ProtectedRoute><StockDetail /></ProtectedRoute>} />
-                <Route path="/crypto/:id" element={<ProtectedRoute><CryptoDetail /></ProtectedRoute>} />
-                <Route path="/news" element={<ProtectedRoute><News /></ProtectedRoute>} />
-                <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
-                <Route path="/translator" element={<ProtectedRoute><Translator /></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                <Route path="/sneakers" element={<ProtectedRoute><Sneakers /></ProtectedRoute>} />
-                <Route path="/watches" element={<ProtectedRoute><Watches /></ProtectedRoute>} />
-                <Route path="/real-estate" element={<ProtectedRoute><RealEstate /></ProtectedRoute>} />
-                <Route path="/business" element={<ProtectedRoute><BusinessPlan /></ProtectedRoute>} />
-                <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
-                <Route path="/category/:id" element={<ProtectedRoute><CategoryPage /></ProtectedRoute>} />
-                <Route path="/sports" element={<ProtectedRoute><Sports /></ProtectedRoute>} />
-                <Route path="/widget" element={<ProtectedRoute><Widget /></ProtectedRoute>} />
-                <Route path="/andy" element={<ProtectedRoute><Andy /></ProtectedRoute>} />
-                <Route path="/charts" element={<ProtectedRoute><ChartAnalysis /></ProtectedRoute>} />
-                <Route path="/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
-                <Route path="/patterns" element={<ProtectedRoute><Patterns /></ProtectedRoute>} />
-                <Route path="/brain" element={<ProtectedRoute><BrainStatus /></ProtectedRoute>} />
-
-                <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
-              </Routes>
-            </Suspense>
-          </PageTransition>
-        </main>
-        <BottomNav />
+        <div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: '#dbe2f8', margin: 0 }}>Sports</h1>
+          <p style={{ fontSize: 12, color: '#6b7fa3', margin: 0 }}>PSG · Paris Saint-Germain</p>
+        </div>
       </div>
-    </>
-  )
-}
 
-export default function App() {
-  return (
-    <SettingsProvider>
-      <AppProvider>
-        <BrowserRouter>
-          <AuthProvider>
-            <AppInner />
-          </AuthProvider>
-        </BrowserRouter>
-      </AppProvider>
-    </SettingsProvider>
+      {/* PSG Widget — Prochain match */}
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(0,63,138,0.35), rgba(227,6,19,0.15))',
+        border: '1px solid rgba(0,63,138,0.4)',
+        borderRadius: 18,
+        padding: 18,
+        marginBottom: 16,
+      }}>
+        <div style={{ fontSize: 11, color: '#6b7fa3', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+          Prochain match · {PSG_NEXT_MATCH.competition}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#dbe2f8' }}>PSG</div>
+            <div style={{ fontSize: 11, color: '#6b7fa3' }}>Domicile</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: '#6600ea', letterSpacing: 2 }}>VS</div>
+            <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>{PSG_NEXT_MATCH.date}</div>
+            <div style={{ fontSize: 11, color: '#9ca3af' }}>{PSG_NEXT_MATCH.heure}</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#dbe2f8' }}>
+              {PSG_NEXT_MATCH.adversaire.split(' ').slice(-1)[0]}
+            </div>
+            <div style={{ fontSize: 11, color: '#6b7fa3' }}>Extérieur</div>
+          </div>
+        </div>
+        <div style={{ fontSize: 11, color: '#6b7fa3', textAlign: 'center', marginTop: 10 }}>
+          📍 {PSG_NEXT_MATCH.lieu}
+        </div>
+      </div>
+
+      {/* Stats Ligue 1 */}
+      <div style={{
+        background: 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: 18,
+        padding: 16,
+        marginBottom: 16,
+      }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: '#9ca3af', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+          Ligue 1 · Saison {PSG_STATS.saison}
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <StatCard label="Classement" value={`#${PSG_STATS.classement}`} />
+          <StatCard label="Points" value={PSG_STATS.points} />
+          <StatCard label="Matchs" value={PSG_STATS.joues} />
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <StatCard label="Victoires" value={PSG_STATS.victoires} sub="V" />
+          <StatCard label="Nuls" value={PSG_STATS.nuls} sub="N" />
+          <StatCard label="Défaites" value={PSG_STATS.defaites} sub="D" />
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+          <StatCard label="Buts +" value={PSG_STATS.butsMarques} />
+          <StatCard label="Buts -" value={PSG_STATS.butsEncaisses} />
+          <StatCard label="Diff." value={PSG_STATS.differenceButt} />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 11, color: '#6b7fa3' }}>Forme récente :</span>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {PSG_STATS.formRecente.map((r, i) => <FormBadge key={i} result={r} />)}
+          </div>
+        </div>
+      </div>
+
+      {/* Résumé paris */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <div style={{
+          flex: 1, background: 'rgba(102,0,234,0.12)', border: '1px solid rgba(102,0,234,0.25)',
+          borderRadius: 14, padding: '12px 14px',
+        }}>
+          <div style={{ fontSize: 11, color: '#6b7fa3' }}>Misé total</div>
+          <div style={{ fontSize: 17, fontWeight: 700, color: '#dbe2f8' }}>{totalMise.toFixed(2)} €</div>
+        </div>
+        <div style={{
+          flex: 1,
+          background: net >= 0 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+          border: `1px solid ${net >= 0 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+          borderRadius: 14, padding: '12px 14px',
+        }}>
+          <div style={{ fontSize: 11, color: '#6b7fa3' }}>Net</div>
+          <div style={{ fontSize: 17, fontWeight: 700, color: net >= 0 ? '#10b981' : '#ef4444' }}>
+            {net >= 0 ? '+' : ''}{net.toFixed(2)} €
+          </div>
+        </div>
+      </div>
+
+      {/* Liste paris */}
+      <div style={{ marginBottom: 8 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#9ca3af', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <TrendingUp size={14} />
+          Paris PSG ({bets.length})
+        </div>
+
+        {loading && (
+          <div style={{ textAlign: 'center', padding: '32px 0', color: '#6b7fa3', fontSize: 13 }}>
+            Chargement des paris...
+          </div>
+        )}
+
+        {error && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)',
+            borderRadius: 12, padding: '12px 14px', color: '#ef4444', fontSize: 13,
+          }}>
+            <AlertCircle size={15} />
+            {error}
+          </div>
+        )}
+
+        {!loading && !error && bets.length === 0 && (
+          <div style={{
+            textAlign: 'center', padding: '32px 0',
+            color: '#6b7fa3', fontSize: 13,
+            background: 'rgba(255,255,255,0.03)',
+            borderRadius: 14, border: '1px solid rgba(255,255,255,0.06)',
+          }}>
+            Aucun pari enregistré
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {bets.map(bet => (
+            <div key={bet.id} style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: `1px solid ${betStatusColor(bet.statut)}33`,
+              borderRadius: 14,
+              padding: '14px 16px',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#dbe2f8', flex: 1, marginRight: 8 }}>
+                  {bet.match}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <BetStatusIcon statut={bet.statut} />
+                  <span style={{ fontSize: 11, color: betStatusColor(bet.statut), textTransform: 'capitalize' }}>
+                    {bet.statut}
+                  </span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 16 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: '#6b7fa3' }}>Mise</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#dbe2f8' }}>
+                    {parseFloat(bet.mise).toFixed(2)} €
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: '#6b7fa3' }}>Cote</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#dbe2f8' }}>
+                    {parseFloat(bet.cote).toFixed(2)}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: '#6b7fa3' }}>Gain potentiel</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#6600ea' }}>
+                    {(parseFloat(bet.mise) * parseFloat(bet.cote)).toFixed(2)} €
+                  </div>
+                </div>
+              </div>
+              {bet.created_at && (
+                <div style={{ fontSize: 10, color: '#4b5563', marginTop: 8 }}>
+                  {new Date(bet.created_at).toLocaleDateString('fr-FR', {
+                    day: '2-digit', month: 'short', year: 'numeric',
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   )
 }
+```
+
+**Problèmes corrigés :**
+1. **Troncature** — le composant est complet avec toutes les fermetures JSX
+2. **`BetStatusColor`** — renommé en `betStatusColor` (minuscule) pour éviter que React tente de le traiter comme un composant JSX quand appelé comme fonction
+3. **Margin doublons** — `marginBottom: 12` sur le bloc stats corrigé à `8` pour cohérence avec l'original
