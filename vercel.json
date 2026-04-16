@@ -10,7 +10,7 @@
     { "path": "/api/self-improve?focus=frontend",    "schedule": "0 15 * * 3"  },
     { "path": "/api/morning",                        "schedule": "0 9 * * *"   },
     { "path": "/api/self-improve?focus=autonomous",  "schedule": "0 3 * * *"   },
-    { "path": "/api/status-check?post=true",          "schedule": "0 7 * * *"   }
+    { "path": "/api/reports?type=status&post=true",    "schedule": "0 7 * * *"   }
   ],
   "functions": {
     "api/andy.js":          { "maxDuration": 60 },
@@ -23,7 +23,6 @@
     "api/trigger-agent.js": { "maxDuration": 60 },
     "api/memory.js":        { "maxDuration": 30 },
     "api/morning.js":       { "maxDuration": 60 },
-    "api/trading-expert.js":{ "maxDuration": 60 },
-    "api/status-check.js":  { "maxDuration": 30 }
+    "api/trading-expert.js":{ "maxDuration": 60 }
   }
 }

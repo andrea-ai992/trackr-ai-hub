@@ -108,6 +108,49 @@ export function formatMemoryForPrompt(entries) {
   return `\n\n## Historique des améliorations récentes\n${lines.join('\n')}`
 }
 
+// ─── Agents Activity Log (fusionné depuis agents-log.js) ─────────────────────
+const DISCORD_API_MEM = 'https://discord.com/api/v10'
+const BOT_TOKEN_MEM   = process.env.DISCORD_BOT_TOKEN
+
+const LOG_CHANNELS = [
+  { key: 'market_scanner', id: process.env.DISCORD_CH_MARKET_SCANNER, agent: 'MarketScanner', emoji: '🔭', color: 0x34d399 },
+  { key: 'crypto',         id: process.env.DISCORD_CH_CRYPTO,          agent: 'CryptoTracker', emoji: '₿',  color: 0xfcd34d },
+  { key: 'code_review',    id: process.env.DISCORD_CH_CODE_REVIEW,     agent: 'CodeReviewer',  emoji: '👁️', color: 0x60a5fa },
+  { key: 'ui_review',      id: process.env.DISCORD_CH_UI_REVIEW,       agent: 'UIInspector',   emoji: '🎨', color: 0xf9a8d4 },
+  { key: 'reports',        id: process.env.DISCORD_CH_REPORTS,         agent: 'ReportBot',     emoji: '📋', color: 0x67e8f9 },
+  { key: 'app_pulse',      id: process.env.DISCORD_CH_APP_PULSE,       agent: 'Pulse',         emoji: '💓', color: 0xff006e },
+  { key: 'trading_desk',   id: process.env.DISCORD_CH_TRADING_DESK,    agent: 'TradingExpert', emoji: '📊', color: 0x00c853 },
+  { key: 'brain',          id: process.env.DISCORD_CH_BRAIN,           agent: 'Brain',         emoji: '🧠', color: 0x6600ea },
+]
+
+async function handleAgentsLog(req, res) {
+  res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate=60')
+  if (!BOT_TOKEN_MEM) return res.json({ log: [], stats: { lastScan: null, tasksToday: 0, totalAgents: 45, activeAgents: 0 } })
+  try {
+    const results = await Promise.allSettled(
+      LOG_CHANNELS.filter(c => c.id).map(async ch => {
+        const r = await fetch(`${DISCORD_API_MEM}/channels/${ch.id}/messages?limit=8`, { headers: { Authorization: `Bot ${BOT_TOKEN_MEM}` } })
+        if (!r.ok) return []
+        const msgs = await r.json()
+        if (!Array.isArray(msgs)) return []
+        return msgs.map(m => {
+          const embed = m.embeds?.[0]
+          const description = embed?.description || m.content || ''
+          const rawColor = embed?.color ?? ch.color
+          return { id: m.id, channel: ch.key, agent: embed?.author?.name || ch.agent, emoji: ch.emoji, color: '#' + rawColor.toString(16).padStart(6, '0'), summary: description.replace(/\*\*/g, '').slice(0, 160), timestamp: m.timestamp }
+        }).filter(e => e.summary.length > 10)
+      })
+    )
+    const log = results.flatMap(r => r.status === 'fulfilled' ? r.value : []).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 40)
+    const todayStr = new Date().toDateString()
+    const tasksToday = log.filter(e => new Date(e.timestamp).toDateString() === todayStr).length
+    const activeChannels = new Set(log.filter(e => (Date.now() - new Date(e.timestamp)) / 60000 < 20).map(e => e.channel))
+    return res.json({ log, stats: { lastScan: log[0]?.timestamp || null, tasksToday, totalAgents: 45, activeAgents: activeChannels.size, activeChannels: [...activeChannels] } })
+  } catch (e) {
+    return res.json({ log: [], stats: { lastScan: null, tasksToday: 0, totalAgents: 45, activeAgents: 0 } })
+  }
+}
+
 // ─── Handler HTTP ─────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -122,6 +165,10 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
+      // ?type=agents-log → activité Discord (fusionné depuis agents-log.js)
+      if (req.query?.type === 'agents-log') {
+        return handleAgentsLog(req, res)
+      }
       const limit   = Math.min(parseInt(req.query?.limit || '30'), 100)
       const entries = await getMemoryEntries(limit)
       return res.json({ ok: true, entries, count: entries.length })

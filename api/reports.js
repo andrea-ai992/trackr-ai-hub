@@ -16,7 +16,9 @@ const CH = {
   reports:  process.env.DISCORD_CH_REPORTS,
   code:     process.env.DISCORD_CH_CODE_REVIEW,
   brain:    process.env.DISCORD_CH_BRAIN || process.env.DISCORD_CH_CODE_REVIEW,
+  annonces: process.env.DISCORD_CH_ANNONCES,
 }
+const APP_URL = process.env.APP_URL || 'https://trackr-app-nu.vercel.app'
 
 // ─── Discord helper ───────────────────────────────────────────────────────────
 async function discord(channelId, embeds) {
@@ -330,6 +332,62 @@ async function generateSummary() {
   }
 }
 
+// ─── Status Check (fusionné ici pour rester dans la limite 12 fonctions) ─────
+async function runStatusCheck(post = false) {
+  const AV_KEY = process.env.ALPHA_VANTAGE_KEY
+
+  async function ping(name, url, opts = {}) {
+    const t = Date.now()
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(7000), ...opts })
+      return { name, ok: r.ok, ms: Date.now() - t, status: r.status }
+    } catch (e) { return { name, ok: false, ms: Date.now() - t, error: e.message.slice(0, 60) } }
+  }
+
+  const required = ['ANTHROPIC_API_KEY','DISCORD_BOT_TOKEN','GITHUB_TOKEN','GITHUB_REPO',
+    'CRON_SECRET','APP_URL','ALPHA_VANTAGE_KEY','DISCORD_CH_BRAIN','DISCORD_CH_MORNING',
+    'DISCORD_CH_ANNONCES','DISCORD_CH_TRADING_DESK','DISCORD_CH_REPORTS']
+  const missing = required.filter(k => !process.env[k])
+
+  const [mem, rep, morning, av, cg] = await Promise.all([
+    ping('Memory API',     `${APP_URL}/api/memory`),
+    ping('Reports API',    `${APP_URL}/api/reports?type=summary`),
+    ping('Morning API',    `${APP_URL}/api/morning`),
+    AV_KEY
+      ? fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey=${AV_KEY}`,{signal:AbortSignal.timeout(8000)}).then(r=>r.json()).then(d=>({name:'Alpha Vantage',ok:!!d['Global Quote']?.['05. price'],note:`AAPL $${d['Global Quote']?.['05. price']||'—'}`})).catch(e=>({name:'Alpha Vantage',ok:false,error:e.message}))
+      : Promise.resolve({name:'Alpha Vantage',ok:false,error:'Clé manquante'}),
+    fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',{signal:AbortSignal.timeout(6000)}).then(r=>r.json()).then(d=>({name:'CoinGecko',ok:!!d?.bitcoin?.usd,note:`BTC $${d?.bitcoin?.usd?.toLocaleString('en-US')||'—'}`})).catch(e=>({name:'CoinGecko',ok:false,error:e.message})),
+  ])
+
+  const all = [mem, rep, morning, av, cg]
+  const ok = all.filter(r => r.ok), ko = all.filter(r => !r.ok)
+  const allGood = ko.length === 0 && missing.length === 0
+
+  const embed = {
+    color: allGood ? 0x00c853 : ko.length > 2 ? 0xff1744 : 0xffd740,
+    author: { name: '📡 Statut Système — Trackr AI Hub' },
+    title: allGood ? '🟢 Tous les systèmes opérationnels' : `⚠️ ${ko.length} service(s) dégradé(s)`,
+    description: `**${ok.length}/${all.length}** services OK · Variables: **${required.length - missing.length}/${required.length}**`,
+    fields: [
+      ok.length  ? { name: `✅ OK (${ok.length})`,  value: ok.map(r=>`\`${r.name}\`${r.ms?` ${r.ms}ms`:''}${r.note?` — ${r.note}`:''}`).join('\n'), inline: false } : null,
+      ko.length  ? { name: `❌ KO (${ko.length})`,  value: ko.map(r=>`\`${r.name}\` — ${r.error||`HTTP ${r.status}`}`).join('\n'), inline: false } : null,
+      missing.length ? { name: `⚠️ Vars manquantes`, value: missing.map(k=>`\`${k}\``).join(', '), inline: false } : { name: '✅ Variables', value: 'Toutes configurées', inline: false },
+    ].filter(Boolean),
+    footer: { text: 'Trackr Autonomous · Status quotidien 7h UTC' },
+    timestamp: new Date().toISOString(),
+  }
+
+  if (post && CH.annonces && BOT_TOKEN) {
+    await fetch(`${DISCORD_API}/channels/${CH.annonces}/messages`, {
+      method: 'POST',
+      headers: { Authorization: `Bot ${BOT_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ embeds: [embed] }),
+    }).catch(() => {})
+  }
+
+  return { ok: allGood, services: { ok: ok.length, ko: ko.length }, missing, results: all, posted: post && !!CH.annonces }
+}
+
 // ─── Main handler ─────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -368,7 +426,13 @@ export default async function handler(req, res) {
       return res.json({ ok: true, stats, posted: post })
     }
 
-    return res.status(400).json({ error: 'Type invalide. Utilise : summary | daily | weekly' })
+    // ── status : vérification système → #annonces ────────────────────────────
+    if (type === 'status') {
+      const statusResult = await runStatusCheck(post)
+      return res.json(statusResult)
+    }
+
+    return res.status(400).json({ error: 'Type invalide. Utilise : summary | daily | weekly | status' })
 
   } catch (e) {
     console.error('reports error:', e.message)

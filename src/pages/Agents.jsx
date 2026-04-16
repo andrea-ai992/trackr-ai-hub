@@ -299,7 +299,7 @@ export default function Agents() {
 
   const fetchLog = useCallback(async () => {
     try {
-      const res = await fetch('/api/agents-log')
+      const res = await fetch('/api/memory?type=agents-log')
       if (!res.ok) throw new Error()
       const data = await res.json()
       setLog(data.log || [])
