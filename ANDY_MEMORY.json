@@ -1,19 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776350537219",
-      "timestamp": "2026-04-16T14:42:17.219Z",
-      "type": "improvement",
-      "focus": "bugs",
-      "file": "api/discord.js",
-      "problem": "api/discord.js appelle .json() sur une réponse SSE (text/event-stream) de Yahoo Finance",
-      "severity": "critical",
-      "commit": "fix(discord): guard against SSE/non-JSON response from Yahoo Finance in getQuickSignal",
-      "learned": "Yahoo Finance peut retourner text/event-stream ou d'autres content-types non-JSON, il faut toujours wrapper .json() dans un try/catch ET vérifier le content-type avant d'appeler .json().",
-      "applied": true,
-      "fromAdminTask": null
-    },
-    {
       "id": "mem_1776350543315",
       "timestamp": "2026-04-16T14:42:23.315Z",
       "type": "brain_cycle",
@@ -3934,6 +3921,41 @@
     {
       "id": "mem_1776364556212",
       "timestamp": "2026-04-16T18:35:56.212Z",
+      "type": "pattern_scan",
+      "focus": "bugs",
+      "findings": [
+        {
+          "id": "sse_json_parse",
+          "file": "api/discord.js",
+          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
+          "severity": "critical"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/andy.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/brain.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/trading-expert.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        }
+      ],
+      "count": 4,
+      "applied": false,
+      "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776364557757",
+      "timestamp": "2026-04-16T18:35:57.757Z",
       "type": "pattern_scan",
       "focus": "bugs",
       "findings": [
