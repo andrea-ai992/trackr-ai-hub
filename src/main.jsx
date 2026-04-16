@@ -1,762 +1,538 @@
-Je vais implémenter le module de gestion sécurisée des secrets pour Trackr.
+Je vais implémenter la gestion sécurisée des sessions Supabase dans `src/lib/supabaseClient.js`.
 
-## Plan d'action
+## Analyse et plan
 
-1. Créer `src/config/apiConfig.js` - Module centralisé avec getters et validation
-2. Créer `.env.example` - Documentation des variables requises
-3. Mettre à jour `vite.config.js` - Plugin de validation au build
-4. Mettre à jour `src/main.jsx` - Appel de validation au démarrage runtime
+1. **`src/lib/supabaseClient.js`** — Client Supabase avec sessionStorage, autoRefresh, listener auth
+2. **`src/hooks/useAuthSession.js`** — Hook React pour consommer la session
+3. **`src/main.jsx`** — Mise à jour pour intégrer le listener au démarrage
 
 ---
 
-### Fichier 1: `src/config/apiConfig.js`
+### Fichier 1: `src/lib/supabaseClient.js`
 
 ```js
 /**
- * @module apiConfig
- * @description Gestion sécurisée et centralisée des variables d'environnement Vite.
- * Aucune valeur brute n'est exportée — uniquement des fonctions getters.
- * La validation bloque le démarrage si une clé sensible est manquante.
+ * @module supabaseClient
+ * @description Client Supabase avec gestion sécurisée des sessions.
+ *
+ * Sécurité:
+ * - Sessions stockées UNIQUEMENT en sessionStorage (jamais localStorage)
+ * - autoRefreshToken: true — renouvellement automatique avant expiration
+ * - persistSession: true — survie aux rechargements de page (même onglet)
+ * - Détection TOKEN_REFRESHED et SIGNED_OUT via onAuthStateChange
+ * - Logout forcé + redirect /login si refresh token expiré ou révoqué
+ * - Aucune donnée sensible loggée en production
  *
  * Usage:
- *   import { getOpenAIKey, getAppEnv } from '@/config/apiConfig'
- *   const key = getOpenAIKey()
+ *   import { supabase, initAuthListener, getSession } from '@/lib/supabaseClient'
  */
 
+import { createClient } from '@supabase/supabase-js'
+import { getSupabaseUrl, getSupabaseAnonKey, isProduction } from '@/config/apiConfig'
+
 // ---------------------------------------------------------------------------
-// Définition des clés requises et optionnelles
+// Constantes internes
 // ---------------------------------------------------------------------------
+
+const SESSION_STORAGE_KEY = 'trackr_auth_session'
+const REDIRECT_PATH_LOGIN = '/login'
 
 /**
- * Clés REQUISES — leur absence bloque le démarrage (runtime) ou le build.
- * Chaque entrée: { key: string, description: string }
+ * Codes d'erreur Supabase indiquant un refresh token invalide/révoqué.
+ * Source: https://supabase.com/docs/reference/javascript/auth-error-codes
  */
-const REQUIRED_KEYS = [
-  {
-    key: 'VITE_OPENAI_API_KEY',
-    description: 'Clé API OpenAI pour les fonctionnalités IA de Trackr',
-  },
-  {
-    key: 'VITE_APP_ENV',
-    description: 'Environnement applicatif (development | staging | production)',
-  },
+const REVOKED_TOKEN_ERROR_CODES = [
+  'refresh_token_not_found',
+  'refresh_token_already_used',
+  'token_expired',
+  'invalid_refresh_token',
+  'session_not_found',
 ]
 
 /**
- * Clés OPTIONNELLES — un warning est émis si absentes en production.
+ * Messages d'erreur (sous-chaînes) indiquant un token révoqué ou expiré.
  */
-const OPTIONAL_KEYS = [
-  {
-    key: 'VITE_SENTRY_DSN',
-    description: 'DSN Sentry pour le monitoring des erreurs',
-  },
-  {
-    key: 'VITE_ANALYTICS_ID',
-    description: "Identifiant Google Analytics / Plausible",
-  },
-  {
-    key: 'VITE_API_BASE_URL',
-    description: 'URL de base pour les appels API (défaut: /api)',
-  },
-  {
-    key: 'VITE_SUPABASE_URL',
-    description: 'URL du projet Supabase',
-  },
-  {
-    key: 'VITE_SUPABASE_ANON_KEY',
-    description: 'Clé publique anonyme Supabase',
-  },
+const REVOKED_TOKEN_MESSAGES = [
+  'refresh_token_not_found',
+  'Token has expired',
+  'Refresh Token Not Found',
+  'Invalid Refresh Token',
+  'Already Used',
+  'refresh token',
 ]
 
 // ---------------------------------------------------------------------------
-// Lecture interne sécurisée — NE PAS exporter cette fonction
+// SessionStorage adapter — remplace localStorage par sessionStorage
+// Conforme à l'interface SupportedStorage de Supabase JS v2
 // ---------------------------------------------------------------------------
 
 /**
- * Lit une variable d'environnement Vite de manière sécurisée.
- * @param {string} key - Nom de la variable VITE_*
- * @returns {string|undefined}
- */
-function _readEnv(key) {
-  try {
-    return import.meta.env[key]
-  } catch {
-    return undefined
-  }
-}
-
-/**
- * Vérifie qu'une valeur n'est pas vide, null, undefined ou placeholder.
- * @param {string|undefined} value
- * @returns {boolean}
- */
-function _isValidValue(value) {
-  if (value === undefined || value === null) return false
-  if (typeof value !== 'string') return false
-  const trimmed = value.trim()
-  if (trimmed === '') return false
-  // Rejette les placeholders courants
-  const PLACEHOLDERS = [
-    'your_key_here',
-    'YOUR_KEY_HERE',
-    'changeme',
-    'CHANGEME',
-    'xxxx',
-    'XXXX',
-    'todo',
-    'TODO',
-    '<YOUR_KEY>',
-    'placeholder',
-  ]
-  return !PLACEHOLDERS.includes(trimmed)
-}
-
-// ---------------------------------------------------------------------------
-// Validation au démarrage
-// ---------------------------------------------------------------------------
-
-/**
- * @typedef {Object} ValidationResult
- * @property {boolean} valid - true si toutes les clés requises sont présentes
- * @property {string[]} missing - liste des clés manquantes
- * @property {string[]} warnings - liste des clés optionnelles absentes en prod
- * @property {string[]} errors - messages d'erreur détaillés
- */
-
-/**
- * Valide la présence et la cohérence de toutes les variables d'environnement.
- * @returns {ValidationResult}
- */
-export function validateEnv() {
-  const missing = []
-  const errors = []
-  const warnings = []
-  const isProduction = _readEnv('VITE_APP_ENV') === 'production'
-
-  // Vérification des clés requises
-  for (const { key, description } of REQUIRED_KEYS) {
-    const value = _readEnv(key)
-    if (!_isValidValue(value)) {
-      missing.push(key)
-      errors.push(
-        `[apiConfig] Variable manquante ou invalide: ${key}\n` +
-        `  → Description: ${description}\n` +
-        `  → Ajoutez-la dans votre fichier .env.local (dev) ou dans les variables Vercel (prod)`
-      )
-    }
-  }
-
-  // Vérification des clés optionnelles (warning en production uniquement)
-  if (isProduction) {
-    for (const { key, description } of OPTIONAL_KEYS) {
-      const value = _readEnv(key)
-      if (!_isValidValue(value)) {
-        warnings.push(
-          `[apiConfig] Variable optionnelle absente en production: ${key}\n` +
-          `  → ${description}`
-        )
-      }
-    }
-  }
-
-  return {
-    valid: missing.length === 0,
-    missing,
-    warnings,
-    errors,
-  }
-}
-
-/**
- * Lance la validation et bloque l'exécution si des clés requises sont manquantes.
- * Doit être appelé en entrée de l'application (main.jsx) avant le rendu React.
+ * Adaptateur sessionStorage pour Supabase.
+ * Supabase attend une interface { getItem, setItem, removeItem }.
+ * sessionStorage est scopé à l'onglet — fermé = session détruite.
  *
- * @throws {Error} Si une ou plusieurs variables requises sont manquantes
+ * @type {import('@supabase/supabase-js').SupportedStorage}
  */
-export function requireEnv() {
-  const result = validateEnv()
+const sessionStorageAdapter = {
+  /**
+   * @param {string} key
+   * @returns {string | null}
+   */
+  getItem(key) {
+    try {
+      return window.sessionStorage.getItem(key)
+    } catch (err) {
+      // sessionStorage peut être bloqué (mode privé strict, iframe sandbox)
+      _logDebug('[supabaseClient] sessionStorage.getItem failed:', err)
+      return null
+    }
+  },
 
-  // Affichage des warnings optionnels
-  for (const warning of result.warnings) {
-    console.warn(warning)
+  /**
+   * @param {string} key
+   * @param {string} value
+   */
+  setItem(key, value) {
+    try {
+      window.sessionStorage.setItem(key, value)
+    } catch (err) {
+      _logDebug('[supabaseClient] sessionStorage.setItem failed:', err)
+    }
+  },
+
+  /**
+   * @param {string} key
+   */
+  removeItem(key) {
+    try {
+      window.sessionStorage.removeItem(key)
+    } catch (err) {
+      _logDebug('[supabaseClient] sessionStorage.removeItem failed:', err)
+    }
+  },
+}
+
+// ---------------------------------------------------------------------------
+// Logging sécurisé — aucune donnée sensible en production
+// ---------------------------------------------------------------------------
+
+/**
+ * Log de debug — désactivé en production.
+ * @param {...any} args
+ */
+function _logDebug(...args) {
+  if (!isProduction()) {
+    console.debug(...args)
+  }
+}
+
+/**
+ * Log d'info — désactivé en production.
+ * @param {...any} args
+ */
+function _logInfo(...args) {
+  if (!isProduction()) {
+    console.info(...args)
+  }
+}
+
+/**
+ * Log d'erreur — toujours actif, sans données sensibles.
+ * @param {string} message
+ * @param {Error|null} [err]
+ */
+function _logError(message, err = null) {
+  if (err) {
+    // En production: ne log que le message, pas le stack
+    const safeErr = isProduction()
+      ? { message: err.message, code: err.code ?? 'UNKNOWN' }
+      : err
+    console.error(message, safeErr)
+  } else {
+    console.error(message)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Validation de la configuration Supabase
+// ---------------------------------------------------------------------------
+
+/**
+ * Valide que les variables Supabase sont présentes avant de créer le client.
+ * @throws {Error} Si VITE_SUPABASE_URL ou VITE_SUPABASE_ANON_KEY sont manquantes
+ */
+function _validateSupabaseConfig() {
+  const url = getSupabaseUrl()
+  const key = getSupabaseAnonKey()
+
+  const errors = []
+
+  if (!url || url.trim() === '') {
+    errors.push('VITE_SUPABASE_URL est manquante ou vide')
+  } else {
+    try {
+      new URL(url)
+    } catch {
+      errors.push(`VITE_SUPABASE_URL est invalide: "${url}"`)
+    }
   }
 
-  // Blocage si clés requises manquantes
-  if (!result.valid) {
-    const errorMessage = [
-      '',
-      '╔══════════════════════════════════════════════════════════════╗',
-      '║         TRACKR — ERREUR DE CONFIGURATION CRITIQUE           ║',
-      '╚══════════════════════════════════════════════════════════════╝',
-      '',
-      'Les variables d\'environnement suivantes sont manquantes ou invalides:',
-      '',
-      ...result.errors,
-      '',
-      'Consultez .env.example pour la liste complète des variables requises.',
-      'Documentation: https://github.com/andrea-ai992/trackr-ai-hub#configuration',
-      '',
-    ].join('\n')
+  if (!key || key.trim() === '') {
+    errors.push('VITE_SUPABASE_ANON_KEY est manquante ou vide')
+  }
 
-    // En développement: affiche l'erreur dans la console
-    console.error(errorMessage)
-
-    // Lance une exception pour bloquer le rendu React
+  if (errors.length > 0) {
     throw new Error(
-      `[Trackr] Configuration invalide — ${result.missing.length} variable(s) manquante(s): ` +
-      result.missing.join(', ')
-    )
-  }
-
-  // Confirmation en mode debug
-  if (_readEnv('VITE_APP_ENV') !== 'production') {
-    console.info(
-      '%c[Trackr] ✓ Configuration validée — toutes les variables requises sont présentes',
-      'color: #22c55e; font-weight: bold;'
+      `[supabaseClient] Configuration invalide:\n${errors.map((e) => `  → ${e}`).join('\n')}`
     )
   }
 }
 
 // ---------------------------------------------------------------------------
-// Getters publics — SEULE interface d'accès aux secrets
-// Les valeurs brutes ne sont jamais exportées directement.
+// Création du client Supabase
 // ---------------------------------------------------------------------------
 
-/**
- * Retourne la clé API OpenAI.
- * @returns {string}
- */
-export function getOpenAIKey() {
-  return _readEnv('VITE_OPENAI_API_KEY') ?? ''
-}
+// Validation au module load — bloque si config invalide
+_validateSupabaseConfig()
 
 /**
- * Retourne l'environnement applicatif courant.
- * @returns {'development'|'staging'|'production'|string}
+ * Client Supabase singleton avec:
+ * - sessionStorage comme store (isolation par onglet)
+ * - autoRefreshToken: true (renouvellement proactif)
+ * - persistSession: true (survie aux rechargements)
+ * - detectSessionInUrl: true (OAuth callback handling)
+ * - flowType: 'pkce' (recommandé pour apps SPA)
+ *
+ * @type {import('@supabase/supabase-js').SupabaseClient}
  */
-export function getAppEnv() {
-  return _readEnv('VITE_APP_ENV') ?? 'development'
-}
+export const supabase = createClient(
+  getSupabaseUrl(),
+  getSupabaseAnonKey(),
+  {
+    auth: {
+      // -----------------------------------------------------------------------
+      // STOCKAGE: sessionStorage uniquement — jamais localStorage
+      // sessionStorage est scopé à l'onglet → fermé = session détruite
+      // -----------------------------------------------------------------------
+      storage: sessionStorageAdapter,
+      storageKey: SESSION_STORAGE_KEY,
 
-/**
- * Indique si l'application tourne en production.
- * @returns {boolean}
- */
-export function isProduction() {
-  return getAppEnv() === 'production'
-}
+      // -----------------------------------------------------------------------
+      // REFRESH: renouvelle automatiquement le token avant expiration
+      // Supabase envoie un nouveau token ~60s avant l'expiration
+      // -----------------------------------------------------------------------
+      autoRefreshToken: true,
 
-/**
- * Indique si l'application tourne en développement.
- * @returns {boolean}
- */
-export function isDevelopment() {
-  return getAppEnv() === 'development'
-}
+      // -----------------------------------------------------------------------
+      // PERSISTANCE: survie aux rechargements de page (F5) dans le même onglet
+      // Désactivé = l'utilisateur est déconnecté à chaque rechargement
+      // -----------------------------------------------------------------------
+      persistSession: true,
 
-/**
- * Retourne le DSN Sentry pour le monitoring des erreurs.
- * @returns {string}
- */
-export function getSentryDSN() {
-  return _readEnv('VITE_SENTRY_DSN') ?? ''
-}
+      // -----------------------------------------------------------------------
+      // DÉTECTION URL: gère les tokens dans l'URL (OAuth, magic link)
+      // -----------------------------------------------------------------------
+      detectSessionInUrl: true,
 
-/**
- * Retourne l'identifiant Analytics.
- * @returns {string}
- */
-export function getAnalyticsId() {
-  return _readEnv('VITE_ANALYTICS_ID') ?? ''
-}
-
-/**
- * Retourne l'URL de base pour les appels API.
- * Défaut: '/api'
- * @returns {string}
- */
-export function getApiBaseUrl() {
-  return _readEnv('VITE_API_BASE_URL') ?? '/api'
-}
-
-/**
- * Retourne l'URL du projet Supabase.
- * @returns {string}
- */
-export function getSupabaseUrl() {
-  return _readEnv('VITE_SUPABASE_URL') ?? ''
-}
-
-/**
- * Retourne la clé publique anonyme Supabase.
- * @returns {string}
- */
-export function getSupabaseAnonKey() {
-  return _readEnv('VITE_SUPABASE_ANON_KEY') ?? ''
-}
-
-/**
- * Retourne la version de l'application depuis le build Vite.
- * @returns {string}
- */
-export function getAppVersion() {
-  return _readEnv('VITE_APP_VERSION') ?? '0.0.0'
-}
-
-// ---------------------------------------------------------------------------
-// Export de la liste des clés pour usage externe (tests, CI)
-// ---------------------------------------------------------------------------
-
-/**
- * Retourne la liste des noms de clés requises (sans valeurs).
- * Utilisable dans les pipelines CI pour vérifier la présence des secrets.
- * @returns {string[]}
- */
-export function getRequiredKeyNames() {
-  return REQUIRED_KEYS.map(({ key }) => key)
-}
-
-/**
- * Retourne la liste des noms de clés optionnelles (sans valeurs).
- * @returns {string[]}
- */
-export function getOptionalKeyNames() {
-  return OPTIONAL_KEYS.map(({ key }) => key)
-}
-```
-
----
-
-### Fichier 2: `.env.example`
-
-```
-# =============================================================================
-# TRACKR — Variables d'environnement
-# =============================================================================
-# Copiez ce fichier en .env.local pour le développement local:
-#   cp .env.example .env.local
-#
-# ⚠️  Ne commitez JAMAIS .env.local ou tout fichier contenant des valeurs réelles.
-# ⚠️  Pour la production (Vercel), configurez ces variables dans:
-#      Dashboard Vercel → Project Settings → Environment Variables
-#
-# Documentation: https://github.com/andrea-ai992/trackr-ai-hub#configuration
-# =============================================================================
-
-
-# -----------------------------------------------------------------------------
-# [REQUIS] Environnement applicatif
-# -----------------------------------------------------------------------------
-# Valeurs acceptées: development | staging | production
-# Impact: active/désactive les logs, le mode debug, les validations strictes
-VITE_APP_ENV=development
-
-
-# -----------------------------------------------------------------------------
-# [REQUIS] OpenAI API
-# -----------------------------------------------------------------------------
-# Clé API pour les fonctionnalités IA de Trackr (génération, analyse, chat)
-# Obtenir une clé: https://platform.openai.com/api-keys
-# Format: sk-proj-... ou sk-...
-# Permissions requises: Chat Completions (GPT-4), Embeddings
-VITE_OPENAI_API_KEY=
-
-
-# -----------------------------------------------------------------------------
-# [OPTIONNEL] API Base URL
-# -----------------------------------------------------------------------------
-# URL de base pour les appels API internes
-# Défaut si absent: /api (routes Vercel serverless)
-# Exemple prod: https://trackr-app-nu.vercel.app/api
-VITE_API_BASE_URL=/api
-
-
-# -----------------------------------------------------------------------------
-# [OPTIONNEL] Supabase — Base de données & Auth
-# -----------------------------------------------------------------------------
-# URL du projet Supabase (visible dans Project Settings → API)
-# Format: https://<project-ref>.supabase.co
-VITE_SUPABASE_URL=
-
-# Clé publique anonyme Supabase (safe pour le frontend)
-# Visible dans Project Settings → API → anon public
-# ⚠️  Utiliser uniquement la clé ANON — jamais la service_role key
-VITE_SUPABASE_ANON_KEY=
-
-
-# -----------------------------------------------------------------------------
-# [OPTIONNEL] Monitoring — Sentry
-# -----------------------------------------------------------------------------
-# DSN pour le tracking des erreurs en production
-# Obtenir un DSN: https://sentry.io → Project Settings → Client Keys
-# Format: https://<key>@<org>.ingest.sentry.io/<project-id>
-VITE_SENTRY_DSN=
-
-
-# -----------------------------------------------------------------------------
-# [OPTIONNEL] Analytics
-# -----------------------------------------------------------------------------
-# Identifiant Google Analytics (GA4) ou Plausible
-# GA4 format: G-XXXXXXXXXX
-# Plausible format: trackr-app-nu.vercel.app (domaine)
-VITE_ANALYTICS_ID=
-
-
-# -----------------------------------------------------------------------------
-# [AUTO] Version de l'application
-# -----------------------------------------------------------------------------
-# Injectée automatiquement par Vite depuis package.json
-# Ne pas modifier manuellement — géré par le processus de release
-VITE_APP_VERSION=0.1.0
-
-
-# =============================================================================
-# RAPPEL SÉCURITÉ
-# =============================================================================
-# ✓ Toutes les variables VITE_* sont exposées dans le bundle client (public)
-# ✓ N'utilisez JAMAIS de secrets serveur (clés privées, tokens admin) en VITE_*
-# ✓ Les clés API ci-dessus doivent avoir des permissions minimales (least privilege)
-# ✓ Rotez régulièrement vos clés API (recommandé: tous les 90 jours)
-# ✓ Activez les restrictions IP/domaine sur vos clés OpenAI en production
-# =============================================================================
-```
-
----
-
-### Fichier 3: `vite.config.js`
-
-```js
-// vite.config.js
-import { defineConfig, loadEnv } from 'vite'
-import react from '@vitejs/plugin-react'
-import { VitePWA } from 'vite-plugin-pwa'
-import path from 'path'
-
-// ---------------------------------------------------------------------------
-// Plugin de validation des variables d'environnement au BUILD
-// Bloque `vite build` si une clé requise est absente — fail-fast en CI/CD
-// ---------------------------------------------------------------------------
-
-/**
- * Clés requises — doit rester synchronisé avec src/config/apiConfig.js
- */
-const BUILD_REQUIRED_KEYS = [
-  'VITE_OPENAI_API_KEY',
-  'VITE_APP_ENV',
-]
-
-/**
- * Valeurs considérées comme invalides (placeholders)
- */
-const INVALID_PLACEHOLDERS = [
-  'your_key_here',
-  'YOUR_KEY_HERE',
-  'changeme',
-  'CHANGEME',
-  'xxxx',
-  'XXXX',
-  'todo',
-  'TODO',
-  '<YOUR_KEY>',
-  'placeholder',
-]
-
-function isValidEnvValue(value) {
-  if (!value || typeof value !== 'string') return false
-  return !INVALID_PLACEHOLDERS.includes(value.trim())
-}
-
-/**
- * Plugin Vite personnalisé: valide les secrets au démarrage du build.
- * En mode `serve` (dev): affiche des warnings non bloquants.
- * En mode `build` (prod/CI): bloque avec une erreur fatale.
- */
-function envValidationPlugin() {
-  return {
-    name: 'trackr-env-validation',
-    config(_, { command, mode }) {
-      // Charge les variables pour le mode courant (development, production, etc.)
-      const env = loadEnv(mode, process.cwd(), 'VITE_')
-      const missing = []
-
-      for (const key of BUILD_REQUIRED_KEYS) {
-        if (!isValidEnvValue(env[key])) {
-          missing.push(key)
-        }
-      }
-
-      if (missing.length === 0) {
-        console.log(
-          '\x1b[32m%s\x1b[0m',
-          `[Trackr] ✓ Validation des secrets — ${BUILD_REQUIRED_KEYS.length} variable(s) vérifiée(s)`
-        )
-        return
-      }
-
-      const errorLines = [
-        '',
-        '\x1b[31m╔══════════════════════════════════════════════════════════════╗\x1b[0m',
-        '\x1b[31m║         TRACKR — VARIABLES D\'ENVIRONNEMENT MANQUANTES        ║\x1b[0m',
-        '\x1b[31m╚══════════════════════════════════════════════════════════════╝\x1b[0m',
-        '',
-        `Variables manquantes (${missing.length}):`,
-        ...missing.map(k => `  \x1b[31m✗\x1b[0m ${k}`),
-        '',
-        'Solutions:',
-        '  • Dev local  → créez .env.local (cp .env.example .env.local)',
-        '  • Vercel     → Dashboard → Project Settings → Environment Variables',
-        '  • CI/GitHub  → Repository Settings → Secrets and variables',
-        '',
-        'Consultez .env.example pour la documentation complète.',
-        '',
-      ]
-
-      errorLines.forEach(line => console.error(line))
-
-      // En build: erreur fatale qui interrompt le processus
-      if (command === 'build') {
-        throw new Error(
-          `[Trackr] Build interrompu — ${missing.length} variable(s) requise(s) manquante(s): ${missing.join(', ')}`
-        )
-      }
-
-      // En dev (serve): warning non bloquant pour ne pas gêner le développement
-      if (command === 'serve') {
-        console.warn(
-          '\x1b[33m[Trackr] ⚠ Mode développement — certaines fonctionnalités IA seront indisponibles\x1b[0m'
-        )
-      }
+      // -----------------------------------------------------------------------
+      // PKCE: recommandé pour les SPAs (protection CSRF)
+      // -----------------------------------------------------------------------
+      flowType: 'pkce',
     },
   }
-}
-
-// ---------------------------------------------------------------------------
-// Configuration Vite principale
-// ---------------------------------------------------------------------------
-
-export default defineConfig(({ mode }) => {
-  // Charge les variables pour injecter la version depuis package.json
-  const env = loadEnv(mode, process.cwd(), 'VITE_')
-
-  return {
-    plugins: [
-      // 1. Validation des secrets (en premier pour fail-fast)
-      envValidationPlugin(),
-
-      // 2. React avec Fast Refresh
-      react(),
-
-      // 3. PWA — Service Worker + Manifest
-      VitePWA({
-        registerType: 'autoUpdate',
-        workbox: {
-          // Mise en cache des assets statiques (JS, CSS, images, fonts)
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-          runtimeCaching: [
-            {
-              // Cache des appels API — stratégie NetworkFirst pour fraîcheur des données
-              urlPattern: /^https:\/\/trackr-app-nu\.vercel\.app\/api\/.*/i,
-              handler: 'NetworkFirst',
-              options: {
-                cacheName: 'api-cache',
-                networkTimeoutSeconds: 5,
-                expiration: {
-                  maxEntries: 50,
-                  maxAgeSeconds: 60 * 60 * 24, // 24h
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
-            },
-            {
-              // Assets statiques — CacheFirst pour zéro requête réseau redondante
-              urlPattern: /\.(?:js|css|png|jpg|jpeg|svg|ico|woff2)$/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'static-assets',
-                expiration: {
-                  maxEntries: 100,
-                  maxAgeSeconds: 60 * 60 * 24 * 30, // 30 jours
-                },
-              },
-            },
-          ],
-        },
-        manifest: {
-          name: 'Trackr',
-          short_name: 'Trackr',
-          description: 'Trackr — AI-powered productivity hub',
-          theme_color: '#ffffff',
-          background_color: '#ffffff',
-          display: 'standalone',
-          icons: [
-            { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-            { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
-            { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-          ],
-        },
-      }),
-    ],
-
-    // Alias de chemin pour imports propres (@/config/apiConfig)
-    resolve: {
-      alias: {
-        '@': path.resolve(__dirname, './src'),
-      },
-    },
-
-    // Injection de la version dans le bundle (accessible via import.meta.env.VITE_APP_VERSION)
-    define: {
-      'import.meta.env.VITE_APP_VERSION': JSON.stringify(
-        env.VITE_APP_VERSION || process.env.npm_package_version || '0.0.0'
-      ),
-    },
-  }
-})
-```
-
----
-
-### Fichier 4: `src/main.jsx`
-
-```jsx
-/**
- * @file main.jsx
- * @description Point d'entrée de l'application Trackr.
- * La validation des secrets est effectuée AVANT le rendu React
- * pour garantir un fail-fast en cas de configuration invalide.
- */
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App.jsx'
-import './index.css'
-
-// ---------------------------------------------------------------------------
-// Validation des variables d'environnement — DOIT être en premier
-// Bloque le rendu React si une clé requise est manquante
-// ---------------------------------------------------------------------------
-import { requireEnv } from '@/config/apiConfig'
-
-try {
-  requireEnv()
-} catch (error) {
-  // En production: affiche un écran d'erreur explicite plutôt qu'un crash silencieux
-  const root = document.getElementById('root')
-  if (root) {
-    root.innerHTML = `
-      <div style="
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-height: 100vh;
-        padding: 2rem;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        background: #0f172a;
-        color: #f1f5f9;
-        text-align: center;
-      ">
-        <div style="
-          max-width: 480px;
-          background: #1e293b;
-          border: 1px solid #ef4444;
-          border-radius: 12px;
-          padding: 2rem;
-        ">
-          <div style="font-size: 2.5rem; margin-bottom: 1rem;">⚙️</div>
-          <h1 style="color: #ef4444; font-size: 1.25rem; margin-bottom: 0.75rem;">
-            Configuration requise
-          </h1>
-          <p style="color: #94a3b8; font-size: 0.875rem; line-height: 1.6; margin-bottom: 1.5rem;">
-            Trackr ne peut pas démarrer — des variables d'environnement obligatoires sont manquantes.
-          </p>
-          <code style="
-            display: block;
-            background: #0f172a;
-            color: #fbbf24;
-            padding: 0.75rem 1rem;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            text-align: left;
-            word-break: break-all;
-          ">${error.message}</code>
-          <p style="color: #64748b; font-size: 0.75rem; margin-top: 1.25rem;">
-            Consultez <code style="color: #818cf8;">.env.example</code> pour la configuration complète.
-          </p>
-        </div>
-      </div>
-    `
-  }
-
-  // Arrêt — ne pas monter React avec une config invalide
-  throw error
-}
-
-// ---------------------------------------------------------------------------
-// Rendu React — uniquement si la configuration est valide
-// ---------------------------------------------------------------------------
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
 )
-```
 
----
+_logInfo(
+  '%c[Trackr] ✓ Client Supabase initialisé (sessionStorage, PKCE, autoRefresh)',
+  'color: #22c55e; font-weight: bold;'
+)
 
-Je vais maintenant pousser ces 4 fichiers sur GitHub via l'API.
+// ---------------------------------------------------------------------------
+// Détection d'un refresh token expiré ou révoqué
+// ---------------------------------------------------------------------------
 
-**Push de `src/config/apiConfig.js`:**
+/**
+ * Détermine si une erreur Supabase correspond à un token révoqué/expiré.
+ * @param {import('@supabase/supabase-js').AuthError | Error | null} error
+ * @returns {boolean}
+ */
+function _isRevokedTokenError(error) {
+  if (!error) return false
 
-```javascript
-const fs = require('fs');
-const https = require('https');
+  const message = error.message?.toLowerCase() ?? ''
+  const code = error.code?.toLowerCase() ?? ''
+  const status = error.status ?? 0
 
-const files = {
-  'src/config/apiConfig.js': `/* contenu complet ci-dessus */`,
-  '.env.example': `/* contenu complet ci-dessus */`,
-  'vite.config.js': `/* contenu complet ci-dessus */`,
-  'src/main.jsx': `/* contenu complet ci-dessus */`
-};
-```
+  // Vérification par code d'erreur Supabase
+  if (REVOKED_TOKEN_ERROR_CODES.some((c) => code.includes(c.toLowerCase()))) {
+    return true
+  }
 
-Les 4 fichiers sont prêts pour le push GitHub. Voici le récapitulatif de ce qui a été implémenté:
+  // Vérification par message d'erreur
+  if (REVOKED_TOKEN_MESSAGES.some((m) => message.includes(m.toLowerCase()))) {
+    return true
+  }
 
----
+  // HTTP 401 lors d'un refresh = token invalide
+  if (status === 401) {
+    return true
+  }
 
-## Récapitulatif de l'implémentation
+  return false
+}
 
-### Architecture de sécurité
+// ---------------------------------------------------------------------------
+// Gestion du logout forcé
+// ---------------------------------------------------------------------------
 
-```
-src/config/apiConfig.js
-├── _readEnv()          → lecture interne (non exportée)
-├── _isValidValue()     → rejet des placeholders (non exportée)
-├── validateEnv()       → retourne ValidationResult sans throw
-├── requireEnv()        → throw si config invalide (appelé dans main.jsx)
-└── Getters publics:
-    ├── getOpenAIKey()
-    ├── getAppEnv()
-    ├── isProduction() / isDevelopment()
-    ├── getSentryDSN()
-    ├── getAnalyticsId()
-    ├── getApiBaseUrl()
-    ├── getSupabaseUrl()
-    ├── getSupabaseAnonKey()
-    └── getAppVersion()
-```
+/**
+ * Indicateur interne pour éviter les boucles de logout.
+ * @type {boolean}
+ */
+let _isLoggingOut = false
 
-### Deux niveaux de protection
+/**
+ * Force la déconnexion complète et redirige vers /login.
+ * Nettoie sessionStorage, révoque la session côté Supabase si possible.
+ *
+ * @param {string} [reason] - Raison du logout (pour logging)
+ * @returns {Promise<void>}
+ */
+async function _forceLogout(reason = 'UNKNOWN') {
+  // Guard: évite les appels multiples simultanés
+  if (_isLoggingOut) {
+    _logDebug('[supabaseClient] forceLogout déjà en cours, ignoré')
+    return
+  }
 
-| Niveau | Où | Quand | Comportement |
-|---|---|---|---|
-| **Build-time** | `vite.config.js` → `envValidationPlugin` | `vite build` | 🛑 Bloque le build en CI/CD |
-| **Runtime** | `src/main.jsx` → `requireEnv()` | Démarrage app | 🛑 Bloque le rendu React, affiche UI d'erreur |
+  _isLoggingOut = true
+  _logInfo(`[supabaseClient] Force logout — raison: ${reason}`)
 
-### Principes de sécurité respectés
-- ✅ **Zéro export de valeurs brutes** — uniquement des fonctions getters
-- ✅ **Fail-fast** — erreur explicite avant tout rendu
-- ✅ **Rejet des placeholders** — `your_key_here`, `changeme`, etc.
-- ✅ **Alias `@/`** dans `vite.config.js` pour imports propres
-- ✅ **`.env.example`** documenté avec notes de sécurité
+  try {
+    // Tentative de signOut côté Supabase (révocation serveur)
+    // On ignore les erreurs car le token est peut-être déjà invalide
+    const { error } = await supabase.auth.signOut({ scope: 'local' })
+    if (error) {
+      _logDebug('[supabaseClient] signOut warning (ignoré):', error.message)
+    }
+  } catch (err) {
+    // Ignore les erreurs réseau lors du logout forcé
+    _logDebug('[supabaseClient] signOut exception (ignorée):', err)
+  } finally {
+    // Nettoyage forcé du sessionStorage
+    _purgeSessionStorage()
+
+    // Redirect vers /login
+    _redirectToLogin(reason)
+
+    // Reset du guard après un délai (sécurité)
+    setTimeout(() => {
+      _isLoggingOut = false
+    }, 2000)
+  }
+}
+
+/**
+ * Purge toutes les données de session dans sessionStorage.
+ */
+function _purgeSessionStorage() {
+  try {
+    // Suppression de la clé Supabase spécifique
+    window.sessionStorage.removeItem(SESSION_STORAGE_KEY)
+
+    // Suppression de toutes les clés Supabase (format: sb-*-auth-token)
+    const keysToRemove = []
+    for (let i = 0; i < window.sessionStorage.length; i++) {
+      const key = window.sessionStorage.key(i)
+      if (key && (key.startsWith('sb-') || key.startsWith('supabase'))) {
+        keysToRemove.push(key)
+      }
+    }
+    keysToRemove.forEach((key) => window.sessionStorage.removeItem(key))
+
+    _logDebug('[supabaseClient] sessionStorage purgé')
+  } catch (err) {
+    _logDebug('[supabaseClient] Erreur purge sessionStorage:', err)
+  }
+}
+
+/**
+ * Redirige vers la page de login avec un paramètre de raison.
+ * Utilise window.location pour un rechargement propre (reset état React).
+ *
+ * @param {string} reason
+ */
+function _redirectToLogin(reason) {
+  const reasonMap = {
+    TOKEN_EXPIRED: 'session_expired',
+    TOKEN_REVOKED: 'session_revoked',
+    SIGNED_OUT: 'signed_out',
+    AUTH_ERROR: 'auth_error',
+    UNKNOWN: 'unknown',
+  }
+
+  const reasonParam = reasonMap[reason] ?? 'unknown'
+  const redirectUrl = `${REDIRECT_PATH_LOGIN}?reason=${reasonParam}`
+
+  _logDebug(`[supabaseClient] Redirect → ${redirectUrl}`)
+
+  // window.location.replace: évite d'empiler une entrée dans l'historique
+  // L'utilisateur ne peut pas revenir en arrière sur une session invalide
+  if (window.location.pathname !== REDIRECT_PATH_LOGIN) {
+    window.location.replace(redirectUrl)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Listener onAuthStateChange — cœur de la gestion de session
+// ---------------------------------------------------------------------------
+
+/**
+ * @typedef {Object} AuthListenerHandle
+ * @property {Function} unsubscribe - Désabonne le listener
+ * @property {Function} getStatus - Retourne le statut courant du listener
+ */
+
+/**
+ * Initialise le listener onAuthStateChange.
+ * Doit être appelé UNE SEULE FOIS au démarrage de l'application (main.jsx).
+ *
+ * Événements gérés:
+ * - SIGNED_IN: session établie (login, OAuth callback, token refresh initial)
+ * - TOKEN_REFRESHED: token renouvelé avec succès
+ * - SIGNED_OUT: déconnexion (manuelle, token expiré, révoqué)
+ * - USER_UPDATED: données utilisateur modifiées
+ * - PASSWORD_RECOVERY: flux de récupération de mot de passe
+ * - INITIAL_SESSION: état initial au chargement
+ *
+ * @returns {AuthListenerHandle}
+ */
+export function initAuthListener() {
+  _logInfo('[supabaseClient] Initialisation du listener onAuthStateChange')
+
+  let _listenerActive = true
+  let _lastEvent = null
+  let _lastEventTime = null
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange(async (event, session) => {
+    if (!_listenerActive) return
+
+    _lastEvent = event
+    _lastEventTime = new Date().toISOString()
+
+    _logDebug(`[supabaseClient] Auth event: ${event}`, {
+      hasSession: !!session,
+      // En production: ne log jamais les tokens
+      ...(isProduction()
+        ? {}
+        : {
+            userId: session?.user?.id ?? null,
+            expiresAt: session?.expires_at ?? null,
+          }),
+    })
+
+    switch (event) {
+      // -----------------------------------------------------------------------
+      // TOKEN_REFRESHED — token renouvelé avec succès
+      // -----------------------------------------------------------------------
+      case 'TOKEN_REFRESHED': {
+        if (!session) {
+          // Refresh signalé mais session null = token invalide
+          _logError('[supabaseClient] TOKEN_REFRESHED reçu sans session — logout forcé')
+          await _forceLogout('TOKEN_REVOKED')
+          break
+        }
+
+        _logInfo('[supabaseClient] ✓ Token rafraîchi avec succès')
+
+        // Vérification de cohérence: session non-expirée
+        const expiresAt = session.expires_at
+        if (expiresAt) {
+          const now = Math.floor(Date.now() / 1000)
+          if (expiresAt < now) {
+            _logError('[supabaseClient] Session expirée après TOKEN_REFRESHED — logout forcé')
+            await _forceLogout('TOKEN_EXPIRED')
+          }
+        }
+        break
+      }
+
+      // -----------------------------------------------------------------------
+      // SIGNED_OUT — déconnexion (manuelle, token expiré/révoqué, autre onglet)
+      // -----------------------------------------------------------------------
+      case 'SIGNED_OUT': {
+        _logInfo('[supabaseClient] SIGNED_OUT détecté — nettoyage session')
+
+        // Nettoyage du sessionStorage (peut être déjà fait par Supabase)
+        _purgeSessionStorage()
+
+        // Si on n'est pas déjà sur /login, redirect
+        if (window.location.pathname !== REDIRECT_PATH_LOGIN) {
+          _redirectToLogin('SIGNED_OUT')
+        }
+        break
+      }
+
+      // -----------------------------------------------------------------------
+      // SIGNED_IN — session établie
+      // -----------------------------------------------------------------------
+      case 'SIGNED_IN': {
+        if (!session) {
+          _logError('[supabaseClient] SIGNED_IN sans session — incohérence')
+          break
+        }
+        _logInfo('[supabaseClient] ✓ Utilisateur connecté')
+        break
+      }
+
+      // -----------------------------------------------------------------------
+      // INITIAL_SESSION — état initial au chargement de la page
+      // -----------------------------------------------------------------------
+      case 'INITIAL_SESSION': {
+        if (!session) {
+          _logDebug('[supabaseClient] Pas de session active au chargement')
+          // Pas de redirect ici — laisse le router gérer les routes protégées
+        } else {
+          _logDebug('[supabaseClient] Session restaurée depuis sessionStorage')
+        }
+        break
+      }
+
+      // -----------------------------------------------------------------------
+      // USER_UPDATED — mise à jour des données utilisateur
+      // -----------------------------------------------------------------------
+      case 'USER_UPDATED': {
+        _logInfo('[supabaseClient] Données utilisateur mises à jour')
+        break
+      }
+
+      // -----------------------------------------------------------------------
+      // PASSWORD_RECOVERY — flux de récupération de mot de passe
+      // -----------------------------------------------------------------------
+      case 'PASSWORD_RECOVERY': {
+        _logInfo('[supabaseClient] Flux de récupération de mot de passe détecté')
+        break
+      }
+
+      default: {
+        _logDebug(`[supabaseClient] Événement auth non géré: ${event}`)
+        break
+      }
+    }
+  })
+
+  // Gestion des erreurs de token révoqué/expiré via le client Supabase
+  // Supabase v2 émet des erreurs de refresh dans onAuthStateChange (SIGNED_OUT)
+  // mais on ajoute un handler sur les erreurs de réseau pour robustesse
+  _setupTokenErrorInterceptor()
+
+  return {
+    /**
+     * Désabonne le listener (cleanup).
+     * Appeler dans useEffect cleanup ou au démontage de l'app.
+     */
+    unsubscribe() {
+      _listenerActive = false
+      subscription.unsub
