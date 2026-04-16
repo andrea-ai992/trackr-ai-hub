@@ -11,11 +11,17 @@ import dotenv from 'dotenv'
 const __dir = dirname(fileURLToPath(import.meta.url))
 dotenv.config({ path: `${__dir}/.env` })
 
-const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN
-const GUILD_ID  = process.env.DISCORD_GUILD_ID
-const APP_URL   = process.env.APP_URL || process.env.VERCEL_URL || 'https://trackr-app-nu.vercel.app'
-const PORT      = process.env.PORT || 3099
-const API       = 'https://discord.com/api/v10'
+const BOT_TOKEN  = process.env.DISCORD_BOT_TOKEN
+const GUILD_ID   = process.env.DISCORD_GUILD_ID
+const APP_URL    = process.env.APP_URL || process.env.VERCEL_URL || 'https://trackr-app-nu.vercel.app'
+const PORT       = process.env.PORT || 3099
+const API        = 'https://discord.com/api/v10'
+const BOT_START  = Date.now()  // ignore messages older than this
+
+// Extract creation timestamp from Discord snowflake ID
+function snowflakeMs(id) {
+  return Number(BigInt(id) >> 22n) + 1420070400000
+}
 
 if (!BOT_TOKEN || !GUILD_ID) {
   console.error('❌ Missing DISCORD_BOT_TOKEN or DISCORD_GUILD_ID')
@@ -315,10 +321,13 @@ async function editMessage(channelId, messageId, content) {
 }
 
 // ─── Process a message ───────────────────────────────────────────────────────
-const processed = new Set()
+const processed  = new Set()
+const channelLock = new Map()  // channelId → true when processing
 
 async function processMessage(msg, channelName) {
   if (processed.has(msg.id)) return
+  // Skip messages created before bot started (prevents replay on restart)
+  if (snowflakeMs(msg.id) < BOT_START - 5000) return
   processed.add(msg.id)
   setTimeout(() => processed.delete(msg.id), 120000)
 
@@ -501,7 +510,13 @@ async function pollAll() {
 
         for (const msg of newMsgs) {
           lastSeen.set(ch.id, msg.id)
-          processMessage(msg, ch.name).catch(e => console.error('processMessage:', e.message))
+          // Process one message at a time per channel — no concurrent floods
+          if (!channelLock.get(ch.id)) {
+            channelLock.set(ch.id, true)
+            processMessage(msg, ch.name)
+              .catch(e => console.error('processMessage:', e.message))
+              .finally(() => channelLock.delete(ch.id))
+          }
         }
       } catch (e) {
         if (!e.message.includes('50013') && !e.message.includes('403'))
