@@ -29,6 +29,8 @@ const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY
 const PORT          = process.env.PORT || 3099
 const API           = 'https://discord.com/api/v10'
 const BOT_START     = Date.now()
+// Snowflake généré depuis BOT_START — tous les messages antérieurs sont ignorés
+const BOT_START_SNOWFLAKE = String((BigInt(BOT_START - 1420070400000) << 22n))
 
 // ─── Startup validation ───────────────────────────────────────────────────────
 if (!BOT_TOKEN || !GUILD_ID) {
@@ -39,8 +41,6 @@ if (!ANTHROPIC_KEY) {
 }
 console.log(`🔑 Claude key: ${ANTHROPIC_KEY.slice(0,14)}...${ANTHROPIC_KEY.slice(-4)} (${ANTHROPIC_KEY.length} chars)`)
 
-// Extract creation timestamp from Discord snowflake (ignore pre-start messages)
-function snowflakeMs(id) { return Number(BigInt(id) >> 22n) + 1420070400000 }
 
 // Admin IDs (auto-populated from guild owner at startup)
 const ADMIN_IDS = new Set(
@@ -301,7 +301,7 @@ const channelLock = new Map()
 async function processMessage(msg, channelName) {
   // Dedup + replay protection
   if (processed.has(msg.id)) return
-  if (snowflakeMs(msg.id) < BOT_START - 3000) return
+  if (BigInt(msg.id) <= BigInt(BOT_START_SNOWFLAKE)) return  // strict: avant démarrage = ignoré
   processed.add(msg.id)
   setTimeout(() => processed.delete(msg.id), 60000)
 
@@ -418,25 +418,33 @@ async function discoverChannels() {
 
 async function initLastSeen() {
   const chs = [...monitoredChannels.values()]
-  // Process in batches of 5 to avoid rate limits
   for (let i = 0; i < chs.length; i += 5) {
     await Promise.allSettled(
       chs.slice(i, i + 5).map(async ch => {
+        // Toujours initialiser avec BOT_START_SNOWFLAKE en premier
+        // → même si le fetch échoue, le poll ne remontera jamais avant le démarrage
+        lastSeen.set(ch.id, BOT_START_SNOWFLAKE)
         try {
           const msgs = await discordGet(`/channels/${ch.id}/messages?limit=1`)
-          if (msgs.length > 0) lastSeen.set(ch.id, msgs[0].id)
+          if (msgs.length > 0) {
+            // Prendre le plus récent entre le dernier message et BOT_START
+            const msgSnow = msgs[0].id
+            const pick = BigInt(msgSnow) > BigInt(BOT_START_SNOWFLAKE) ? msgSnow : BOT_START_SNOWFLAKE
+            lastSeen.set(ch.id, pick)
+          }
         } catch (e) {
-          // Only skip on 403 (permanent permission denied) — 503 is temporary
           if (e.message.includes('403') || e.message.includes('Missing Access')) {
             deadChannels.add(ch.id)
             monitoredChannels.delete(ch.id)
           }
+          // Sinon on garde BOT_START_SNOWFLAKE — aucun replay possible
         }
       })
     )
     await sleep(200)
   }
-  console.log(`✅ Ready — ${monitoredChannels.size} channels active, ${deadChannels.size} skipped`)
+  console.log(`✅ Ready — ${monitoredChannels.size} channels actifs, ${deadChannels.size} skippés`)
+  console.log(`🛡️  Replay protection: messages avant ${new Date(BOT_START).toISOString()} ignorés`)
 }
 
 // ─── Poll ─────────────────────────────────────────────────────────────────────
