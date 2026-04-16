@@ -1,14 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776375047651",
-      "timestamp": "2026-04-16T21:30:47.651Z",
-      "type": "error",
-      "focus": "frontend",
-      "error": "Anthropic API → 400",
-      "applied": false
-    },
-    {
       "id": "mem_1776375048469",
       "timestamp": "2026-04-16T21:30:48.469Z",
       "type": "brain_cycle",
@@ -2900,6 +2892,14 @@
       "count": 4,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776379865881",
+      "timestamp": "2026-04-16T22:51:05.881Z",
+      "type": "error",
+      "focus": "bugs",
+      "error": "old_code not found in api/andy.js — skipping to avoid corruption",
+      "applied": false
     }
   ]
 }
