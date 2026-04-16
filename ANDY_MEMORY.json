@@ -3899,6 +3899,14 @@
       "count": 5,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776324140385",
+      "timestamp": "2026-04-16T07:22:20.385Z",
+      "type": "error",
+      "focus": "bugs",
+      "error": "Bad escaped character in JSON at position 558 (line 5 column 400)",
+      "applied": false
     }
   ]
 }
