@@ -26,5 +26,5 @@ services:
         value: "1492704547959996457"
       - key: DISCORD_CH_UI_REVIEW
         value: "1492704517366485085"
-      - key: VERCEL_URL
+      - key: APP_URL
         value: https://trackr-app-nu.vercel.app

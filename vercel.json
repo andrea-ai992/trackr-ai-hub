@@ -1,5 +1,6 @@
 {
   "crons": [
+    { "path": "/api/monitor",                         "schedule": "*/5 * * * *" },
     { "path": "/api/brain",                           "schedule": "0 0 * * *"  },
     { "path": "/api/morning",                         "schedule": "0 9 * * *"  },
     { "path": "/api/reports?type=daily&post=true",    "schedule": "0 8 * * *"  },
@@ -25,6 +26,7 @@
     "api/memory.js":        { "maxDuration": 30 },
     "api/morning.js":       { "maxDuration": 60 },
     "api/trading-expert.js":{ "maxDuration": 60 },
-    "api/deploy-notify.js": { "maxDuration": 10 }
+    "api/deploy-notify.js": { "maxDuration": 10 },
+    "api/monitor.js":       { "maxDuration": 30 }
   }
 }
