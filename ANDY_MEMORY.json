@@ -1,47 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776342122602",
-      "timestamp": "2026-04-16T12:22:02.602Z",
-      "type": "pattern_scan",
-      "focus": "bugs",
-      "findings": [
-        {
-          "id": "sse_json_parse",
-          "file": "api/discord.js",
-          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
-          "severity": "critical"
-        },
-        {
-          "id": "vercel_url_empty",
-          "file": "api/brain.js",
-          "description": "Using VERCEL_URL which is empty in production — use APP_URL instead",
-          "severity": "high"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/andy.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/brain.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/trading-expert.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        }
-      ],
-      "count": 5,
-      "applied": false,
-      "note": "Patterns detected before Claude analysis — guiding fix priority"
-    },
-    {
       "id": "mem_1776342123527",
       "timestamp": "2026-04-16T12:22:03.527Z",
       "type": "error",
@@ -3244,6 +3203,20 @@
       "learned": "All external fetch() calls in Vercel serverless functions must have explicit timeouts since the platform's execution limit is hard and a stalled TCP connection will silently exhaust it.",
       "applied": true,
       "fromAdminTask": null
+    },
+    {
+      "id": "mem_1776351453457",
+      "timestamp": "2026-04-16T14:57:33.457Z",
+      "type": "brain_cycle",
+      "hour": 14,
+      "successRate": 5,
+      "agentsRan": 4,
+      "improved": true,
+      "improvedFile": "api/andy.js",
+      "focus": "bugs",
+      "errors": 0,
+      "appHealthy": true,
+      "duration": 35
     }
   ]
 }
