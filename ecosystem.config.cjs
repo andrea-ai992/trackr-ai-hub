@@ -4,6 +4,18 @@
 module.exports = {
   apps: [
     {
+      name: 'dashboard',
+      script: 'deploy/dashboard.js',
+      interpreter: 'node',
+      cwd: '/root/trackr',
+      restart_delay: 3000,
+      autorestart: true,
+      watch: false,
+      env: { NODE_ENV: 'production', DASHBOARD_PORT: '4000', DASHBOARD_PASS: 'trackr2024' },
+      out_file: '/root/logs/dashboard.log',
+      error_file: '/root/logs/dashboard-error.log',
+    },
+    {
       name: 'andy-daemon',
       script: 'cli/andy-daemon.js',
       interpreter: 'node',
