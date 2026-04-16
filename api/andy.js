@@ -74,7 +74,7 @@ async function runServerTool(name, input) {
   if (name === 'fetch_price') {
     try {
       const sym = encodeURIComponent(input.symbol)
-      const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`, { headers: { 'User-Agent': 'Mozilla/5.0' } })
+      const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(7000) })
       const d = await r.json()
       const meta = d?.chart?.result?.[0]?.meta
       if (!meta?.regularMarketPrice) return { error: 'Symbol not found' }
@@ -86,7 +86,7 @@ async function runServerTool(name, input) {
 
   if (name === 'fetch_crypto_price') {
     try {
-      const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${input.coinId}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true`, { headers: { Accept: 'application/json' } })
+      const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${input.coinId}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true`, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(7000) })
       const d = await r.json()
       const coin = d[input.coinId]
       if (!coin) return { error: 'Not found' }
@@ -106,7 +106,7 @@ async function runServerTool(name, input) {
       }
       const p = intervalMap[interval] || { interval: '1d', range: '6mo' }
       const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${p.interval}&range=${p.range}`
-      const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } })
+      const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) })
       const d = await r.json()
       const res = d?.chart?.result?.[0]
       if (!res) return { error: 'No data for ' + symbol }
