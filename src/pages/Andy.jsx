@@ -1,30 +1,21 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
-import {
-  ArrowLeft, Bot, Mic, MicOff, Send, Volume2, VolumeX,
-  Trash2, Copy, Check, ChevronDown, ChevronUp, Zap, Maximize2, Minimize2,
-  Activity, GitCommit, TrendingUp, Shield,
-} from 'lucide-react'
 
-// ─── Activity Feed — ce que l'IA a fait ──────────────────────────────────────
+const MONO = "'JetBrains Mono', 'Fira Code', 'SF Mono', 'Courier New', monospace"
+
+// ─── Activity Feed (System Log) ───────────────────────────────────────────────
 function ActivityFeed() {
-  const [commits, setCommits]       = useState([])
-  const [agentLog, setAgentLog]     = useState([])
-  const [memory, setMemory]         = useState([])
-  const [loading, setLoading]       = useState(true)
+  const [commits, setCommits] = useState([])
+  const [agentLog, setAgentLog] = useState([])
+  const [memory, setMemory] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     Promise.allSettled([
-      // GitHub commits récents
-      fetch('https://api.github.com/repos/andrea-ai992/trackr-ai-hub/commits?per_page=8')
-        .then(r => r.json()),
-      // Activité agents Discord
-      fetch('/api/memory?type=agents-log')
-        .then(r => r.json()),
-      // Mémoire apprentissage
-      fetch('/api/memory?limit=20')
-        .then(r => r.json()),
+      fetch('https://api.github.com/repos/andrea-ai992/trackr-ai-hub/commits?per_page=8').then(r => r.json()),
+      fetch('/api/memory?type=agents-log').then(r => r.json()),
+      fetch('/api/memory?limit=20').then(r => r.json()),
     ]).then(([c, a, m]) => {
       if (c.status === 'fulfilled' && Array.isArray(c.value)) setCommits(c.value)
       if (a.status === 'fulfilled' && Array.isArray(a.value?.log)) setAgentLog(a.value.log.slice(0, 10))
@@ -35,125 +26,81 @@ function ActivityFeed() {
 
   function timeAgo(d) {
     if (!d) return ''
-    const m = Math.floor((Date.now() - new Date(d)) / 60000)
-    if (m < 1) return 'maintenant'
-    if (m < 60) return `${m}m`
-    if (m < 1440) return `${Math.floor(m / 60)}h`
-    return `${Math.floor(m / 1440)}j`
+    const min = Math.floor((Date.now() - new Date(d)) / 60000)
+    if (min < 1) return 'now'
+    if (min < 60) return `${min}m`
+    if (min < 1440) return `${Math.floor(min / 60)}h`
+    return `${Math.floor(min / 1440)}d`
   }
 
   const aiCommits = commits.filter(c => c.commit?.message?.includes('[AnDy'))
 
   if (loading) return (
-    <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {[...Array(5)].map((_, i) => (
-        <div key={i} style={{ height: 64, borderRadius: 14 }} className="skeleton" />
-      ))}
+    <div style={{ padding: '20px 16px', fontFamily: MONO, color: '#333', fontSize: 12 }}>
+      $ loading system log...
     </div>
   )
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', overscrollBehavior: 'contain' }}>
-
-      {/* ── Commits IA ── */}
-      <div style={{ marginBottom: 22 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-          <GitCommit size={12} color="#00daf3" />
-          <span className="section-label">Améliorations IA récentes</span>
-          {aiCommits.length > 0 && (
-            <span className="pill pill-cyan" style={{ fontSize: 9, padding: '1px 6px', marginLeft: 'auto' }}>
-              {aiCommits.length} commits
-            </span>
-          )}
-        </div>
-        {aiCommits.length === 0 ? (
-          <div style={{ fontSize: 12, color: '#4b6070', padding: '12px 0' }}>Aucun commit IA récent</div>
-        ) : aiCommits.map((c, i) => (
-          <div key={i} className="stagger-item" style={{
-            padding: '11px 14px', marginBottom: 8, borderRadius: 14,
-            background: 'rgba(0,218,243,0.04)', border: '1px solid rgba(0,218,243,0.1)',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-              <p style={{ fontSize: 12, color: '#bac9cc', lineHeight: 1.4, flex: 1, margin: 0 }}>
-                {c.commit.message.replace('[AnDy Auto-Improve] ', '').replace('[AnDy] ', '').slice(0, 90)}
-              </p>
-              <span style={{ fontSize: 10, color: '#4b6070', flexShrink: 0 }}>{timeAgo(c.commit.author?.date)}</span>
-            </div>
-            {c.commit.message.includes('focus=security') && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 5 }}>
-                <Shield size={9} color="#ef4444" />
-                <span style={{ fontSize: 9, color: '#ef4444', fontWeight: 700 }}>SÉCURITÉ</span>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* ── Agent Discord Activity ── */}
-      {agentLog.length > 0 && (
-        <div style={{ marginBottom: 22 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-            <Activity size={12} color="#ecb2ff" />
-            <span className="section-label">Activité agents Discord</span>
-          </div>
-          {agentLog.map((entry, i) => (
-            <div key={i} className="stagger-item" style={{
-              padding: '10px 14px', marginBottom: 7, borderRadius: 14,
-              background: 'rgba(19,28,43,0.5)', border: '1px solid rgba(132,147,150,0.1)',
-              display: 'flex', gap: 10, alignItems: 'flex-start',
-            }}>
-              <span style={{ fontSize: 16, flexShrink: 0 }}>{entry.emoji || '🤖'}</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: entry.color || '#bac9cc' }}>{entry.agent}</span>
-                  <span style={{ fontSize: 10, color: '#374151', marginLeft: 'auto' }}>{timeAgo(entry.timestamp)}</span>
+    <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px', fontFamily: MONO, overscrollBehavior: 'contain' }}>
+      {aiCommits.length > 0 && (
+        <>
+          <div style={{ fontSize: 10, color: '#00ff88', padding: '14px 0 8px', letterSpacing: '0.12em' }}>COMMITS</div>
+          {aiCommits.map((c, i) => (
+            <div key={i} style={{ marginBottom: 10, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 10, color: '#333', flexShrink: 0, paddingTop: 1 }}>{timeAgo(c.commit.author?.date)}</span>
+              <div>
+                <div style={{ fontSize: 11, color: '#888', lineHeight: 1.5 }}>
+                  {c.commit.message.replace('[AnDy Auto-Improve] ', '').replace('[AnDy] ', '').slice(0, 85)}
                 </div>
-                <p style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.35, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                  {entry.summary}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── Apprentissage Trading ── */}
-      {memory.filter(e => e.type === 'trading_result' || e.type === 'trading_learning').length > 0 && (
-        <div style={{ marginBottom: 22 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-            <TrendingUp size={12} color="#10b981" />
-            <span className="section-label">Apprentissage trading</span>
-          </div>
-          {memory.filter(e => e.type === 'trading_result' || e.type === 'trading_learning').map((entry, i) => (
-            <div key={i} className="stagger-item" style={{
-              padding: '10px 14px', marginBottom: 7, borderRadius: 14,
-              background: entry.type === 'trading_result'
-                ? `rgba(${entry.verdictCorrect ? '16,185,129' : '239,68,68'},0.06)`
-                : 'rgba(19,28,43,0.5)',
-              border: `1px solid rgba(${entry.type === 'trading_result' && entry.verdictCorrect ? '16,185,129' : entry.type === 'trading_result' ? '239,68,68' : '132,147,150'},0.12)`,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                <span style={{ fontSize: 11, fontWeight: 800, color: 'white' }}>{entry.symbol}</span>
-                <span style={{ fontSize: 10, fontWeight: 700, color: entry.verdict?.includes('ACHAT') ? '#10b981' : entry.verdict?.includes('VENTE') ? '#ef4444' : '#fcd34d' }}>{entry.verdict}</span>
-                {entry.verdictCorrect !== undefined && (
-                  <span style={{ fontSize: 10 }}>{entry.verdictCorrect ? '✅' : '❌'}</span>
+                {c.commit.message.includes('focus=security') && (
+                  <div style={{ fontSize: 9, color: '#ef4444', marginTop: 2 }}>⚠ SECURITY</div>
                 )}
-                <span style={{ fontSize: 10, color: '#374151', marginLeft: 'auto' }}>{entry.technique}</span>
               </div>
-              <p style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.3, margin: 0 }}>
-                {entry.result?.slice(0, 100)}
-              </p>
             </div>
           ))}
-        </div>
+        </>
       )}
 
-      {agentLog.length === 0 && aiCommits.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '40px 20px', color: '#4b6070' }}>
-          <Activity size={32} style={{ opacity: 0.3, marginBottom: 12 }} />
-          <div style={{ fontSize: 13 }}>Aucune activité IA récente</div>
-          <div style={{ fontSize: 11, marginTop: 6, opacity: 0.6 }}>Les améliorations apparaîtront ici automatiquement</div>
-        </div>
+      {agentLog.length > 0 && (
+        <>
+          <div style={{ fontSize: 10, color: '#aa44ff', padding: '14px 0 8px', letterSpacing: '0.12em' }}>AGENTS</div>
+          {agentLog.map((entry, i) => (
+            <div key={i} style={{ marginBottom: 10, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 10, color: '#333', flexShrink: 0, paddingTop: 1 }}>{timeAgo(entry.timestamp)}</span>
+              <div>
+                <div style={{ fontSize: 10, color: entry.color || '#888', fontWeight: 700, marginBottom: 2 }}>{entry.agent}</div>
+                <div style={{ fontSize: 11, color: '#555', lineHeight: 1.4 }}>{entry.summary?.slice(0, 100)}</div>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+
+      {memory.filter(e => e.type === 'trading_result' || e.type === 'trading_learning').length > 0 && (
+        <>
+          <div style={{ fontSize: 10, color: '#10b981', padding: '14px 0 8px', letterSpacing: '0.12em' }}>TRADING MEMORY</div>
+          {memory.filter(e => e.type === 'trading_result' || e.type === 'trading_learning').map((entry, i) => (
+            <div key={i} style={{ marginBottom: 10, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 10, color: '#333', flexShrink: 0, paddingTop: 1 }}>
+                {entry.verdictCorrect === true ? '[OK]' : entry.verdictCorrect === false ? '[✗]' : '[ ]'}
+              </span>
+              <div>
+                <div style={{ fontSize: 11, color: '#e0e0e0', fontWeight: 700 }}>
+                  {entry.symbol}{' '}
+                  <span style={{ color: entry.verdict?.includes('ACHAT') ? '#10b981' : entry.verdict?.includes('VENTE') ? '#ef4444' : '#fcd34d', fontWeight: 400 }}>
+                    {entry.verdict}
+                  </span>
+                </div>
+                <div style={{ fontSize: 10, color: '#555', marginTop: 2 }}>{entry.result?.slice(0, 80)}</div>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+
+      {aiCommits.length === 0 && agentLog.length === 0 && (
+        <div style={{ color: '#333', fontSize: 12, padding: '20px 0' }}>$ no activity found</div>
       )}
     </div>
   )
@@ -162,404 +109,12 @@ function ActivityFeed() {
 // ─── Storage ──────────────────────────────────────────────────────────────────
 const HISTORY_KEY = 'trackr_andy_v2'
 const MAX_MSGS = 60
-const GALAXY_KEY = 'trackr_andy_galaxy'
 
 function loadHistory() {
   try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]') } catch { return [] }
 }
 function saveHistory(msgs) {
   localStorage.setItem(HISTORY_KEY, JSON.stringify(msgs.slice(-MAX_MSGS)))
-}
-function loadGalaxyData() {
-  try { return JSON.parse(localStorage.getItem(GALAXY_KEY) || '{"exchanges":0}') }
-  catch { return { exchanges: 0 } }
-}
-function saveGalaxyData(d) {
-  localStorage.setItem(GALAXY_KEY, JSON.stringify(d))
-}
-
-// ─── Galaxy Canvas — Interactive 2D Galaxy ────────────────────────────────────
-function GalaxyCanvas({ exchanges, active, mini = false }) {
-  const canvasRef = useRef(null)
-  const animRef = useRef(null)
-  const stateRef = useRef({
-    stars: [], nebulas: [], particles: [], shooters: [],
-    time: 0, rotation: 0,
-    // pan/zoom
-    panX: 0, panY: 0, zoom: 1,
-    dragging: false, lastX: 0, lastY: 0,
-    pinchDist: null,
-  })
-
-  // Galaxy params — rich from the start, grows with exchanges
-  const growth = Math.min(exchanges / 150, 1)
-  const BASE_STARS = 350
-  const starCount = Math.floor(BASE_STARS + growth * 650)  // 350 → 1000
-  const nebulaCount = Math.floor(4 + growth * 8)           // 4 → 12
-  const armCount = Math.floor(3 + growth * 3)              // 3 → 6 arms
-  const coreIntensity = 0.55 + growth * 0.45
-
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    const s = stateRef.current
-
-    function resize() {
-      const rect = canvas.getBoundingClientRect()
-      const dpr = window.devicePixelRatio || 1
-      canvas.width = rect.width * dpr
-      canvas.height = rect.height * dpr
-      ctx.scale(dpr, dpr)
-      initGalaxy(rect.width, rect.height)
-    }
-
-    function initGalaxy(w, h) {
-      const cx = w / 2, cy = h / 2
-      const maxR = Math.min(w, h) * (mini ? 0.36 : 0.44)
-
-      // Spiral arm stars
-      s.stars = Array.from({ length: starCount }, (_, i) => {
-        const arm = i % armCount
-        const progress = i / starCount
-        const t = progress * Math.PI * 10 + (arm / armCount) * Math.PI * 2
-        const r = (Math.pow(progress, 0.55) * 0.92 + 0.04) * maxR
-        const spread = 0.14 + progress * 0.12
-        const noiseA = (Math.random() - 0.5) * spread
-        const noiseR = (Math.random() - 0.5) * r * 0.15
-        const angle = t + noiseA
-        const flattenY = 0.35 + growth * 0.1
-        const x = cx + Math.cos(angle) * (r + noiseR)
-        const y = cy + Math.sin(angle) * (r + noiseR) * flattenY
-
-        const colors = [
-          '#ffffff', '#c3f5ff', '#00daf3', '#63f7ff',
-          '#d1bcff', '#ecb2ff', '#a78bfa', '#7dd3fc',
-          '#fde68a', '#fca5a5',
-        ]
-        const color = colors[Math.floor(Math.random() * colors.length)]
-        const brightness = 0.3 + Math.random() * 0.7
-        const size = Math.random() < 0.08 ? 2.2 + Math.random() * 1.4 : 0.4 + Math.random() * 1.4
-        return {
-          x, y, color, size, brightness,
-          twinkleSpeed: 0.6 + Math.random() * 2,
-          twinkleOffset: Math.random() * Math.PI * 2,
-          arm,
-        }
-      })
-
-      // Background dust
-      s.particles = Array.from({ length: 200 }, () => ({
-        x: Math.random() * w, y: Math.random() * h,
-        size: Math.random() * 0.9 + 0.1,
-        opacity: Math.random() * 0.35 + 0.05,
-        twinkle: Math.random() * Math.PI * 2,
-        speed: 0.004 + Math.random() * 0.01,
-      }))
-
-      // Nebulas
-      const nebulaColors = [
-        ['#6600ea', '#00e5ff'], ['#cf5cff', '#6600ea'],
-        ['#00daf3', '#0044aa'], ['#9945FF', '#ff006e'],
-        ['#00b4d8', '#6600ea'], ['#ff006e', '#9945FF'],
-        ['#fbbf24', '#6600ea'], ['#34d399', '#00daf3'],
-      ]
-      s.nebulas = Array.from({ length: nebulaCount }, (_, i) => {
-        const angle = (i / nebulaCount) * Math.PI * 2 + Math.random() * 0.8
-        const r = (0.15 + Math.random() * 0.55) * maxR
-        const x = cx + Math.cos(angle) * r
-        const y = cy + Math.sin(angle) * r * 0.38
-        const [c1, c2] = nebulaColors[i % nebulaColors.length]
-        return {
-          x, y,
-          rx: 35 + Math.random() * 80 * (0.4 + growth * 0.6),
-          ry: 20 + Math.random() * 45 * (0.4 + growth * 0.6),
-          rot: Math.random() * Math.PI,
-          c1, c2,
-          opacity: 0.07 + growth * 0.12,
-        }
-      })
-    }
-
-    function spawnShooter(w, h) {
-      const side = Math.random() < 0.5 ? 0 : 1
-      const x = side === 0 ? -10 : Math.random() * w
-      const y = side === 0 ? Math.random() * h * 0.5 : -10
-      s.shooters.push({
-        x, y,
-        vx: 2 + Math.random() * 4,
-        vy: 1.5 + Math.random() * 3,
-        life: 1, maxLen: 60 + Math.random() * 80,
-        color: Math.random() < 0.5 ? '#c3f5ff' : '#ecb2ff',
-      })
-    }
-
-    function draw() {
-      const rect = canvas.getBoundingClientRect()
-      const w = rect.width, h = rect.height
-      if (!w || !h) { animRef.current = requestAnimationFrame(draw); return }
-      const cx = w / 2, cy = h / 2
-      s.time += 0.012
-      if (!mini) s.rotation += 0.00015
-
-      // Shooting stars spawn
-      if (!mini && Math.random() < 0.004) spawnShooter(w, h)
-
-      ctx.clearRect(0, 0, w, h)
-
-      // Deep space bg — full solid
-      ctx.fillStyle = '#060a16'
-      ctx.fillRect(0, 0, w, h)
-
-      // Radial depth gradient
-      const bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.min(w, h) * 0.75)
-      bgGrad.addColorStop(0, 'rgba(25,10,55,0.75)')
-      bgGrad.addColorStop(0.45, 'rgba(11,19,35,0.45)')
-      bgGrad.addColorStop(1, 'rgba(6,10,22,0)')
-      ctx.fillStyle = bgGrad
-      ctx.fillRect(0, 0, w, h)
-
-      // Apply pan + zoom transform
-      ctx.save()
-      ctx.translate(cx + s.panX, cy + s.panY)
-      ctx.scale(s.zoom, s.zoom)
-      ctx.rotate(s.rotation)
-      ctx.translate(-cx, -cy)
-
-      // Background particles
-      for (const p of s.particles) {
-        p.twinkle += p.speed
-        const alpha = p.opacity * (0.6 + 0.4 * Math.sin(p.twinkle))
-        ctx.beginPath()
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(195,245,255,${alpha})`
-        ctx.fill()
-      }
-
-      // Nebulas
-      for (const n of s.nebulas) {
-        ctx.save()
-        ctx.translate(n.x, n.y)
-        ctx.rotate(n.rot)
-        const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, n.rx)
-        const a1 = Math.round(n.opacity * 255).toString(16).padStart(2, '0')
-        grad.addColorStop(0, n.c1 + a1)
-        grad.addColorStop(0.45, n.c2 + '1a')
-        grad.addColorStop(1, 'transparent')
-        ctx.beginPath()
-        ctx.ellipse(0, 0, n.rx, n.ry, 0, 0, Math.PI * 2)
-        ctx.fillStyle = grad
-        ctx.fill()
-        ctx.restore()
-      }
-
-      // Stars
-      for (const star of s.stars) {
-        const tw = 0.5 + 0.5 * Math.sin(s.time * star.twinkleSpeed + star.twinkleOffset)
-        const alpha = (0.35 + 0.65 * tw) * star.brightness
-
-        if (star.size > 1.4) {
-          // Glow halo for bright stars
-          const glowR = star.size * 5
-          const g = ctx.createRadialGradient(star.x, star.y, 0, star.x, star.y, glowR)
-          g.addColorStop(0, star.color + Math.round(alpha * 90).toString(16).padStart(2, '0'))
-          g.addColorStop(1, 'transparent')
-          ctx.beginPath()
-          ctx.arc(star.x, star.y, glowR, 0, Math.PI * 2)
-          ctx.fillStyle = g
-          ctx.fill()
-
-          // Cross sparkle for very bright
-          if (star.size > 2.5) {
-            ctx.strokeStyle = star.color + Math.round(alpha * 100).toString(16).padStart(2, '0')
-            ctx.lineWidth = 0.5
-            const len = star.size * 4
-            ctx.beginPath(); ctx.moveTo(star.x - len, star.y); ctx.lineTo(star.x + len, star.y); ctx.stroke()
-            ctx.beginPath(); ctx.moveTo(star.x, star.y - len); ctx.lineTo(star.x, star.y + len); ctx.stroke()
-          }
-        }
-
-        // Star core
-        ctx.beginPath()
-        ctx.arc(star.x, star.y, star.size * (0.7 + 0.3 * tw), 0, Math.PI * 2)
-        ctx.fillStyle = star.color + Math.round(alpha * 255).toString(16).padStart(2, '0')
-        ctx.fill()
-      }
-
-      // Galaxy core glow (layered)
-      const coreR = 22 + growth * 38
-      const layers = [
-        { r: coreR * 5, a: 0.04 * coreIntensity, c: '#6600ea' },
-        { r: coreR * 3, a: 0.1 * coreIntensity, c: '#00daf3' },
-        { r: coreR * 1.8, a: 0.3 * coreIntensity, c: '#c3f5ff' },
-        { r: coreR,       a: 0.7 * coreIntensity, c: '#ffffff' },
-      ]
-      for (const l of layers) {
-        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, l.r)
-        g.addColorStop(0, `${l.c}${Math.round(l.a * 255).toString(16).padStart(2, '0')}`)
-        g.addColorStop(0.4, `${l.c}${Math.round(l.a * 0.4 * 255).toString(16).padStart(2, '0')}`)
-        g.addColorStop(1, 'transparent')
-        ctx.beginPath()
-        ctx.ellipse(cx, cy, l.r, l.r * 0.42, 0, 0, Math.PI * 2)
-        ctx.fillStyle = g
-        ctx.fill()
-      }
-
-      // Pulsing ring when AI active
-      if (active) {
-        const pulse = 0.3 + 0.25 * Math.sin(s.time * 4)
-        const pR = 50 + growth * 25 + Math.sin(s.time * 3.5) * 10
-        ctx.beginPath()
-        ctx.ellipse(cx, cy, pR, pR * 0.4, 0, 0, Math.PI * 2)
-        ctx.strokeStyle = `rgba(0,218,243,${pulse})`
-        ctx.lineWidth = 1.5
-        ctx.stroke()
-        // Outer ring
-        ctx.beginPath()
-        ctx.ellipse(cx, cy, pR * 1.4, pR * 0.56, 0, 0, Math.PI * 2)
-        ctx.strokeStyle = `rgba(102,0,234,${pulse * 0.5})`
-        ctx.lineWidth = 0.8
-        ctx.stroke()
-      }
-
-      ctx.restore()
-
-      // Shooting stars (not affected by pan/zoom)
-      if (!mini) {
-        s.shooters = s.shooters.filter(sh => {
-          sh.x += sh.vx; sh.y += sh.vy; sh.life -= 0.025
-          if (sh.life <= 0) return false
-          const tail = sh.maxLen * sh.life
-          const grad = ctx.createLinearGradient(sh.x - sh.vx * tail / sh.vx, sh.y - sh.vy * tail / sh.vy, sh.x, sh.y)
-          grad.addColorStop(0, 'transparent')
-          grad.addColorStop(1, sh.color + Math.round(sh.life * 200).toString(16).padStart(2, '0'))
-          ctx.beginPath()
-          ctx.moveTo(sh.x - sh.vx * (tail / sh.vx), sh.y - sh.vy * (tail / sh.vy))
-          ctx.lineTo(sh.x, sh.y)
-          ctx.strokeStyle = grad
-          ctx.lineWidth = 1.2
-          ctx.stroke()
-          return true
-        })
-      }
-
-      // Level label (bottom center, not mini)
-      if (!mini && exchanges > 0) {
-        ctx.font = `700 11px 'Space Grotesk', system-ui`
-        ctx.fillStyle = 'rgba(195,245,255,0.3)'
-        ctx.textAlign = 'center'
-        ctx.fillText(`LVL ${Math.floor(exchanges / 5) + 1} · ${exchanges} échanges`, w / 2, h - 20)
-      }
-
-      animRef.current = requestAnimationFrame(draw)
-    }
-
-    // Use ResizeObserver for reliable sizing
-    const ro = new ResizeObserver(() => {
-      cancelAnimationFrame(animRef.current)
-      resize()
-      animRef.current = requestAnimationFrame(draw)
-    })
-    ro.observe(canvas)
-
-    return () => {
-      ro.disconnect()
-      cancelAnimationFrame(animRef.current)
-    }
-  }, [exchanges, active, growth, starCount, nebulaCount, armCount, coreIntensity, mini])
-
-  // ── Touch/Mouse interaction (pan + zoom) ─────────────────────────────────
-  useEffect(() => {
-    if (mini) return
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const s = stateRef.current
-
-    function getPos(e) {
-      const r = canvas.getBoundingClientRect()
-      const t = e.touches ? e.touches[0] : e
-      return { x: t.clientX - r.left, y: t.clientY - r.top }
-    }
-
-    function onMouseDown(e) {
-      const p = getPos(e)
-      s.dragging = true; s.lastX = p.x; s.lastY = p.y
-    }
-    function onMouseMove(e) {
-      if (!s.dragging) return
-      const p = getPos(e)
-      s.panX += (p.x - s.lastX); s.panY += (p.y - s.lastY)
-      s.lastX = p.x; s.lastY = p.y
-      // Limit pan
-      const maxPan = 300
-      s.panX = Math.max(-maxPan, Math.min(maxPan, s.panX))
-      s.panY = Math.max(-maxPan, Math.min(maxPan, s.panY))
-    }
-    function onMouseUp() { s.dragging = false }
-
-    function onWheel(e) {
-      e.preventDefault()
-      const factor = e.deltaY < 0 ? 1.1 : 0.91
-      s.zoom = Math.max(0.4, Math.min(4, s.zoom * factor))
-    }
-
-    function pinchDist(e) {
-      const dx = e.touches[0].clientX - e.touches[1].clientX
-      const dy = e.touches[0].clientY - e.touches[1].clientY
-      return Math.hypot(dx, dy)
-    }
-    function onTouchStart(e) {
-      if (e.touches.length === 2) { s.pinchDist = pinchDist(e); return }
-      const p = getPos(e)
-      s.dragging = true; s.lastX = p.x; s.lastY = p.y
-    }
-    function onTouchMove(e) {
-      e.preventDefault()
-      if (e.touches.length === 2) {
-        const d = pinchDist(e)
-        if (s.pinchDist) {
-          const factor = d / s.pinchDist
-          s.zoom = Math.max(0.4, Math.min(4, s.zoom * factor))
-        }
-        s.pinchDist = d; return
-      }
-      if (!s.dragging) return
-      const p = getPos(e.touches[0])
-      s.panX += (p.x - s.lastX); s.panY += (p.y - s.lastY)
-      s.lastX = p.x; s.lastY = p.y
-    }
-    function onTouchEnd(e) { if (e.touches.length < 2) s.pinchDist = null; if (e.touches.length === 0) s.dragging = false }
-
-    canvas.addEventListener('mousedown', onMouseDown)
-    canvas.addEventListener('mousemove', onMouseMove)
-    canvas.addEventListener('mouseup', onMouseUp)
-    canvas.addEventListener('mouseleave', onMouseUp)
-    canvas.addEventListener('wheel', onWheel, { passive: false })
-    canvas.addEventListener('touchstart', onTouchStart, { passive: false })
-    canvas.addEventListener('touchmove', onTouchMove, { passive: false })
-    canvas.addEventListener('touchend', onTouchEnd)
-
-    return () => {
-      canvas.removeEventListener('mousedown', onMouseDown)
-      canvas.removeEventListener('mousemove', onMouseMove)
-      canvas.removeEventListener('mouseup', onMouseUp)
-      canvas.removeEventListener('mouseleave', onMouseUp)
-      canvas.removeEventListener('wheel', onWheel)
-      canvas.removeEventListener('touchstart', onTouchStart)
-      canvas.removeEventListener('touchmove', onTouchMove)
-      canvas.removeEventListener('touchend', onTouchEnd)
-    }
-  }, [mini])
-
-  return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        width: '100%', height: '100%', display: 'block',
-        cursor: mini ? 'default' : 'grab',
-      }}
-    />
-  )
 }
 
 // ─── TradingView ──────────────────────────────────────────────────────────────
@@ -585,10 +140,10 @@ function TVChart({ symbol, interval }) {
       new window.TradingView.widget({
         container_id: uid.current, autosize: true, symbol: sym, interval: int,
         timezone: 'Europe/Paris', theme: 'dark', style: '1', locale: 'fr',
-        backgroundColor: 'rgba(6,10,22,1)', gridColor: 'rgba(132,147,150,0.05)',
+        backgroundColor: 'rgba(0,0,0,1)', gridColor: 'rgba(40,40,40,0.5)',
         enable_publishing: false, hide_side_toolbar: true,
         studies: ['RSI@tv-basicstudies', 'MACD@tv-basicstudies'],
-        overrides: { 'paneProperties.background': '#060a16' },
+        overrides: { 'paneProperties.background': '#000000' },
       })
     }
     if (tvLoaded && window.TradingView) { init() }
@@ -603,38 +158,42 @@ function TVChart({ symbol, interval }) {
     }
     return () => { if (container) container.innerHTML = '' }
   }, [symbol, interval])
-  return <div style={{ width: '100%', height: 340, borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(132,147,150,0.12)', marginBottom: 8, background: '#060a16' }}><div ref={ref} style={{ height: '100%', width: '100%' }} /></div>
+  return (
+    <div style={{ width: '100%', height: 300, margin: '8px 0', border: '1px solid #1a1a1a', background: '#000' }}>
+      <div ref={ref} style={{ height: '100%', width: '100%' }} />
+    </div>
+  )
 }
 
 // ─── Tool display ─────────────────────────────────────────────────────────────
 const TOOL_CFG = {
-  navigate:              { icon: '📍', label: 'Navigation',       color: '#00daf3', bg: 'rgba(0,218,243,0.08)'   },
-  fetch_price:           { icon: '📊', label: 'Prix live',         color: '#34d399', bg: 'rgba(52,211,153,0.08)'  },
-  fetch_crypto_price:    { icon: '₿',  label: 'Prix live',         color: '#fcd34d', bg: 'rgba(252,211,77,0.08)'  },
-  technical_analysis:    { icon: '📈', label: 'Analyse technique', color: '#a78bfa', bg: 'rgba(167,139,250,0.08)' },
-  scan_market:           { icon: '🔍', label: 'Scanner marché',    color: '#ecb2ff', bg: 'rgba(236,178,255,0.08)' },
-  add_stock:             { icon: '📈', label: 'Action ajoutée',    color: '#34d399', bg: 'rgba(52,211,153,0.08)'  },
-  remove_stock:          { icon: '📉', label: 'Action retirée',    color: '#f87171', bg: 'rgba(248,113,113,0.08)' },
-  add_crypto:            { icon: '₿',  label: 'Crypto ajoutée',    color: '#fcd34d', bg: 'rgba(252,211,77,0.08)'  },
-  remove_crypto:         { icon: '₿',  label: 'Crypto retirée',    color: '#f87171', bg: 'rgba(248,113,113,0.08)' },
-  create_alert:          { icon: '🔔', label: 'Alerte créée',      color: '#ecb2ff', bg: 'rgba(236,178,255,0.08)' },
-  delete_alert:          { icon: '🔕', label: 'Alerte supprimée',  color: '#4b6070', bg: 'rgba(75,96,112,0.08)'   },
-  add_to_watchlist:      { icon: '👁️', label: 'Watchlist',         color: '#00daf3', bg: 'rgba(0,218,243,0.08)'   },
-  remove_from_watchlist: { icon: '👁️', label: 'Retiré watchlist',  color: '#4b6070', bg: 'rgba(75,96,112,0.08)'   },
-  add_sneaker:           { icon: '👟', label: 'Sneaker ajoutée',   color: '#ecb2ff', bg: 'rgba(236,178,255,0.08)' },
+  navigate:              { label: 'navigate',      color: '#00ff88' },
+  fetch_price:           { label: 'fetch_price',   color: '#00ff88' },
+  fetch_crypto_price:    { label: 'fetch_crypto',  color: '#00ff88' },
+  technical_analysis:    { label: 'tech_analysis', color: '#00cc66' },
+  scan_market:           { label: 'scan_market',   color: '#00cc66' },
+  add_stock:             { label: 'add_stock',     color: '#00ff88' },
+  remove_stock:          { label: 'remove_stock',  color: '#ff4444' },
+  add_crypto:            { label: 'add_crypto',    color: '#00ff88' },
+  remove_crypto:         { label: 'remove_crypto', color: '#ff4444' },
+  create_alert:          { label: 'create_alert',  color: '#00cc66' },
+  delete_alert:          { label: 'delete_alert',  color: '#555'    },
+  add_to_watchlist:      { label: 'watchlist+',    color: '#00ff88' },
+  remove_from_watchlist: { label: 'watchlist-',    color: '#555'    },
+  add_sneaker:           { label: 'add_sneaker',   color: '#00cc66' },
 }
 
 function toolSummary(name, input, result) {
   const fmt = (n, d = 2) => Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d })
   switch (name) {
     case 'navigate': return `→ ${input.path}`
-    case 'fetch_price': return result?.price ? `${result.name || input.symbol} · $${fmt(result.price)} · ${parseFloat(result.changePct) >= 0 ? '+' : ''}${result.changePct}%` : input.symbol
-    case 'fetch_crypto_price': return result?.price ? `${input.coinId} · $${fmt(result.price)} · ${parseFloat(result.change24h) >= 0 ? '+' : ''}${result.change24h}%` : input.coinId
-    case 'technical_analysis': return result?.trend ? `${result.assetName || input.symbol} · ${input.interval} · ${result.trend} · RSI ${result.rsi}` : `${input.symbol} ${input.interval}`
-    case 'scan_market': return `${result?.count || 0} actifs scannés`
-    case 'add_stock': return `${input.symbol} · ${input.quantity} @ $${input.buyPrice}`
+    case 'fetch_price': return result?.price ? `${result.name || input.symbol} $${fmt(result.price)} ${parseFloat(result.changePct) >= 0 ? '+' : ''}${result.changePct}%` : input.symbol
+    case 'fetch_crypto_price': return result?.price ? `${input.coinId} $${fmt(result.price)} ${parseFloat(result.change24h) >= 0 ? '+' : ''}${result.change24h}%` : input.coinId
+    case 'technical_analysis': return result?.trend ? `${result.assetName || input.symbol} ${input.interval} ${result.trend} RSI=${result.rsi}` : `${input.symbol} ${input.interval}`
+    case 'scan_market': return `${result?.count || 0} assets scanned`
+    case 'add_stock': return `${input.symbol} ${input.quantity}x @ $${input.buyPrice}`
     case 'remove_stock': return input.symbol
-    case 'add_crypto': return `${input.coinName} · ${input.quantity} @ $${input.buyPrice}`
+    case 'add_crypto': return `${input.coinName} ${input.quantity}x @ $${input.buyPrice}`
     case 'remove_crypto': return input.coinId
     case 'create_alert': return `${input.symbol} ${input.direction === 'above' ? '>' : '<'} $${input.targetPrice}`
     case 'delete_alert': return `${input.symbol} ${input.direction === 'above' ? '>' : '<'} $${input.targetPrice}`
@@ -647,27 +206,27 @@ function toolSummary(name, input, result) {
 
 function ToolCard({ name, input, result }) {
   const [exp, setExp] = useState(false)
-  const cfg = TOOL_CFG[name] || { icon: '⚙️', label: name, color: '#4b6070', bg: 'rgba(75,96,112,0.08)' }
+  const cfg = TOOL_CFG[name] || { label: name, color: '#555' }
   const summary = toolSummary(name, input, result)
   const hasDetail = result && !result.error && Object.keys(result).length > 1
+  const ok = !result?.error
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '7px 10px', borderRadius: 10, margin: '2px 0', background: cfg.bg, border: `1px solid ${cfg.color}20` }}>
-      <span style={{ fontSize: 13, lineHeight: 1.5, flexShrink: 0 }}>{cfg.icon}</span>
-      <div style={{ flex: 1, minWidth: 0, fontSize: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-          <span style={{ color: cfg.color, fontWeight: 700, fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: "'Space Grotesk', system-ui" }}>{cfg.label}</span>
-          <span style={{ fontSize: 9, color: '#4b6070', background: 'rgba(0,0,0,0.25)', padding: '1px 5px', borderRadius: 4 }}>{result?.error ? '✗' : '✓'}</span>
-        </div>
-        <div style={{ color: '#bac9cc', marginTop: 2, wordBreak: 'break-word', lineHeight: 1.4 }}>{summary}</div>
+    <div style={{ fontFamily: MONO, fontSize: 11, padding: '2px 0', color: '#555' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span style={{ color: ok ? cfg.color : '#ef4444' }}>{ok ? '✓' : '✗'}</span>
+        <span style={{ color: cfg.color, fontWeight: 700 }}>[{cfg.label}]</span>
+        <span style={{ color: '#666' }}>{summary}</span>
         {hasDetail && (
-          <>
-            <button onClick={() => setExp(e => !e)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#4b6070', fontSize: 10, marginTop: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-              {exp ? <ChevronUp size={9} /> : <ChevronDown size={9} />} {exp ? 'Moins' : 'Détails'}
-            </button>
-            {exp && <pre style={{ marginTop: 5, fontSize: 10, color: '#4b6070', background: 'rgba(0,0,0,0.3)', padding: '5px 8px', borderRadius: 6, overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{JSON.stringify(result, null, 2)}</pre>}
-          </>
+          <button onClick={() => setExp(e => !e)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#444', fontSize: 10, marginLeft: 4, fontFamily: MONO }}>
+            {exp ? '▲' : '▼'}
+          </button>
         )}
       </div>
+      {exp && hasDetail && (
+        <pre style={{ margin: '4px 0 4px 18px', fontSize: 10, color: '#444', background: '#050505', border: '1px solid #1a1a1a', padding: '5px 8px', overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: MONO }}>
+          {JSON.stringify(result, null, 2)}
+        </pre>
+      )}
     </div>
   )
 }
@@ -679,9 +238,9 @@ function inlineMd(text) {
   const parts = []; const re = /(\*\*(.+?)\*\*|`(.+?)`|\*(.+?)\*)/g; let last = 0, m
   while ((m = re.exec(text)) !== null) {
     if (m.index > last) parts.push(text.slice(last, m.index))
-    if (m[2]) parts.push(<strong key={m.index} style={{ color: '#c3f5ff', fontWeight: 700 }}>{m[2]}</strong>)
-    else if (m[3]) parts.push(<code key={m.index} style={{ background: 'rgba(0,218,243,0.1)', borderRadius: 4, padding: '1px 5px', fontSize: '0.88em', fontFamily: 'monospace', color: '#00daf3' }}>{m[3]}</code>)
-    else if (m[4]) parts.push(<em key={m.index} style={{ color: '#ecb2ff' }}>{m[4]}</em>)
+    if (m[2]) parts.push(<strong key={m.index} style={{ color: '#e0e0e0', fontWeight: 700 }}>{m[2]}</strong>)
+    else if (m[3]) parts.push(<code key={m.index} style={{ background: 'rgba(0,255,136,0.07)', padding: '1px 4px', color: '#00ff88', fontFamily: MONO }}>{m[3]}</code>)
+    else if (m[4]) parts.push(<em key={m.index} style={{ color: '#aa44ff' }}>{m[4]}</em>)
     last = re.lastIndex
   }
   if (last < text.length) parts.push(text.slice(last))
@@ -690,11 +249,11 @@ function inlineMd(text) {
 
 function renderLine(line, key) {
   const lm = line.match(/^[-*•]\s(.+)/)
-  if (lm) return <div key={key} style={{ display: 'flex', gap: 8, margin: '2px 0' }}><span style={{ color: '#00daf3', flexShrink: 0 }}>·</span><span>{inlineMd(lm[1])}</span></div>
-  const gm = line.match(/^🟢\s(.+)/); if (gm) return <div key={key} style={{ background: 'rgba(52,211,153,0.07)', borderLeft: '2px solid #34d399', borderRadius: '0 8px 8px 0', padding: '5px 10px', margin: '3px 0', color: '#6ee7b7', fontSize: 13.5 }}>🟢 {inlineMd(gm[1])}</div>
-  const rm = line.match(/^🔴\s(.+)/); if (rm) return <div key={key} style={{ background: 'rgba(248,113,113,0.07)', borderLeft: '2px solid #f87171', borderRadius: '0 8px 8px 0', padding: '5px 10px', margin: '3px 0', color: '#fca5a5', fontSize: 13.5 }}>🔴 {inlineMd(rm[1])}</div>
-  const ym = line.match(/^🟡\s(.+)/); if (ym) return <div key={key} style={{ background: 'rgba(252,211,77,0.07)', borderLeft: '2px solid #fcd34d', borderRadius: '0 8px 8px 0', padding: '5px 10px', margin: '3px 0', color: '#fcd34d', fontSize: 13.5 }}>🟡 {inlineMd(ym[1])}</div>
-  const em = line.match(/^⚡\s(.+)/); if (em) return <div key={key} style={{ background: 'rgba(0,218,243,0.07)', borderLeft: '2px solid #00daf3', borderRadius: '0 8px 8px 0', padding: '5px 10px', margin: '3px 0', color: '#c3f5ff', fontSize: 13.5 }}>⚡ {inlineMd(em[1])}</div>
+  if (lm) return <div key={key} style={{ display: 'flex', gap: 8, margin: '2px 0' }}><span style={{ color: '#444', flexShrink: 0 }}>—</span><span>{inlineMd(lm[1])}</span></div>
+  const gm = line.match(/^🟢\s(.+)/); if (gm) return <div key={key} style={{ color: '#10b981', margin: '3px 0' }}>+ {inlineMd(gm[1])}</div>
+  const rm = line.match(/^🔴\s(.+)/); if (rm) return <div key={key} style={{ color: '#ef4444', margin: '3px 0' }}>- {inlineMd(rm[1])}</div>
+  const ym = line.match(/^🟡\s(.+)/); if (ym) return <div key={key} style={{ color: '#fcd34d', margin: '3px 0' }}>~ {inlineMd(ym[1])}</div>
+  const em = line.match(/^⚡\s(.+)/); if (em) return <div key={key} style={{ color: '#00ff88', margin: '3px 0' }}>! {inlineMd(em[1])}</div>
   return <div key={key} style={{ lineHeight: 1.65, margin: '1px 0' }}>{inlineMd(line)}</div>
 }
 
@@ -717,73 +276,119 @@ function renderContent(text) {
         const lang = line.slice(3).trim(); const code = []
         i++
         while (i < lines.length && !lines[i].startsWith('```')) { code.push(lines[i]); i++ }
-        out.push(<pre key={`${si}-${i}`} style={{ background: 'rgba(6,10,22,0.8)', border: '1px solid rgba(132,147,150,0.1)', borderRadius: 10, padding: '12px 14px', overflowX: 'auto', margin: '8px 0', fontSize: 12.5, lineHeight: 1.6 }}>{lang && <div style={{ color: '#4b6070', fontSize: 10, marginBottom: 6, fontFamily: 'monospace', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{lang}</div>}<code style={{ fontFamily: 'monospace', color: '#c3f5ff', whiteSpace: 'pre' }}>{code.join('\n')}</code></pre>)
+        out.push(
+          <pre key={`${si}-${i}`} style={{ background: '#050505', border: '1px solid #1a1a1a', padding: '10px 12px', overflowX: 'auto', margin: '6px 0', fontSize: 11, lineHeight: 1.6, fontFamily: MONO }}>
+            {lang && <div style={{ color: '#333', fontSize: 9, marginBottom: 4, letterSpacing: '0.1em' }}>{lang.toUpperCase()}</div>}
+            <code style={{ color: '#00ff88', whiteSpace: 'pre', fontFamily: MONO }}>{code.join('\n')}</code>
+          </pre>
+        )
         i++; continue
       }
       const hm = line.match(/^(#{1,3})\s(.+)/)
-      if (hm) { const sz = hm[1].length === 1 ? 17 : hm[1].length === 2 ? 15 : 13.5; out.push(<div key={`${si}-${i}`} style={{ fontSize: sz, fontWeight: 700, color: '#c3f5ff', margin: '12px 0 4px', fontFamily: "'Space Grotesk', system-ui" }}>{hm[2]}</div>); i++; continue }
-      if (line.match(/^---+$/)) { out.push(<div key={`${si}-${i}`} style={{ height: 1, background: 'rgba(132,147,150,0.1)', margin: '10px 0' }} />); i++; continue }
-      if (line.trim() === '') { out.push(<div key={`${si}-${i}`} style={{ height: 5 }} />); i++; continue }
+      if (hm) {
+        const sz = hm[1].length === 1 ? 15 : hm[1].length === 2 ? 13 : 12
+        out.push(<div key={`${si}-${i}`} style={{ fontSize: sz, fontWeight: 700, color: '#e0e0e0', margin: '10px 0 3px', fontFamily: MONO }}>
+          {'#'.repeat(hm[1].length)} {hm[2]}
+        </div>)
+        i++; continue
+      }
+      if (line.match(/^---+$/)) { out.push(<div key={`${si}-${i}`} style={{ height: 1, background: '#1a1a1a', margin: '8px 0' }} />); i++; continue }
+      if (line.trim() === '') { out.push(<div key={`${si}-${i}`} style={{ height: 4 }} />); i++; continue }
       out.push(renderLine(line, `${si}-${i}`)); i++
     }
     return <div key={si}>{out}</div>
   })
 }
 
-// ─── Message bubble ────────────────────────────────────────────────────────────
+// ─── Message Bubble ───────────────────────────────────────────────────────────
 function Bubble({ msg, onSpeak }) {
   const isUser = msg.role === 'user'
   const [copied, setCopied] = useState(false)
   const allTools = [...(msg.serverTools || []), ...(msg.clientActions || []).map(a => ({ ...a, isClient: true }))]
+  const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : ''
 
   if (isUser) return (
-    <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 0' }}>
-      <div style={{ maxWidth: '80%', padding: '10px 16px', borderRadius: '18px 18px 4px 18px', background: '#000', border: '1px solid rgba(0,255,128,0.25)', color: '#00ff88', fontSize: 14.5, lineHeight: 1.6, wordBreak: 'break-word', fontFamily: "'SF Mono', 'Fira Code', monospace" }}>
-        {msg.content}
+    <div style={{ padding: '10px 0', borderBottom: '1px solid #0d0d0d' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'flex-end', gap: 8, marginBottom: 4 }}>
+        {time && <span style={{ fontSize: 9, color: '#2a2a2a', fontFamily: MONO }}>{time}</span>}
+        <span style={{ fontSize: 9, color: '#00ff88', fontFamily: MONO, fontWeight: 700, letterSpacing: '0.1em' }}>YOU</span>
+      </div>
+      <div style={{ textAlign: 'right' }}>
+        <span style={{ fontSize: 13.5, color: '#00ff88', fontFamily: MONO, lineHeight: 1.6, wordBreak: 'break-word' }}>
+          &gt; {msg.content}
+        </span>
       </div>
     </div>
   )
 
   return (
-    <div style={{ display: 'flex', gap: 10, padding: '6px 0', alignItems: 'flex-start' }}>
-      <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, marginTop: 2, background: '#000', border: '1px solid rgba(0,218,243,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 8px rgba(0,218,243,0.2)' }}>
-        <Bot size={13} color="#00daf3" />
+    <div style={{ padding: '10px 0', borderBottom: '1px solid #0d0d0d' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        <span style={{ fontSize: 9, color: '#00ff88', fontFamily: MONO, fontWeight: 700, letterSpacing: '0.1em' }}>ANDY</span>
+        {time && <span style={{ fontSize: 9, color: '#2a2a2a', fontFamily: MONO }}>{time}</span>}
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        {allTools.length > 0 && <div style={{ marginBottom: 6 }}>{allTools.map((t, i) => <ToolCard key={t.id || i} name={t.name} input={t.input} result={t.result} />)}</div>}
-        {(msg.content || msg.streaming) && (
-          <div style={{ background: '#000', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '4px 16px 16px 16px', padding: '12px 16px', fontSize: 14.5, color: '#f0f0f0', lineHeight: 1.7, wordBreak: 'break-word' }}>
-            {msg.content ? renderContent(msg.content) : null}
-            {msg.streaming && (
-              <span style={{ display: 'inline-block', width: 2, height: '1em', background: '#00daf3', marginLeft: 2, verticalAlign: 'text-bottom', animation: 'cursorBlink 0.9s ease-in-out infinite alternate', borderRadius: 1 }} />
-            )}
-          </div>
-        )}
-        {msg.content && !msg.streaming && (
-          <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-            <button onClick={() => { navigator.clipboard.writeText(msg.content); setCopied(true); setTimeout(() => setCopied(false), 1500) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#333', padding: '2px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, transition: 'color 150ms' }} onMouseEnter={e => e.currentTarget.style.color='#888'} onMouseLeave={e => e.currentTarget.style.color='#333'}>
-              {copied ? <><Check size={10} style={{ color: '#00ff88' }} /> Copié</> : <><Copy size={10} /> Copier</>}
-            </button>
-            <button onClick={() => onSpeak(msg.content)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#333', padding: '2px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
-              <Volume2 size={10} /> Écouter
-            </button>
-          </div>
-        )}
-      </div>
+      {allTools.length > 0 && (
+        <div style={{ marginBottom: 8, paddingLeft: 2 }}>
+          {allTools.map((t, i) => <ToolCard key={t.id || i} name={t.name} input={t.input} result={t.result} />)}
+        </div>
+      )}
+      {(msg.content || msg.streaming) && (
+        <div style={{ fontSize: 13.5, color: '#c0c0c0', lineHeight: 1.7, fontFamily: MONO, wordBreak: 'break-word' }}>
+          {msg.content ? renderContent(msg.content) : null}
+          {msg.streaming && (
+            <span style={{ display: 'inline-block', width: 8, height: '0.9em', background: '#00ff88', marginLeft: 2, verticalAlign: 'text-bottom', animation: 'cursorBlink 0.8s step-end infinite' }} />
+          )}
+        </div>
+      )}
+      {msg.content && !msg.streaming && (
+        <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
+          <button
+            onClick={() => { navigator.clipboard.writeText(msg.content); setCopied(true); setTimeout(() => setCopied(false), 1500) }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2a2a2a', padding: 0, fontSize: 10, fontFamily: MONO }}
+            onMouseEnter={e => e.currentTarget.style.color = '#666'}
+            onMouseLeave={e => e.currentTarget.style.color = '#2a2a2a'}
+          >
+            {copied ? '[copied ✓]' : '[copy]'}
+          </button>
+          <button
+            onClick={() => onSpeak(msg.content)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2a2a2a', padding: 0, fontSize: 10, fontFamily: MONO }}
+            onMouseEnter={e => e.currentTarget.style.color = '#666'}
+            onMouseLeave={e => e.currentTarget.style.color = '#2a2a2a'}
+          >
+            [speak]
+          </button>
+        </div>
+      )}
     </div>
   )
 }
 
 // ─── Voice ────────────────────────────────────────────────────────────────────
 function useSpeech(onResult) {
-  const ref = useRef(null); const [listening, setListening] = useState(false); const [interim, setInterim] = useState(''); const [supported, setSupported] = useState(false)
+  const ref = useRef(null)
+  const [listening, setListening] = useState(false)
+  const [interim, setInterim] = useState('')
+  const [supported, setSupported] = useState(false)
   useEffect(() => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR) return; setSupported(true)
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SR) return
+    setSupported(true)
     const r = new SR(); r.lang = 'fr-FR'; r.continuous = false; r.interimResults = true
-    r.onresult = e => { let f = '', inter = ''; for (const res of e.results) { if (res.isFinal) f += res[0].transcript; else inter += res[0].transcript }; setInterim(inter); if (f) { setInterim(''); onResult(f.trim()) } }
-    r.onend = () => { setListening(false); setInterim('') }; r.onerror = () => { setListening(false); setInterim('') }; ref.current = r
+    r.onresult = e => {
+      let f = '', inter = ''
+      for (const res of e.results) { if (res.isFinal) f += res[0].transcript; else inter += res[0].transcript }
+      setInterim(inter); if (f) { setInterim(''); onResult(f.trim()) }
+    }
+    r.onend = () => { setListening(false); setInterim('') }
+    r.onerror = () => { setListening(false); setInterim('') }
+    ref.current = r
   }, [])
-  const toggle = useCallback(() => { if (!ref.current) return; if (listening) ref.current.stop(); else { try { ref.current.start(); setListening(true) } catch {} } }, [listening])
+  const toggle = useCallback(() => {
+    if (!ref.current) return
+    if (listening) ref.current.stop()
+    else { try { ref.current.start(); setListening(true) } catch {} }
+  }, [listening])
   return { listening, interim, supported, toggle }
 }
 
@@ -792,20 +397,21 @@ function speakText(text) {
   const clean = text.replace(/[🟢🔴🟡📊📈📉🔔⚡₿]/gu, '').replace(/\*\*/g, '').replace(/`[^`]*`/g, '').replace(/```[\s\S]*?```/g, 'code').replace(/\[CHART:[^\]]+\]/g, '').slice(0, 600)
   const u = new SpeechSynthesisUtterance(clean); u.lang = 'fr-FR'; u.rate = 1.05; u.pitch = 1
   const fr = window.speechSynthesis.getVoices().find(v => /thomas|amélie|nicolas/i.test(v.name) && v.lang?.startsWith('fr'))
-  if (fr) u.voice = fr; window.speechSynthesis.speak(u)
+  if (fr) u.voice = fr
+  window.speechSynthesis.speak(u)
 }
 
 // ─── Suggestions ──────────────────────────────────────────────────────────────
 const SUGGESTIONS = [
-  { text: 'Analyse technique Apple 1h', icon: '📈' },
-  { text: 'Scanne mon portfolio', icon: '🔍' },
-  { text: 'Combien vaut Bitcoin ?', icon: '₿' },
-  { text: 'Crée alertes NVDA aux niveaux clés', icon: '🔔' },
-  { text: 'Meilleur setup du marché ?', icon: '⚡' },
-  { text: 'Analyse S&P500 tendance', icon: '🌐' },
+  'analyse technique Apple 1h',
+  'scanne mon portfolio',
+  'combien vaut Bitcoin ?',
+  'crée alertes NVDA aux niveaux clés',
+  'meilleur setup du marché ?',
+  'analyse S&P500 tendance',
 ]
 
-// ─── Input bar ────────────────────────────────────────────────────────────────
+// ─── Input Bar ────────────────────────────────────────────────────────────────
 function InputBar({ input, onInput, onSend, onMic, listening, interim, supported, loading, offline, textareaRef }) {
   function onKeyDown(e) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend() }
@@ -813,26 +419,42 @@ function InputBar({ input, onInput, onSend, onMic, listening, interim, supported
   const canSend = input.trim() && !loading && !offline
 
   return (
-    <div>
-      {interim && <div style={{ fontSize: 12, color: '#00daf3', marginBottom: 7, padding: '5px 10px', background: 'rgba(0,218,243,0.08)', borderRadius: 8, border: '1px solid rgba(0,218,243,0.15)' }}>🎤 {interim}</div>}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', background: '#0a0a0a', border: `1px solid ${listening ? 'rgba(255,80,80,0.35)' : '#222'}`, borderRadius: 16, padding: '8px 8px 8px 14px' }}>
+    <div style={{ fontFamily: MONO }}>
+      {interim && (
+        <div style={{ fontSize: 11, color: '#00daf3', marginBottom: 4 }}>[mic] {interim}</div>
+      )}
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, borderTop: '1px solid #1a1a1a', paddingTop: 10 }}>
+        <span style={{ fontSize: 13, color: listening ? '#ef4444' : canSend ? '#00ff88' : '#333', paddingBottom: 6, flexShrink: 0, fontFamily: MONO, userSelect: 'none' }}>
+          {listening ? '[●]' : '>_'}
+        </span>
         <textarea
           ref={textareaRef}
           value={input}
           onChange={onInput}
           onKeyDown={onKeyDown}
-          placeholder={listening ? 'Écoute…' : 'Message…'}
+          placeholder={offline ? 'offline' : listening ? 'listening...' : ''}
           rows={1}
-          style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: '#f0f0f0', fontSize: 14, resize: 'none', lineHeight: 1.5, fontFamily: 'inherit', maxHeight: 120, overflowY: 'auto' }}
+          style={{
+            flex: 1, background: 'none', border: 'none', outline: 'none',
+            color: '#e0e0e0', fontSize: 13.5, resize: 'none', lineHeight: 1.5,
+            fontFamily: MONO, maxHeight: 120, overflowY: 'auto', paddingBottom: 6,
+          }}
         />
-        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0, paddingBottom: 6, alignItems: 'center' }}>
           {supported && (
-            <button onClick={onMic} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: listening ? 'rgba(255,80,80,0.15)' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: listening ? '#ff5050' : '#444', transition: 'all 200ms' }}>
-              {listening ? <MicOff size={14} /> : <Mic size={14} />}
+            <button onClick={onMic} style={{ background: 'none', border: 'none', cursor: 'pointer', color: listening ? '#ef4444' : '#333', fontSize: 11, fontFamily: MONO, padding: 0 }}>
+              {listening ? '[stop]' : '[mic]'}
             </button>
           )}
-          <button onClick={onSend} disabled={!canSend} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: canSend ? '#00ff88' : '#111', cursor: canSend ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', color: canSend ? '#000' : '#333', transition: 'all 200ms', boxShadow: canSend ? '0 0 12px rgba(0,255,136,0.35)' : 'none' }}>
-            <Send size={14} />
+          <button onClick={onSend} disabled={!canSend} style={{
+            background: 'none',
+            border: `1px solid ${canSend ? '#00ff88' : '#1a1a1a'}`,
+            cursor: canSend ? 'pointer' : 'default',
+            color: canSend ? '#00ff88' : '#2a2a2a',
+            fontSize: 12, fontFamily: MONO, padding: '3px 10px',
+            transition: 'all 150ms',
+          }}>
+            [↵]
           </button>
         </div>
       </div>
@@ -850,15 +472,13 @@ export default function Andy() {
   } = useApp()
 
   const [messages, setMessages] = useState(loadHistory)
-  const [galaxyData, setGalaxyData] = useState(loadGalaxyData)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [toolStatus, setToolStatus] = useState('') // e.g. "📈 Analyse technique…"
+  const [toolStatus, setToolStatus] = useState('')
   const [autoSpeak, setAutoSpeak] = useState(false)
   const [offline, setOffline] = useState(!navigator.onLine)
-  const [view, setView] = useState('galaxy') // 'galaxy' | 'chat'
+  const [view, setView] = useState('chat') // 'chat' | 'log'
   const streamTextRef = useRef('')
-
   const listRef = useRef(null)
   const textareaRef = useRef(null)
 
@@ -869,7 +489,6 @@ export default function Andy() {
   }, [])
 
   useEffect(() => { saveHistory(messages) }, [messages])
-  useEffect(() => { saveGalaxyData(galaxyData) }, [galaxyData])
 
   useEffect(() => {
     if (view === 'chat' && listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight
@@ -905,17 +524,14 @@ export default function Andy() {
     const trimmed = (text || input).trim()
     if (!trimmed || loading || offline) return
     setInput('')
-    if (textareaRef.current) { textareaRef.current.style.height = 'auto' }
-    if (view === 'galaxy') setView('chat')
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
+    setView('chat')
 
-    const userMsg = { role: 'user', content: trimmed }
+    const userMsg = { role: 'user', content: trimmed, timestamp: new Date() }
     const newMsgs = [...messages, userMsg]
-
-    // Add streaming placeholder immediately
-    const placeholder = { role: 'assistant', content: '', streaming: true, serverTools: [], clientActions: [] }
+    const placeholder = { role: 'assistant', content: '', streaming: true, serverTools: [], clientActions: [], timestamp: new Date() }
     setMessages([...newMsgs, placeholder])
     setLoading(true)
-    setGalaxyData(prev => ({ ...prev, exchanges: prev.exchanges + 1 }))
     streamTextRef.current = ''
 
     const apiMsgs = newMsgs.map(m => ({ role: m.role, content: m.content }))
@@ -967,20 +583,18 @@ export default function Andy() {
         }
       }
 
-      // Finalize message
       const finalText = streamTextRef.current
       if (finalClientActions.length > 0) await executeClientActions(finalClientActions)
       setMessages(prev => {
         const copy = [...prev]
-        copy[copy.length - 1] = { role: 'assistant', content: finalText, streaming: false, serverTools: finalServerTools, clientActions: finalClientActions }
+        copy[copy.length - 1] = { role: 'assistant', content: finalText, streaming: false, serverTools: finalServerTools, clientActions: finalClientActions, timestamp: copy[copy.length - 1].timestamp }
         return copy
       })
-      setGalaxyData(prev => ({ ...prev, exchanges: prev.exchanges + 1 }))
       if (autoSpeak && finalText) speakText(finalText)
     } catch (e) {
       setMessages(prev => {
         const copy = [...prev]
-        copy[copy.length - 1] = { role: 'assistant', content: `Erreur : ${e.message}`, streaming: false, serverTools: [], clientActions: [] }
+        copy[copy.length - 1] = { role: 'assistant', content: `ERR: ${e.message}`, streaming: false, serverTools: [], clientActions: [], timestamp: copy[copy.length - 1].timestamp }
         return copy
       })
     } finally {
@@ -990,170 +604,135 @@ export default function Andy() {
   }
 
   function clearAll() {
-    setMessages([]); localStorage.removeItem(HISTORY_KEY)
-    setGalaxyData({ exchanges: 0 }); localStorage.removeItem(GALAXY_KEY)
-    setView('galaxy')
+    setMessages([])
+    localStorage.removeItem(HISTORY_KEY)
   }
 
-  const level = Math.floor(galaxyData.exchanges / 5) + 1
-  const xp = galaxyData.exchanges % 5
-  const growth = Math.min(galaxyData.exchanges / 150, 1)
-
   return (
-    <div style={{ position: 'fixed', inset: 0, background: '#000', display: 'flex', flexDirection: 'column', color: '#dbe2f8', fontFamily: "'Inter', system-ui, sans-serif", overflow: 'hidden' }}>
+    <div style={{ position: 'fixed', inset: 0, background: '#000', display: 'flex', flexDirection: 'column', color: '#c0c0c0', fontFamily: MONO, overflow: 'hidden' }}>
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px', paddingTop: 'max(14px, env(safe-area-inset-top, 0px))', paddingBottom: 12, borderBottom: '1px solid rgba(132,147,150,0.08)', background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(20px)', flexShrink: 0, zIndex: 20 }}>
-        <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4b6070', padding: 4, display: 'flex' }}>
-          <ArrowLeft size={20} />
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '0 14px',
+        paddingTop: 'max(12px, env(safe-area-inset-top, 0px))',
+        paddingBottom: 10,
+        borderBottom: '1px solid #1a1a1a',
+        background: '#000',
+        flexShrink: 0, zIndex: 20,
+      }}>
+        <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#333', padding: 0, fontSize: 16, fontFamily: MONO, lineHeight: 1 }}>
+          ←
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
-          <div style={{ position: 'relative', width: 34, height: 34 }}>
-            <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'linear-gradient(135deg, #00a3b8, #6600ea)', opacity: 0.2, animation: 'andySpin 8s linear infinite' }} />
-            <div style={{ position: 'absolute', inset: 2, borderRadius: '50%', background: 'linear-gradient(135deg, #00a3b8, #6600ea)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Bot size={15} color="white" />
-            </div>
-            <div style={{ position: 'absolute', bottom: 0, right: 0, width: 9, height: 9, borderRadius: '50%', background: offline ? '#ef4444' : '#00daf3', border: '2px solid #000', boxShadow: offline ? 'none' : '0 0 5px #00daf3' }} />
-          </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 15, fontWeight: 700, color: '#c3f5ff', fontFamily: "'Space Grotesk', system-ui" }}>AnDy AI</span>
-              <span style={{ fontSize: 9, fontWeight: 800, color: '#00daf3', background: 'rgba(0,218,243,0.1)', border: '1px solid rgba(0,218,243,0.2)', padding: '1px 6px', borderRadius: 999, letterSpacing: '0.1em', textTransform: 'uppercase' }}>LVL {level}</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
-              <div style={{ width: 60, height: 2, background: 'rgba(132,147,150,0.15)', borderRadius: 2 }}>
-                <div style={{ height: '100%', width: `${(xp / 5) * 100}%`, background: 'linear-gradient(90deg, #00daf3, #6600ea)', borderRadius: 2, transition: 'width 600ms ease' }} />
-              </div>
-              <span style={{ fontSize: 9, color: '#4b6070' }}>{offline ? 'hors ligne' : 'sonnet · actif'}</span>
-            </div>
-          </div>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <span style={{ fontSize: 12, color: '#00ff88', fontWeight: 700, letterSpacing: '0.1em', flexShrink: 0 }}>ANDY</span>
+          <span style={{ fontSize: 10, color: '#222' }}>·</span>
+          <span style={{ fontSize: 10, color: '#444', flexShrink: 0 }}>claude-sonnet-4-6</span>
+          <span style={{ fontSize: 10, color: '#222' }}>·</span>
+          <span style={{
+            width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+            background: offline ? '#ef4444' : '#00ff88',
+            boxShadow: offline ? 'none' : '0 0 5px #00ff88',
+            display: 'inline-block',
+          }} />
+          <span style={{ fontSize: 10, color: offline ? '#ef4444' : '#00ff88', flexShrink: 0 }}>
+            {offline ? 'OFFLINE' : 'ONLINE'}
+          </span>
+          {messages.length > 0 && (
+            <span style={{ fontSize: 10, color: '#2a2a2a', flexShrink: 0 }}>· {messages.length}</span>
+          )}
         </div>
 
-        <div style={{ display: 'flex', gap: 4 }}>
-          {/* Galaxy / Chat toggle */}
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0 }}>
           <button
-            onClick={() => setView(v => v === 'galaxy' ? 'chat' : (v === 'chat' ? 'galaxy' : 'chat'))}
-            style={{ background: view === 'chat' ? 'rgba(0,218,243,0.12)' : 'rgba(255,255,255,0.05)', border: `1px solid ${view === 'chat' ? 'rgba(0,218,243,0.3)' : 'rgba(132,147,150,0.12)'}`, borderRadius: 10, padding: '6px 10px', cursor: 'pointer', color: view === 'chat' ? '#00daf3' : '#bac9cc', fontSize: 11, fontWeight: 700, fontFamily: "'Space Grotesk', system-ui", letterSpacing: '0.06em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 5 }}
+            onClick={() => setView(v => v === 'log' ? 'chat' : 'log')}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: view === 'log' ? '#00ff88' : '#333', fontSize: 11, fontFamily: MONO, padding: 0 }}
           >
-            {view === 'galaxy' ? <><Maximize2 size={11} /> Chat</> : view === 'activity' ? <><Minimize2 size={11} /> Chat</> : <><Minimize2 size={11} /> Hub</>}
+            [log]
           </button>
-          {/* Activity feed */}
-          <button
-            onClick={() => setView(v => v === 'activity' ? 'galaxy' : 'activity')}
-            style={{ background: view === 'activity' ? 'rgba(236,178,255,0.14)' : 'rgba(255,255,255,0.04)', border: `1px solid ${view === 'activity' ? 'rgba(236,178,255,0.3)' : 'rgba(132,147,150,0.1)'}`, borderRadius: 10, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: view === 'activity' ? '#ecb2ff' : '#4b6070' }}
-            title="Activité IA"
-          >
-            <Activity size={14} />
+          <button onClick={() => setAutoSpeak(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: autoSpeak ? '#00ff88' : '#333', fontSize: 11, fontFamily: MONO, padding: 0 }}>
+            [spk]
           </button>
-          <button onClick={() => setAutoSpeak(v => !v)} style={{ background: autoSpeak ? 'rgba(0,218,243,0.12)' : 'rgba(255,255,255,0.04)', border: autoSpeak ? '1px solid rgba(0,218,243,0.25)' : '1px solid rgba(132,147,150,0.1)', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: autoSpeak ? '#00daf3' : '#4b6070' }}>
-            {autoSpeak ? <Volume2 size={14} /> : <VolumeX size={14} />}
+          <button onClick={() => sendMessage('Scanne mon portfolio et donne-moi les signaux importants.')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#00cc66', fontSize: 11, fontFamily: MONO, padding: 0 }}>
+            [scan]
           </button>
-          <button onClick={() => sendMessage('Scanne mon portfolio et donne-moi les signaux importants.')} style={{ background: 'rgba(236,178,255,0.08)', border: '1px solid rgba(236,178,255,0.18)', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ecb2ff' }}>
-            <Zap size={14} />
-          </button>
-          {messages.length > 0 && view !== 'activity' && (
-            <button onClick={clearAll} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(132,147,150,0.1)', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4b6070' }}>
-              <Trash2 size={14} />
+          {messages.length > 0 && (
+            <button onClick={clearAll} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#333', fontSize: 11, fontFamily: MONO, padding: 0 }}>
+              [clr]
             </button>
           )}
         </div>
       </div>
 
-      {offline && <div style={{ background: 'rgba(248,113,113,0.1)', color: '#fca5a5', fontSize: 12, textAlign: 'center', padding: '7px 16px', borderBottom: '1px solid rgba(248,113,113,0.15)', flexShrink: 0 }}>Hors ligne — connexion requise</div>}
-
-      {/* ── Galaxy View — Full immersive ─────────────────────────────────────── */}
-      {view === 'galaxy' && (
-        <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-          {/* Full page galaxy */}
-          <GalaxyCanvas exchanges={galaxyData.exchanges} active={loading} />
-
-          {/* Hint to explore */}
-          <div style={{ position: 'absolute', top: 14, left: 0, right: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 5 }}>
-            <div style={{ fontSize: 10, color: 'rgba(195,245,255,0.3)', letterSpacing: '0.18em', textTransform: 'uppercase', fontFamily: "'Space Grotesk', system-ui" }}>
-              Glisse · Pince pour zoomer
-            </div>
-          </div>
-
-          {/* Center info overlay */}
-          <div style={{ position: 'absolute', top: '38%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none', zIndex: 5 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#00daf3', letterSpacing: '0.3em', textTransform: 'uppercase', fontFamily: "'Space Grotesk', system-ui", marginBottom: 6, opacity: 0.65 }}>Neural Core</div>
-            <div style={{ fontSize: 28, fontWeight: 800, fontFamily: "'Space Grotesk', system-ui", background: 'linear-gradient(135deg, #c3f5ff, #ecb2ff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', marginBottom: 2 }}>
-              {galaxyData.exchanges === 0 ? 'Dormant' : `${galaxyData.exchanges} échanges`}
-            </div>
-            <div style={{ fontSize: 11, color: 'rgba(75,96,112,0.8)' }}>
-              {galaxyData.exchanges === 0
-                ? `${350} étoiles · Galaxie prête`
-                : `${Math.floor(350 + growth * 650)} étoiles · ${Math.round(growth * 100)}% évolué`}
-            </div>
-          </div>
-
-          {/* Bottom: suggestions + input */}
-          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10, padding: '0 16px 16px', background: 'linear-gradient(to top, rgba(6,10,22,0.97) 55%, rgba(6,10,22,0.5) 80%, transparent)' }}>
-            {messages.length === 0 && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
-                {SUGGESTIONS.map((s, i) => (
-                  <button key={i} onClick={() => sendMessage(s.text)} style={{ background: 'rgba(19,28,43,0.75)', border: '1px solid rgba(0,218,243,0.1)', backdropFilter: 'blur(16px)', borderRadius: 14, padding: '10px 12px', cursor: 'pointer', textAlign: 'left', color: '#bac9cc', fontSize: 12, lineHeight: 1.35, display: 'flex', alignItems: 'center', gap: 7, transition: 'all 150ms' }}>
-                    <span style={{ fontSize: 15 }}>{s.icon}</span>
-                    <span>{s.text}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            <InputBar
-              input={input} onInput={handleInput}
-              onSend={() => sendMessage()} onMic={toggleMic}
-              listening={listening} interim={interim}
-              supported={supported} loading={loading} offline={offline}
-              textareaRef={textareaRef}
-            />
-          </div>
+      {offline && (
+        <div style={{ background: 'rgba(239,68,68,0.06)', color: '#ef4444', fontSize: 11, textAlign: 'center', padding: '5px 16px', borderBottom: '1px solid rgba(239,68,68,0.12)', fontFamily: MONO }}>
+          ! OFFLINE — connexion requise
         </div>
       )}
 
-      {/* ── Chat View ───────────────────────────────────────────────────────── */}
+      {/* ── Chat View ─────────────────────────────────────────────────────── */}
       {view === 'chat' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#000' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div ref={listRef} style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 8px', overscrollBehavior: 'contain' }}>
 
-          {/* Messages */}
-          <div ref={listRef} style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 8px', overscrollBehavior: 'contain', background: '#000' }}>
             {messages.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '50px 20px' }}>
-                <div style={{ fontSize: 11, color: '#333', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 24 }}>AnDy · Prêt</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  {SUGGESTIONS.slice(0, 4).map((s, i) => (
-                    <button key={i} onClick={() => sendMessage(s.text)} style={{ background: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: 12, padding: '10px 12px', cursor: 'pointer', textAlign: 'left', color: '#555', fontSize: 12, display: 'flex', alignItems: 'center', gap: 7, transition: 'all 150ms' }} onMouseEnter={e => { e.currentTarget.style.borderColor='rgba(0,255,128,0.2)'; e.currentTarget.style.color='#888' }} onMouseLeave={e => { e.currentTarget.style.borderColor='#1a1a1a'; e.currentTarget.style.color='#555' }}>
-                      <span style={{ fontSize: 15 }}>{s.icon}</span><span>{s.text}</span>
+              <div style={{ padding: '20px 0' }}>
+                {/* Boot info */}
+                <div style={{ border: '1px solid #1a1a1a', padding: '12px 14px', marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, color: '#00ff88', fontWeight: 700, marginBottom: 8, letterSpacing: '0.08em' }}>
+                    ANDY — ASSISTANT IA
+                  </div>
+                  <div style={{ fontSize: 10, color: '#444', lineHeight: 1.9 }}>
+                    <div>model   · claude-sonnet-4-6</div>
+                    <div>status  · <span style={{ color: offline ? '#ef4444' : '#00ff88' }}>{offline ? 'OFFLINE' : 'ONLINE'}</span></div>
+                    <div>tools   · portfolio · crypto · markets · alerts · sneakers</div>
+                    <div>voice   · fr-FR (speech I/O)</div>
+                  </div>
+                </div>
+                {/* Quick commands */}
+                <div style={{ fontSize: 9, color: '#2a2a2a', marginBottom: 10, letterSpacing: '0.2em' }}>QUICK COMMANDS</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {SUGGESTIONS.map((s, i) => (
+                    <button key={i} onClick={() => sendMessage(s)} style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      textAlign: 'left', color: '#3a3a3a', fontSize: 12, fontFamily: MONO,
+                      padding: '5px 0', display: 'flex', alignItems: 'center', gap: 10,
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#888'}
+                    onMouseLeave={e => e.currentTarget.style.color = '#3a3a3a'}>
+                      <span style={{ color: '#2a2a2a' }}>&gt;</span>
+                      <span>{s}</span>
                     </button>
                   ))}
                 </div>
               </div>
             )}
+
             {messages.map((msg, i) => <Bubble key={i} msg={msg} onSpeak={speakText} />)}
+
             {loading && (
-              <div style={{ display: 'flex', gap: 10, padding: '6px 0', marginTop: 4 }}>
-                <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: '#000', border: '1px solid rgba(0,218,243,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Bot size={13} color="#00daf3" />
-                </div>
-                <div style={{ background: '#000', border: '1px solid #1a1a1a', borderRadius: '4px 16px 16px 16px', padding: '12px 16px', display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <span style={{ display: 'inline-flex', gap: 3 }}>
-                    {[0,1,2].map(i => <span key={i} style={{ width: 4, height: 4, borderRadius: '50%', background: '#00daf3', animation: `dotPulse 1.2s ease-in-out ${i*0.2}s infinite` }} />)}
-                  </span>
-                  {toolStatus && <span style={{ fontSize: 11, color: '#00daf3', marginLeft: 4 }}>{toolStatus}</span>}
+              <div style={{ padding: '10px 0', borderBottom: '1px solid #0d0d0d' }}>
+                <div style={{ fontSize: 9, color: '#00ff88', fontFamily: MONO, fontWeight: 700, marginBottom: 6, letterSpacing: '0.1em' }}>ANDY</div>
+                <div style={{ fontSize: 11, color: '#333', fontFamily: MONO }}>
+                  {toolStatus
+                    ? <span style={{ color: '#555' }}>[{toolStatus}]</span>
+                    : <span>
+                        thinking
+                        <span style={{ animation: 'dotPulse 1.2s ease-in-out 0s infinite' }}>.</span>
+                        <span style={{ animation: 'dotPulse 1.2s ease-in-out 0.2s infinite' }}>.</span>
+                        <span style={{ animation: 'dotPulse 1.2s ease-in-out 0.4s infinite' }}>.</span>
+                      </span>
+                  }
                 </div>
               </div>
             )}
+
             <div style={{ height: 8 }} />
           </div>
 
           {/* Input */}
-          <div style={{ borderTop: '1px solid #111', padding: '10px 16px', paddingBottom: 'max(14px, env(safe-area-inset-bottom, 0px))', background: '#000', flexShrink: 0 }}>
-            {toolStatus && !loading && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#00daf3' }} />
-                <span style={{ fontSize: 11, color: '#00daf3' }}>{toolStatus}</span>
-              </div>
-            )}
+          <div style={{ padding: '10px 16px', paddingBottom: 'max(14px, env(safe-area-inset-bottom, 0px))', background: '#000', flexShrink: 0 }}>
             <InputBar
               input={input} onInput={handleInput}
               onSend={() => sendMessage()} onMic={toggleMic}
@@ -1165,21 +744,21 @@ export default function Andy() {
         </div>
       )}
 
-      {/* ── Activity View ───────────────────────────────────────────────────── */}
-      {view === 'activity' && (
+      {/* ── Log View ──────────────────────────────────────────────────────── */}
+      {view === 'log' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div style={{ padding: '12px 16px 8px', borderBottom: '1px solid rgba(132,147,150,0.08)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px #10b981' }} className="live-ping" />
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: "'Space Grotesk', system-ui" }}>IA Active — Ce qu'elle a fait</span>
+          <div style={{ padding: '10px 16px 8px', borderBottom: '1px solid #1a1a1a', flexShrink: 0 }}>
+            <span style={{ fontSize: 10, color: '#2a2a2a', fontFamily: MONO, letterSpacing: '0.1em' }}>
+              $ tail -f /var/log/andy/activity.log
+            </span>
           </div>
           <ActivityFeed />
         </div>
       )}
 
       <style>{`
-        @keyframes andySpin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
-        @keyframes cursorBlink { from { opacity: 1 } to { opacity: 0 } }
-        @keyframes dotPulse { 0%,80%,100% { opacity: 0.2; transform: scale(0.8) } 40% { opacity: 1; transform: scale(1) } }
+        @keyframes cursorBlink { 0%,100% { opacity: 1 } 50% { opacity: 0 } }
+        @keyframes dotPulse { 0%,80%,100% { opacity: 0.15 } 40% { opacity: 1 } }
       `}</style>
     </div>
   )

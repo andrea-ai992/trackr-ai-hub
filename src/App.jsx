@@ -165,13 +165,7 @@ function AppInner() {
       <GlobalSearchButton onOpen={() => setSearchOpen(true)} />
       <VoiceAssistant />
       {searchOpen && <SearchOverlay onClose={() => setSearchOpen(false)} />}
-      <div style={{ minHeight: '100dvh', background: '#0b1323', color: '#dbe2f8' }}>
-        {/* Aurora background blobs (Stitch / Celestial AI style) */}
-        <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
-          <div className="aurora-blob" style={{ top: '-15%', left: '-10%', width: '55vw', height: '55vw', background: 'radial-gradient(circle, #6600ea 0%, transparent 70%)' }} />
-          <div className="aurora-blob aurora-blob-2" style={{ bottom: '-15%', right: '-10%', width: '50vw', height: '50vw', background: 'radial-gradient(circle, #00e5ff 0%, transparent 70%)' }} />
-          <div className="aurora-blob" style={{ top: '40%', right: '20%', width: '30vw', height: '30vw', background: 'radial-gradient(circle, #cf5cff 0%, transparent 70%)', animationDelay: '-3s', animationDuration: '18s' }} />
-        </div>
+      <div style={{ minHeight: '100dvh', background: '#000', color: '#c0c0c0' }}>
         <main style={{ paddingBottom: 'calc(88px + env(safe-area-inset-bottom, 0px) + 8px)', position: 'relative', zIndex: 1 }}>
           <PageTransition>
             <Routes>
