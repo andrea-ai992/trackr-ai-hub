@@ -178,7 +178,7 @@ Règles :
 - Réponses concises sauf si une explication longue est vraiment nécessaire.
 - Dans ce terminal, tu peux utiliser du markdown basique (** pour gras, \` pour code).`
 
-// ── Chat streaming ────────────────────────────────────────────────────────────
+// ── Chat streaming ──────────────────────────��─────────────────────────────────
 async function chat(userMessage) {
   if (!API_KEY) {
     line(`\n  ${_.red}✗ ANTHROPIC_API_KEY manquante — ajoute-la dans .env${R}`)
@@ -193,11 +193,12 @@ async function chat(userMessage) {
   line(`  ${_.dark}╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌`)
   line()
 
-  // Spinner pendant la connexion
   spinStart('connexion…', _.purple)
 
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+  let res
+  // Retry automatique sur 429 (rate limit) — max 3 essais
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'x-api-key':         API_KEY,
@@ -212,12 +213,34 @@ async function chat(userMessage) {
         messages:   history,
       }),
       signal: AbortSignal.timeout(60000),
-    })
+    }).catch(e => ({ ok: false, status: 0, _err: e }))
 
-    spinStop()
+    if (res.status === 429) {
+      const wait = attempt * 8   // 8s, 16s, 24s
+      spinStop()
+      for (let s = wait; s > 0; s--) {
+        out(`\r${BG}  ${_.amber}⏳ Rate limit — reprise dans ${s}s…${R}   `)
+        await sl(1000)
+      }
+      out('\r\x1b[2K')
+      spinStart(`tentative ${attempt + 1}/3…`, _.amber)
+      continue
+    }
+    break   // ok ou autre erreur — on sort
+  }
 
+  spinStop()
+
+  try {
     if (!res.ok) {
-      line(`  ${_.red}✗ Erreur API ${res.status}${R}`)
+      const status = res.status || 0
+      if (status === 429) {
+        line(`  ${_.amber}⚠ Rate limit persistant — attends 1 minute et réessaie.${R}`)
+      } else if (status === 401) {
+        line(`  ${_.red}✗ API Key invalide ou expirée.${R}`)
+      } else {
+        line(`  ${_.red}✗ Erreur API ${status || res._err?.message || 'réseau'}${R}`)
+      }
       history.pop()
       return
     }
