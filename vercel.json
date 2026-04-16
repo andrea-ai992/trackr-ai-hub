@@ -1,6 +1,6 @@
 {
   "crons": [
-    { "path": "/api/monitor",                         "schedule": "*/5 * * * *" },
+    { "path": "/api/monitor",                         "schedule": "0 6 * * *"  },
     { "path": "/api/brain",                           "schedule": "0 0 * * *"  },
     { "path": "/api/morning",                         "schedule": "0 9 * * *"  },
     { "path": "/api/reports?type=daily&post=true",    "schedule": "0 8 * * *"  },

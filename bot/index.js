@@ -557,5 +557,16 @@ setInterval(discoverChannels, 10 * 60 * 1000)
 // Cron every 15 minutes
 setInterval(runCron, 15 * 60 * 1000)
 
+// Monitor every 5 minutes (replaces Vercel cron which requires Pro plan)
+async function runMonitor() {
+  try {
+    await fetch(`${APP_URL}/api/monitor?silent=true`, {
+      headers: { 'User-Agent': 'TrackrAndyBot/3.0' },
+      signal: AbortSignal.timeout(15000),
+    })
+  } catch {}
+}
+setInterval(runMonitor, 5 * 60 * 1000)
+
 process.on('SIGTERM', () => { server.close(); process.exit(0) })
 process.on('SIGINT',  () => { server.close(); process.exit(0) })
