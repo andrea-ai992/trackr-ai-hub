@@ -1,14 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776343920074",
-      "timestamp": "2026-04-16T12:52:00.074Z",
-      "type": "error",
-      "focus": "security",
-      "error": "Anthropic API → 400",
-      "applied": false
-    },
-    {
       "id": "mem_1776343921008",
       "timestamp": "2026-04-16T12:52:01.008Z",
       "type": "brain_cycle",
@@ -3349,6 +3341,41 @@
       "source": "discord-.jpg5714",
       "description": "juste un server que je peux utiliser 24/4 et que ça tourne tout le temps en gros pas de lag bien rapide et que je puisse tout transférer facilement pour continuer à developer comme sur mon pc mas sur le server",
       "createdAt": "2026-04-16T15:47:32.617Z"
+    },
+    {
+      "id": "mem_1776354816016",
+      "timestamp": "2026-04-16T15:53:36.016Z",
+      "type": "pattern_scan",
+      "focus": "bugs",
+      "findings": [
+        {
+          "id": "sse_json_parse",
+          "file": "api/discord.js",
+          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
+          "severity": "critical"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/andy.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/brain.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/trading-expert.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        }
+      ],
+      "count": 4,
+      "applied": false,
+      "note": "Patterns detected before Claude analysis — guiding fix priority"
     }
   ]
 }
