@@ -19,12 +19,18 @@ const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_KEY   // free at alphavantag
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 async function discordPost(channelId, payload) {
   if (!channelId || !BOT_TOKEN) return null
-  const r = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
-    method: 'POST',
-    headers: { Authorization: `Bot ${BOT_TOKEN}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
-  return r.ok ? r.json() : null
+  try {
+    const r = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+      method: 'POST',
+      headers: { Authorization: `Bot ${BOT_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(8000),
+    })
+    return r.ok ? r.json() : null
+  } catch (e) {
+    console.warn('discordPost error:', e.message)
+    return null
+  }
 }
 
 async function githubGet(path) {
