@@ -12,10 +12,21 @@ function ActivityFeed() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    async function safeJson(res) {
+      if (!res.ok) { console.warn(`ActivityFeed fetch error: HTTP ${res.status} ${res.url}`); return null }
+      const ct = res.headers.get('content-type') || ''
+      if (!ct.includes('application/json') && !ct.includes('text/json') && !ct.includes('text/plain')) {
+        console.warn(`ActivityFeed: unexpected content-type "${ct}" for ${res.url}, skipping .json()`)
+        await res.body?.cancel().catch(() => {})
+        return null
+      }
+      try { return await res.json() } catch (e) { console.warn(`ActivityFeed JSON parse error (${res.url}):`, e.message); return null }
+    }
+
     Promise.allSettled([
-      fetch('https://api.github.com/repos/andrea-ai992/trackr-ai-hub/commits?per_page=8').then(r => r.json()),
-      fetch('/api/memory?type=agents-log').then(r => r.json()),
-      fetch('/api/memory?limit=20').then(r => r.json()),
+      fetch('https://api.github.com/repos/andrea-ai992/trackr-ai-hub/commits?per_page=8', { signal: AbortSignal.timeout(8000) }).then(safeJson),
+      fetch('/api/memory?type=agents-log', { signal: AbortSignal.timeout(6000) }).then(safeJson),
+      fetch('/api/memory?limit=20', { signal: AbortSignal.timeout(6000) }).then(safeJson),
     ]).then(([c, a, m]) => {
       if (c.status === 'fulfilled' && Array.isArray(c.value)) setCommits(c.value)
       if (a.status === 'fulfilled' && Array.isArray(a.value?.log)) setAgentLog(a.value.log.slice(0, 10))
