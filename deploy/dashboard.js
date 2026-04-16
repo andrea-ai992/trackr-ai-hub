@@ -331,8 +331,9 @@ http.createServer(async (req, res) => {
     return
   }
 
-  // Auth check
-  if (!validSession(req)) return html(200, LOGIN_HTML)
+  // Auth check — session cookie (browser) OU Bearer token (CLI)
+  const bearerOk = (req.headers.authorization || '') === `Bearer ${PASS}`
+  if (!validSession(req) && !bearerOk) return html(200, LOGIN_HTML)
 
   // API — Status
   if (url.pathname === '/api/status') {
@@ -366,6 +367,22 @@ http.createServer(async (req, res) => {
       json({ ok: true })
     })
     return
+  }
+
+  // API — Tasks status (CLI /tasks command)
+  if (url.pathname === '/api/tasks') {
+    let taskStatus = [], files = { queue: [], running: [], done: [], error: [] }
+    try {
+      const all = readdirSync(TASKS).filter(f => !f.startsWith('.'))
+      files = {
+        queue:   all.filter(f => f.endsWith('.txt')).map(f => f.replace(/\.txt$/, '')),
+        running: all.filter(f => f.endsWith('.running')).map(f => f.replace(/\.running$/, '')),
+        done:    all.filter(f => f.endsWith('.done')).map(f => f.replace(/\.done$/, '')),
+        error:   all.filter(f => f.endsWith('.error')).map(f => f.replace(/\.error$/, '')),
+      }
+    } catch {}
+    try { taskStatus = JSON.parse(readFileSync(resolve(TASKS, '.task-status.json'), 'utf8')) } catch {}
+    return json({ files, status: taskStatus })
   }
 
   // API — Add task

@@ -1134,25 +1134,13 @@ async function cmd(input) {
 
   // ── /tasks — live task pipeline tracker ──────────────────────────────────────
   if (c === '/tasks') {
+    const DASH      = `http://62.238.12.221:4000`
+    const PASS_T    = process.env.DASHBOARD_PASS || 'trackr2024'
+    const authHdr   = { Authorization: `Bearer ${PASS_T}` }
     const STATUS_FILE = resolve(TASKS_DIR, '.task-status.json')
+
     const STAGES = ['planning', 'generating', 'testing', 'safe', 'live']
     const SLABEL = { planning: 'PLAN', generating: 'CODE', testing: 'TEST', safe: 'SAFE', live: 'LIVE' }
-
-    function readStatus() {
-      try { return JSON.parse(readFileSync(STATUS_FILE, 'utf8')) } catch { return [] }
-    }
-
-    function scanFiles() {
-      try {
-        const all = readdirSync(TASKS_DIR).filter(f => !f.startsWith('.'))
-        return {
-          queue:   all.filter(f => f.endsWith('.txt')).map(f => f.replace(/\.txt$/, '')),
-          running: all.filter(f => f.endsWith('.running')).map(f => f.replace(/\.running$/, '')),
-          done:    all.filter(f => f.endsWith('.done')).map(f => f.replace(/\.done$/, '')),
-          error:   all.filter(f => f.endsWith('.error')).map(f => f.replace(/\.error$/, '')),
-        }
-      } catch { return { queue: [], running: [], done: [], error: [] } }
-    }
 
     function pipeline(stage) {
       const cur = STAGES.indexOf(stage)
@@ -1164,6 +1152,30 @@ async function cmd(input) {
       }).join(`${_.dark}›${R}`)
     }
 
+    // Fetch données serveur OU fallback local
+    async function fetchData() {
+      try {
+        const r = await fetch(`${DASH}/api/tasks`, { headers: authHdr, signal: AbortSignal.timeout(4000) }).catch(() => null)
+        if (r?.ok) {
+          const d = await r.json().catch(() => null)
+          if (d?.files) return { ...d, source: 'server' }
+        }
+      } catch {}
+      // Fallback local
+      try {
+        const all = readdirSync(TASKS_DIR).filter(f => !f.startsWith('.'))
+        const files = {
+          queue:   all.filter(f => f.endsWith('.txt')).map(f => f.replace(/\.txt$/, '')),
+          running: all.filter(f => f.endsWith('.running')).map(f => f.replace(/\.running$/, '')),
+          done:    all.filter(f => f.endsWith('.done')).map(f => f.replace(/\.done$/, '')),
+          error:   all.filter(f => f.endsWith('.error')).map(f => f.replace(/\.error$/, '')),
+        }
+        let status = []
+        try { status = JSON.parse(readFileSync(STATUS_FILE, 'utf8')) } catch {}
+        return { files, status, source: 'local' }
+      } catch { return { files: { queue:[], running:[], done:[], error:[] }, status: [], source: 'offline' } }
+    }
+
     let prevRows  = 0
     let firstDraw = true
     let active    = true
@@ -1172,21 +1184,21 @@ async function cmd(input) {
 
     line()
     line(`  ${_.cyan}${_.bold}╔══ TASK TRACKER — LIVE ════════════════════════════╗${R}`)
-    line(`  ${_.cyan}║${R}  ${_.grey}Suivi pipeline : PLAN › CODE › TEST › SAFE › LIVE${R}`)
-    line(`  ${_.cyan}║${R}  ${_.dark}Ctrl+C pour quitter${R}`)
+    line(`  ${_.cyan}║${R}  ${_.grey}Pipeline : PLAN › CODE › TEST › SAFE › LIVE${R}`)
+    line(`  ${_.cyan}║${R}  ${_.dark}Source : serveur 62.238.12.221 · Ctrl+C quitter${R}`)
     line(`  ${_.cyan}╚════════════════════════════════════════════════════╝${R}`)
     line()
 
     while (active) {
+      const { files, status, source } = await fetchData()
       const rows = []
       const push = s => rows.push(s ?? '')
+      const ts = new Date().toLocaleTimeString('fr-FR')
+      const W  = 56
+      const srcCol = source === 'server' ? _.green : source === 'local' ? _.amber : _.red
+      const srcLbl = source === 'server' ? '● SERVER' : source === 'local' ? '◎ LOCAL' : '✗ OFFLINE'
 
-      const files  = scanFiles()
-      const status = readStatus()
-      const ts     = new Date().toLocaleTimeString('fr-FR')
-      const W      = 56
-
-      push(`  ${_.dark}${ts}${R}  ${_.green}● LIVE${R}  ${_.dark}DONE${R} ${_.green}${files.done.length}${R}  ${_.dark}QUEUE${R} ${_.cyan}${files.queue.length}${R}  ${_.dark}RUN${R} ${_.amber}${files.running.length}${R}  ${_.dark}ERR${R} ${_.red}${files.error.length}${R}`)
+      push(`  ${_.dark}${ts}${R}  ${srcCol}${srcLbl}${R}  ${_.dark}DONE${R} ${_.green}${files.done.length}${R}  ${_.dark}QUEUE${R} ${_.cyan}${files.queue.length}${R}  ${_.dark}RUN${R} ${_.amber}${files.running.length}${R}  ${_.dark}ERR${R} ${_.red}${files.error.length}${R}`)
       push(`  ${_.dark}${'─'.repeat(W)}${R}`)
 
       // Running (max 2)
@@ -1199,56 +1211,62 @@ async function cmd(input) {
         }
       } else {
         push(`  ${_.dark}⟨◈⟩ Idle — aucune tâche en cours${R}`)
+        push('')
       }
 
       push(`  ${_.dark}${'─'.repeat(W)}${R}`)
 
-      // Queue (next 3)
+      // Queue (next 4)
+      push(`  ${_.cyan}QUEUE (${files.queue.length})${R}`)
       if (files.queue.length) {
-        push(`  ${_.cyan}QUEUE (${files.queue.length})${R}`)
-        for (const name of files.queue.slice(0, 3))
+        for (const name of files.queue.slice(0, 4))
           push(`  ${_.dark}· ${_.grey}${name.slice(0, 52)}${R}`)
-        if (files.queue.length > 3) push(`  ${_.dark}  … +${files.queue.length - 3} de plus${R}`)
+        if (files.queue.length > 4) push(`  ${_.dark}  … +${files.queue.length - 4} de plus${R}`)
       } else {
-        push(`  ${_.dark}Queue vide${R}`)
+        push(`  ${_.dark}  vide${R}`)
       }
 
       push(`  ${_.dark}${'─'.repeat(W)}${R}`)
 
-      // Done (last 5) — fallback sur fichiers si pas de status JSON
+      // Done (last 5)
       const doneFromStatus = status.filter(t => t.status === 'DONE').slice(-5).reverse()
       const doneList = doneFromStatus.length
         ? doneFromStatus.map(t => ({ name: t.name, dur: t.dur ? `${t.dur}s` : '—', live: !!t.stages?.live }))
         : files.done.slice(-5).reverse().map(n => ({ name: n, dur: '—', live: true }))
 
       push(`  ${_.green}DONE (${files.done.length})${R}`)
-      for (const t of doneList) {
-        const liveCol = t.live ? _.green : _.amber
-        const liveTag = t.live ? 'LIVE' : 'DONE'
-        push(`  ${_.dark}✓ ${_.silver}${t.name.slice(0, 32).padEnd(32)}${R} ${_.dark}${t.dur.padStart(5)}${R}  ${liveCol}${liveTag}${R}`)
+      if (doneList.length) {
+        for (const t of doneList) {
+          const liveCol = t.live ? _.green : _.amber
+          const liveTag = t.live ? 'LIVE' : 'DONE'
+          push(`  ${_.dark}✓ ${_.silver}${t.name.slice(0, 32).padEnd(32)}${R} ${_.dark}${t.dur.padStart(5)}${R}  ${liveCol}${liveTag}${R}`)
+        }
+      } else {
+        push(`  ${_.dark}  aucune${R}`)
       }
 
-      // Errors (max 3) — fallback sur fichiers .error
-      if (files.error.length) {
-        push(`  ${_.dark}${'─'.repeat(W)}${R}`)
-        push(`  ${_.red}ERRORS (${files.error.length})${R}`)
-        const errFromStatus = status.filter(t => t.status === 'ERROR').slice(-3).reverse()
-        const errList = errFromStatus.length
-          ? errFromStatus.map(t => ({ name: t.name, msg: (t.error || '').slice(0, 24) }))
-          : files.error.slice(-3).reverse().map(n => ({ name: n, msg: 'voir logs serveur' }))
+      // Errors (max 3)
+      push(`  ${_.dark}${'─'.repeat(W)}${R}`)
+      const errFromStatus = status.filter(t => t.status === 'ERROR').slice(-3).reverse()
+      const errList = errFromStatus.length
+        ? errFromStatus.map(t => ({ name: t.name, msg: (t.error || '').slice(0, 26) }))
+        : files.error.slice(-3).reverse().map(n => ({ name: n, msg: '' }))
+
+      push(`  ${_.red}ERRORS (${files.error.length})${R}`)
+      if (errList.length) {
         for (const t of errList)
-          push(`  ${_.red}✗ ${_.dark}${t.name.slice(0, 28).padEnd(28)}${R}  ${_.red}${t.msg}${R}`)
+          push(`  ${_.red}✗ ${_.dark}${t.name.slice(0, 30).padEnd(30)}${R}  ${_.red}${t.msg}${R}`)
+      } else {
+        push(`  ${_.dark}  aucune${R}`)
       }
 
       // Render — erase exactly as many lines as we drew last time
       if (!firstDraw) process.stdout.write(`\x1b[${prevRows}A\x1b[0J`)
       else firstDraw = false
-
-      for (const l of rows)
-        process.stdout.write(BG + l + '\x1b[K\n')
-
+      for (const l of rows) process.stdout.write(BG + l + '\x1b[K\n')
       prevRows = rows.length
-      if (active) await sl(2000)
+
+      if (active) await sl(3000)
     }
 
     process.removeListener('SIGINT', onSigint)
@@ -1262,7 +1280,7 @@ async function cmd(input) {
   if (c === '/watch') {
     const DASH = `http://62.238.12.221:4000`
     const PASS = process.env.DASHBOARD_PASS || 'trackr2024'
-    const authHeader = 'Basic ' + Buffer.from('admin:' + PASS).toString('base64')
+    const authHeader = `Bearer ${PASS}`
 
     line()
     line(`  ${_.green}${_.bold}╔══ LIVE SERVER WATCH ═══════════════════════════════╗${R}`)
