@@ -418,6 +418,26 @@ async function handleGuideCommand(options, interactionToken) {
   })
 }
 
+async function handleAnalyseCommand(options, interactionToken) {
+  const symbol    = (options.find(o => o.name === 'symbol')?.value || 'BTC').toUpperCase()
+  const typeOpt   = options.find(o => o.name === 'type')?.value
+
+  // Réponse immédiate — defer (l'analyse prend ~15s)
+  const CRYPTO_LIST = ['BTC','ETH','SOL','BNB','XRP','ADA','DOGE','AVAX','DOT','MATIC','LINK','UNI','LTC','ATOM']
+  const type = typeOpt || (CRYPTO_LIST.includes(symbol) ? 'crypto' : 'stock')
+
+  await patchReply(interactionToken, agentEmbed('oracle',
+    `🔍 **Analyse ${type === 'crypto' ? 'crypto' : 'action'} de ${symbol} en cours...**\n\nJe collecte les données de marché, calcule RSI, MACD, Bollinger, Fibonacci et je prépare une analyse niveau expert Goldman Sachs. Prêt dans ~15 secondes. 📊`,
+    [{ name: '⏳ Patience', value: 'L\'analyse complète sera postée dans **#trading-desk**', inline: false }]
+  ))
+
+  // Fire and forget — poste dans #trading-desk
+  const APP_URL = process.env.APP_URL || 'https://trackr-app-nu.vercel.app'
+  fetch(`${APP_URL}/api/trading-expert?symbol=${symbol}&type=${type}`, {
+    signal: AbortSignal.timeout(55000),
+  }).catch(() => {})
+}
+
 async function handleHelpCommand(interactionToken) {
   const categories = {
     'ai-core': '🧠 Intelligence Centrale',
@@ -459,6 +479,7 @@ async function processInteraction(body) {
     case 'portfolio': return handlePortfolioCommand(opts, token)
     case 'alert':     return handleAlertCommand(opts, token)
     case 'report':    return handleReportCommand(opts, token)
+    case 'analyse':   return handleAnalyseCommand(opts, token)
     case 'brain':     return handleBrainCommand(token)
     case 'help':      return handleHelpCommand(token)
     case 'guide':     return handleGuideCommand(opts, token)
