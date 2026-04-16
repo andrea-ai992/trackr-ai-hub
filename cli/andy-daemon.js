@@ -118,18 +118,23 @@ async function flushSyncQueue() {
 }
 
 // ── Claude API ────────────────────────────────────────────────────────────────
+// Stratégie économique : Haiku (~20x moins cher) pour plan/review/autogen
+//                        Sonnet uniquement pour la génération de code
+const MODEL_SMART = 'claude-sonnet-4-6'               // ~$3/M in · $15/M out
+const MODEL_FAST  = 'claude-haiku-4-5-20251001'        // ~$0.8/M in · $4/M out
+
 const SYSTEM = `Tu es AnDy, l'IA autonome du projet Trackr.
 App React 19 + Vite mobile-first, déployée sur Vercel. Repo GitHub: ${GITHUB_REPO}. App: ${APP_URL}.
 Tu travailles en mode serveur autonome — tu génères et pousses du code directement sur GitHub.
 Sois précis, complet, production-ready.`
 
-async function generateRaw(prompt, maxTokens = 8192) {
+async function generateRaw(prompt, maxTokens = 4096, model = MODEL_SMART) {
   if (!API_KEY) throw new Error('ANTHROPIC_API_KEY manquante')
   while (true) {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: maxTokens, system: SYSTEM, stream: false, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({ model, max_tokens: maxTokens, system: SYSTEM, stream: false, messages: [{ role: 'user', content: prompt }] }),
       signal: AbortSignal.timeout(120000),
     }).catch(err => { throw new Error(`Réseau: ${err.message}`) })
 
@@ -173,12 +178,13 @@ async function executeTask(taskContent, taskName = '') {
   ].join('\n')
 
   stage('planning')
-  const plan    = await generateRaw(planPrompt, 400)
+  // Haiku pour le plan (pas besoin de Sonnet)
+  const plan    = await generateRaw(planPrompt, 300, MODEL_FAST)
   const fileOps = plan.split('\n')
     .map(l => l.match(/^(CREATE|MODIFY):(.+\.[\w]+)/i))
     .filter(Boolean)
     .map(m => ({ action: m[1].toUpperCase(), path: m[2].trim().replace(/^\//, '') }))
-    .slice(0, 3)
+    .slice(0, 2)  // max 2 fichiers par tâche (économie)
 
   if (!fileOps.length) throw new Error('Plan vide')
 
@@ -199,25 +205,26 @@ async function executeTask(taskContent, taskName = '') {
     const codePrompt = [
       'TÂCHE: ' + taskContent,
       op.action === 'MODIFY' && currentContent
-        ? 'FICHIER ACTUEL (' + op.path + '):\n' + currentContent.slice(0, 12000)
+        ? 'FICHIER ACTUEL (' + op.path + '):\n' + currentContent.slice(0, 10000)
         : 'Crée ' + op.path + ' from scratch.',
       'Génère le code COMPLET et fonctionnel. Code uniquement, pas de backticks.',
     ].filter(Boolean).join('\n')
 
-    const newCode = await generateRaw(codePrompt, 8192)
+    // Sonnet pour la génération de code (qualité critique)
+    const newCode = await generateRaw(codePrompt, 5000, MODEL_SMART)
     let clean = newCode.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim()
 
-    // Review superviseur
+    // Review superviseur — Haiku suffit pour valider
     stage('testing')
     const reviewPrompt = [
       'Superviseur: vérifie ce code pour ' + op.path + ' (Trackr React+Vite).',
-      'TÂCHE: ' + taskContent.slice(0, 300),
-      'CODE:\n' + clean.slice(0, 10000),
-      'Vérifie: syntaxe valide, tâche accomplie, pas de TODO/placeholder, compatible React 19.',
-      'Réponds exactement APPROVED ou REJECTED\\nRAISON: ...\\nFIX: <code complet corrigé>',
+      'TÂCHE: ' + taskContent.slice(0, 200),
+      'CODE (extrait):\n' + clean.slice(0, 6000),
+      'Vérifie: syntaxe valide, tâche accomplie, pas de TODO/placeholder.',
+      'Réponds APPROVED ou REJECTED\\nRAISON: ...\\nFIX: <code complet corrigé>',
     ].join('\n')
 
-    const review = await generateRaw(reviewPrompt, 8192)
+    const review = await generateRaw(reviewPrompt, 5000, MODEL_FAST)
     if (review.trim().startsWith('REJECTED')) {
       const fixMatch = review.match(/FIX:([\s\S]+)/)
       if (fixMatch) clean = fixMatch[1].replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim()
@@ -385,7 +392,8 @@ async function generateNextTasks() {
   while (attempts < 3) {
     attempts++
     try {
-      const raw   = await generateRaw(prompt, 800)
+      // Haiku pour la génération de tâches (très économique)
+      const raw   = await generateRaw(prompt, 600, MODEL_FAST)
       const tasks = raw.split('\n').map(l => l.match(/^TASK:\s*(.+)/i)?.[1]?.trim()).filter(Boolean)
       if (!tasks.length) throw new Error('Aucune ligne TASK')
       tasks.slice(0, 3).forEach((desc, i) => {
@@ -396,7 +404,7 @@ async function generateNextTasks() {
       return
     } catch (err) {
       log(`auto-gen ${attempts}/3 failed: ${err.message}`)
-      if (attempts < 3) await sl(20000)
+      if (attempts < 3) await sl(15000)
     }
   }
   // Fallback statique
@@ -430,11 +438,32 @@ function scheduleDiscordRecap() {
 }
 
 // ── Main loop ─────────────────────────────────────────────────────────────────
+// Coût estimé par tâche : ~$0.08-0.12 (Haiku plan+review, Sonnet code)
+// $20 de crédits ≈ 160-250 tâches
+const PAUSE_BETWEEN_TASKS = 20   // secondes entre chaque tâche (évite burst)
+const PAUSE_BETWEEN_CYCLES = 120 // secondes entre cycles d'auto-gen
+
 async function main() {
   mkdirSync(TASKS_DIR, { recursive: true })
   log('=== AnDy Daemon démarré ===')
   log(`Repo: ${GITHUB_REPO} | App: ${APP_URL}`)
-  log(`Dossier tâches: ${TASKS_DIR}`)
+  log(`Modèles: code=${MODEL_SMART} plan/review/gen=${MODEL_FAST}`)
+
+  // Nettoyage des .error et .running du démarrage précédent
+  const stale = readdirSync(TASKS_DIR).filter(f => f.endsWith('.running') || f.endsWith('.error'))
+  if (stale.length) {
+    const archiveDir = resolve(TASKS_DIR, '_archive')
+    mkdirSync(archiveDir, { recursive: true })
+    for (const f of stale) {
+      try {
+        const src = resolve(TASKS_DIR, f)
+        const dst = resolve(archiveDir, f)
+        renameSync(src, dst)
+      } catch {}
+    }
+    log(`Archivé ${stale.length} fichier(s) stale → andy-tasks/_archive/`)
+  }
+
   scheduleDiscordRecap()
 
   while (true) {
@@ -447,15 +476,21 @@ async function main() {
       log(`${queue.length} tâche(s) en queue`)
       for (const f of queue) {
         const fp = resolve(TASKS_DIR, f)
-        if (existsSync(fp)) await runTask(fp)
+        if (existsSync(fp)) {
+          await runTask(fp)
+          // Pause entre tâches pour éviter de brûler les crédits trop vite
+          await sl(PAUSE_BETWEEN_TASKS * 1000)
+        }
       }
     } else {
       await generateNextTasks()
       const after = readdirSync(TASKS_DIR).filter(f => f.endsWith('.txt'))
       if (!after.length) {
-        const pause = Math.min(30 + autoGenCount * 5, 180)
-        log(`Pas de tâches — pause ${pause}s`)
-        await sl(pause * 1000)
+        log(`Pas de tâches — pause ${PAUSE_BETWEEN_CYCLES}s`)
+        await sl(PAUSE_BETWEEN_CYCLES * 1000)
+      } else {
+        // Petite pause avant de traiter le nouveau cycle
+        await sl(10000)
       }
     }
 
