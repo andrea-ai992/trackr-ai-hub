@@ -1,19 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776364870069",
-      "timestamp": "2026-04-16T18:41:10.069Z",
-      "type": "improvement",
-      "focus": "bugs",
-      "file": "api/brain.js",
-      "problem": "fetch() calls in api/brain.js to Anthropic API and GitHub API have no AbortSignal.timeout() — can hang indefinitely blocking Vercel function",
-      "severity": "high",
-      "commit": "fix: add AbortSignal.timeout to askBrain and ghGet in brain.js to prevent infinite hangs",
-      "learned": "Critical orchestrator functions that call external APIs (Anthropic, GitHub) without timeouts can silently block the entire Vercel function lifecycle up to the platform limit, making timeouts essential even for trusted services.",
-      "applied": true,
-      "fromAdminTask": null
-    },
-    {
       "id": "mem_1776365147893",
       "timestamp": "2026-04-16T18:45:47.893Z",
       "type": "pattern_scan",
@@ -2836,6 +2823,14 @@
       "count": 4,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776369656265",
+      "timestamp": "2026-04-16T20:00:56.265Z",
+      "type": "error",
+      "focus": "bugs",
+      "error": "Anthropic API → 400",
+      "applied": false
     }
   ]
 }
