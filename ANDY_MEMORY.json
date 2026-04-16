@@ -1,20 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776314239516",
-      "timestamp": "2026-04-16T04:37:19.516Z",
-      "type": "brain_cycle",
-      "hour": 4,
-      "successRate": 5,
-      "agentsRan": 4,
-      "improved": false,
-      "improvedFile": null,
-      "focus": "bugs",
-      "errors": 0,
-      "appHealthy": true,
-      "duration": 21
-    },
-    {
       "id": "mem_1776314522729",
       "timestamp": "2026-04-16T04:42:02.729Z",
       "type": "pattern_scan",
@@ -4238,6 +4224,47 @@
       "focus": "bugs",
       "error": "Anthropic API → 400",
       "applied": false
+    },
+    {
+      "id": "mem_1776327119209",
+      "timestamp": "2026-04-16T08:11:59.209Z",
+      "type": "pattern_scan",
+      "focus": "security",
+      "findings": [
+        {
+          "id": "sse_json_parse",
+          "file": "api/discord.js",
+          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
+          "severity": "critical"
+        },
+        {
+          "id": "vercel_url_empty",
+          "file": "api/brain.js",
+          "description": "Using VERCEL_URL which is empty in production — use APP_URL instead",
+          "severity": "high"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/andy.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/trading-expert.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/brain.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        }
+      ],
+      "count": 5,
+      "applied": false,
+      "note": "Patterns detected before Claude analysis — guiding fix priority"
     }
   ]
 }
