@@ -4058,6 +4058,14 @@
       "count": 5,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776324719890",
+      "timestamp": "2026-04-16T07:31:59.890Z",
+      "type": "error",
+      "focus": "security",
+      "error": "Anthropic API → 429",
+      "applied": false
     }
   ]
 }
