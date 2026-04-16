@@ -1,0 +1,6 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "node cli/andy-daemon.js"
+restartPolicyType = "always"
