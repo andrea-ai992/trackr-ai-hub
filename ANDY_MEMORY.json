@@ -236,6 +236,19 @@
       "focus": "bugs",
       "error": "old_code not found in api/discord.js — skipping to avoid corruption",
       "applied": false
+    },
+    {
+      "id": "mem_1776313351692",
+      "timestamp": "2026-04-16T04:22:31.692Z",
+      "type": "improvement",
+      "focus": "bugs",
+      "file": "api/discord.js",
+      "problem": "Calling .json() on an SSE (text/event-stream) response in api/discord.js — must read stream instead",
+      "severity": "critical",
+      "commit": "fix(discord): guard against non-JSON response before calling .json() on Yahoo Finance fetch",
+      "learned": "Les APIs financières comme Yahoo Finance peuvent retourner du HTML ou du SSE en cas d'erreur/rate-limit, il faut toujours vérifier le Content-Type avant d'appeler .json() pour éviter des SyntaxError silencieuses qui corrompent les signaux de trading.",
+      "applied": true,
+      "fromAdminTask": null
     }
   ]
 }
