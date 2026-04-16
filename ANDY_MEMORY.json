@@ -1,19 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776351452430",
-      "timestamp": "2026-04-16T14:57:32.430Z",
-      "type": "improvement",
-      "focus": "bugs",
-      "file": "api/andy.js",
-      "problem": "fetch() calls in api/andy.js have no AbortSignal.timeout() — can hang indefinitely on Yahoo Finance and CoinGecko requests",
-      "severity": "high",
-      "commit": "fix: add AbortSignal.timeout() to all fetch calls in api/andy.js to prevent indefinite hangs",
-      "learned": "All external fetch() calls in Vercel serverless functions must have explicit timeouts since the platform's execution limit is hard and a stalled TCP connection will silently exhaust it.",
-      "applied": true,
-      "fromAdminTask": null
-    },
-    {
       "id": "mem_1776351453457",
       "timestamp": "2026-04-16T14:57:33.457Z",
       "type": "brain_cycle",
@@ -3943,6 +3930,19 @@
       "errors": 0,
       "appHealthy": true,
       "duration": 13
+    },
+    {
+      "id": "mem_1776364870069",
+      "timestamp": "2026-04-16T18:41:10.069Z",
+      "type": "improvement",
+      "focus": "bugs",
+      "file": "api/brain.js",
+      "problem": "fetch() calls in api/brain.js to Anthropic API and GitHub API have no AbortSignal.timeout() — can hang indefinitely blocking Vercel function",
+      "severity": "high",
+      "commit": "fix: add AbortSignal.timeout to askBrain and ghGet in brain.js to prevent infinite hangs",
+      "learned": "Critical orchestrator functions that call external APIs (Anthropic, GitHub) without timeouts can silently block the entire Vercel function lifecycle up to the platform limit, making timeouts essential even for trusted services.",
+      "applied": true,
+      "fromAdminTask": null
     }
   ]
 }
