@@ -1,18 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776305086221",
-      "timestamp": "2026-04-16T02:04:46.221Z",
-      "type": "dry_run",
-      "focus": "bugs",
-      "file": "api/andy.js",
-      "problem": "Dans computeMACD, prevLine peut être NaN si computeEMA retourne null sur le slice court (closes.slice(0, -1) peut avoir moins de 26 éléments)",
-      "severity": "high",
-      "learned": "Les opérations arithmétiques entre valeurs potentiellement null produisent NaN qui passe inaperçu à travers les guards || 0, il faut vérifier la nullité avant toute soustraction.",
-      "applied": false,
-      "dryRun": true
-    },
-    {
       "id": "mem_1776305152792",
       "timestamp": "2026-04-16T02:05:52.792Z",
       "type": "dry_run",
@@ -4294,6 +4282,14 @@
       "count": 5,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776325622438",
+      "timestamp": "2026-04-16T07:47:02.438Z",
+      "type": "error",
+      "focus": "bugs",
+      "error": "Anthropic API → 400",
+      "applied": false
     }
   ]
 }
