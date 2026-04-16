@@ -37,9 +37,33 @@ async function fetchCryptoData(symbol) {
 async function fetchStockData(symbol) {
   const results = await Promise.allSettled([
     AV_KEY
-      ? fetch(`https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&outputsize=compact&apikey=${AV_KEY}`, { signal: AbortSignal.timeout(10000) }).then(r => r.json())
-      : fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=60d`, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) }).then(r => r.json()),
-    fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(6000) }).then(r => r.json()),
+      ? fetch(`https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&outputsize=compact&apikey=${AV_KEY}`, { signal: AbortSignal.timeout(10000) }).then(async r => {
+          const ct = r.headers.get('content-type') || ''
+          if (!r.ok) { console.warn(`Alpha Vantage ${symbol}: HTTP ${r.status}`); return null }
+          if (!ct.includes('application/json') && !ct.includes('text/json') && !ct.includes('text/plain')) {
+            console.warn(`Alpha Vantage ${symbol}: unexpected content-type "${ct}", skipping .json()`)
+            return null
+          }
+          return r.json().catch(e => { console.warn(`Alpha Vantage ${symbol}: JSON parse error:`, e.message); return null })
+        })
+      : fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=60d`, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) }).then(async r => {
+          const ct = r.headers.get('content-type') || ''
+          if (!r.ok) { console.warn(`Yahoo Finance ${symbol} (60d): HTTP ${r.status}`); return null }
+          if (!ct.includes('application/json') && !ct.includes('text/json') && !ct.includes('text/plain')) {
+            console.warn(`Yahoo Finance ${symbol} (60d): unexpected content-type "${ct}", skipping .json()`)
+            return null
+          }
+          return r.json().catch(e => { console.warn(`Yahoo Finance ${symbol} (60d): JSON parse error:`, e.message); return null })
+        }),
+    fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(6000) }).then(async r => {
+      const ct = r.headers.get('content-type') || ''
+      if (!r.ok) { console.warn(`Yahoo Finance ${symbol} (1d): HTTP ${r.status}`); return null }
+      if (!ct.includes('application/json') && !ct.includes('text/json') && !ct.includes('text/plain')) {
+        console.warn(`Yahoo Finance ${symbol} (1d): unexpected content-type "${ct}", skipping .json()`)
+        return null
+      }
+      return r.json().catch(e => { console.warn(`Yahoo Finance ${symbol} (1d): JSON parse error:`, e.message); return null })
+    }),
   ])
 
   const historicalRaw = results[0].status === 'fulfilled' ? results[0].value : null
