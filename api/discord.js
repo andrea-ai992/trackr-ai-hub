@@ -4,10 +4,52 @@
 
 import crypto from 'crypto'
 
-const DISCORD_API = 'https://discord.com/api/v10'
-const APP_ID = process.env.DISCORD_APPLICATION_ID
-const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN
-const PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY
+const DISCORD_API    = 'https://discord.com/api/v10'
+const APP_ID         = process.env.DISCORD_APPLICATION_ID
+const BOT_TOKEN      = process.env.DISCORD_BOT_TOKEN
+const PUBLIC_KEY     = process.env.DISCORD_PUBLIC_KEY
+const ANTHROPIC_KEY  = process.env.ANTHROPIC_API_KEY
+const APP_URL        = process.env.APP_URL || 'https://trackr-app-nu.vercel.app'
+
+// ─── Crypto helpers ───────────────────────────────────────────────────────────
+const CRYPTO_LIST   = ['BTC','ETH','SOL','BNB','XRP','ADA','DOGE','AVAX','DOT','MATIC','LINK','UNI','LTC','ATOM']
+const CRYPTO_ID_MAP = { BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana', BNB: 'binancecoin', XRP: 'ripple', ADA: 'cardano', DOGE: 'dogecoin', AVAX: 'avalanche-2', DOT: 'polkadot', MATIC: 'matic-network', LINK: 'chainlink', UNI: 'uniswap', LTC: 'litecoin', ATOM: 'cosmos' }
+
+function quickRSI(closes, period = 14) {
+  if (!closes || closes.length < period + 1) return null
+  let gains = 0, losses = 0
+  for (let i = closes.length - period; i < closes.length; i++) {
+    const diff = closes[i] - closes[i - 1]
+    if (diff > 0) gains += diff; else losses -= diff
+  }
+  if (losses === 0) return 100
+  const rs = (gains / period) / (losses / period)
+  return parseFloat((100 - 100 / (1 + rs)).toFixed(1))
+}
+
+async function getQuickSignal(symbol, type) {
+  let price = null, change24h = null, rsi = null
+  if (type === 'crypto') {
+    const id = CRYPTO_ID_MAP[symbol] || symbol.toLowerCase()
+    const [priceRes, ohlcRes] = await Promise.allSettled([
+      fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd&include_24hr_change=true`, { signal: AbortSignal.timeout(4000) }).then(r => r.json()),
+      fetch(`https://api.coingecko.com/api/v3/coins/${id}/ohlc?vs_currency=usd&days=14`, { signal: AbortSignal.timeout(4000) }).then(r => r.json()),
+    ])
+    if (priceRes.status === 'fulfilled') { const d = priceRes.value?.[id]; price = d?.usd; change24h = d?.usd_24h_change }
+    if (ohlcRes.status === 'fulfilled' && Array.isArray(ohlcRes.value)) rsi = quickRSI(ohlcRes.value.map(c => c[4]))
+  } else {
+    const data = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=30d`, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(5000) }).then(r => r.json()).catch(() => null)
+    if (data?.chart?.result?.[0]) {
+      const r = data.chart.result[0]
+      const closes = (r.indicators?.quote?.[0]?.close || []).filter(Boolean)
+      price = r.meta?.regularMarketPrice
+      const prev = r.meta?.previousClose || r.meta?.chartPreviousClose
+      if (prev && price) change24h = (price - prev) / prev * 100
+      rsi = quickRSI(closes)
+    }
+  }
+  return { price, change24h, rsi }
+}
 
 // ─── 45 Agent definitions ────────────────────────────────────────────────────
 export const AGENTS = {
@@ -118,11 +160,7 @@ function verifyDiscordSignature(rawBody, signature, timestamp) {
 
 // ─── Call AnDy API ────────────────────────────────────────────────────────────
 async function callAnDy(userMessage) {
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : 'http://localhost:3000'
-
-  const res = await fetch(`${baseUrl}/api/andy`, {
+  const res = await fetch(`${APP_URL}/api/andy`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -254,8 +292,7 @@ async function handleReportCommand(options, interactionToken) {
   const type = options.find(o => o.name === 'type')?.value || 'daily'
   // Appelle l'endpoint reports dédié (avec mémoire + Claude Haiku)
   try {
-    const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://trackr-app-nu.vercel.app'
-    const r = await fetch(`${baseUrl}/api/reports?type=${type}`)
+    const r = await fetch(`${APP_URL}/api/reports?type=${type}`)
     const data = await r.json()
     await patchReply(interactionToken, agentEmbed('report_bot',
       `✅ Rapport **${type}** généré — ${data.stats?.improvements ?? 0} améliorations · ${data.stats?.successRate ?? 0}% succès`,
@@ -277,10 +314,7 @@ async function handleBrainCommand(interactionToken) {
     [{ name: '⚡ Statut', value: 'En cours d\'exécution', inline: true }]
   ))
   // Déclenche le brain en background
-  try {
-    const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://trackr-app-nu.vercel.app'
-    fetch(`${baseUrl}/api/brain`).catch(() => {})
-  } catch {}
+  fetch(`${APP_URL}/api/brain`).catch(() => {})
 }
 
 async function handleAskAgent(agentKey, options, interactionToken) {
@@ -419,20 +453,57 @@ async function handleGuideCommand(options, interactionToken) {
 }
 
 async function handleAnalyseCommand(options, interactionToken) {
-  const symbol    = (options.find(o => o.name === 'symbol')?.value || 'BTC').toUpperCase()
-  const typeOpt   = options.find(o => o.name === 'type')?.value
+  const symbol  = (options.find(o => o.name === 'symbol')?.value || 'BTC').toUpperCase()
+  const typeOpt = options.find(o => o.name === 'type')?.value
+  const type    = typeOpt || (CRYPTO_LIST.includes(symbol) ? 'crypto' : 'stock')
 
-  // Réponse immédiate — defer (l'analyse prend ~15s)
-  const CRYPTO_LIST = ['BTC','ETH','SOL','BNB','XRP','ADA','DOGE','AVAX','DOT','MATIC','LINK','UNI','LTC','ATOM']
-  const type = typeOpt || (CRYPTO_LIST.includes(symbol) ? 'crypto' : 'stock')
+  // ── Phase 1 : Signal instantané en ~3s ───────────────────────────────────
+  try {
+    const { price, change24h, rsi } = await getQuickSignal(symbol, type)
 
-  await patchReply(interactionToken, agentEmbed('oracle',
-    `🔍 **Analyse ${type === 'crypto' ? 'crypto' : 'action'} de ${symbol} en cours...**\n\nJe collecte les données de marché, calcule RSI, MACD, Bollinger, Fibonacci et je prépare une analyse niveau expert Goldman Sachs. Prêt dans ~15 secondes. 📊`,
-    [{ name: '⏳ Patience', value: 'L\'analyse complète sera postée dans **#trading-desk**', inline: false }]
-  ))
+    const priceStr = price ? `$${Number(price).toLocaleString('en-US', { maximumFractionDigits: 4 })}` : 'N/A'
+    const chgStr   = change24h != null ? `${change24h >= 0 ? '+' : ''}${change24h.toFixed(2)}%` : 'N/A'
+    const chgEmoji = change24h == null ? '⬜' : change24h >= 2 ? '🚀' : change24h >= 0 ? '🟢' : change24h <= -2 ? '🔴' : '🔻'
+    const rsiLabel = rsi != null ? `${rsi}${rsi > 70 ? ' ⚠️ suracheté' : rsi < 30 ? ' 🟢 survendu' : ''}` : null
 
-  // Fire and forget — poste dans #trading-desk
-  const APP_URL = process.env.APP_URL || 'https://trackr-app-nu.vercel.app'
+    // Haiku verdict ultra-rapide
+    let quickVerdict = '🔍 Collecte et analyse en cours...'
+    if (ANTHROPIC_KEY && price) {
+      try {
+        const haikuData = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 220,
+            messages: [{ role: 'user', content: `Expert senior Goldman Sachs. ${symbol} (${type}): Prix ${priceStr}, var 24h ${chgStr}${rsi ? `, RSI(14)=${rsi}` : ''}. En 2 phrases percutantes en français: verdict immédiat (ACHAT/NEUTRE/VENTE) + 1 niveau clé à surveiller maintenant. Direct, précis, professionnel.` }],
+          }),
+          signal: AbortSignal.timeout(6000),
+        }).then(r => r.json())
+        quickVerdict = haikuData.content?.[0]?.text || quickVerdict
+      } catch {}
+    }
+
+    await patchReply(interactionToken, {
+      author: { name: `⚡ TradingExpert — Signal ${symbol} (instantané)` },
+      color: change24h == null ? 0x6600ea : change24h >= 0 ? 0x00c853 : 0xff1744,
+      description: quickVerdict,
+      fields: [
+        { name: `${chgEmoji} Prix actuel`, value: priceStr, inline: true },
+        { name: '📅 Variation 24h', value: chgStr, inline: true },
+        ...(rsiLabel ? [{ name: '📊 RSI(14)', value: rsiLabel, inline: true }] : []),
+        { name: '🔬 Analyse Goldman Sachs', value: 'Complète dans **#trading-desk** → ~15 secondes', inline: false },
+      ],
+      footer: { text: 'TradingExpert · Signal rapide Haiku · Analyse Sonnet en cours...' },
+      timestamp: new Date().toISOString(),
+    })
+  } catch {
+    await patchReply(interactionToken, agentEmbed('oracle',
+      `🔍 **Analyse ${symbol} en cours...**\n\nRésultats complets dans **#trading-desk** dans ~15 secondes.`
+    ))
+  }
+
+  // ── Phase 2 : Analyse complète Goldman Sachs en arrière-plan ─────────────
   fetch(`${APP_URL}/api/trading-expert?symbol=${symbol}&type=${type}`, {
     signal: AbortSignal.timeout(55000),
   }).catch(() => {})

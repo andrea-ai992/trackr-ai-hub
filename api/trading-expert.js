@@ -172,7 +172,7 @@ function computeATR(highs, lows, closes, period = 14) {
 }
 
 function buildIndicators(closes, highs, lows, volumes) {
-  return {
+  const ind = {
     rsi14:   computeRSI(closes, 14),
     rsi7:    computeRSI(closes, 7),
     ema9:    computeEMA(closes, 9),
@@ -184,20 +184,168 @@ function buildIndicators(closes, highs, lows, volumes) {
     fibonacci: computeFibonacci(closes, highs, lows),
     volume:  computeVolumeAnalysis(volumes),
     atr:     computeATR(highs, lows, closes),
+    roc10:   computeROC(closes, 10),
+    stoch:   computeStochastic(closes, highs, lows, 14),
+    williamsR: computeWilliamsR(closes, highs, lows, 14),
     price:   closes[closes.length - 1],
     change1d: closes.length > 1 ? parseFloat(((closes.at(-1) - closes.at(-2)) / closes.at(-2) * 100).toFixed(2)) : null,
     change7d: closes.length > 7 ? parseFloat(((closes.at(-1) - closes.at(-8)) / closes.at(-8) * 100).toFixed(2)) : null,
+    change30d: closes.length > 30 ? parseFloat(((closes.at(-1) - closes.at(-31)) / closes.at(-31) * 100).toFixed(2)) : null,
   }
+  ind.patterns = detectPatterns(closes, highs, lows, ind)
+  return ind
 }
 
-// ─── Charger les techniques apprises ─────────────────────────────────────────
+// ─── Indicateurs supplémentaires (quantitatif) ───────────────────────────────
+function computeROC(closes, period = 10) {
+  if (closes.length < period + 1) return null
+  const prev = closes[closes.length - 1 - period]
+  const curr = closes[closes.length - 1]
+  return parseFloat(((curr - prev) / prev * 100).toFixed(2))
+}
+
+function computeStochastic(closes, highs, lows, period = 14) {
+  if (!highs?.length || highs.length < period) return null
+  const recentHighs = highs.slice(-period)
+  const recentLows  = lows.slice(-period)
+  const highestHigh = Math.max(...recentHighs)
+  const lowestLow   = Math.min(...recentLows)
+  const current     = closes[closes.length - 1]
+  if (highestHigh === lowestLow) return null
+  return parseFloat(((current - lowestLow) / (highestHigh - lowestLow) * 100).toFixed(1))
+}
+
+function computeWilliamsR(closes, highs, lows, period = 14) {
+  const stoch = computeStochastic(closes, highs, lows, period)
+  return stoch != null ? parseFloat((stoch - 100).toFixed(1)) : null
+}
+
+function detectPatterns(closes, highs, lows, indicators) {
+  const patterns = []
+  const price = closes[closes.length - 1]
+
+  // Doji / hammer candlestick patterns (approximation sur données OHLC)
+  if (highs?.length && lows?.length) {
+    const lastH = highs[highs.length - 1]
+    const lastL = lows[lows.length - 1]
+    const body = Math.abs(closes[closes.length - 1] - closes[closes.length - 2] || 0)
+    const range = lastH - lastL
+    if (range > 0 && body / range < 0.2) patterns.push('Doji (indécision)')
+    const lowerShadow = (Math.min(closes.at(-1), closes.at(-2) || closes.at(-1)) - lastL)
+    if (lowerShadow / range > 0.6 && body / range < 0.3) patterns.push('Hammer (reversal potentiel)')
+  }
+
+  // Bollinger squeeze (compression → explosion imminente)
+  if (indicators.bollinger?.bandwidth < 5) patterns.push('Bollinger Squeeze (breakout imminent)')
+
+  // MACD divergence bullish
+  if (indicators.macd?.crossingUp) patterns.push('MACD Crossover Haussier ⚡')
+  if (indicators.macd?.crossingDown) patterns.push('MACD Crossover Baissier ⚠️')
+
+  // RSI divergence setup
+  if (indicators.rsi14 < 35 && indicators.macd?.bullish) patterns.push('Setup: RSI survendu + MACD haussier 🎯')
+  if (indicators.rsi14 > 68 && !indicators.macd?.bullish) patterns.push('Setup: RSI suracheté + MACD baissier ⚠️')
+
+  // Prix au-dessus/en-dessous EMA50
+  if (price && indicators.ema50) {
+    const dist = ((price - indicators.ema50) / indicators.ema50 * 100).toFixed(1)
+    patterns.push(`EMA50 ${price > indicators.ema50 ? `+${dist}%` : `${dist}%`} (${price > indicators.ema50 ? 'tendance haussière' : 'tendance baissière'})`)
+  }
+
+  // Volume confirmation
+  if (indicators.volume?.ratio > 1.5 && indicators.macd?.bullish) patterns.push('Volume fort + momentum haussier 💪')
+  if (indicators.volume?.ratio > 1.5 && !indicators.macd?.bullish) patterns.push('Volume fort + distribution baissière 📉')
+
+  return patterns
+}
+
+// ─── Vérifier les prédictions passées (apprentissage auto) ───────────────────
+async function verifyPastPredictions() {
+  try {
+    const entries = await getMemoryEntries(100)
+    const pending = entries.filter(e =>
+      e.type === 'trading_prediction' &&
+      !e.verified &&
+      e.targetDate &&
+      new Date(e.targetDate) <= new Date()
+    )
+
+    for (const pred of pending.slice(0, 3)) {  // max 3 vérifications par run
+      try {
+        const isCrypto = ['BTC','ETH','SOL','BNB','XRP','ADA','DOGE','AVAX','DOT','MATIC','LINK','UNI','LTC','ATOM'].includes(pred.symbol)
+        let currentPrice = null
+
+        if (isCrypto) {
+          const id = pred.symbol.toLowerCase().replace('btc','bitcoin').replace('eth','ethereum').replace('sol','solana')
+          const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`).then(r => r.json())
+          currentPrice = r[id]?.usd
+        } else {
+          const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${pred.symbol}?interval=1d&range=1d`, { headers: { 'User-Agent': 'Mozilla/5.0' } }).then(r => r.json())
+          currentPrice = r?.chart?.result?.[0]?.meta?.regularMarketPrice
+        }
+
+        if (!currentPrice || !pred.entryPrice) continue
+
+        const actualReturn = ((currentPrice - pred.entryPrice) / pred.entryPrice * 100).toFixed(2)
+        const verdictCorrect = (
+          (pred.verdict?.includes('ACHAT') && currentPrice > pred.entryPrice) ||
+          (pred.verdict?.includes('VENTE') && currentPrice < pred.entryPrice) ||
+          (pred.verdict === 'NEUTRE' && Math.abs(currentPrice - pred.entryPrice) / pred.entryPrice < 0.02)
+        )
+
+        await addMemoryEntry({
+          type: 'trading_result',
+          symbol: pred.symbol,
+          technique: pred.technique,
+          verdict: pred.verdict,
+          entryPrice: pred.entryPrice,
+          currentPrice,
+          actualReturn: parseFloat(actualReturn),
+          verdictCorrect,
+          conviction: pred.conviction,
+          result: `Prédit ${pred.verdict} à $${pred.entryPrice}, prix actuel $${currentPrice} (${actualReturn >= 0 ? '+' : ''}${actualReturn}%) — ${verdictCorrect ? '✅ CORRECT' : '❌ INCORRECT'}`,
+        }).catch(() => {})
+      } catch {}
+    }
+  } catch {}
+}
+
+// ─── Charger les techniques apprises + performance ───────────────────────────
 async function loadTradingLearnings() {
   try {
-    const entries = await getMemoryEntries(50)
+    const entries = await getMemoryEntries(100)
+    const results = entries.filter(e => e.type === 'trading_result' && e.verdictCorrect !== undefined)
     const learnings = entries.filter(e => e.type === 'trading_learning')
-    return learnings.length > 0
-      ? `\n\n**Techniques validées par apprentissage :**\n${learnings.slice(-10).map(l => `- ${l.technique}: ${l.result}`).join('\n')}`
+
+    let perfText = ''
+    if (results.length > 0) {
+      const correct = results.filter(e => e.verdictCorrect).length
+      const winRate = (correct / results.length * 100).toFixed(0)
+      const avgReturn = (results.reduce((s, e) => s + (e.actualReturn || 0), 0) / results.length).toFixed(2)
+      perfText = `\n**Performance historique :** ${winRate}% win rate sur ${results.length} prédictions vérifiées | Rendement moyen: ${avgReturn}%`
+
+      // Top techniques par winrate
+      const byTech = {}
+      results.forEach(e => {
+        if (!e.technique) return
+        if (!byTech[e.technique]) byTech[e.technique] = { correct: 0, total: 0 }
+        byTech[e.technique].total++
+        if (e.verdictCorrect) byTech[e.technique].correct++
+      })
+      const topTechs = Object.entries(byTech)
+        .map(([t, s]) => ({ t, wr: s.correct / s.total * 100 }))
+        .sort((a, b) => b.wr - a.wr)
+        .slice(0, 3)
+      if (topTechs.length > 0) {
+        perfText += `\n**Meilleures techniques :** ${topTechs.map(t => `${t.t} (${t.wr.toFixed(0)}%)`).join(', ')}`
+      }
+    }
+
+    const learnText = learnings.length > 0
+      ? `\n**Apprentissages récents :**\n${learnings.slice(-8).map(l => `- ${l.technique}: ${l.result}`).join('\n')}`
       : ''
+
+    return perfText + learnText
   } catch { return '' }
 }
 
@@ -206,43 +354,49 @@ async function analyzeWithClaude(symbol, type, indicators, marketData, learnings
   const price = indicators.price
   const fmtPct = v => v != null ? `${v > 0 ? '+' : ''}${v}%` : 'N/A'
 
-  const prompt = `Tu es le Chief Investment Officer de Trackr, formé par les meilleures équipes de trading de Goldman Sachs, Citadel et Two Sigma. Tu analyses ${symbol} (${type === 'crypto' ? 'cryptomonnaie' : 'action'}) pour un trader professionnel.
+  const prompt = `Tu es le Chief Investment Officer de Trackr, formé par Goldman Sachs, Citadel, Two Sigma et Renaissance Technologies. Tu analyses ${symbol} (${type === 'crypto' ? 'cryptomonnaie' : 'action'}) avec la précision d'un quant fund de premier rang. Ton objectif: identifier des setups à FORT RENDEMENT avec une gestion de risque rigoureuse.
 
 **DONNÉES MARCHÉ :**
 - Prix actuel : ${price ? `$${price.toLocaleString('en-US', { maximumFractionDigits: 4 })}` : 'N/A'}
-- Variation 24h : ${fmtPct(indicators.change1d)}
-- Variation 7j : ${fmtPct(indicators.change7d)}
+- Variation 24h : ${fmtPct(indicators.change1d)} | 7j : ${fmtPct(indicators.change7d)} | 30j : ${fmtPct(indicators.change30d)}
 ${marketData ? `- Volume 24h : $${(marketData.volume24h / 1e6)?.toFixed(0) ?? 'N/A'}M\n- Market Cap : $${(marketData.marketCap / 1e9)?.toFixed(1) ?? 'N/A'}B` : ''}
 
-**INDICATEURS TECHNIQUES :**
-- RSI(14) : ${indicators.rsi14 ?? 'N/A'} ${indicators.rsi14 > 70 ? '⚠️ Suracheté' : indicators.rsi14 < 30 ? '🟢 Survendu' : '—'}
-- RSI(7) : ${indicators.rsi7 ?? 'N/A'}
+**INDICATEURS TECHNIQUES COMPLETS :**
+- RSI(14) : ${indicators.rsi14 ?? 'N/A'} ${indicators.rsi14 > 70 ? '⚠️ Suracheté' : indicators.rsi14 < 30 ? '🟢 Survendu' : '—'} | RSI(7) : ${indicators.rsi7 ?? 'N/A'}
 - EMA 9 / 21 / 50 : ${indicators.ema9?.toFixed(2) ?? 'N/A'} / ${indicators.ema21?.toFixed(2) ?? 'N/A'} / ${indicators.ema50?.toFixed(2) ?? 'N/A'}
-- SMA 200 : ${indicators.sma200?.toFixed(2) ?? 'N/A'} ${price && indicators.sma200 ? (price > indicators.sma200 ? '(au-dessus — haussier)' : '(en-dessous — baissier)') : ''}
-- MACD : ligne ${indicators.macd?.line ?? 'N/A'} ${indicators.macd?.crossingUp ? '🟢 CROISEMENT HAUSSIER' : indicators.macd?.crossingDown ? '🔴 CROISEMENT BAISSIER' : ''}
-- Bollinger : position ${indicators.bollinger?.position ?? 'N/A'}% (upper: ${indicators.bollinger?.upper ?? 'N/A'}, lower: ${indicators.bollinger?.lower ?? 'N/A'})
+- SMA 200 : ${indicators.sma200?.toFixed(2) ?? 'N/A'} ${price && indicators.sma200 ? (price > indicators.sma200 ? '(au-dessus — tendance long terme haussière)' : '(en-dessous — tendance long terme baissière)') : ''}
+- MACD : ligne ${indicators.macd?.line ?? 'N/A'} | EMA12=${indicators.macd?.ema12 ?? 'N/A'} EMA26=${indicators.macd?.ema26 ?? 'N/A'} ${indicators.macd?.crossingUp ? '🟢 CROISEMENT HAUSSIER' : indicators.macd?.crossingDown ? '🔴 CROISEMENT BAISSIER' : ''}
+- Bollinger : position ${indicators.bollinger?.position ?? 'N/A'}% | bandwidth ${indicators.bollinger?.bandwidth ?? 'N/A'}% | upper=${indicators.bollinger?.upper ?? 'N/A'} lower=${indicators.bollinger?.lower ?? 'N/A'}
+- Stochastique(14) : ${indicators.stoch ?? 'N/A'} ${indicators.stoch > 80 ? '⚠️ suracheté' : indicators.stoch < 20 ? '🟢 survendu' : ''} | Williams %R : ${indicators.williamsR ?? 'N/A'}
+- ROC(10) : ${indicators.roc10 ?? 'N/A'}% (momentum 10j)
 - Fibonacci (20j) : 23.6%=$${indicators.fibonacci?.r236 ?? 'N/A'} | 38.2%=$${indicators.fibonacci?.r382 ?? 'N/A'} | 61.8%=$${indicators.fibonacci?.r618 ?? 'N/A'}
-- Volume : ${indicators.volume?.trend ?? 'N/A'} (ratio vs moyenne 20j : ${indicators.volume?.ratio ?? 'N/A'}x)
-- ATR(14) : ${indicators.atr ?? 'N/A'} (volatilité)
+- Volume : ${indicators.volume?.trend ?? 'N/A'} (ratio vs moy.20j : ${indicators.volume?.ratio ?? 'N/A'}x) | ATR(14) : ${indicators.atr ?? 'N/A'}
+
+**PATTERNS DÉTECTÉS :**
+${indicators.patterns?.length ? indicators.patterns.map(p => `- ${p}`).join('\n') : '- Aucun pattern fort détecté'}
+
 ${learnings}
 
 **INSTRUCTIONS :**
-Produis une analyse experte structurée en JSON :
+Identifie le setup le plus performant possible. Produis une analyse JSON ultra-précise :
 {
   "verdict": "ACHAT_FORT|ACHAT|NEUTRE|VENTE|VENTE_FORTE",
   "conviction": 1-100,
-  "resume_executif": "2-3 phrases percutantes — synthèse pour un CIO",
-  "thesis_haussiere": "Arguments techniques et fondamentaux pour la hausse",
-  "thesis_baissiere": "Risques et arguments pour la baisse",
-  "zones_entree": ["$X.XX — raison précise", "..."],
-  "targets": [{"prix": X, "horizon": "1-2 semaines", "probabilite": "60%"}, ...],
-  "stop_loss": {"prix": X, "raison": "support/niveau clé"},
+  "resume_executif": "2-3 phrases percutantes pour un CIO — va à l'essentiel",
+  "thesis_haussiere": "Arguments techniques et fondamentaux pour la hausse avec niveaux précis",
+  "thesis_baissiere": "Risques et arguments pour la baisse avec niveaux précis",
+  "zones_entree": ["$X.XX — raison précise (support Fibonacci / rebond EMA)", "..."],
+  "targets": [{"prix": X, "horizon": "X jours", "probabilite": "X%", "ratio_risque_rendement": "1:X"}, ...],
+  "stop_loss": {"prix": X, "raison": "support/niveau clé", "risque_pct": X},
+  "setup_haute_conviction": "Description du setup idéal si conviction >= 70 (ex: RSI survendu + MACD crossover + support EMA50 = triple confluence)",
   "signaux_cles": ["Signal 1", "Signal 2", "Signal 3"],
   "risques_majeurs": ["Risque 1", "Risque 2"],
-  "technique_validee": "Nom de la technique la plus fiable ici (ex: RSI_divergence, MACD_crossover, Bollinger_squeeze)",
+  "catalyseurs": ["Événement ou niveau qui pourrait accélérer le mouvement"],
+  "technique_validee": "Technique principale (ex: RSI_divergence, MACD_crossover, Bollinger_squeeze, EMA_crossover, Fibonacci_retracement)",
   "score_technique": 1-100,
   "horizon_optimal": "scalp|swing|position",
-  "note_apprise": "Ce que cette analyse t'apprend sur le comportement de ce ticker (pour ta mémoire)"
+  "rendement_potentiel_pct": X,
+  "note_apprise": "Pattern ou observation unique sur ce ticker pour améliorer les futures analyses"
 }`
 
   const r = await fetch('https://api.anthropic.com/v1/messages', {
@@ -297,6 +451,8 @@ async function postAnalysis(channelId, symbol, type, indicators, analysis) {
         { name: '📊 Conviction', value: `\`${convBar}\` ${conv}%`, inline: true },
         { name: '⏱ Horizon optimal', value: analysis.horizon_optimal || '—', inline: true },
         { name: '💰 Prix actuel', value: `$${price?.toLocaleString('en-US', { maximumFractionDigits: 4 }) || '—'}`, inline: true },
+        ...(analysis.rendement_potentiel_pct ? [{ name: '📈 Rendement potentiel', value: `+${analysis.rendement_potentiel_pct}%`, inline: true }] : []),
+        ...(analysis.setup_haute_conviction && conv >= 70 ? [{ name: '🎯 Setup haute conviction', value: analysis.setup_haute_conviction.slice(0, 300), inline: false }] : []),
       ],
       timestamp: new Date().toISOString(),
     },
@@ -322,7 +478,7 @@ async function postAnalysis(channelId, symbol, type, indicators, analysis) {
         },
         {
           name: '🎯 Objectifs de prix',
-          value: (analysis.targets || []).map(t => `• **$${t.prix}** — ${t.horizon} (${t.probabilite})`).join('\n').slice(0, 400) || '—',
+          value: (analysis.targets || []).map(t => `• **$${t.prix}** — ${t.horizon} (${t.probabilite}${t.ratio_risque_rendement ? ` · R/R ${t.ratio_risque_rendement}` : ''})`).join('\n').slice(0, 400) || '—',
           inline: false,
         },
         {
@@ -360,6 +516,9 @@ export default async function handler(req, res) {
   const channelId = req.query?.channel || req.body?.channel || TRADING_CH
 
   try {
+    // 0. Vérifier les prédictions passées (apprentissage autonome)
+    verifyPastPredictions().catch(() => {})
+
     // 1. Récupérer les données
     let closes = [], highs = [], lows = [], volumes = [], marketData = null
 
@@ -402,19 +561,37 @@ export default async function handler(req, res) {
     // 4. Analyse Claude expert
     const analysis = await analyzeWithClaude(symbol, type, indicators, marketData, learnings)
 
-    // 5. Sauvegarder l'apprentissage en mémoire
-    if (analysis.technique_validee && analysis.note_apprise) {
-      await addMemoryEntry({
-        type:      'trading_learning',
-        symbol,
-        assetType: type,
-        technique: analysis.technique_validee,
-        verdict:   analysis.verdict,
-        conviction: analysis.conviction,
-        result:    analysis.note_apprise,
-        score:     analysis.score_technique,
-      }).catch(() => {})
-    }
+    // 5. Sauvegarder l'apprentissage + la prédiction (pour vérification auto dans 7j)
+    const targetDate = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString()
+    await Promise.allSettled([
+      analysis.technique_validee && analysis.note_apprise
+        ? addMemoryEntry({
+            type:       'trading_learning',
+            symbol,
+            assetType:  type,
+            technique:  analysis.technique_validee,
+            verdict:    analysis.verdict,
+            conviction: analysis.conviction,
+            result:     analysis.note_apprise,
+            score:      analysis.score_technique,
+          })
+        : Promise.resolve(),
+      // Enregistre la prédiction pour vérification dans 7 jours
+      analysis.verdict && indicators.price
+        ? addMemoryEntry({
+            type:             'trading_prediction',
+            symbol,
+            assetType:        type,
+            verdict:          analysis.verdict,
+            conviction:       analysis.conviction,
+            technique:        analysis.technique_validee,
+            entryPrice:       indicators.price,
+            rendementPredit:  analysis.rendement_potentiel_pct,
+            targetDate,
+            verified:         false,
+          })
+        : Promise.resolve(),
+    ])
 
     // 6. Post sur Discord trading-desk
     await postAnalysis(channelId, symbol, type, indicators, analysis)
