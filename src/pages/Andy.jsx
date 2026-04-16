@@ -1000,10 +1000,10 @@ export default function Andy() {
   const growth = Math.min(galaxyData.exchanges / 150, 1)
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: '#060a16', display: 'flex', flexDirection: 'column', color: '#dbe2f8', fontFamily: "'Inter', system-ui, sans-serif", overflow: 'hidden' }}>
+    <div style={{ position: 'fixed', inset: 0, background: '#000', display: 'flex', flexDirection: 'column', color: '#dbe2f8', fontFamily: "'Inter', system-ui, sans-serif", overflow: 'hidden' }}>
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px', paddingTop: 'max(14px, env(safe-area-inset-top, 0px))', paddingBottom: 12, borderBottom: '1px solid rgba(132,147,150,0.08)', background: 'rgba(6,10,22,0.85)', backdropFilter: 'blur(20px)', flexShrink: 0, zIndex: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px', paddingTop: 'max(14px, env(safe-area-inset-top, 0px))', paddingBottom: 12, borderBottom: '1px solid rgba(132,147,150,0.08)', background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(20px)', flexShrink: 0, zIndex: 20 }}>
         <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4b6070', padding: 4, display: 'flex' }}>
           <ArrowLeft size={20} />
         </button>
@@ -1014,7 +1014,7 @@ export default function Andy() {
             <div style={{ position: 'absolute', inset: 2, borderRadius: '50%', background: 'linear-gradient(135deg, #00a3b8, #6600ea)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Bot size={15} color="white" />
             </div>
-            <div style={{ position: 'absolute', bottom: 0, right: 0, width: 9, height: 9, borderRadius: '50%', background: offline ? '#ef4444' : '#00daf3', border: '2px solid #060a16', boxShadow: offline ? 'none' : '0 0 5px #00daf3' }} />
+            <div style={{ position: 'absolute', bottom: 0, right: 0, width: 9, height: 9, borderRadius: '50%', background: offline ? '#ef4444' : '#00daf3', border: '2px solid #000', boxShadow: offline ? 'none' : '0 0 5px #00daf3' }} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
