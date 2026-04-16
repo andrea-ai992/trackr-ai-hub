@@ -1,47 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776350822786",
-      "timestamp": "2026-04-16T14:47:02.786Z",
-      "type": "pattern_scan",
-      "focus": "bugs",
-      "findings": [
-        {
-          "id": "sse_json_parse",
-          "file": "api/discord.js",
-          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
-          "severity": "critical"
-        },
-        {
-          "id": "vercel_url_empty",
-          "file": "api/brain.js",
-          "description": "Using VERCEL_URL which is empty in production — use APP_URL instead",
-          "severity": "high"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/andy.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/brain.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/trading-expert.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        }
-      ],
-      "count": 5,
-      "applied": false,
-      "note": "Patterns detected before Claude analysis — guiding fix priority"
-    },
-    {
       "id": "mem_1776350824362",
       "timestamp": "2026-04-16T14:47:04.362Z",
       "type": "error",
@@ -3986,6 +3945,20 @@
       "learned": "Yahoo Finance occasionally returns text/event-stream instead of JSON, so every .json() call on its responses must be preceded by a content-type check — this pattern is already established in morning.js and trading-expert.js but was incomplete in discord.js.",
       "applied": true,
       "fromAdminTask": null
+    },
+    {
+      "id": "mem_1776364566314",
+      "timestamp": "2026-04-16T18:36:06.314Z",
+      "type": "brain_cycle",
+      "hour": 18,
+      "successRate": 0,
+      "agentsRan": 4,
+      "improved": false,
+      "improvedFile": null,
+      "focus": "bugs",
+      "errors": 0,
+      "appHealthy": true,
+      "duration": 14
     }
   ]
 }
