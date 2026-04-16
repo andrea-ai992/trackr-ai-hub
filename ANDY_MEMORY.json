@@ -1,20 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776375349174",
-      "timestamp": "2026-04-16T21:35:49.174Z",
-      "type": "brain_cycle",
-      "hour": 21,
-      "successRate": 0,
-      "agentsRan": 0,
-      "improved": false,
-      "improvedFile": null,
-      "focus": null,
-      "errors": 0,
-      "appHealthy": true,
-      "duration": 2
-    },
-    {
       "id": "mem_1776375350186",
       "timestamp": "2026-04-16T21:35:50.186Z",
       "type": "pattern_scan",
@@ -2932,6 +2918,19 @@
       "count": 4,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776380173316",
+      "timestamp": "2026-04-16T22:56:13.316Z",
+      "type": "improvement",
+      "focus": "bugs",
+      "file": "src/pages/Andy.jsx",
+      "problem": "src/pages/Andy.jsx: fetch() calls in ActivityFeed use .then(r => r.json()) without checking r.ok or content-type, and without any AbortSignal.timeout() — a non-JSON or error response (e.g. 401, 500, SSE) will silently crash the Promise.allSettled chain or produce garbage state",
+      "severity": "high",
+      "commit": "fix: add AbortSignal.timeout, ok-check and safe JSON parsing to ActivityFeed fetch calls in Andy.jsx",
+      "learned": "Frontend fetch chains that call .then(r => r.json()) directly before Promise.allSettled can cause loading states to hang forever when an API returns a non-JSON error response, because the rejection escapes the allSettled boundary.",
+      "applied": true,
+      "fromAdminTask": null
     }
   ]
 }
