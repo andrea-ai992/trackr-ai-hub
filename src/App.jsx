@@ -1,6 +1,323 @@
+Je vais générer tous les fichiers nécessaires et les pousser sur GitHub.
+
+**Plan d'action:**
+1. `vite.config.js` — chunks + esnext + esbuild
+2. `src/components/PageSkeleton.jsx` — skeleton animé
+3. `src/App.jsx` — lazy routes + Suspense
+4. Mise à jour fetch dans `src/pages/CryptoMarkets.jsx` — AbortController + cache
+
+---
+
+**FICHIER 1: vite.config.js**
+
+```js
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    target: 'esnext',
+    minify: 'esbuild',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-router': ['react-router-dom'],
+          'vendor-charts': ['recharts'],
+        },
+      },
+    },
+  },
+})
+```
+
+---
+
+**FICHIER 2: src/components/PageSkeleton.jsx**
+
 ```jsx
-// src/pages/CryptoMarkets.jsx
-import { useState, useEffect, useCallback } from 'react'
+import { useEffect, useState } from 'react'
+
+const keyframes = `
+  @keyframes skeletonShimmer {
+    0% { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+  }
+  @keyframes skeletonFade {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+`
+
+function SkeletonBar({ width = '100%', height = 16, borderRadius = 8, style = {} }) {
+  return (
+    <div
+      style={{
+        width,
+        height,
+        borderRadius,
+        background: 'linear-gradient(90deg, #111 25%, #1a1a1a 50%, #111 75%)',
+        backgroundSize: '800px 100%',
+        animation: 'skeletonShimmer 1.6s infinite linear',
+        flexShrink: 0,
+        ...style,
+      }}
+    />
+  )
+}
+
+function SkeletonCard() {
+  return (
+    <div
+      style={{
+        background: '#12121a',
+        border: '1px solid rgba(102,0,234,0.12)',
+        borderRadius: 16,
+        padding: 16,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            background: 'linear-gradient(90deg, #111 25%, #1a1a1a 50%, #111 75%)',
+            backgroundSize: '800px 100%',
+            animation: 'skeletonShimmer 1.6s infinite linear',
+            flexShrink: 0,
+          }}
+        />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <SkeletonBar width="55%" height={14} />
+          <SkeletonBar width="35%" height={11} />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+          <SkeletonBar width={70} height={14} />
+          <SkeletonBar width={50} height={20} borderRadius={6} />
+        </div>
+      </div>
+      <SkeletonBar width="100%" height={52} borderRadius={8} />
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 8,
+          paddingTop: 8,
+          borderTop: '1px solid rgba(255,255,255,0.06)',
+        }}
+      >
+        {[...Array(4)].map((_, i) => (
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <SkeletonBar width="50%" height={10} />
+            <SkeletonBar width="70%" height={12} />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default function PageSkeleton() {
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), 50)
+    return () => clearTimeout(t)
+  }, [])
+
+  return (
+    <>
+      <style>{keyframes}</style>
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: '#080808',
+          zIndex: 9999,
+          overflowY: 'auto',
+          opacity: visible ? 1 : 0,
+          transition: 'opacity 0.2s ease',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 480,
+            margin: '0 auto',
+            padding: '0 16px 100px',
+          }}
+        >
+          {/* Header skeleton */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '16px 0',
+              marginBottom: 8,
+            }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <SkeletonBar width={140} height={20} />
+              <SkeletonBar width={100} height={12} />
+            </div>
+            <SkeletonBar width={36} height={36} borderRadius={10} />
+          </div>
+
+          {/* Summary bar skeleton */}
+          <div
+            style={{
+              display: 'flex',
+              gap: 12,
+              padding: '12px 16px',
+              background: '#12121a',
+              border: '1px solid rgba(102,0,234,0.12)',
+              borderRadius: 12,
+              marginBottom: 16,
+            }}
+          >
+            {[...Array(4)].map((_, i) => (
+              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <SkeletonBar width="60%" height={10} />
+                <SkeletonBar width="80%" height={14} />
+              </div>
+            ))}
+          </div>
+
+          {/* Cards skeleton */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {[...Array(4)].map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        </div>
+
+        {/* Bottom nav skeleton */}
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 72,
+            background: 'rgba(8,8,8,0.95)',
+            borderTop: '1px solid rgba(255,255,255,0.06)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-around',
+            padding: '0 24px',
+            backdropFilter: 'blur(20px)',
+          }}
+        >
+          {[...Array(5)].map((_, i) => (
+            <div
+              key={i}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}
+            >
+              <div
+                style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: 6,
+                  background: 'linear-gradient(90deg, #111 25%, #1a1a1a 50%, #111 75%)',
+                  backgroundSize: '800px 100%',
+                  animation: 'skeletonShimmer 1.6s infinite linear',
+                }}
+              />
+              <SkeletonBar width={32} height={8} borderRadius={4} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  )
+}
+```
+
+---
+
+**FICHIER 3: src/App.jsx**
+
+```jsx
+import { lazy, Suspense } from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import PageSkeleton from './components/PageSkeleton'
+
+const Dashboard     = lazy(() => import('./pages/Dashboard'))
+const CryptoMarkets = lazy(() => import('./pages/CryptoMarkets'))
+const Portfolio     = lazy(() => import('./pages/Portfolio'))
+const Watchlist     = lazy(() => import('./pages/Watchlist'))
+const Settings      = lazy(() => import('./pages/Settings'))
+
+function SuspenseRoute({ children }) {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      {children}
+    </Suspense>
+  )
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <SuspenseRoute>
+              <Dashboard />
+            </SuspenseRoute>
+          }
+        />
+        <Route
+          path="/markets"
+          element={
+            <SuspenseRoute>
+              <CryptoMarkets />
+            </SuspenseRoute>
+          }
+        />
+        <Route
+          path="/portfolio"
+          element={
+            <SuspenseRoute>
+              <Portfolio />
+            </SuspenseRoute>
+          }
+        />
+        <Route
+          path="/watchlist"
+          element={
+            <SuspenseRoute>
+              <Watchlist />
+            </SuspenseRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <SuspenseRoute>
+              <Settings />
+            </SuspenseRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  )
+}
+```
+
+---
+
+**FICHIER 4: src/pages/CryptoMarkets.jsx** (fetch avec AbortController + cache localStorage 5min)
+
+```jsx
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts'
 
 const COLORS = {
@@ -31,6 +348,10 @@ const COINGECKO_URL =
   '&sparkline=true' +
   '&price_change_percentage=24h'
 
+const CACHE_KEY = 'trackr_crypto_markets'
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+const FETCH_TIMEOUT = 10000 // 10 seconds
+
 const SPIN_STYLE = `
   @keyframes spin {
     to { transform: rotate(360deg); }
@@ -40,6 +361,33 @@ const SPIN_STYLE = `
     50% { opacity: 0.4; }
   }
 `
+
+// ─── Cache helpers ────────────────────────────────────────────────────────────
+
+function getCachedData() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY)
+    if (!raw) return null
+    const { data, timestamp } = JSON.parse(raw)
+    if (Date.now() - timestamp > CACHE_TTL) {
+      localStorage.removeItem(CACHE_KEY)
+      return null
+    }
+    return data
+  } catch {
+    return null
+  }
+}
+
+function setCachedData(data) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }))
+  } catch {
+    // storage full or unavailable — ignore
+  }
+}
+
+// ─── Formatters ───────────────────────────────────────────────────────────────
 
 function formatPrice(price) {
   if (price >= 1000) {
@@ -61,6 +409,8 @@ function formatMarketCap(val) {
 function formatVolume(val) {
   return formatMarketCap(val)
 }
+
+// ─── Components ───────────────────────────────────────────────────────────────
 
 function SparklineChart({ data, positive }) {
   if (!data || data.length === 0) return null
@@ -88,8 +438,8 @@ function CoinCard({ coin, rank }) {
   const change = coin.price_change_percentage_24h || 0
   const positive = change >= 0
   const changeColor = positive ? COLORS.green : COLORS.red
-  const changeBg = positive ? COLORS.greenDim : COLORS.redDim
-  const sparkData = coin.sparkline_in_7d?.price || []
+  const changeBg   = positive ? COLORS.greenDim : COLORS.redDim
+  const sparkData  = coin.sparkline_in_7d?.price || []
 
   return (
     <div
@@ -183,304 +533,4 @@ function CoinCard({ coin, rank }) {
           </div>
         </div>
         <div>
-          <div style={{ fontSize: 10, color: COLORS.textDim, marginBottom: 2, letterSpacing: '0.3px' }}>24h LOW</div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.red }}>
-            {formatPrice(coin.low_24h || 0)}
-          </div>
-        </div>
-        <div>
-          <div style={{ fontSize: 10, color: COLORS.textDim, marginBottom: 2, letterSpacing: '0.3px' }}>VOLUME</div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.textSub }}>
-            {formatVolume(coin.total_volume || 0)}
-          </div>
-        </div>
-        <div>
-          <div style={{ fontSize: 10, color: COLORS.textDim, marginBottom: 2, letterSpacing: '0.3px' }}>SUPPLY</div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.textSub }}>
-            {coin.circulating_supply
-              ? (coin.circulating_supply / 1e6).toFixed(2) + 'M'
-              : '—'}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function LoadingCard() {
-  return (
-    <div style={{
-      background: COLORS.card,
-      border: `1px solid ${COLORS.cardBorder}`,
-      borderRadius: 16,
-      padding: '16px',
-      height: 220,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    }}>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-        <div style={{
-          width: 32,
-          height: 32,
-          borderRadius: '50%',
-          border: `2px solid ${COLORS.purpleLight}`,
-          borderTopColor: 'transparent',
-          animation: 'spin 0.8s linear infinite',
-        }} />
-        <span style={{ fontSize: 12, color: COLORS.textDim }}>Loading...</span>
-      </div>
-    </div>
-  )
-}
-
-function MarketSummaryBar({ coins }) {
-  if (!coins.length) return null
-  const gainers = coins.filter(c => (c.price_change_percentage_24h || 0) >= 0).length
-  const losers = coins.length - gainers
-  const avgChange = coins.reduce((s, c) => s + (c.price_change_percentage_24h || 0), 0) / coins.length
-  const positive = avgChange >= 0
-
-  return (
-    <div style={{
-      display: 'flex',
-      gap: 12,
-      padding: '12px 16px',
-      background: COLORS.card,
-      border: `1px solid ${COLORS.cardBorder}`,
-      borderRadius: 12,
-      marginBottom: 16,
-      flexWrap: 'wrap',
-    }}>
-      <div style={{ flex: 1, minWidth: 80 }}>
-        <div style={{ fontSize: 10, color: COLORS.textDim, marginBottom: 2 }}>AVG 24H</div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: positive ? COLORS.green : COLORS.red }}>
-          {positive ? '+' : ''}{avgChange.toFixed(2)}%
-        </div>
-      </div>
-      <div style={{ flex: 1, minWidth: 80 }}>
-        <div style={{ fontSize: 10, color: COLORS.textDim, marginBottom: 2 }}>GAINERS</div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.green }}>{gainers} 📈</div>
-      </div>
-      <div style={{ flex: 1, minWidth: 80 }}>
-        <div style={{ fontSize: 10, color: COLORS.textDim, marginBottom: 2 }}>LOSERS</div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.red }}>{losers} 📉</div>
-      </div>
-      <div style={{ flex: 1, minWidth: 80 }}>
-        <div style={{ fontSize: 10, color: COLORS.textDim, marginBottom: 2 }}>TRACKED</div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text }}>{coins.length} 🪙</div>
-      </div>
-    </div>
-  )
-}
-
-export default function CryptoMarkets() {
-  const [coins, setCoins] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [lastUpdated, setLastUpdated] = useState(null)
-  const [refreshing, setRefreshing] = useState(false)
-  const [countdown, setCountdown] = useState(60)
-
-  const fetchCoins = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true)
-    else setRefreshing(true)
-    setError(null)
-
-    try {
-      const res = await fetch(COINGECKO_URL, {
-        headers: { Accept: 'application/json' },
-      })
-
-      if (res.status === 429) {
-        throw new Error('Rate limit reached. Please wait a moment.')
-      }
-      if (!res.ok) {
-        throw new Error(`API error: ${res.status} ${res.statusText}`)
-      }
-
-      const data = await res.json()
-      if (!Array.isArray(data) || data.length === 0) {
-        throw new Error('No data received from CoinGecko.')
-      }
-
-      setCoins(data)
-      setLastUpdated(new Date())
-      setCountdown(60)
-    } catch (err) {
-      setError(err.message || 'Failed to fetch market data.')
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
-    }
-  }, [])
-
-  // Initial fetch
-  useEffect(() => {
-    fetchCoins(false)
-  }, [fetchCoins])
-
-  // Auto-refresh every 60s
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchCoins(true)
-    }, 60_000)
-    return () => clearInterval(interval)
-  }, [fetchCoins])
-
-  // Countdown timer
-  useEffect(() => {
-    if (loading) return
-    const tick = setInterval(() => {
-      setCountdown(prev => (prev <= 1 ? 60 : prev - 1))
-    }, 1000)
-    return () => clearInterval(tick)
-  }, [loading])
-
-  const handleManualRefresh = () => {
-    if (!refreshing && !loading) {
-      fetchCoins(true)
-    }
-  }
-
-  return (
-    <>
-      <style>{SPIN_STYLE}</style>
-      <div style={{
-        minHeight: '100vh',
-        background: COLORS.bg,
-        padding: '0 0 80px 0',
-      }}>
-        {/* Header */}
-        <div style={{
-          padding: '20px 16px 12px',
-          borderBottom: `1px solid ${COLORS.border}`,
-          position: 'sticky',
-          top: 0,
-          background: COLORS.bg,
-          zIndex: 10,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <h1 style={{
-                fontSize: 20,
-                fontWeight: 800,
-                color: COLORS.text,
-                margin: 0,
-                letterSpacing: '-0.3px',
-              }}>
-                Crypto Markets
-              </h1>
-              <div style={{ fontSize: 11, color: COLORS.textDim, marginTop: 2 }}>
-                {lastUpdated
-                  ? `Updated ${lastUpdated.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} · refresh in ${countdown}s`
-                  : 'Fetching live data…'}
-              </div>
-            </div>
-            <button
-              onClick={handleManualRefresh}
-              disabled={refreshing || loading}
-              style={{
-                background: COLORS.purpleDim,
-                border: `1px solid ${COLORS.purple}`,
-                borderRadius: 10,
-                padding: '8px 14px',
-                color: COLORS.purpleLight,
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: refreshing || loading ? 'not-allowed' : 'pointer',
-                opacity: refreshing || loading ? 0.5 : 1,
-                transition: 'opacity 0.2s',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              <span style={{
-                display: 'inline-block',
-                animation: refreshing ? 'spin 0.8s linear infinite' : 'none',
-              }}>
-                ↻
-              </span>
-              {refreshing ? 'Updating…' : 'Refresh'}
-            </button>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div style={{ padding: '16px 16px 0' }}>
-          {/* Error state */}
-          {error && (
-            <div style={{
-              background: COLORS.redDim,
-              border: `1px solid ${COLORS.red}`,
-              borderRadius: 12,
-              padding: '14px 16px',
-              marginBottom: 16,
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 10,
-            }}>
-              <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.red, marginBottom: 4 }}>
-                  Failed to load market data
-                </div>
-                <div style={{ fontSize: 12, color: COLORS.textSub }}>{error}</div>
-                <button
-                  onClick={handleManualRefresh}
-                  style={{
-                    marginTop: 10,
-                    background: 'transparent',
-                    border: `1px solid ${COLORS.red}`,
-                    borderRadius: 8,
-                    padding: '5px 12px',
-                    color: COLORS.red,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Try again
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Loading state */}
-          {loading && !error && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {Array.from({ length: 5 }).map((_, i) => (
-                <LoadingCard key={i} />
-              ))}
-            </div>
-          )}
-
-          {/* Data state */}
-          {!loading && !error && coins.length > 0 && (
-            <>
-              <MarketSummaryBar coins={coins} />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {coins.map((coin, idx) => (
-                  <CoinCard key={coin.id} coin={coin} rank={idx + 1} />
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* Empty state (should not occur normally) */}
-          {!loading && !error && coins.length === 0 && (
-            <div style={{
-              textAlign: 'center',
-              padding: '60px 20px',
-              color: COLORS.textDim,
-              fontSize: 14,
-            }}>
-              No market data available.
-            </div>
-          )}
-        </div>
-      </div>
-    </>
-  )
-}
+          <div style={{ fontSize: 10, color: COLORS.textDim, marginBottom: 2, letterSpacing: '0.3px' }
