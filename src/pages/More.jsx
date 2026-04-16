@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Plane, Languages, Footprints, FolderOpen, Settings2, Plus, X,
-  TrendingUp, Bitcoin, ChevronRight, Sparkles, Lock, LayoutDashboard, Bot, Radio, Brain, Shield, Watch
+  TrendingUp, Bitcoin, ChevronRight, Sparkles, Lock, LayoutDashboard, Bot, Radio, Brain, Shield, Watch,
+  Home, Briefcase
 } from 'lucide-react'
 
 // All available modules
@@ -127,6 +128,30 @@ const ALL_MODULES = [
     desc: 'App preferences & data',
     color: '#64748b',
     glow: 'rgba(100,116,139,0.15)',
+    builtIn: true,
+  },
+  {
+    id: 'real-estate',
+    to: '/real-estate',
+    icon: Home,
+    label: 'Immobilier',
+    desc: 'Portfolio · Prix marché · Simulateur crédit',
+    color: '#10b981',
+    glow: 'rgba(16,185,129,0.2)',
+    badge: 'AI',
+    badgeColor: '#10b981',
+    builtIn: true,
+  },
+  {
+    id: 'business',
+    to: '/business',
+    icon: Briefcase,
+    label: 'Business Plan IA',
+    desc: 'Génère · Valide · Développe tes idées',
+    color: '#8b5cf6',
+    glow: 'rgba(139,92,246,0.2)',
+    badge: 'IA',
+    badgeColor: '#8b5cf6',
     builtIn: true,
   },
   {

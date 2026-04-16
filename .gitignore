@@ -26,3 +26,4 @@ dist-ssr
 .env*.local
 .env.bot
 bot/.env
+*.bak

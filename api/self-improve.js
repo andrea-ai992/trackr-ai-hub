@@ -25,6 +25,11 @@ const READABLE_FILES = [
   'api/discord-cron.js',
   'api/trigger-agent.js',
   'api/trading-expert.js',
+  'api/monitor.js',
+  // Nouveaux modules IA
+  'api/real-estate.js',
+  'api/business-plan.js',
+  'api/watch-price.js',
   // IA autonome (l'IA peut se corriger elle-même — sauf memory.js et self-improve.js)
   'api/brain.js',
   'api/reports.js',
@@ -40,6 +45,9 @@ const READABLE_FILES = [
   'src/pages/News.jsx',
   'src/pages/Portfolio.jsx',
   'src/pages/More.jsx',
+  'src/pages/Watches.jsx',
+  'src/pages/RealEstate.jsx',
+  'src/pages/BusinessPlan.jsx',
   // Frontend — components + CSS
   'src/components/BottomNav.jsx',
   'src/components/Skeleton.jsx',
@@ -220,6 +228,16 @@ function pickFiles(focus) {
     autonomous:  ['api/brain.js', 'api/agent-forge.js', 'api/reports.js', 'api/morning.js'],
     // 📊 Trading — améliorer TradingExpert, indicateurs, apprentissage
     trading:     ['api/trading-expert.js', 'api/andy.js', 'api/discord.js'],
+    // 🏠 Immobilier — améliorer les calculs, les données marché, l'UX
+    realestate:  ['api/real-estate.js', 'src/pages/RealEstate.jsx'],
+    // 💼 Business — améliorer la génération de plans, les analyses marché
+    business:    ['api/business-plan.js', 'src/pages/BusinessPlan.jsx'],
+    // ⌚ Watches — améliorer le tracking de prix, l'UX collection
+    watches:     ['api/watch-price.js', 'src/pages/Watches.jsx'],
+    // 📡 Monitor — améliorer la détection d'anomalies et les alertes
+    monitor:     ['api/monitor.js', 'api/self-improve.js'],
+    // 🚀 Full — analyse globale complète de tout le projet
+    full:        ['api/andy.js', 'api/brain.js', 'api/discord.js', 'api/monitor.js', 'api/real-estate.js', 'api/business-plan.js', 'src/pages/Dashboard.jsx', 'src/pages/More.jsx', 'src/App.jsx'],
   }
   return maps[focus] || maps.bugs
 }
