@@ -1,15 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776314634237",
-      "timestamp": "2026-04-16T04:43:54.237Z",
-      "type": "admin_task",
-      "status": "pending",
-      "source": "discord-.jpg5714",
-      "description": "pour les actions si ya pas des buy in option intéressante pour plutôt du long terme et d’autre que je peux flip avec mon pea",
-      "createdAt": "2026-04-16T04:43:53.854Z"
-    },
-    {
       "id": "mem_1776314641880",
       "timestamp": "2026-04-16T04:44:01.880Z",
       "type": "admin_task",
@@ -4232,6 +4223,14 @@
       "count": 5,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776327123612",
+      "timestamp": "2026-04-16T08:12:03.612Z",
+      "type": "error",
+      "focus": "bugs",
+      "error": "Anthropic API → 400",
+      "applied": false
     }
   ]
 }
