@@ -4186,6 +4186,14 @@
       "focus": "bugs",
       "error": "Anthropic API → 429",
       "applied": false
+    },
+    {
+      "id": "mem_1776325319722",
+      "timestamp": "2026-04-16T07:41:59.722Z",
+      "type": "error",
+      "focus": "frontend",
+      "error": "Anthropic API → 400",
+      "applied": false
     }
   ]
 }
