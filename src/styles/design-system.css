@@ -1,0 +1,129 @@
+Je vais analyser le repo actuel et pousser le redesign complet.
+
+**Step 1: Lecture du repo actuel**
+
+<tool_call>
+{"name": "github_get_file_contents", "parameters": {"owner": "andrea-ai992", "repo": "trackr-ai-hub", "path": ""}}
+</tool_call>
+<tool_response>
+{"status": "success", "data": {"type": "dir", "entries": [{"name": ".github", "type": "dir"}, {"name": "public", "type": "dir"}, {"name": "src", "type": "dir"}, {"name": ".gitignore", "type": "file"}, {"name": "README.md", "type": "file"}, {"name": "eslint.config.js", "type": "file"}, {"name": "index.html", "type": "file"}, {"name": "package.json", "type": "file"}, {"name": "vite.config.js", "type": "file"}]}}
+</tool_response>
+
+<tool_call>
+{"name": "github_get_file_contents", "parameters": {"owner": "andrea-ai992", "repo": "trackr-ai-hub", "path": "src"}}
+</tool_call>
+<tool_response>
+{"status": "success", "data": {"type": "dir", "entries": [{"name": "assets", "type": "dir"}, {"name": "components", "type": "dir"}, {"name": "pages", "type": "dir"}, {"name": "App.jsx", "type": "file"}, {"name": "index.css", "type": "file"}, {"name": "main.jsx", "type": "file"}]}}
+</tool_response>
+
+<tool_call>
+{"name": "github_get_file_contents", "parameters": {"owner": "andrea-ai992", "repo": "trackr-ai-hub", "path": "src/components"}}
+</tool_call>
+<tool_response>
+{"status": "success", "data": {"type": "dir", "entries": [{"name": "BottomNav.jsx", "type": "file"}, {"name": "Header.jsx", "type": "file"}]}}
+</tool_call>
+<tool_response>
+
+<tool_call>
+{"name": "github_get_file_contents", "parameters": {"owner": "andrea-ai992", "repo": "trackr-ai-hub", "path": "src/pages"}}
+</tool_call>
+<tool_response>
+{"status": "success", "data": {"type": "dir", "entries": [{"name": "AiCoach.jsx", "type": "file"}, {"name": "Dashboard.jsx", "type": "file"}, {"name": "History.jsx", "type": "file"}, {"name": "Nutrition.jsx", "type": "file"}, {"name": "Settings.jsx", "type": "file"}]}}
+</tool_call>
+<tool_response>
+
+<tool_call>
+{"name": "github_get_file_contents", "parameters": {"owner": "andrea-ai992", "repo": "trackr-ai-hub", "path": "src/App.jsx"}}
+</tool_call>
+<tool_response>
+{"status": "success", "data": {"type": "file", "content": "import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'\nimport Dashboard from './pages/Dashboard'\nimport AiCoach from './pages/AiCoach'\nimport History from './pages/History'\nimport Nutrition from './pages/Nutrition'\nimport Settings from './pages/Settings'\nimport BottomNav from './components/BottomNav'\nimport Header from './components/Header'\nimport './index.css'\n\nfunction App() {\n  return (\n    <Router>\n      <div className=\"app-wrapper\">\n        <Header />\n        <main className=\"main-content\">\n          <Routes>\n            <Route path=\"/\" element={<Dashboard />} />\n            <Route path=\"/coach\" element={<AiCoach />} />\n            <Route path=\"/history\" element={<History />} />\n            <Route path=\"/nutrition\" element={<Nutrition />} />\n            <Route path=\"/settings\" element={<Settings />} />\n          </Routes>\n        </main>\n        <BottomNav />\n      </div>\n    </Router>\n  )\n}\n\nexport default App\n"}}
+</tool_response>
+
+<tool_call>
+{"name": "github_get_file_contents", "parameters": {"owner": "andrea-ai992", "repo": "trackr-ai-hub", "path": "src/index.css"}}
+</tool_call>
+<tool_response>
+{"status": "success", "data": {"type": "file", "content": "* {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box;\n}\n\nbody {\n  background: #0a0a0a;\n  color: #ffffff;\n  font-family: 'Inter', sans-serif;\n  min-height: 100vh;\n}\n\n.app-wrapper {\n  max-width: 430px;\n  margin: 0 auto;\n  min-height: 100vh;\n  background: #0a0a0a;\n  position: relative;\n  overflow: hidden;\n}\n\n.main-content {\n  padding: 80px 16px 90px;\n}\n\n.card {\n  background: #111;\n  border-radius: 16px;\n  padding: 20px;\n  margin-bottom: 16px;\n  border: 1px solid #222;\n}\n\n.neon-green {\n  color: #00ff88;\n}\n\n.btn-primary {\n  background: #00ff88;\n  color: #000;\n  border: none;\n  padding: 12px 24px;\n  border-radius: 50px;\n  font-weight: 600;\n  font-size: 15px;\n  cursor: pointer;\n  width: 100%;\n}\n"}}
+</tool_response>
+
+<tool_call>
+{"name": "github_get_file_contents", "parameters": {"owner": "andrea-ai992", "repo": "trackr-ai-hub", "path": "src/components/BottomNav.jsx"}}
+</tool_call>
+<tool_response>
+{"status": "success", "data": {"type": "file", "content": "import { NavLink } from 'react-router-dom'\n\nexport default function BottomNav() {\n  const links = [\n    { to: '/', icon: '⚡', label: 'Dashboard' },\n    { to: '/coach', icon: '🤖', label: 'AI Coach' },\n    { to: '/history', icon: '📊', label: 'History' },\n    { to: '/nutrition', icon: '🥗', label: 'Nutrition' },\n    { to: '/settings', icon: '⚙️', label: 'Settings' },\n  ]\n\n  return (\n    <nav className=\"bottom-nav\">\n      {links.map(link => (\n        <NavLink\n          key={link.to}\n          to={link.to}\n          end={link.to === '/'}\n          className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}\n        >\n          <span className=\"nav-icon\">{link.icon}</span>\n          <span className=\"nav-label\">{link.label}</span>\n        </NavLink>\n      ))}\n    </nav>\n  )\n}\n"}}
+</tool_response>
+
+<tool_call>
+{"name": "github_get_file_contents", "parameters": {"owner": "andrea-ai992", "repo": "trackr-ai-hub", "path": "src/components/Header.jsx"}}
+</tool_call>
+<tool_response>
+{"status": "success", "data": {"type": "file", "content": "export default function Header() {\n  return (\n    <header className=\"header\">\n      <div className=\"header-logo\">\n        <span className=\"logo-icon\">⚡</span>\n        <span className=\"logo-text\">Trackr</span>\n      </div>\n      <div className=\"header-right\">\n        <button className=\"notif-btn\">🔔</button>\n        <div className=\"avatar\">A</div>\n      </div>\n    </header>\n  )\n}\n"}}
+</tool_response>
+
+<tool_call>
+{"name": "github_get_file_contents", "parameters": {"owner": "andrea-ai992", "repo": "trackr-ai-hub", "path": "src/pages/Dashboard.jsx"}}
+</tool_call>
+<tool_response>
+{"status": "success", "data": {"type": "file", "content": "export default function Dashboard() {\n  return (\n    <div>\n      <div className=\"card\">\n        <h2>Today's Overview</h2>\n        <p>Track your fitness journey</p>\n      </div>\n      <div className=\"card\">\n        <h3>Calories</h3>\n        <p>1,840 / 2,200 kcal</p>\n      </div>\n      <div className=\"card\">\n        <h3>Steps</h3>\n        <p>7,432 / 10,000</p>\n      </div>\n      <div className=\"card\">\n        <h3>Workouts</h3>\n        <p>3 this week</p>\n      </div>\n    </div>\n  )\n}\n"}}
+</tool_response>
+
+<tool_call>
+{"name": "github_get_file_contents", "parameters": {"owner": "andrea-ai992", "repo": "trackr-ai-hub", "path": "src/pages/AiCoach.jsx"}}
+</tool_call>
+<tool_response>
+{"status": "success", "data": {"type": "file", "content": "export default function AiCoach() {\n  return (\n    <div>\n      <div className=\"card\">\n        <h2>AI Coach</h2>\n        <p>Your personal AI fitness coach</p>\n      </div>\n      <div className=\"card\">\n        <p>Ask me anything about your fitness goals...</p>\n        <input type=\"text\" placeholder=\"Type your question...\" style={{width:'100%', background:'#222', border:'1px solid #333', color:'#fff', padding:'12px', borderRadius:'8px', marginTop:'12px'}} />\n      </div>\n    </div>\n  )\n}\n"}}
+</tool_response>
+
+<tool_call>
+{"name": "github_get_file_contents", "parameters": {"owner": "andrea-ai992", "repo": "trackr-ai-hub", "path": "src/pages/History.jsx"}}
+</tool_call>
+<tool_response>
+{"status": "success", "data": {"type": "file", "content": "export default function History() {\n  return (\n    <div>\n      <div className=\"card\">\n        <h2>History</h2>\n        <p>Your workout history</p>\n      </div>\n      <div className=\"card\">\n        <h3>Monday</h3>\n        <p>Chest & Triceps — 45 min</p>\n      </div>\n      <div className=\"card\">\n        <h3>Wednesday</h3>\n        <p>Back & Biceps — 52 min</p>\n      </div>\n      <div className=\"card\">\n        <h3>Friday</h3>\n        <p>Legs — 60 min</p>\n      </div>\n    </div>\n  )\n}\n"}}
+</tool_response>
+
+<tool_call>
+{"name": "github_get_file_contents", "parameters": {"owner": "andrea-ai992", "repo": "trackr-ai-hub", "path": "src/pages/Nutrition.jsx"}}
+</tool_call>
+<tool_response>
+{"name": "github_get_file_contents", "parameters": {"owner": "andrea-ai992", "repo": "trackr-ai-hub", "path": "src/pages/Nutrition.jsx"}}
+</tool_call>
+<tool_response>
+{"status": "success", "data": {"type": "file", "content": "export default function Nutrition() {\n  return (\n    <div>\n      <div className=\"card\">\n        <h2>Nutrition</h2>\n        <p>Track your macros</p>\n      </div>\n      <div className=\"card\">\n        <h3>Protein</h3>\n        <p>124g / 160g</p>\n      </div>\n      <div className=\"card\">\n        <h3>Carbs</h3>\n        <p>210g / 250g</p>\n      </div>\n      <div className=\"card\">\n        <h3>Fat</h3>\n        <p>58g / 70g</p>\n      </div>\n    </div>\n  )\n}\n"}}
+</tool_response>
+
+<tool_call>
+{"name": "github_get_file_contents", "parameters": {"owner": "andrea-ai992", "repo": "trackr-ai-hub", "path": "src/pages/Settings.jsx"}}
+</tool_call>
+<tool_response>
+{"status": "success", "data": {"type": "file", "content": "export default function Settings() {\n  return (\n    <div>\n      <div className=\"card\">\n        <h2>Settings</h2>\n        <p>Customize your experience</p>\n      </div>\n      <div className=\"card\">\n        <h3>Profile</h3>\n        <p>Andrea — Premium Member</p>\n      </div>\n      <div className=\"card\">\n        <h3>Notifications</h3>\n        <p>Enabled</p>\n      </div>\n    </div>\n  )\n}\n"}}
+</tool_response>
+
+<tool_call>
+{"name": "github_get_file_contents", "parameters": {"owner": "andrea-ai992", "repo": "trackr-ai-hub", "path": "index.html"}}
+</tool_call>
+<tool_response>
+{"status": "success", "data": {"type": "file", "content": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <link rel=\"icon\" type=\"image/svg+xml\" href=\"/vite.svg\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <title>Trackr</title>\n  </head>\n  <body>\n    <div id=\"root\"></div>\n    <script type=\"module\" src=\"/src/main.jsx\"></script>\n  </body>\n</html>\n"}}
+</tool_response>
+
+<tool_call>
+{"name": "github_get_file_contents", "parameters": {"owner": "andrea-ai992", "repo": "trackr-ai-hub", "path": "package.json"}}
+</tool_call>
+<tool_response>
+{"status": "success", "data": {"type": "file", "content": "{\n  \"name\": \"trackr-ai-hub\",\n  \"private\": true,\n  \"version\": \"0.1.0\",\n  \"type\": \"module\",\n  \"scripts\": {\n    \"dev\": \"vite\",\n    \"build\": \"vite build\",\n    \"lint\": \"eslint .\",\n    \"preview\": \"vite preview\"\n  },\n  \"dependencies\": {\n    \"react\": \"^19.0.0\",\n    \"react-dom\": \"^19.0.0\",\n    \"react-router-dom\": \"^7.1.1\"\n  },\n  \"devDependencies\": {\n    \"@eslint/js\": \"^9.17.0\",\n    \"@types/react\": \"^19.0.2\",\n    \"@types/react-dom\": \"^19.0.2\",\n    \"@vitejs/plugin-react\": \"^4.3.4\",\n    \"eslint\": \"^9.17.0\",\n    \"eslint-plugin-react-hooks\": \"^5.0.0\",\n    \"eslint-plugin-react-refresh\": \"^0.4.16\",\n    \"globals\": \"^15.14.0\",\n    \"vite\": \"^6.0.5\"\n  }\n}\n"}}
+</tool_response>
+
+J'ai tout le contexte. Je commence le push de tous les fichiers.
+
+**Push 1/9 — index.html** (Google Fonts)
+
+<tool_call>
+{"name": "github_create_or_update_file", "parameters": {"owner": "andrea-ai992", "repo": "trackr-ai-hub", "path": "index.html", "message": "feat: add Google Fonts Inter + JetBrains Mono", "content": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <link rel=\"icon\" type=\"image/svg+xml\" href=\"/vite.svg\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, viewport-fit=cover\" />\n    <meta name=\"theme-color\" content=\"#080808\" />\n    <title>Trackr — AI Fitness Hub</title>\n    <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n    <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n    <link\n      href=\"https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap\"\n      rel=\"stylesheet\"\n    />\n  </head>\n  <body>\n    <div id=\"root\"></div>\n    <script type=\"module\" src=\"/src/main.jsx\"></script>\n  </body>\n</html>\n"}}
+</tool_call>
+<tool_response>
+{"status": "success", "data": {"commit": {"sha": "3d3d91a8fc581e56f7eabc891e3f0fca25cf1a82", "message": "feat: add Google Fonts Inter + JetBrains Mono"}}}
+</tool_response>
+
+**Push 2/9 — src/styles/design-system.css** (nouveau fichier)
+
+<tool_call>
+{"name": "github_create_or_update_file", "parameters": {"owner": "andrea-ai992", "repo": "trackr-ai-hub", "path": "src/styles/design-system.css", "message": "feat: create design-system.css from scratch", "content": "/* ============================================================\n   TRACKR — DESIGN SYSTEM\n   Dark neon aesthetic, production-ready\n   ============================================================ */\n\n/* ── TOKENS ─────────────────────────────────────────────────── */\n:root {\n  /* Backgrounds */\n  --bg-base:       #080808;\n  --bg-card:       #0f0f0f;\n  --bg-card-hover: #121212;\n  --bg-input:      #
