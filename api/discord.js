@@ -42,11 +42,16 @@ async function getQuickSignal(symbol, type) {
       .then(async r => {
         const ct = r.headers.get('content-type') || ''
         if (!r.ok) { console.warn(`Yahoo Finance ${symbol}: HTTP ${r.status}`); return null }
-        if (!ct.includes('application/json') && !ct.includes('text/json')) {
+        if (!ct.includes('application/json') && !ct.includes('text/json') && !ct.includes('text/plain')) {
           console.warn(`Yahoo Finance ${symbol}: unexpected content-type "${ct}", skipping .json()`)
           return null
         }
-        return r.json()
+        try {
+          return await r.json()
+        } catch (parseErr) {
+          console.warn(`Yahoo Finance ${symbol}: JSON parse error:`, parseErr.message)
+          return null
+        }
       })
       .catch(e => { console.warn(`Yahoo Finance ${symbol} fetch error:`, e.message); return null })
     if (data?.chart?.result?.[0]) {
