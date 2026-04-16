@@ -6,7 +6,8 @@ import { PullIndicator } from '../components/Skeleton'
 // ─── Tabs ────────────────────────────────────────────────────────────────────
 const TABS = [
   { id: 'all',    label: 'Tout',   emoji: '🏆', color: '#6366f1' },
-  { id: 'soccer', label: 'Foot',   emoji: '⚽', color: '#10b981', sport: 'soccer',     league: 'fra.1' },
+  { id: 'soccer', label: 'Ligue 1',emoji: '⚽', color: '#10b981', sport: 'soccer',     league: 'fra.1' },
+  { id: 'ucl',    label: 'UCL',    emoji: '⭐', color: '#1e40af', sport: 'soccer',     league: 'uefa.champions' },
   { id: 'nfl',    label: 'NFL',    emoji: '🏈', color: '#f97316', sport: 'football',   league: 'nfl' },
   { id: 'ncaa',   label: 'NCAA',   emoji: '🎓', color: '#ef4444', sport: 'football',   league: 'college-football' },
   { id: 'nba',    label: 'NBA',    emoji: '🏀', color: '#f59e0b', sport: 'basketball', league: 'nba' },
@@ -16,14 +17,18 @@ const TABS = [
 
 // ─── My Teams ────────────────────────────────────────────────────────────────
 const MY_TEAMS = [
-  { id: '160', sport: 'soccer',     league: 'fra.1',           name: 'PSG',      fullName: 'Paris Saint-Germain', color: '#004170', accent: '#DA291C', emoji: '⚽',
-    logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/160.png&h=80&w=80' },
-  { id: '7',   sport: 'football',   league: 'nfl',             name: 'Broncos',  fullName: 'Denver Broncos',      color: '#FB4F14', accent: '#002244', emoji: '🏈',
-    logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/nfl/500/den.png&h=80&w=80' },
-  { id: '201', sport: 'football',   league: 'college-football', name: 'Oklahoma', fullName: 'Oklahoma Sooners',   color: '#841617', accent: '#FDF9D8', emoji: '🎓',
-    logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/ncaa/500/201.png&h=80&w=80' },
-  { id: '14',  sport: 'basketball', league: 'nba',             name: 'Heat',     fullName: 'Miami Heat',         color: '#98002E', accent: '#F9A01B', emoji: '🏀',
-    logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/nba/500/mia.png&h=80&w=80' },
+  // PSG — Ligue 1
+  { id: '160', sport: 'soccer',     league: 'fra.1',            name: 'PSG',      fullName: 'Paris Saint-Germain', color: '#004170', accent: '#DA291C', emoji: '⚽',
+    logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/160.png&h=80&w=80', tags: ['soccer', 'ucl'] },
+  // PSG — Champions League (même équipe, ligue différente)
+  { id: '160', sport: 'soccer',     league: 'uefa.champions',   name: 'PSG UCL',  fullName: 'PSG — Ligue des Champions', color: '#1e3a8a', accent: '#fbbf24', emoji: '⭐',
+    logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/160.png&h=80&w=80', tags: ['ucl'] },
+  { id: '7',   sport: 'football',   league: 'nfl',              name: 'Broncos',  fullName: 'Denver Broncos',      color: '#FB4F14', accent: '#002244', emoji: '🏈',
+    tags: ['nfl'], logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/nfl/500/den.png&h=80&w=80' },
+  { id: '201', sport: 'football',   league: 'college-football', name: 'Oklahoma', fullName: 'Oklahoma Sooners',    color: '#841617', accent: '#FDF9D8', emoji: '🎓',
+    tags: ['ncaa'], logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/ncaa/500/201.png&h=80&w=80' },
+  { id: '14',  sport: 'basketball', league: 'nba',              name: 'Heat',     fullName: 'Miami Heat',          color: '#98002E', accent: '#F9A01B', emoji: '🏀',
+    tags: ['nba'], logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/nba/500/mia.png&h=80&w=80' },
 ]
 
 // ─── ESPN fetch with proxy fallback ──────────────────────────────────────────
@@ -324,10 +329,10 @@ export default function Sports() {
   useEffect(() => {
     Promise.all(MY_TEAMS.map(async t => {
       const data = await fetchTeam(t)
-      return [t.id, data]
+      return [`${t.id}-${t.league}`, data]
     })).then(results => {
       const map = {}
-      results.forEach(([id, data]) => { map[id] = data })
+      results.forEach(([key, data]) => { map[key] = data })
       setTeamData(map)
       setLoading(false)
     })
@@ -358,13 +363,13 @@ export default function Sports() {
     setLoading(true)
     setNewsLoading(true)
     const [teams, newsArrays, scoreData] = await Promise.all([
-      Promise.all(MY_TEAMS.map(async t => [t.id, await fetchTeam(t)])),
+      Promise.all(MY_TEAMS.map(async t => [`${t.id}-${t.league}`, await fetchTeam(t)])),
       tab === 'all'
         ? Promise.all(TABS.filter(t => t.sport).map(t => fetchNews(t.sport, t.league, 3)))
         : [await fetchNews(activeTab?.sport, activeTab?.league, 10)],
       activeTab?.sport && tab !== 'all' ? fetchScoreboard(activeTab.sport, activeTab.league) : [],
     ])
-    const tmap = {}; teams.forEach(([id, d]) => { tmap[id] = d })
+    const tmap = {}; teams.forEach(([key, d]) => { tmap[key] = d })
     setTeamData(tmap)
     const combined = newsArrays.flat().sort((a, b) => new Date(b.published) - new Date(a.published))
     const dedup = [...new Map(combined.map(a => [a.headline?.slice(0, 60), a])).values()]
@@ -427,61 +432,68 @@ export default function Sports() {
       <div style={{ padding: '16px 16px 0' }}>
 
         {/* ── My Teams ── */}
-        {(tab === 'all' || MY_TEAMS.some(t => {
-          const s = TABS.find(x => x.id === tab)
-          return t.sport === s?.sport
-        })) && (
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🏆 Mes équipes</span>
-            </div>
-            {loading ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {[...Array(4)].map((_, i) => <div key={i} style={{ height: 110, borderRadius: 20, background: 'rgba(255,255,255,0.03)' }} className="skeleton" />)}
+        {(() => {
+          const visible = MY_TEAMS.filter(t =>
+            tab === 'all'
+              ? !t.tags?.includes('ucl')   // All tab: skip duplicate UCL entry
+              : t.tags?.includes(tab) || t.league === activeTab?.league
+          )
+          if (!visible.length) return null
+          return (
+            <div style={{ marginBottom: 22 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <span className="section-label">🏆 Mes équipes</span>
               </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {MY_TEAMS
-                  .filter(t => tab === 'all' || (() => {
-                    const s = TABS.find(x => x.id === tab)
-                    return t.sport === s?.sport
-                  })())
-                  .map(team => (
-                    <TeamCard key={team.id} team={team} data={teamData[team.id]} />
+              {loading ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {[...Array(visible.length || 2)].map((_, i) => <div key={i} style={{ height: 110, borderRadius: 20 }} className="skeleton" />)}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {visible.map((team, i) => (
+                    <div key={`${team.id}-${team.league}`} className="stagger-item" style={{ '--i': i }}>
+                      <TeamCard team={team} data={teamData[`${team.id}-${team.league}`] || teamData[team.id]} />
+                    </div>
                   ))}
-              </div>
-            )}
-          </div>
-        )}
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
         {/* ── Live Scores ── */}
         {liveScores.length > 0 && (
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <Zap size={13} color="#ef4444" fill="#ef4444" />
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.07em' }}>En cours</span>
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
+              <Zap size={12} color="#ef4444" fill="#ef4444" />
+              <span className="section-label" style={{ color: '#ef4444' }}>En direct</span>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', boxShadow: '0 0 6px #ef4444' }} className="live-ping" />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {liveScores.map((g, i) => <ScoreCard key={i} game={g} />)}
+              {liveScores.map((g, i) => (
+                <div key={i} className="stagger-item"><ScoreCard game={g} /></div>
+              ))}
             </div>
           </div>
         )}
 
         {/* ── Recent Scores ── */}
         {recentScores.length > 0 && (
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>Résultats récents</div>
+          <div style={{ marginBottom: 20 }}>
+            <span className="section-label" style={{ display: 'block', marginBottom: 10 }}>Résultats récents</span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {recentScores.slice(0, 8).map((g, i) => <ScoreCard key={i} game={g} />)}
+              {recentScores.slice(0, 8).map((g, i) => (
+                <div key={i} className="stagger-item"><ScoreCard game={g} /></div>
+              ))}
             </div>
           </div>
         )}
 
         {/* ── News ── */}
         <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>
+          <span className="section-label" style={{ display: 'block', marginBottom: 10 }}>
             Actualités {activeTab?.emoji || '🏆'}
-          </div>
+          </span>
           {newsLoading && tabNews.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {[...Array(5)].map((_, i) => (
