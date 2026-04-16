@@ -10,6 +10,7 @@ const CRON_SECRET  = process.env.CRON_SECRET
 // Channel IDs from Discord setup
 const CH_MORNING   = process.env.DISCORD_CH_MORNING   // #morning-briefing
 const CH_BRAIN     = process.env.DISCORD_CH_BRAIN     // #brain-cycles (fallback)
+const CH_ANNONCES  = process.env.DISCORD_CH_ANNONCES  // #annonces (alertes crédits)
 
 const GITHUB_TOKEN     = process.env.GITHUB_TOKEN
 const GITHUB_REPO      = process.env.GITHUB_REPO          // owner/repo
@@ -290,6 +291,102 @@ function buildMorningEmbeds(data) {
   return [headerEmbed, marketEmbed, iaEmbed, planEmbed]
 }
 
+// ─── Credit & API Health Check ───────────────────────────────────────────────
+async function checkApiHealth() {
+  const issues = []
+
+  // 1. Anthropic API — test minimal (1 token)
+  try {
+    if (ANTHROPIC_KEY) {
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1, messages: [{ role: 'user', content: 'ok' }] }),
+        signal: AbortSignal.timeout(8000),
+      })
+      if (r.status === 402) issues.push({ name: 'Anthropic API', level: 'critique', msg: '💳 Crédits Anthropic épuisés — l\'IA ne peut plus fonctionner !' })
+      else if (r.status === 529) issues.push({ name: 'Anthropic API', level: 'moyen', msg: '⚠️ Anthropic surchargé (529) — temporaire' })
+      else if (r.status === 401) issues.push({ name: 'Anthropic API', level: 'critique', msg: '🔑 Clé API Anthropic invalide ou expirée !' })
+      else if (!r.ok && r.status !== 400) issues.push({ name: 'Anthropic API', level: 'élevé', msg: `❌ Erreur Anthropic ${r.status}` })
+    } else {
+      issues.push({ name: 'Anthropic API', level: 'critique', msg: '🔑 ANTHROPIC_API_KEY manquante dans les variables d\'environnement !' })
+    }
+  } catch { issues.push({ name: 'Anthropic API', level: 'moyen', msg: '⏱️ Anthropic timeout — vérifie la connexion' }) }
+
+  // 2. Alpha Vantage — vérifie si la clé est active
+  try {
+    if (ALPHA_VANTAGE_KEY) {
+      const r = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey=${ALPHA_VANTAGE_KEY}`, { signal: AbortSignal.timeout(6000) })
+      const d = await r.json().catch(() => ({}))
+      if (d?.Note?.includes('API rate limit')) {
+        issues.push({ name: 'Alpha Vantage', level: 'moyen', msg: '⏳ Alpha Vantage quota journalier atteint (25 req/jour) — reprend demain' })
+      } else if (d?.['Error Message']) {
+        issues.push({ name: 'Alpha Vantage', level: 'élevé', msg: `❌ Alpha Vantage erreur: ${d['Error Message']}` })
+      }
+    }
+  } catch {}
+
+  // 3. Discord Bot Token — vérifie si le bot est connecté
+  try {
+    if (BOT_TOKEN) {
+      const r = await fetch('https://discord.com/api/v10/users/@me', {
+        headers: { Authorization: `Bot ${BOT_TOKEN}` },
+        signal: AbortSignal.timeout(5000),
+      })
+      if (r.status === 401) issues.push({ name: 'Discord Bot', level: 'critique', msg: '🤖 Token Discord Bot invalide — toutes les notifs sont coupées !' })
+      else if (!r.ok) issues.push({ name: 'Discord Bot', level: 'élevé', msg: `❌ Discord Bot erreur ${r.status}` })
+    } else {
+      issues.push({ name: 'Discord Bot', level: 'critique', msg: '🤖 DISCORD_BOT_TOKEN manquant — bot Discord non fonctionnel !' })
+    }
+  } catch {}
+
+  // 4. GitHub Token — vérifie accès au repo
+  try {
+    if (GITHUB_TOKEN && GITHUB_REPO) {
+      const r = await fetch(`https://api.github.com/repos/${GITHUB_REPO}`, {
+        headers: { Authorization: `token ${GITHUB_TOKEN}` },
+        signal: AbortSignal.timeout(5000),
+      })
+      if (r.status === 401 || r.status === 403) {
+        issues.push({ name: 'GitHub Token', level: 'critique', msg: '🔑 Token GitHub invalide — l\'IA ne peut plus se mettre à jour !' })
+      }
+    }
+  } catch {}
+
+  return issues
+}
+
+async function postCreditAlerts(issues) {
+  if (!issues.length || !CH_ANNONCES || !BOT_TOKEN) return
+  const critiques = issues.filter(i => i.level === 'critique')
+  const autres    = issues.filter(i => i.level !== 'critique')
+  const color     = critiques.length > 0 ? 0xff1744 : 0xffa000
+
+  await discordPost(CH_ANNONCES, {
+    embeds: [{
+      color,
+      author: { name: '⚠️ Trackr — Alerte Crédits & APIs' },
+      title: critiques.length > 0 ? '🔴 ACTION REQUISE — Problème critique' : '🟡 Attention — Problème détecté',
+      description: issues.map(i => {
+        const emoji = i.level === 'critique' ? '🔴' : i.level === 'élevé' ? '🟠' : '🟡'
+        return `${emoji} **${i.name}** — ${i.msg}`
+      }).join('\n'),
+      fields: critiques.length > 0 ? [{
+        name: '💡 Que faire ?',
+        value: [
+          '• Anthropic crédits : recharge sur **console.anthropic.com**',
+          '• GitHub token : renouvelle sur **github.com/settings/tokens**',
+          '• Discord token : regénère sur **discord.com/developers**',
+          '• Alpha Vantage : quota reset à minuit UTC',
+        ].join('\n'),
+        inline: false,
+      }] : [],
+      footer: { text: 'Surveillance automatique · Morning Check · Trackr AI' },
+      timestamp: new Date().toISOString(),
+    }],
+  }).catch(() => {})
+}
+
 // ─── Main Handler ─────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   // Auth check for cron calls
@@ -330,6 +427,11 @@ export default async function handler(req, res) {
         ? 'baissier'
         : 'neutre',
     }
+
+    // Vérification crédits & santé API (en parallèle, ne bloque pas le briefing)
+    checkApiHealth().then(issues => {
+      if (issues.length > 0) postCreditAlerts(issues).catch(() => {})
+    }).catch(() => {})
 
     const briefing = await generateAIBriefing(context)
 

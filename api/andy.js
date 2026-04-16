@@ -221,9 +221,7 @@ async function runServerTool(name, input) {
 
   if (name === 'trigger_agent') {
     try {
-      const baseUrl = process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : 'https://trackr-app-nu.vercel.app'
+      const baseUrl = process.env.APP_URL || 'https://trackr-app-nu.vercel.app'
       const r = await fetch(`${baseUrl}/api/trigger-agent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

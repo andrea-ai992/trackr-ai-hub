@@ -24,6 +24,7 @@
     "api/trigger-agent.js": { "maxDuration": 60 },
     "api/memory.js":        { "maxDuration": 30 },
     "api/morning.js":       { "maxDuration": 60 },
-    "api/trading-expert.js":{ "maxDuration": 60 }
+    "api/trading-expert.js":{ "maxDuration": 60 },
+    "api/deploy-notify.js": { "maxDuration": 10 }
   }
 }

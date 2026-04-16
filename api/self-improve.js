@@ -112,6 +112,52 @@ async function postDiscord(title, description, fields = [], color = 0x8b5cf6) {
   }).catch(() => {})
 }
 
+// ─── Known error patterns to scan for proactively ────────────────────────────
+const KNOWN_ERROR_PATTERNS = [
+  {
+    id: 'sse_json_parse',
+    pattern: /res\.json\(\)|await res\.json\(\)/,
+    files: ['api/discord.js', 'api/andy.js'],
+    description: 'Calling .json() on an SSE (text/event-stream) response — must read stream instead',
+    severity: 'critical',
+  },
+  {
+    id: 'vercel_url_empty',
+    pattern: /process\.env\.VERCEL_URL/,
+    files: ['api/andy.js', 'api/discord.js', 'api/brain.js', 'api/morning.js'],
+    description: 'Using VERCEL_URL which is empty in production — use APP_URL instead',
+    severity: 'high',
+  },
+  {
+    id: 'fetch_no_timeout',
+    pattern: /await fetch\([^)]+\)(?!.*AbortSignal|.*timeout)/,
+    files: ['api/andy.js', 'api/trading-expert.js', 'api/brain.js'],
+    description: 'fetch() call without AbortSignal.timeout() — can hang indefinitely',
+    severity: 'medium',
+  },
+  {
+    id: 'empty_catch',
+    pattern: /catch\s*\([^)]*\)\s*\{\s*\}/,
+    files: ['api/discord.js', 'api/andy.js', 'api/brain.js'],
+    description: 'Empty catch block silently swallows errors',
+    severity: 'medium',
+  },
+]
+
+// ─── Scan for known error patterns and return findings ────────────────────────
+async function detectKnownPatterns(loadedFiles) {
+  const findings = []
+  for (const { id, pattern, files, description, severity } of KNOWN_ERROR_PATTERNS) {
+    for (const [path, content] of loadedFiles) {
+      if (!files.some(f => path.endsWith(f))) continue
+      if (pattern.test(content)) {
+        findings.push({ id, file: path, description, severity })
+      }
+    }
+  }
+  return findings
+}
+
 // ─── Pick files to analyze based on focus ────────────────────────────────────
 function pickFiles(focus) {
   const maps = {
@@ -122,7 +168,7 @@ function pickFiles(focus) {
     // ✨ Fonctionnalités — nouvelles features utiles
     features:    ['src/pages/Dashboard.jsx', 'src/pages/Sports.jsx', 'src/pages/Markets.jsx', 'src/pages/Andy.jsx', 'src/App.jsx'],
     // 🐛 Bugs — edge cases, erreurs silencieuses, race conditions
-    bugs:        ['api/andy.js', 'api/brain.js', 'api/morning.js', 'api/trading-expert.js', 'src/pages/Andy.jsx', 'src/pages/Dashboard.jsx'],
+    bugs:        ['api/andy.js', 'api/discord.js', 'api/brain.js', 'api/morning.js', 'api/trading-expert.js', 'src/pages/Andy.jsx', 'src/pages/Dashboard.jsx'],
     // 🎨 Frontend/Design — animations, responsive, UX, accessibilité
     frontend:    ['src/index.css', 'src/App.jsx', 'src/pages/Dashboard.jsx', 'src/pages/Sports.jsx', 'src/components/BottomNav.jsx', 'src/pages/Markets.jsx'],
     // 🤖 Système autonome — Brain, Agent Forge, Morning, Reports
@@ -276,8 +322,27 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Could not load any files from GitHub' })
     }
 
-    // 3. Ask Claude to analyze (avec contexte mémoire)
-    const improvement = await analyzeWithClaude(loaded.map(([p, c]) => [p, c]), focus, memoryContext)
+    // 3. Détection proactive de patterns d'erreurs connus
+    const patternFindings = await detectKnownPatterns(loaded.map(([p, c]) => [p, c]))
+    if (patternFindings.length > 0) {
+      const patternSummary = patternFindings.map(f => `- [${f.severity.toUpperCase()}] ${f.file}: ${f.description}`).join('\n')
+      console.log(`🔍 Known patterns found:\n${patternSummary}`)
+      // Store in memory for learning
+      await addMemoryEntry({
+        type: 'pattern_scan',
+        focus,
+        findings: patternFindings,
+        count: patternFindings.length,
+        applied: false,
+        note: 'Patterns detected before Claude analysis — guiding fix priority',
+      }).catch(() => {})
+    }
+
+    // 3b. Ask Claude to analyze (avec contexte mémoire + patterns détectés)
+    const patternContext = patternFindings.length > 0
+      ? `\n\n**🚨 Patterns d'erreurs détectés automatiquement (PRIORITÉ) :**\n${patternFindings.map(f => `- [${f.severity.toUpperCase()}] \`${f.file}\`: ${f.description}`).join('\n')}\nFixe le plus critique en premier.`
+      : ''
+    const improvement = await analyzeWithClaude(loaded.map(([p, c]) => [p, c]), focus, memoryContext + patternContext)
 
     // No change needed
     if (improvement.no_change) {

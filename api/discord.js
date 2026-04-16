@@ -158,20 +158,45 @@ function verifyDiscordSignature(rawBody, signature, timestamp) {
   }
 }
 
-// ─── Call AnDy API ────────────────────────────────────────────────────────────
+// ─── Call AnDy API (reads SSE stream) ────────────────────────────────────────
 async function callAnDy(userMessage) {
-  const res = await fetch(`${APP_URL}/api/andy`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      messages: [{ role: 'user', content: userMessage }],
-      portfolio: [], crypto: [], sneakers: [], alerts: [], watchlist: [],
-    }),
-  })
-  if (!res.ok) return 'Erreur API AnDy'
-  const data = await res.json()
-  // Strip chart tags for Discord
-  return (data.text || '').replace(/\[CHART:[^\]]+\]/g, '').slice(0, 2000)
+  try {
+    const res = await fetch(`${APP_URL}/api/andy`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [{ role: 'user', content: userMessage }],
+        portfolio: [], crypto: [], sneakers: [], alerts: [], watchlist: [],
+      }),
+      signal: AbortSignal.timeout(50000),
+    })
+    if (!res.ok) return `Erreur API AnDy (${res.status})`
+
+    // /api/andy returns SSE text/event-stream — collect all token events
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buf = '', fullText = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buf += decoder.decode(value, { stream: true })
+      const lines = buf.split('\n')
+      buf = lines.pop()
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        try {
+          const ev = JSON.parse(line.slice(6))
+          if (ev.type === 'token') fullText += ev.text
+          if (ev.type === 'error') return `Erreur IA: ${ev.message}`
+        } catch {}
+      }
+    }
+
+    return fullText.replace(/\[CHART:[^\]]+\]/g, '').trim().slice(0, 2000) || 'Pas de réponse.'
+  } catch (e) {
+    return `Erreur connexion AnDy: ${e.message}`
+  }
 }
 
 // ─── Fetch live price ─────────────────────────────────────────────────────────

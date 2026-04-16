@@ -99,7 +99,14 @@ function computeStats(entries, daysBack = 7) {
   )].slice(0, 5)
 
   // Agents forgés
-  const forgedAgents = window.filter(e => e.type === 'agent_forged')
+  const forgedAgents   = window.filter(e => e.type === 'agent_forged')
+  const patternScans   = window.filter(e => e.type === 'pattern_scan')
+  const patternsFound  = patternScans.reduce((sum, e) => sum + (e.count || 0), 0)
+
+  // Unique patterns detected
+  const detectedPatterns = [...new Set(
+    patternScans.flatMap(e => (e.findings || []).map(f => f.id))
+  )]
 
   return {
     window: daysBack,
@@ -110,6 +117,8 @@ function computeStats(entries, daysBack = 7) {
     noChanges:       noChanges.length,
     dryruns:         dryruns.length,
     forgedAgents:    forgedAgents.length,
+    patternsFound,
+    detectedPatterns,
     byFocus,
     bySeverity,
     topFiles,
@@ -212,7 +221,12 @@ async function generateDailyReport() {
           value: commitsText.slice(0, 900),
           inline: false,
         },
-      ].filter(f => f.value !== 'Aucun' || f.name.includes('Cycles')),
+        stats.patternsFound > 0 ? {
+          name: `🔍 Patterns d'erreurs détectés`,
+          value: `**${stats.patternsFound}** patterns trouvés · ${stats.detectedPatterns.join(', ')}`,
+          inline: false,
+        } : null,
+      ].filter(Boolean).filter(f => f.value !== 'Aucun' || f.name.includes('Cycles')),
       footer: { text: `Trackr Autonomous · ${stats.total} événements analysés` },
     },
   ]
