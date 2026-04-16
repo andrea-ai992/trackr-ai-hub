@@ -242,12 +242,28 @@ const taskLog   = []
 const errorLog  = []
 let   autoGenCount = 0
 
+// Priorités ordonnées : qualité + design > features > infra
 const TASK_DOMAINS = [
-  'UI/animations', 'performances', 'Sports/PSG', 'Sports/MMA-UFC',
-  'Markets/crypto', 'Markets/stocks', 'News/cache', 'News/filters',
-  'BottomNav/design', 'Hub/widgets', 'accessibilité', 'PWA/offline',
-  'API-integrations', 'error-handling', 'Discord-bot', 'monitoring',
-  'refactoring', 'TypeScript migration', 'tests E2E', 'SEO/meta',
+  // P0 — Fluidité et qualité visuelle (répété 3x pour poids plus élevé)
+  'P0/performance — code splitting, lazy loading, bundle < 200kb, LCP < 1.5s',
+  'P0/animations — page transitions fade 200ms, hover scale, skeleton loaders neon vert',
+  'P0/polish — supprimer tous les layout shifts, hauteurs fixes sur cards, scroll smooth iOS',
+  // P1 — Design dédié par catégorie (look app native)
+  'P1/Sports — design stadium dark, scores live animés, stats visuelles comme ESPN',
+  'P1/MMA-UFC — design octagon noir/rouge, fighter cards avec photos, countdown fight',
+  'P1/Crypto — design Bloomberg terminal, charts recharts temps réel, prix live pulsants',
+  'P1/Markets — design Bloomberg/TradingView, candlestick charts, heatmap sectorielle',
+  'P1/News — design Flipboard/Apple News, cards avec image cover, catégories colorées',
+  'P1/Hub — dashboard glassmorphism, widgets modulaires drag-drop, KPIs animés',
+  // P2 — Features
+  'P2/notifications — push notifications PWA, badge icône, son discret',
+  'P2/search — barre de recherche globale avec résultats instantanés',
+  'P2/offline — PWA service worker, cache offline, indicateur connexion',
+  'P2/settings — thème perso, layout dense/normal, raccourcis clavier',
+  // P3 — Infra
+  'P3/API — rate limiting, cache Redis/KV, erreurs gracieuses',
+  'P3/sécurité — headers HTTP, CSP, HTTPS strict',
+  'P3/monitoring — Sentry errors, Web Vitals tracking',
 ]
 
 const SECURITY_DOMAINS = [
@@ -305,13 +321,18 @@ async function generateNextTasks() {
   log(`AUTO-GEN #${autoGenCount} — feature: ${domain} | sécurité: ${secDomain}`)
 
   const prompt = [
-    'Projet Trackr — app React + Vite, repo: ' + GITHUB_REPO,
+    'Projet Trackr — app React 19 + Vite mobile-first, repo: ' + GITHUB_REPO,
+    'OBJECTIF PRINCIPAL: rendre l app parfaitement fluide, rapide et visuellement impressionnante.',
+    'Chaque page doit ressembler à une vraie app dédiée pro (ESPN pour sports, Bloomberg pour markets, etc).',
     'Tâches faites (' + totalDone + '): ' + (recentDone.join(', ') || 'aucune'),
-    recentErrs.length ? 'Erreurs: ' + recentErrs.join(' | ') : '',
-    'Focus feature: ' + domain + ' | Focus sécurité: ' + secDomain,
-    'Donne 3 tâches concrètes (2 feature + 1 sécurité).',
-    'Format — exactement 3 lignes TASK:',
-    'TASK: description complète',
+    recentErrs.length ? 'Erreurs récentes: ' + recentErrs.join(' | ') : '',
+    'Focus ce cycle: ' + domain,
+    'Focus sécurité: ' + secDomain,
+    '',
+    'Génère 3 tâches concrètes et ambitieuses — priorise TOUJOURS la qualité visuelle et la fluidité.',
+    'Chaque tâche doit avoir un impact visible immédiat sur l utilisateur.',
+    'Format — exactement 3 lignes:',
+    'TASK: description complète et précise avec fichiers cibles',
     'Pas de markdown, pas de numérotation.',
   ].filter(Boolean).join('\n')
 
