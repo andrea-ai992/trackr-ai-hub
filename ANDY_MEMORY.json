@@ -4178,6 +4178,14 @@
       "errors": 0,
       "appHealthy": true,
       "duration": 4
+    },
+    {
+      "id": "mem_1776325023537",
+      "timestamp": "2026-04-16T07:37:03.537Z",
+      "type": "error",
+      "focus": "bugs",
+      "error": "Anthropic API → 429",
+      "applied": false
     }
   ]
 }
