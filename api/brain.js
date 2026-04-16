@@ -12,7 +12,7 @@ const BOT_TOKEN         = process.env.DISCORD_BOT_TOKEN
 const GITHUB_TOKEN      = process.env.GITHUB_TOKEN
 const REPO              = process.env.GITHUB_REPO || 'andrea-ai992/trackr-ai-hub'
 const GITHUB_API        = 'https://api.github.com'
-const VERCEL_URL        = process.env.APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://trackr-app-nu.vercel.app')
+const VERCEL_URL        = process.env.APP_URL || 'https://trackr-app-nu.vercel.app'
 
 // ─── Canaux Discord ───────────────────────────────────────────────────────────
 const CH = {

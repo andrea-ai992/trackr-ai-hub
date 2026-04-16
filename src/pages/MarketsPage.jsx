@@ -1,0 +1,1 @@
+Fournir le fichier complet incluant le reste de `MarketsPage` (fetch CoinGecko, gestion `loading`/`error`/`isLive`, tri par `sortBy`, rendu de la grille de `CryptoCard`, barre de statut Wifi). Le code des sous-composants (`SparklineChart`, `CryptoCard`, `SortButton`) est correct et peut être conservé tel quel.

@@ -29,12 +29,39 @@ async function discordPost(channelId, payload) {
 
 async function githubGet(path) {
   if (!GITHUB_TOKEN || !GITHUB_REPO) return null
-  const r = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${path}`, {
-    headers: { Authorization: `token ${GITHUB_TOKEN}`, Accept: 'application/vnd.github.v3+json' },
-  })
-  if (!r.ok) return null
-  const { content } = await r.json()
-  return JSON.parse(Buffer.from(content, 'base64').toString())
+  let r
+  try {
+    r = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${path}`, {
+      headers: { Authorization: `token ${GITHUB_TOKEN}`, Accept: 'application/vnd.github.v3+json' },
+      signal: AbortSignal.timeout(8000),
+    })
+  } catch (e) {
+    console.warn(`githubGet ${path}: fetch error:`, e.message)
+    return null
+  }
+  if (!r.ok) {
+    console.warn(`githubGet ${path}: HTTP ${r.status}`)
+    return null
+  }
+  const ct = r.headers.get('content-type') || ''
+  if (!ct.includes('application/json') && !ct.includes('text/json')) {
+    console.warn(`githubGet ${path}: unexpected content-type "${ct}"`)
+    return null
+  }
+  let data
+  try {
+    data = await r.json()
+  } catch (e) {
+    console.warn(`githubGet ${path}: JSON parse error:`, e.message)
+    return null
+  }
+  if (!data?.content) return null
+  try {
+    return JSON.parse(Buffer.from(data.content, 'base64').toString('utf8'))
+  } catch (e) {
+    console.warn(`githubGet ${path}: base64/JSON decode error:`, e.message)
+    return null
+  }
 }
 
 // ─── Data Fetchers ────────────────────────────────────────────────────────────
@@ -78,6 +105,11 @@ async function fetchStockQuoteYahoo(symbol) {
     { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(6000) }
   )
   if (!r.ok) return null
+  const ct = r.headers.get('content-type') || ''
+  if (!ct.includes('application/json') && !ct.includes('text/json')) {
+    console.warn(`Yahoo Finance ${symbol}: unexpected content-type "${ct}", skipping .json()`)
+    return null
+  }
   const data = await r.json()
   const meta = data?.chart?.result?.[0]?.meta
   if (!meta?.regularMarketPrice) return null
