@@ -441,6 +441,32 @@ function prompt(rl) {
   })
 }
 
+// ── Dernier update self-improve ───────────────────────────────────────────────
+async function showLastUpdate() {
+  try {
+    spinStart('Chargement dernier update IA…', _.purple)
+    const r = await fetch(`${APP_URL}/api/memory?type=improvement&limit=3`, {
+      signal: AbortSignal.timeout(6000),
+    })
+    spinStop()
+    if (!r.ok) return
+    const d = await r.json().catch(() => null)
+    const entries = (d?.entries || []).filter(e => e.applied).slice(0, 3)
+    if (!entries.length) return
+
+    line(`  ${_.purple}${_.bold}╔══ DERNIERS UPDATES IA ════════════════════════════╗`)
+    for (const e of entries) {
+      const ts = e.createdAt ? new Date(e.createdAt).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : ''
+      line(`  ${_.purple}║${R}  ${_.cyan}${_.bold}${(e.focus || 'fix').padEnd(12)}${R}  ${_.silver}${(e.problem || e.commit || '').slice(0, 38)}${R}`)
+      if (ts) line(`  ${_.purple}║${R}  ${_.dark}${e.file || ''}  ${ts}${R}`)
+    }
+    line(`  ${_.purple}╚════════════════════════════════════════════════════╝`)
+    line()
+  } catch {
+    spinStop()
+  }
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
   await banner(false)
@@ -457,6 +483,9 @@ async function main() {
   line()
   line(`  ${_.dark}${'─'.repeat(52)}`)
   line()
+
+  // Affiche les derniers updates IA au démarrage
+  await showLastUpdate()
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true })
   rl.on('SIGINT', async () => {
