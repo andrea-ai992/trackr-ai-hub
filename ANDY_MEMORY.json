@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "mem_1776304654984",
+      "timestamp": "2026-04-16T01:57:34.984Z",
+      "type": "dry_run",
+      "focus": "bugs",
+      "file": "api/andy.js",
+      "problem": "Division par zéro silencieuse dans computeMACD quand computeEMA retourne null sur le slice court",
+      "severity": "high",
+      "learned": "Le pattern `(nullableValue || 0)` est dangereux pour des valeurs numériques car NaN et null sont tous deux falsy, effaçant silencieusement des états invalides qui devraient bloquer le calcul.",
+      "applied": false,
+      "dryRun": true
+    }
+  ]
+}
