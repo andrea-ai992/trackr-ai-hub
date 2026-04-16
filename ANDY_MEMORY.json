@@ -1,41 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776375350186",
-      "timestamp": "2026-04-16T21:35:50.186Z",
-      "type": "pattern_scan",
-      "focus": "bugs",
-      "findings": [
-        {
-          "id": "sse_json_parse",
-          "file": "api/discord.js",
-          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
-          "severity": "critical"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/andy.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/brain.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/trading-expert.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        }
-      ],
-      "count": 4,
-      "applied": false,
-      "note": "Patterns detected before Claude analysis — guiding fix priority"
-    },
-    {
       "id": "mem_1776375350952",
       "timestamp": "2026-04-16T21:35:50.952Z",
       "type": "error",
@@ -2931,6 +2896,20 @@
       "learned": "Frontend fetch chains that call .then(r => r.json()) directly before Promise.allSettled can cause loading states to hang forever when an API returns a non-JSON error response, because the rejection escapes the allSettled boundary.",
       "applied": true,
       "fromAdminTask": null
+    },
+    {
+      "id": "mem_1776380180017",
+      "timestamp": "2026-04-16T22:56:20.017Z",
+      "type": "brain_cycle",
+      "hour": 22,
+      "successRate": 10,
+      "agentsRan": 3,
+      "improved": false,
+      "improvedFile": null,
+      "focus": "bugs",
+      "errors": 0,
+      "appHealthy": true,
+      "duration": 28
     }
   ]
 }
