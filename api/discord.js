@@ -38,7 +38,17 @@ async function getQuickSignal(symbol, type) {
     if (priceRes.status === 'fulfilled') { const d = priceRes.value?.[id]; price = d?.usd; change24h = d?.usd_24h_change }
     if (ohlcRes.status === 'fulfilled' && Array.isArray(ohlcRes.value)) rsi = quickRSI(ohlcRes.value.map(c => c[4]))
   } else {
-    const data = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=30d`, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(5000) }).then(r => r.json()).catch(() => null)
+    const data = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=30d`, { headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' }, signal: AbortSignal.timeout(5000) })
+      .then(async r => {
+        const ct = r.headers.get('content-type') || ''
+        if (!r.ok) { console.warn(`Yahoo Finance ${symbol}: HTTP ${r.status}`); return null }
+        if (!ct.includes('application/json') && !ct.includes('text/json')) {
+          console.warn(`Yahoo Finance ${symbol}: unexpected content-type "${ct}", skipping .json()`)
+          return null
+        }
+        return r.json()
+      })
+      .catch(e => { console.warn(`Yahoo Finance ${symbol} fetch error:`, e.message); return null })
     if (data?.chart?.result?.[0]) {
       const r = data.chart.result[0]
       const closes = (r.indicators?.quote?.[0]?.close || []).filter(Boolean)
