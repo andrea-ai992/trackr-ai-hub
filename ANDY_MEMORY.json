@@ -1,41 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776342719689",
-      "timestamp": "2026-04-16T12:31:59.689Z",
-      "type": "pattern_scan",
-      "focus": "performance",
-      "findings": [
-        {
-          "id": "vercel_url_empty",
-          "file": "api/brain.js",
-          "description": "Using VERCEL_URL which is empty in production — use APP_URL instead",
-          "severity": "high"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/andy.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/brain.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/trading-expert.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        }
-      ],
-      "count": 4,
-      "applied": false,
-      "note": "Patterns detected before Claude analysis — guiding fix priority"
-    },
-    {
       "id": "mem_1776342720636",
       "timestamp": "2026-04-16T12:32:00.636Z",
       "type": "error",
@@ -3264,6 +3229,20 @@
       "count": 4,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776352052496",
+      "timestamp": "2026-04-16T15:07:32.497Z",
+      "type": "brain_cycle",
+      "hour": 15,
+      "successRate": 13,
+      "agentsRan": 4,
+      "improved": false,
+      "improvedFile": null,
+      "focus": "bugs",
+      "errors": 0,
+      "appHealthy": true,
+      "duration": 34
     }
   ]
 }
