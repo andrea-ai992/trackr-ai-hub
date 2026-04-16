@@ -1,10 +1,10 @@
 ```jsx
-// src/pages/CryptoMarkets.jsx
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { LineChart, Line, ResponsiveContainer, Tooltip } from "recharts";
 
 const COINGECKO_URL =
-  "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=10&page=1&sparkline=true&price_change_percentage=24h";
+  "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&page=1&sparkline=true&price_change_percentage=24h";
 
 const REFRESH_INTERVAL = 60000;
 
@@ -18,7 +18,6 @@ const shimmerStyle = `
 function SparklineChart({ data, isPositive }) {
   if (!data || data.length === 0) return null;
   const chartData = data.map((price, index) => ({ index, price }));
-
   return (
     <ResponsiveContainer width="100%" height={50}>
       <LineChart data={chartData}>
@@ -113,7 +112,6 @@ function CoinCard({ coin, rank }) {
         e.currentTarget.style.boxShadow = "0 4px 6px rgba(0,0,0,0.3)";
       }}
     >
-      {/* Header row */}
       <div
         style={{
           display: "flex",
@@ -149,7 +147,11 @@ function CoinCard({ coin, rank }) {
           />
           <div>
             <div
-              style={{ color: "#f1f5f9", fontWeight: "700", fontSize: "15px" }}
+              style={{
+                color: "#f1f5f9",
+                fontWeight: "700",
+                fontSize: "15px",
+              }}
             >
               {coin.name}
             </div>
@@ -168,7 +170,11 @@ function CoinCard({ coin, rank }) {
 
         <div style={{ textAlign: "right" }}>
           <div
-            style={{ color: "#f1f5f9", fontWeight: "700", fontSize: "16px" }}
+            style={{
+              color: "#f1f5f9",
+              fontWeight: "700",
+              fontSize: "16px",
+            }}
           >
             {formatPrice(coin.current_price)}
           </div>
@@ -192,7 +198,6 @@ function CoinCard({ coin, rank }) {
         </div>
       </div>
 
-      {/* Sparkline */}
       <div style={{ marginBottom: "12px" }}>
         <SparklineChart
           data={coin.sparkline_in_7d?.price}
@@ -200,7 +205,6 @@ function CoinCard({ coin, rank }) {
         />
       </div>
 
-      {/* Stats row */}
       <div
         style={{
           display: "flex",
@@ -212,36 +216,60 @@ function CoinCard({ coin, rank }) {
       >
         <div style={{ flex: 1 }}>
           <div
-            style={{ color: "#64748b", fontSize: "11px", marginBottom: "2px" }}
+            style={{
+              color: "#64748b",
+              fontSize: "11px",
+              marginBottom: "2px",
+            }}
           >
             Market Cap
           </div>
           <div
-            style={{ color: "#94a3b8", fontSize: "12px", fontWeight: "600" }}
+            style={{
+              color: "#94a3b8",
+              fontSize: "12px",
+              fontWeight: "600",
+            }}
           >
             {formatLargeNumber(coin.market_cap)}
           </div>
         </div>
         <div style={{ flex: 1, textAlign: "center" }}>
           <div
-            style={{ color: "#64748b", fontSize: "11px", marginBottom: "2px" }}
+            style={{
+              color: "#64748b",
+              fontSize: "11px",
+              marginBottom: "2px",
+            }}
           >
             Volume 24h
           </div>
           <div
-            style={{ color: "#94a3b8", fontSize: "12px", fontWeight: "600" }}
+            style={{
+              color: "#94a3b8",
+              fontSize: "12px",
+              fontWeight: "600",
+            }}
           >
             {formatLargeNumber(coin.total_volume)}
           </div>
         </div>
         <div style={{ flex: 1, textAlign: "right" }}>
           <div
-            style={{ color: "#64748b", fontSize: "11px", marginBottom: "2px" }}
+            style={{
+              color: "#64748b",
+              fontSize: "11px",
+              marginBottom: "2px",
+            }}
           >
             ATH
           </div>
           <div
-            style={{ color: "#94a3b8", fontSize: "12px", fontWeight: "600" }}
+            style={{
+              color: "#94a3b8",
+              fontSize: "12px",
+              fontWeight: "600",
+            }}
           >
             {formatPrice(coin.ath)}
           </div>
@@ -284,272 +312,413 @@ function LoadingSkeleton() {
   );
 }
 
-export default function CryptoMarkets() {
-  const [coins, setCoins] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
-  const [countdown, setCountdown] = useState(REFRESH_INTERVAL / 1000);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+const SORT_OPTIONS = [
+  { value: "market_cap_desc", label: "Market Cap ↓" },
+  { value: "market_cap_asc", label: "Market Cap ↑" },
+  { value: "price_desc", label: "Price ↓" },
+  { value: "price_asc", label: "Price ↑" },
+  { value: "change_desc", label: "Change ↓" },
+  { value: "change_asc", label: "Change ↑" },
+];
 
-  const fetchCoins = useCallback(async (isManual = false) => {
-    if (isManual) setIsRefreshing(true);
-    setError(null);
+const FILTER_OPTIONS = [
+  { value: "all", label: "All" },
+  { value: "gainers", label: "▲ Gainers" },
+  { value: "losers", label: "▼ Losers" },
+];
 
-    try {
-      const response = await fetch(COINGECKO_URL);
-      if (!response.ok) {
-        if (response.status === 429) {
-          throw new Error(
-            "Rate limit exceeded. Please wait a moment before refreshing."
-          );
-        }
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+const inputStyle = {
+  width: "100%",
+  background: "#0f172a",
+  border: "1px solid #334155",
+  borderRadius: "10px",
+  padding: "10px 12px 10px 36px",
+  color: "#f1f5f9",
+  fontSize: "14px",
+  outline: "none",
+  boxSizing: "border-box",
+  transition: "border-color 0.2s ease",
+};
+
+const selectStyle = {
+  flex: 1,
+  background: "#0f172a",
+  border: "1px solid #334155",
+  borderRadius: "10px",
+  padding: "9px 10px",
+  color: "#f1f5f9",
+  fontSize: "13px",
+  outline: "none",
+  cursor: "pointer",
+  appearance: "none",
+  WebkitAppearance: "none",
+};
+
+function SearchAndFilter({ searchParams, setSearchParams }) {
+  const query = searchParams.get("q") || "";
+  const filter = searchParams.get("filter") || "all";
+  const sort = searchParams.get("sort") || "market_cap_desc";
+
+  const update = (key, value) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (value === "" || value === null) {
+        next.delete(key);
+      } else {
+        next.set(key, value);
       }
-      const data = await response.json();
-      setCoins(data);
-      setLastUpdated(new Date());
-      setCountdown(REFRESH_INTERVAL / 1000);
-    } catch (err) {
-      setError(err.message || "Failed to fetch cryptocurrency data.");
-    } finally {
-      setLoading(false);
-      setIsRefreshing(false);
-    }
-  }, []);
-
-  // Initial fetch
-  useEffect(() => {
-    fetchCoins();
-  }, [fetchCoins]);
-
-  // Auto-refresh every 60s
-  useEffect(() => {
-    const interval = setInterval(() => fetchCoins(), REFRESH_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchCoins]);
-
-  // Countdown timer
-  useEffect(() => {
-    if (loading || error) return;
-    const timer = setInterval(() => {
-      setCountdown((prev) => (prev <= 1 ? REFRESH_INTERVAL / 1000 : prev - 1));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [loading, error]);
-
-  const totalMarketCap = coins.reduce((sum, c) => sum + (c.market_cap ?? 0), 0);
-  const gainers = coins.filter((c) => c.price_change_percentage_24h >= 0).length;
-
-  const formatLargeNumber = (n) => {
-    if (n >= 1e12) return "$" + (n / 1e12).toFixed(2) + "T";
-    if (n >= 1e9) return "$" + (n / 1e9).toFixed(2) + "B";
-    if (n >= 1e6) return "$" + (n / 1e6).toFixed(2) + "M";
-    return "$" + n.toLocaleString();
+      return next;
+    });
   };
 
   return (
     <div
       style={{
-        minHeight: "100vh",
-        background: "linear-gradient(180deg, #020617 0%, #0f172a 100%)",
-        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+        background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+        border: "1px solid #334155",
+        borderRadius: "16px",
+        padding: "14px",
+        marginBottom: "16px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "10px",
       }}
     >
-      <div style={{ maxWidth: "600px", margin: "0 auto", padding: "16px" }}>
+      {/* Search input */}
+      <div style={{ position: "relative" }}>
+        <span
+          style={{
+            position: "absolute",
+            left: "10px",
+            top: "50%",
+            transform: "translateY(-50%)",
+            color: "#64748b",
+            fontSize: "15px",
+            pointerEvents: "none",
+            lineHeight: 1,
+          }}
+        >
+          🔍
+        </span>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => update("q", e.target.value)}
+          placeholder="Search by name or symbol…"
+          style={inputStyle}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = "#6366f1";
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = "#334155";
+          }}
+        />
+      </div>
 
-        {/* Header */}
-        <div style={{ marginBottom: "20px", paddingTop: "8px" }}>
-          <div
+      {/* Filter + Sort row */}
+      <div style={{ display: "flex", gap: "8px" }}>
+        {/* Variation filter */}
+        <div style={{ position: "relative", flex: 1 }}>
+          <select
+            value={filter}
+            onChange={(e) => update("filter", e.target.value)}
+            style={selectStyle}
+          >
+            {FILTER_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <span
             style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: "4px",
+              position: "absolute",
+              right: "10px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: "#64748b",
+              fontSize: "11px",
+              pointerEvents: "none",
             }}
           >
-            <h1
-              style={{
-                color: "#f1f5f9",
-                fontSize: "24px",
-                fontWeight: "800",
-                margin: 0,
-                letterSpacing: "-0.5px",
-              }}
-            >
-              Crypto Markets
-            </h1>
-            <button
-              onClick={() => fetchCoins(true)}
-              disabled={isRefreshing || loading}
-              style={{
-                background: isRefreshing ? "#334155" : "#1e40af",
-                color: "#f1f5f9",
-                border: "none",
-                borderRadius: "10px",
-                padding: "8px 14px",
-                fontSize: "13px",
-                fontWeight: "600",
-                cursor: isRefreshing || loading ? "not-allowed" : "pointer",
-                opacity: isRefreshing || loading ? 0.6 : 1,
-                transition: "background 0.2s ease",
-              }}
-            >
-              {isRefreshing ? "Refreshing…" : "↻ Refresh"}
-            </button>
-          </div>
-
-          <p style={{ color: "#64748b", fontSize: "13px", margin: "4px 0 0" }}>
-            Top 10 by market cap · auto-refresh in{" "}
-            <span style={{ color: "#94a3b8", fontWeight: "600" }}>
-              {countdown}s
-            </span>
-          </p>
+            ▼
+          </span>
         </div>
 
-        {/* Summary bar */}
-        {!loading && !error && coins.length > 0 && (
-          <div
-            style={{
-              display: "flex",
-              gap: "12px",
-              marginBottom: "20px",
-              flexWrap: "wrap",
-            }}
+        {/* Sort select */}
+        <div style={{ position: "relative", flex: 1 }}>
+          <select
+            value={sort}
+            onChange={(e) => update("sort", e.target.value)}
+            style={selectStyle}
           >
-            {[
-              {
-                label: "Total Market Cap",
-                value: formatLargeNumber(totalMarketCap),
-              },
-              {
-                label: "Gainers / Losers",
-                value: `${gainers} / ${coins.length - gainers}`,
-                valueColor: gainers >= coins.length - gainers ? "#22c55e" : "#ef4444",
-              },
-              {
-                label: "Last updated",
-                value: lastUpdated
-                  ? lastUpdated.toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      second: "2-digit",
-                    })
-                  : "—",
-              },
-            ].map(({ label, value, valueColor }) => (
-              <div
-                key={label}
-                style={{
-                  flex: "1 1 120px",
-                  background: "#0f172a",
-                  border: "1px solid #1e293b",
-                  borderRadius: "12px",
-                  padding: "10px 12px",
-                }}
-              >
-                <div
-                  style={{
-                    color: "#64748b",
-                    fontSize: "11px",
-                    marginBottom: "4px",
-                  }}
-                >
-                  {label}
-                </div>
-                <div
-                  style={{
-                    color: valueColor ?? "#f1f5f9",
-                    fontSize: "13px",
-                    fontWeight: "700",
-                  }}
-                >
-                  {value}
-                </div>
-              </div>
+            {SORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
             ))}
-          </div>
-        )}
-
-        {/* Loading */}
-        {loading && <LoadingSkeleton />}
-
-        {/* Error */}
-        {!loading && error && (
-          <div
+          </select>
+          <span
             style={{
-              background: "rgba(239,68,68,0.1)",
-              border: "1px solid rgba(239,68,68,0.3)",
-              borderRadius: "16px",
-              padding: "24px",
-              textAlign: "center",
+              position: "absolute",
+              right: "10px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: "#64748b",
+              fontSize: "11px",
+              pointerEvents: "none",
             }}
           >
-            <div style={{ fontSize: "32px", marginBottom: "12px" }}>⚠️</div>
-            <div
-              style={{
-                color: "#fca5a5",
-                fontSize: "14px",
-                marginBottom: "16px",
-                lineHeight: "1.5",
-              }}
-            >
-              {error}
-            </div>
+            ▼
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function applyFiltersAndSort(coins, query, filter, sort) {
+  let result = [...coins];
+
+  // Search filter
+  if (query.trim()) {
+    const q = query.trim().toLowerCase();
+    result = result.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.symbol.toLowerCase().includes(q)
+    );
+  }
+
+  // Variation filter
+  if (filter === "gainers") {
+    result = result.filter((c) => c.price_change_percentage_24h >= 0);
+  } else if (filter === "losers") {
+    result = result.filter((c) => c.price_change_percentage_24h < 0);
+  }
+
+  // Sort
+  switch (sort) {
+    case "market_cap_desc":
+      result.sort((a, b) => (b.market_cap ?? 0) - (a.market_cap ?? 0));
+      break;
+    case "market_cap_asc":
+      result.sort((a, b) => (a.market_cap ?? 0) - (b.market_cap ?? 0));
+      break;
+    case "price_desc":
+      result.sort((a, b) => (b.current_price ?? 0) - (a.current_price ?? 0));
+      break;
+    case "price_asc":
+      result.sort((a, b) => (a.current_price ?? 0) - (b.current_price ?? 0));
+      break;
+    case "change_desc":
+      result.sort(
+        (a, b) =>
+          (b.price_change_percentage_24h ?? 0) -
+          (a.price_change_percentage_24h ?? 0)
+      );
+      break;
+    case "change_asc":
+      result.sort(
+        (a, b) =>
+          (a.price_change_percentage_24h ?? 0) -
+          (b.price_change_percentage_24h ?? 0)
+      );
+      break;
+    default:
+      break;
+  }
+
+  return result;
+}
+
+export default function CryptoMarkets() {
+  const [coins, setCoins] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const query = searchParams.get("q") || "";
+  const filter = searchParams.get("filter") || "all";
+  const sort = searchParams.get("sort") || "market_cap_desc";
+
+  const fetchCoins = useCallback(async () => {
+    try {
+      const res = await fetch(COINGECKO_URL);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setCoins(data);
+      setLastUpdated(new Date());
+      setError(null);
+    } catch (err) {
+      setError(err.message || "Failed to fetch data");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCoins();
+    const interval = setInterval(fetchCoins, REFRESH_INTERVAL);
+    return () => clearInterval(interval);
+  }, [fetchCoins]);
+
+  const filteredCoins = useMemo(
+    () => applyFiltersAndSort(coins, query, filter, sort),
+    [coins, query, filter, sort]
+  );
+
+  const hasActiveFilters = query || filter !== "all" || sort !== "market_cap_desc";
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#020817",
+        padding: "16px",
+        maxWidth: "480px",
+        margin: "0 auto",
+        fontFamily:
+          "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      }}
+    >
+      {/* Header */}
+      <div style={{ marginBottom: "20px" }}>
+        <h1
+          style={{
+            color: "#f1f5f9",
+            fontSize: "22px",
+            fontWeight: "800",
+            margin: "0 0 4px 0",
+            letterSpacing: "-0.02em",
+          }}
+        >
+          Crypto Markets
+        </h1>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <p style={{ color: "#64748b", fontSize: "13px", margin: 0 }}>
+            Top 50 by market cap · auto-refresh 60s
+          </p>
+          {lastUpdated && (
+            <span style={{ color: "#475569", fontSize: "11px" }}>
+              {lastUpdated.toLocaleTimeString()}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Search & Filter */}
+      <SearchAndFilter
+        searchParams={searchParams}
+        setSearchParams={setSearchParams}
+      />
+
+      {/* Results info */}
+      {!loading && !error && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: "12px",
+          }}
+        >
+          <span style={{ color: "#64748b", fontSize: "12px" }}>
+            {filteredCoins.length} result{filteredCoins.length !== 1 ? "s" : ""}
+            {hasActiveFilters ? " (filtered)" : ""}
+          </span>
+          {hasActiveFilters && (
             <button
-              onClick={() => fetchCoins(true)}
+              onClick={() => setSearchParams({})}
               style={{
-                background: "#1e40af",
-                color: "#f1f5f9",
-                border: "none",
-                borderRadius: "10px",
-                padding: "10px 20px",
-                fontSize: "14px",
-                fontWeight: "600",
+                background: "none",
+                border: "1px solid #334155",
+                borderRadius: "8px",
+                color: "#94a3b8",
+                fontSize: "11px",
+                padding: "3px 10px",
                 cursor: "pointer",
               }}
             >
-              Try Again
+              Clear filters
             </button>
-          </div>
-        )}
+          )}
+        </div>
+      )}
 
-        {/* Coin list */}
-        {!loading && !error && coins.length > 0 && (
-          <div>
-            {coins.map((coin, i) => (
-              <CoinCard key={coin.id} coin={coin} rank={i + 1} />
-            ))}
-          </div>
-        )}
-
-        {/* Empty state */}
-        {!loading && !error && coins.length === 0 && (
-          <div
+      {/* Error */}
+      {error && (
+        <div
+          style={{
+            background: "rgba(239,68,68,0.1)",
+            border: "1px solid rgba(239,68,68,0.3)",
+            borderRadius: "12px",
+            padding: "14px",
+            marginBottom: "16px",
+            color: "#fca5a5",
+            fontSize: "14px",
+            textAlign: "center",
+          }}
+        >
+          ⚠️ {error}
+          <button
+            onClick={fetchCoins}
             style={{
-              textAlign: "center",
-              color: "#64748b",
-              padding: "48px 16px",
-              fontSize: "14px",
+              display: "block",
+              margin: "8px auto 0",
+              background: "rgba(239,68,68,0.2)",
+              border: "1px solid rgba(239,68,68,0.4)",
+              borderRadius: "8px",
+              color: "#fca5a5",
+              fontSize: "12px",
+              padding: "4px 14px",
+              cursor: "pointer",
             }}
           >
-            No data available.
-          </div>
-        )}
+            Retry
+          </button>
+        </div>
+      )}
 
-        {/* Footer */}
+      {/* Loading */}
+      {loading && <LoadingSkeleton />}
+
+      {/* Empty state */}
+      {!loading && !error && filteredCoins.length === 0 && (
         <div
           style={{
             textAlign: "center",
-            color: "#334155",
-            fontSize: "11px",
-            marginTop: "24px",
-            paddingBottom: "32px",
+            padding: "48px 16px",
+            color: "#475569",
           }}
         >
-          Data provided by CoinGecko API
+          <div style={{ fontSize: "36px", marginBottom: "12px" }}>🔍</div>
+          <div style={{ fontSize: "15px", fontWeight: "600", color: "#64748b" }}>
+            No results found
+          </div>
+          <div style={{ fontSize: "13px", marginTop: "4px" }}>
+            Try a different search or filter
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Coin list */}
+      {!loading &&
+        !error &&
+        filteredCoins.map((coin, idx) => (
+          <CoinCard
+            key={coin.id}
+            coin={coin}
+            rank={coins.indexOf(coin) + 1}
+          />
+        ))}
     </div>
   );
 }
