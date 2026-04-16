@@ -23,10 +23,41 @@ for (const f of ['.env', '.env.local']) {
   }
 }
 
-const API_KEY     = process.env.ANTHROPIC_API_KEY
-const APP_URL     = process.env.APP_URL || 'https://trackr-app-nu.vercel.app'
-const BOT_URL     = process.env.BOT_URL || 'http://localhost:3099'
-const CRON_SECRET = process.env.CRON_SECRET || ''
+const API_KEY        = process.env.ANTHROPIC_API_KEY
+const APP_URL        = process.env.APP_URL || 'https://trackr-app-nu.vercel.app'
+const CRON_SECRET    = process.env.CRON_SECRET || ''
+const BOT_TOKEN      = process.env.DISCORD_BOT_TOKEN || ''
+const GUILD_ID       = process.env.DISCORD_GUILD_ID  || ''
+const CH_STOCKS      = process.env.DISCORD_CH_MARKET_SCANNER || ''
+const CH_CRYPTO      = process.env.DISCORD_CH_CRYPTO || ''
+const DISCORD_API    = 'https://discord.com/api/v10'
+
+// ── Discord direct (pas besoin que le bot tourne) ─────────────────────────────
+async function discordPost(channelId, content) {
+  if (!BOT_TOKEN || !channelId) return false
+  const r = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bot ${BOT_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ content: content.slice(0, 1990) }),
+    signal: AbortSignal.timeout(10000),
+  }).catch(() => null)
+  return r?.ok || false
+}
+
+// Trouve un channel par nom dans le guild
+async function findDiscordChannel(name) {
+  if (!BOT_TOKEN || !GUILD_ID) return null
+  const r = await fetch(`${DISCORD_API}/guilds/${GUILD_ID}/channels`, {
+    headers: { Authorization: `Bot ${BOT_TOKEN}` },
+    signal: AbortSignal.timeout(6000),
+  }).catch(() => null)
+  if (!r?.ok) return null
+  const chs = await r.json().catch(() => [])
+  return chs.find(c => c.name === name && c.type === 0)?.id || null
+}
 
 // ── Portfolios (identiques au bot) ────────────────────────────────────────────
 const STOCKS = [
@@ -204,6 +235,20 @@ Règles :
 - Réponses concises sauf si une explication longue est vraiment nécessaire.
 - Dans ce terminal, tu peux utiliser du markdown basique (** pour gras, \` pour code).`
 
+// ── Generate raw (silencieux, pour /bot brief) ───────────────────────────────
+async function generateRaw(prompt) {
+  if (!API_KEY) return null
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1800, system: SYSTEM, stream: false, messages: [{ role: 'user', content: prompt }] }),
+    signal: AbortSignal.timeout(55000),
+  }).catch(() => null)
+  if (!res?.ok) return null
+  const d = await res.json().catch(() => null)
+  return d?.content?.[0]?.text?.trim() || null
+}
+
 // ── Chat streaming ──────────────────────────��─────────────────────────────────
 async function chat(userMessage) {
   if (!API_KEY) {
@@ -341,9 +386,10 @@ async function cmd(input) {
       ['/monitor',             _.blue,   'Déclenche le monitoring Trackr'],
       ['/status',              _.orange, 'Statut APIs Trackr'],
       ['─── BOT DISCORD ─────────────────────────────', _.dark,   ''],
-      ['/bot status',          _.orange, 'Statut du bot Discord'],
+      ['/bot status',          _.orange, 'Statut connexion Discord'],
       ['/bot brief stocks',    _.green,  'Poste le brief actions → Discord'],
       ['/bot brief crypto',    _.cyan,   'Poste le brief crypto → Discord'],
+      ['/feed [channel]',      _.cyan,   'Derniers messages Discord (défaut: andy-chat)'],
     ]
     for (const [name, col, desc] of cmds) {
       if (name.startsWith('─')) { line(`  ${_.purple}║${R}  ${col}${name}${R}`); continue }
@@ -514,41 +560,83 @@ async function cmd(input) {
     const sub = parts.slice(1).join(' ')
 
     if (!sub || sub === 'status') {
-      spinStart('Ping bot Discord…', _.orange)
+      if (!BOT_TOKEN) {
+        line(`  ${_.amber}⚠ DISCORD_BOT_TOKEN manquant dans .env${R}`)
+        line(); return
+      }
+      spinStart('Ping Discord…', _.orange)
       try {
-        const r = await fetch(`${BOT_URL}/`, { signal: AbortSignal.timeout(4000) })
+        const r = await fetch(`${DISCORD_API}/guilds/${GUILD_ID}`, {
+          headers: { Authorization: `Bot ${BOT_TOKEN}` },
+          signal: AbortSignal.timeout(6000),
+        })
         spinStop()
         if (r.ok) {
-          const d = await r.json().catch(() => ({}))
+          const g = await r.json().catch(() => ({}))
+          const chR = await fetch(`${DISCORD_API}/guilds/${GUILD_ID}/channels`, {
+            headers: { Authorization: `Bot ${BOT_TOKEN}` },
+            signal: AbortSignal.timeout(6000),
+          }).catch(() => null)
+          const chs = chR?.ok ? await chR.json().catch(() => []) : []
+          const text = chs.filter(c => c.type === 0).map(c => `#${c.name}`)
           line()
-          line(`  ${_.orange}${_.bold}╔══ DISCORD BOT ════════════════════════════╗`)
-          line(`  ${_.orange}║${R}  ${_.green}● ONLINE${R}  ${_.grey}uptime ${d.uptime || '?'}s`)
-          line(`  ${_.orange}║${R}  ${_.grey}Channels actifs   ${_.cyan}${d.channels?.active ?? '?'}${R}`)
-          line(`  ${_.orange}║${R}  ${_.grey}Channels morts    ${_.red}${d.channels?.dead ?? '?'}${R}`)
-          if (d.stocks?.length) line(`  ${_.orange}║${R}  ${_.grey}Actions  ${_.silver}${d.stocks.join(', ')}${R}`)
-          if (d.crypto?.length) line(`  ${_.orange}║${R}  ${_.grey}Crypto   ${_.silver}${d.crypto.join(', ')}${R}`)
+          line(`  ${_.orange}${_.bold}╔══ DISCORD ════════════════════════════════╗`)
+          line(`  ${_.orange}║${R}  ${_.green}● CONNECTÉ${R}  ${_.grey}${g.name || ''}`)
+          line(`  ${_.orange}║${R}  ${_.grey}Channels texte   ${_.cyan}${text.length}${R}`)
+          line(`  ${_.orange}║${R}  ${_.grey}Actions ch.      ${_.green}${CH_STOCKS ? '#market-scanner ✓' : 'non configuré'}${R}`)
+          line(`  ${_.orange}║${R}  ${_.grey}Crypto ch.       ${_.cyan}${CH_CRYPTO ? '#crypto ✓' : 'non configuré'}${R}`)
           line(`  ${_.orange}╚════════════════════════════════════════════╝`)
         } else {
-          line(`  ${_.red}✗ Bot inaccessible (${r.status})${R}`)
+          line(`  ${_.red}✗ Discord API ${r.status} — vérifie DISCORD_BOT_TOKEN${R}`)
         }
-      } catch { spinStop(); line(`  ${_.amber}⚠ Bot hors ligne ou BOT_URL non configuré${R}  ${_.grey}(${BOT_URL})`) }
+      } catch (e) { spinStop(); line(`  ${_.red}✗ ${e.message}${R}`) }
       line(); return
     }
 
     if (sub === 'brief stocks' || sub === 'brief crypto') {
-      const endpoint = sub === 'brief stocks' ? '/brief/stocks' : '/brief/crypto'
-      const label = sub === 'brief stocks' ? 'actions' : 'crypto'
-      spinStart(`Envoi brief ${label} → Discord…`, _.green)
-      try {
-        const r = await fetch(`${BOT_URL}${endpoint}`, { signal: AbortSignal.timeout(6000) })
-        spinStop()
-        line(`  ${r.ok ? _.green+'✓' : _.red+'✗'} Brief ${label} ${r.ok ? 'envoyé → Discord' : `erreur ${r.status}`}${R}`)
-      } catch { spinStop(); line(`  ${_.amber}⚠ Bot inaccessible (${BOT_URL})${R}`) }
+      const isStocks = sub === 'brief stocks'
+      const label    = isStocks ? 'actions' : 'crypto'
+      const today    = new Date().toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric', timeZone:'America/New_York' })
+
+      if (!BOT_TOKEN) { line(`  ${_.amber}⚠ DISCORD_BOT_TOKEN manquant dans .env${R}`); line(); return }
+
+      // Génère le brief via Claude
+      line()
+      line(`  ${_.green}${_.bold}Génération brief ${label}…${R}`)
+      const tickers = (isStocks ? STOCKS : CRYPTO).map(p => `${p.ticker} (${p.name})`).join(', ')
+      const briefPrompt = isStocks
+        ? `Analyse pré-marché ACTIONS — ${today}\nPortfolio: ${tickers}\n1. MACRO DU JOUR — Fed, dollar, VIX, futures\n2. SETUP PAR ACTION — tendance + S/R clé + signal\n3. TOP 3 OPPORTUNITÉS — entry/stop/target\n4. RISQUES\nCourt et direct. Max 1700 chars. Note ta date de coupure si tu ne peux pas confirmer les prix.`
+        : `Analyse crypto — ${today}\nCryptos: ${tickers}\n1. DOMINANCE & MACRO CRYPTO — Fear & Greed, tendance\n2. SETUP PAR COIN — tendance + S/R clé + signal\n3. TOP 3 TRADES — entry/stop/target\n4. RISQUES\nCourt et direct. Max 1700 chars. Note ta date de coupure.`
+
+      const analysis = await generateRaw(briefPrompt)
+      if (!analysis) { line(`  ${_.red}✗ Génération échouée${R}`); line(); return }
+
+      const header = isStocks
+        ? `📈 **TRADING ACTIONS — ${today.toUpperCase()}**\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n`
+        : `🪙 **TRADING CRYPTO — ${today.toUpperCase()}**\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n`
+      const full = (header + analysis).slice(0, 1990)
+
+      // Trouve le channel et poste
+      spinStart(`Envoi → Discord #${isStocks ? 'market-scanner' : 'crypto'}…`, _.green)
+      let chId = isStocks ? CH_STOCKS : CH_CRYPTO
+      if (!chId) chId = await findDiscordChannel(isStocks ? 'market-scanner' : 'crypto')
+      const ok = chId ? await discordPost(chId, full) : false
+      spinStop()
+
+      if (ok)      line(`  ${_.green}✓ Brief ${label} posté → Discord${R}`)
+      else if (!chId) line(`  ${_.amber}⚠ Channel introuvable — ajoute DISCORD_CH_${isStocks?'MARKET_SCANNER':'CRYPTO'} dans .env${R}`)
+      else         line(`  ${_.red}✗ Erreur Discord${R}`)
       line(); return
     }
 
     line(`  ${_.grey}Usage: /bot status · /bot brief stocks · /bot brief crypto${R}`)
     line(); return
+  }
+
+  // ── /feed [channel] ──────────────────────────────────────────────────────────
+  if (c === '/feed') {
+    await showFeed(arg || 'andy-chat')
+    return
   }
 
   // ── /monitor ─────────────────────────────────────────────────────────────────
@@ -600,30 +688,75 @@ function prompt(rl) {
   })
 }
 
-// ── Dernier update self-improve ───────────────────────────────────────────────
-async function showLastUpdate() {
+// ── Connexions au démarrage ───────────────────────────────────────────────────
+async function showConnections() {
+  // Check tout en parallèle
+  const [vercelR, discordR, memR] = await Promise.allSettled([
+    fetch(`${APP_URL}/api/memory`, { method: 'HEAD', signal: AbortSignal.timeout(5000) }),
+    BOT_TOKEN && GUILD_ID
+      ? fetch(`${DISCORD_API}/guilds/${GUILD_ID}`, { headers: { Authorization: `Bot ${BOT_TOKEN}` }, signal: AbortSignal.timeout(5000) })
+      : Promise.resolve(null),
+    fetch(`${APP_URL}/api/memory?type=improvement&limit=3`, { signal: AbortSignal.timeout(6000) }),
+  ])
+
+  const vercelOk  = vercelR.status === 'fulfilled' && vercelR.value?.ok
+  const discordOk = discordR.status === 'fulfilled' && discordR.value?.ok
+  const guild     = discordOk ? await discordR.value.json().catch(() => ({})) : null
+
+  // Derniers updates IA
+  const memData   = memR.status === 'fulfilled' ? await memR.value?.json().catch(() => null) : null
+  const updates   = (memData?.entries || []).filter(e => e.applied).slice(0, 2)
+
+  line(`  ${_.dark}╔══ CONNEXIONS ══════════════════════════════════════╗`)
+  line(`  ${_.dark}║${R}  ${vercelOk ? _.green+'●' : _.red+'○'}${R} ${_.grey}Trackr App${R}       ${vercelOk ? _.green+'ONLINE' : _.red+'OFFLINE'}${R}  ${_.dark}${APP_URL.replace('https://','')}`)
+  line(`  ${_.dark}║${R}  ${discordOk ? _.cyan+'●' : _.amber+'○'}${R} ${_.grey}Discord${R}          ${discordOk ? _.cyan+'CONNECTÉ' : _.amber+(BOT_TOKEN ? 'ERREUR' : 'non configuré')}${R}${guild ? `  ${_.dark}${guild.name}` : ''}`)
+  if (discordOk) {
+    line(`  ${_.dark}║${R}  ${_.dark}  └ ${CH_STOCKS ? _.green+'#market-scanner ✓' : _.grey+'market-scanner: ?'}  ${CH_CRYPTO ? _.cyan+'#crypto ✓' : _.grey+'crypto: ?'}${R}`)
+  }
+  line(`  ${_.dark}║${R}  ${_.purple}●${R} ${_.grey}Claude${R}           ${API_KEY ? _.green+'ONLINE' : _.red+'OFFLINE'}${R}  ${_.dark}${process.env._CLI_MODEL || 'claude-sonnet-4-6'}`)
+  line(`  ${_.dark}╚════════════════════════════════════════════════════╝`)
+  line()
+
+  if (updates.length) {
+    line(`  ${_.purple}${_.bold}╔══ DERNIERS UPDATES IA ═════════════════════════════╗`)
+    for (const e of updates) {
+      const ts = e.createdAt ? new Date(e.createdAt).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : ''
+      line(`  ${_.purple}║${R}  ${_.cyan}${_.bold}${(e.focus || 'fix').padEnd(12)}${R}  ${_.silver}${(e.problem || e.commit || '').slice(0, 38)}${R}`)
+      if (ts) line(`  ${_.purple}║${R}  ${_.dark}${(e.file || '').slice(0,30).padEnd(30)}  ${ts}${R}`)
+    }
+    line(`  ${_.purple}╚═════════════════════════════════════════════════════╝`)
+    line()
+  }
+}
+
+// ── /feed — derniers messages Discord ────────────────────────────────────────
+async function showFeed(channelName = 'andy-chat') {
+  if (!BOT_TOKEN || !GUILD_ID) {
+    line(`  ${_.amber}⚠ DISCORD_BOT_TOKEN / DISCORD_GUILD_ID manquants dans .env${R}`)
+    return
+  }
+  spinStart(`Chargement #${channelName}…`, _.cyan)
   try {
-    spinStart('Chargement dernier update IA…', _.purple)
-    const r = await fetch(`${APP_URL}/api/memory?type=improvement&limit=3`, {
+    const chId = await findDiscordChannel(channelName)
+    if (!chId) { spinStop(); line(`  ${_.amber}⚠ Channel #${channelName} introuvable${R}`); return }
+    const r = await fetch(`${DISCORD_API}/channels/${chId}/messages?limit=8`, {
+      headers: { Authorization: `Bot ${BOT_TOKEN}` },
       signal: AbortSignal.timeout(6000),
     })
     spinStop()
-    if (!r.ok) return
-    const d = await r.json().catch(() => null)
-    const entries = (d?.entries || []).filter(e => e.applied).slice(0, 3)
-    if (!entries.length) return
-
-    line(`  ${_.purple}${_.bold}╔══ DERNIERS UPDATES IA ════════════════════════════╗`)
-    for (const e of entries) {
-      const ts = e.createdAt ? new Date(e.createdAt).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : ''
-      line(`  ${_.purple}║${R}  ${_.cyan}${_.bold}${(e.focus || 'fix').padEnd(12)}${R}  ${_.silver}${(e.problem || e.commit || '').slice(0, 38)}${R}`)
-      if (ts) line(`  ${_.purple}║${R}  ${_.dark}${e.file || ''}  ${ts}${R}`)
-    }
-    line(`  ${_.purple}╚════════════════════════════════════════════════════╝`)
+    if (!r.ok) { line(`  ${_.red}✗ Discord ${r.status}${R}`); return }
+    const msgs = await r.json().catch(() => [])
     line()
-  } catch {
-    spinStop()
-  }
+    line(`  ${_.cyan}${_.bold}╔══ #${channelName.toUpperCase()} ════════════════════════════════`)
+    for (const m of [...msgs].reverse()) {
+      const ts  = new Date(m.timestamp).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })
+      const who = m.author?.bot ? `${_.purple}AnDy` : `${_.orange}${m.author?.username || '?'}`
+      line(`  ${_.cyan}║${R}  ${who}${R}  ${_.dark}${ts}${R}`)
+      line(`  ${_.cyan}║${R}  ${_.silver}${(m.content || '').slice(0, 70)}${R}`)
+    }
+    line(`  ${_.cyan}╚${'═'.repeat(52)}`)
+    line()
+  } catch (e) { spinStop(); line(`  ${_.red}✗ ${e.message}${R}`) }
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -643,8 +776,8 @@ async function main() {
   line(`  ${_.dark}${'─'.repeat(52)}`)
   line()
 
-  // Affiche les derniers updates IA au démarrage
-  await showLastUpdate()
+  // Connexions + derniers updates IA
+  await showConnections()
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true })
   rl.on('SIGINT', async () => {
