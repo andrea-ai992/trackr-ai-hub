@@ -1,19 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776364565340",
-      "timestamp": "2026-04-16T18:36:05.340Z",
-      "type": "improvement",
-      "focus": "bugs",
-      "file": "api/discord.js",
-      "problem": "api/discord.js calls .json() on SSE (text/event-stream) responses from Yahoo Finance without content-type check in getQuickSignal",
-      "severity": "critical",
-      "commit": "fix(discord): guard against SSE/non-JSON content-type from Yahoo Finance in getQuickSignal",
-      "learned": "Yahoo Finance occasionally returns text/event-stream instead of JSON, so every .json() call on its responses must be preceded by a content-type check — this pattern is already established in morning.js and trading-expert.js but was incomplete in discord.js.",
-      "applied": true,
-      "fromAdminTask": null
-    },
-    {
       "id": "mem_1776364566314",
       "timestamp": "2026-04-16T18:36:06.314Z",
       "type": "brain_cycle",
@@ -2847,6 +2834,41 @@
       "errors": 0,
       "appHealthy": true,
       "duration": 1
+    },
+    {
+      "id": "mem_1776369354771",
+      "timestamp": "2026-04-16T19:55:54.771Z",
+      "type": "pattern_scan",
+      "focus": "bugs",
+      "findings": [
+        {
+          "id": "sse_json_parse",
+          "file": "api/discord.js",
+          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
+          "severity": "critical"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/andy.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/brain.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/trading-expert.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        }
+      ],
+      "count": 4,
+      "applied": false,
+      "note": "Patterns detected before Claude analysis — guiding fix priority"
     }
   ]
 }
