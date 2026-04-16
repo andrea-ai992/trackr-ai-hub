@@ -245,13 +245,12 @@ async function chat(userMessage) {
       return
     }
 
-    // Collecte le stream en entier puis render proprement
     let fullText = ''
     const reader = res.body.getReader()
     const dec    = new TextDecoder()
     let buf      = ''
 
-    out(`  ${_.dark}`)   // indentation de départ
+    out(`${BG}  `)
 
     while (true) {
       const { done, value } = await reader.read()
@@ -269,20 +268,17 @@ async function chat(userMessage) {
           if (ev.type === 'content_block_delta' && ev.delta?.text) {
             const chunk = ev.delta.text
             fullText += chunk
-            // Affichage live brut pendant le stream — simple et sans bug
-            for (const ch of chunk) {
-              if (ch === '\n') { out(`\x1b[K\n  ${BG}`); continue }
-              out(`${BG}${_.silver}${ch}${R}`)
-            }
+            // Remplace les sauts de ligne par un saut + indentation, sort le chunk d'un coup
+            out(chunk.replace(/\n/g, '\n  '))
           }
         } catch {}
       }
     }
 
-    out('\x1b[K\n')
+    out('\n')
     history.push({ role: 'assistant', content: fullText })
     line()
-    line(`  ${_.dark}─────────────────────────────────────────────────────`)
+    line(`  ${_.dark}──────────────────────────────────────────────────────`)
     line()
 
   } catch (e) {
