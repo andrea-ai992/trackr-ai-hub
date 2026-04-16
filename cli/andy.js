@@ -864,6 +864,7 @@ async function cmd(input) {
       ['/monitor',             _.blue,   'Déclenche le monitoring Trackr'],
       ['/status',              _.orange, 'Statut APIs Trackr'],
       ['─── TÂCHES ───────────────────────────────────', _.dark,   ''],
+      ['/watch',               _.green,  'Live : progression serveur, tâches, logs en temps réel'],
       ['/daemon',              _.green,  'Surveille andy-tasks/ et exécute les .txt'],
       ['─── GITHUB ───────────────────────────────────', _.dark,   ''],
       ['/git log [n]',         _.blue,   'Derniers commits (tableau)'],
@@ -1127,6 +1128,110 @@ async function cmd(input) {
   // ── /git ─────────────────────────────────────────────────────────────────────
   if (c === '/git') {
     await cmdGit(parts)
+    return
+  }
+
+  // ── /watch — live server monitor ─────────────────────────────────────────────
+  if (c === '/watch') {
+    const DASH = `http://62.238.12.221:4000`
+    const PASS = process.env.DASHBOARD_PASS || 'trackr2024'
+    const authHeader = 'Basic ' + Buffer.from('admin:' + PASS).toString('base64')
+
+    line()
+    line(`  ${_.green}${_.bold}╔══ LIVE SERVER WATCH ═══════════════════════════════╗${R}`)
+    line(`  ${_.green}║${R}  ${_.grey}Polling ${DASH} toutes les 4s${R}`)
+    line(`  ${_.green}║${R}  ${_.dark}Ctrl+C pour quitter${R}`)
+    line(`  ${_.green}╚════════════════════════════════════════════════════╝${R}`)
+    line()
+
+    const ROWS = 14  // lignes du panel à effacer à chaque refresh
+    let firstDraw = true
+    let running = true
+
+    // Capture Ctrl+C
+    const onSigint = () => { running = false }
+    process.once('SIGINT', onSigint)
+
+    const clearPanel = () => {
+      if (firstDraw) { firstDraw = false; return }
+      process.stdout.write(`\x1b[${ROWS}A\x1b[0J`)
+    }
+
+    const drawPanel = (status, logs) => {
+      clearPanel()
+      const procs = status?.processes || []
+      const tasks = status?.tasks || []
+      const done  = tasks.filter(t => t.endsWith('.done')).length
+      const queue = tasks.filter(t => t.endsWith('.txt')).length
+      const running_t = tasks.filter(t => t.endsWith('.running'))
+      const errors = tasks.filter(t => t.endsWith('.error')).length
+      const W = 52
+
+      // Ligne 1 : timestamp
+      const ts = new Date().toLocaleTimeString('fr-FR')
+      out(`\n  ${_.dark}${ts}${R}  ${_.green}● LIVE${R}  ${_.dark}uptime: ${status?.uptime || '—'}  RAM: ${status?.mem || '—'}${R}\n`)
+
+      // Ligne 2-3 : processes
+      for (const p of procs) {
+        const on = p.status === 'online'
+        const col = on ? _.green : _.red
+        const st  = on ? '● ONLINE ' : '○ OFFLINE'
+        out(`  ${col}${st}${R}  ${_.silver}${p.name.padEnd(16)}${R}  ${_.dark}CPU ${String(p.cpu).padStart(3)}%  RAM ${p.mem}  ↺ ${p.restarts}${R}\n`)
+      }
+
+      // Ligne 4 : stats tâches
+      out(`\n  ${_.dark}┌──────────────────────────────────────────────────┐${R}\n`)
+      out(`  ${_.dark}│${R}  ${_.white}DONE${R} ${_.green}${String(done).padEnd(5)}${R}  ${_.white}QUEUE${R} ${_.cyan}${String(queue).padEnd(4)}${R}  ${_.white}RUN${R} ${_.amber}${String(running_t.length).padEnd(4)}${R}  ${_.white}ERR${R} ${_.red}${String(errors).padEnd(4)}${R}  ${_.dark}│${R}\n`)
+      out(`  ${_.dark}└──────────────────────────────────────────────────┘${R}\n`)
+
+      // Ligne 5 : tâche en cours
+      if (running_t.length) {
+        const t = running_t[0].replace(/\.running$/, '')
+        out(`  ${_.amber}⟳ EN COURS :${R} ${_.silver}${t.slice(0, 46)}${R}\n`)
+      } else if (queue) {
+        const t = tasks.filter(f => f.endsWith('.txt'))[0].replace(/\.txt$/, '')
+        out(`  ${_.cyan}⏳ PROCHAINE :${R} ${_.dark}${t.slice(0, 44)}${R}\n`)
+      } else {
+        out(`  ${_.dark}⟨◈⟩ Génération prochaine vague…${R}\n`)
+      }
+
+      // Lignes 6-12 : derniers logs
+      out(`\n`)
+      const lines = (logs || []).slice(-6)
+      for (const l of lines) {
+        const col = l.includes('pushed') ? _.green : l.includes('ERROR') ? _.red : l.includes('review') ? _.silver : l.includes('TASK') ? _.grey : _.dark
+        out(`  ${col}${l.replace(/\x1b\[[0-9;]*m/g,'').slice(0,W)}${R}\n`)
+      }
+      // Padding pour avoir toujours ROWS lignes fixes
+      const filled = 2 + procs.length + 5 + lines.length
+      for (let i = filled; i < ROWS; i++) out('\n')
+    }
+
+    while (running) {
+      try {
+        const [sRes, lRes] = await Promise.all([
+          fetch(`${DASH}/api/status`, { headers: { Authorization: authHeader }, signal: AbortSignal.timeout(5000) }).catch(() => null),
+          fetch(`${DASH}/api/logs?which=daemon`, { headers: { Authorization: authHeader }, signal: AbortSignal.timeout(5000) }).catch(() => null),
+        ])
+        const status = sRes?.ok ? await sRes.json().catch(() => null) : null
+        const logData = lRes?.ok ? await lRes.json().catch(() => null) : null
+
+        if (!status) {
+          clearPanel()
+          out(`\n  ${_.red}✗ Dashboard inaccessible — vérifie que le serveur tourne${R}\n`)
+          out(`  ${_.dark}Retry dans 4s… (Ctrl+C pour quitter)${R}\n\n`)
+          firstDraw = false
+        } else {
+          drawPanel(status, logData?.lines)
+        }
+      } catch {}
+      await sl(4000)
+    }
+
+    process.removeListener('SIGINT', onSigint)
+    line()
+    line(`  ${_.dark}⟨◈⟩ Watch terminé.${R}`)
+    line()
     return
   }
 
