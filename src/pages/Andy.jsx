@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import {
   ArrowLeft, Bot, Mic, MicOff, Send, Volume2, VolumeX,
-  Trash2, Copy, Check, Cpu, ChevronDown, ChevronUp, Zap, Maximize2, Minimize2,
+  Trash2, Copy, Check, ChevronDown, ChevronUp, Zap, Maximize2, Minimize2,
   Activity, GitCommit, TrendingUp, Shield,
 } from 'lucide-react'
 
@@ -737,34 +737,34 @@ function Bubble({ msg, onSpeak }) {
   const allTools = [...(msg.serverTools || []), ...(msg.clientActions || []).map(a => ({ ...a, isClient: true }))]
 
   if (isUser) return (
-    <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '3px 0' }}>
-      <div style={{ maxWidth: '78%', padding: '11px 15px', borderRadius: '18px 18px 4px 18px', background: 'linear-gradient(135deg, rgba(0,100,130,0.8) 0%, rgba(102,0,234,0.8) 100%)', border: '1px solid rgba(0,218,243,0.2)', color: '#dbe2f8', fontSize: 14.5, lineHeight: 1.55, wordBreak: 'break-word', backdropFilter: 'blur(8px)' }}>
+    <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 0' }}>
+      <div style={{ maxWidth: '80%', padding: '10px 16px', borderRadius: '18px 18px 4px 18px', background: '#000', border: '1px solid rgba(0,255,128,0.25)', color: '#00ff88', fontSize: 14.5, lineHeight: 1.6, wordBreak: 'break-word', fontFamily: "'SF Mono', 'Fira Code', monospace" }}>
         {msg.content}
       </div>
     </div>
   )
 
   return (
-    <div style={{ display: 'flex', gap: 10, padding: '3px 0', alignItems: 'flex-start' }}>
-      <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, marginTop: 2, background: 'linear-gradient(135deg, #00a3b8, #6600ea)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 10px rgba(0,218,243,0.25)' }}>
-        <Bot size={13} color="white" />
+    <div style={{ display: 'flex', gap: 10, padding: '6px 0', alignItems: 'flex-start' }}>
+      <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, marginTop: 2, background: '#000', border: '1px solid rgba(0,218,243,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 8px rgba(0,218,243,0.2)' }}>
+        <Bot size={13} color="#00daf3" />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         {allTools.length > 0 && <div style={{ marginBottom: 6 }}>{allTools.map((t, i) => <ToolCard key={t.id || i} name={t.name} input={t.input} result={t.result} />)}</div>}
         {(msg.content || msg.streaming) && (
-          <div style={{ background: 'rgba(19,28,43,0.6)', border: '1px solid rgba(132,147,150,0.1)', borderRadius: '4px 16px 16px 16px', padding: '12px 15px', fontSize: 14.5, color: '#dbe2f8', lineHeight: 1.6, wordBreak: 'break-word', backdropFilter: 'blur(12px)' }}>
+          <div style={{ background: '#000', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '4px 16px 16px 16px', padding: '12px 16px', fontSize: 14.5, color: '#f0f0f0', lineHeight: 1.7, wordBreak: 'break-word' }}>
             {msg.content ? renderContent(msg.content) : null}
             {msg.streaming && (
-              <span style={{ display: 'inline-block', width: 2, height: '1em', background: '#00daf3', marginLeft: 2, verticalAlign: 'text-bottom', animation: 'borderGlow 0.8s ease-in-out infinite alternate', borderRadius: 1 }} />
+              <span style={{ display: 'inline-block', width: 2, height: '1em', background: '#00daf3', marginLeft: 2, verticalAlign: 'text-bottom', animation: 'cursorBlink 0.9s ease-in-out infinite alternate', borderRadius: 1 }} />
             )}
           </div>
         )}
         {msg.content && !msg.streaming && (
           <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-            <button onClick={() => { navigator.clipboard.writeText(msg.content); setCopied(true); setTimeout(() => setCopied(false), 1500) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4b6070', padding: '2px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
-              {copied ? <><Check size={10} style={{ color: '#34d399' }} /> Copié</> : <><Copy size={10} /> Copier</>}
+            <button onClick={() => { navigator.clipboard.writeText(msg.content); setCopied(true); setTimeout(() => setCopied(false), 1500) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#333', padding: '2px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, transition: 'color 150ms' }} onMouseEnter={e => e.currentTarget.style.color='#888'} onMouseLeave={e => e.currentTarget.style.color='#333'}>
+              {copied ? <><Check size={10} style={{ color: '#00ff88' }} /> Copié</> : <><Copy size={10} /> Copier</>}
             </button>
-            <button onClick={() => onSpeak(msg.content)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4b6070', padding: '2px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
+            <button onClick={() => onSpeak(msg.content)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#333', padding: '2px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
               <Volume2 size={10} /> Écouter
             </button>
           </div>
@@ -815,23 +815,23 @@ function InputBar({ input, onInput, onSend, onMic, listening, interim, supported
   return (
     <div>
       {interim && <div style={{ fontSize: 12, color: '#00daf3', marginBottom: 7, padding: '5px 10px', background: 'rgba(0,218,243,0.08)', borderRadius: 8, border: '1px solid rgba(0,218,243,0.15)' }}>🎤 {interim}</div>}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', background: 'rgba(19,28,43,0.75)', border: `1px solid ${listening ? 'rgba(248,113,113,0.4)' : 'rgba(0,218,243,0.15)'}`, borderRadius: 18, padding: '8px 8px 8px 14px', backdropFilter: 'blur(20px)', boxShadow: '0 0 20px rgba(0,218,243,0.06)' }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', background: '#0a0a0a', border: `1px solid ${listening ? 'rgba(255,80,80,0.35)' : '#222'}`, borderRadius: 16, padding: '8px 8px 8px 14px' }}>
         <textarea
           ref={textareaRef}
           value={input}
           onChange={onInput}
           onKeyDown={onKeyDown}
-          placeholder={listening ? 'Écoute…' : 'Commande neurale… (Entrée)'}
+          placeholder={listening ? 'Écoute…' : 'Message…'}
           rows={1}
-          style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: '#dbe2f8', fontSize: 14, resize: 'none', lineHeight: 1.5, fontFamily: 'inherit', maxHeight: 120, overflowY: 'auto' }}
+          style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: '#f0f0f0', fontSize: 14, resize: 'none', lineHeight: 1.5, fontFamily: 'inherit', maxHeight: 120, overflowY: 'auto' }}
         />
         <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
           {supported && (
-            <button onClick={onMic} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: listening ? 'rgba(248,113,113,0.2)' : 'rgba(132,147,150,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: listening ? '#f87171' : '#4b6070', transition: 'all 200ms' }}>
+            <button onClick={onMic} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: listening ? 'rgba(255,80,80,0.15)' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: listening ? '#ff5050' : '#444', transition: 'all 200ms' }}>
               {listening ? <MicOff size={14} /> : <Mic size={14} />}
             </button>
           )}
-          <button onClick={onSend} disabled={!canSend} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: canSend ? 'linear-gradient(135deg, #007a90, #5500c0)' : 'rgba(132,147,150,0.06)', cursor: canSend ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', color: canSend ? '#c3f5ff' : '#374151', transition: 'all 200ms', boxShadow: canSend ? '0 0 14px rgba(0,218,243,0.3)' : 'none' }}>
+          <button onClick={onSend} disabled={!canSend} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: canSend ? '#00ff88' : '#111', cursor: canSend ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', color: canSend ? '#000' : '#333', transition: 'all 200ms', boxShadow: canSend ? '0 0 12px rgba(0,255,136,0.35)' : 'none' }}>
             <Send size={14} />
           </button>
         </div>
@@ -1113,31 +1113,16 @@ export default function Andy() {
 
       {/* ── Chat View ───────────────────────────────────────────────────────── */}
       {view === 'chat' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* Mini galaxy strip — tappable to go back */}
-          <div
-            onClick={() => setView('galaxy')}
-            style={{ height: 90, flexShrink: 0, position: 'relative', overflow: 'hidden', borderBottom: '1px solid rgba(132,147,150,0.08)', cursor: 'pointer' }}
-          >
-            <GalaxyCanvas exchanges={galaxyData.exchanges} active={loading} mini />
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(195,245,255,0.35)', letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: "'Space Grotesk', system-ui" }}>
-                  {galaxyData.exchanges} échanges · {Math.round(growth * 100)}% évolué
-                </div>
-                <div style={{ fontSize: 8, color: 'rgba(75,96,112,0.6)', marginTop: 1 }}>Toucher pour explorer</div>
-              </div>
-            </div>
-          </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#000' }}>
 
           {/* Messages */}
-          <div ref={listRef} style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', overscrollBehavior: 'contain' }}>
+          <div ref={listRef} style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 8px', overscrollBehavior: 'contain', background: '#000' }}>
             {messages.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#4b6070' }}>
-                <div style={{ fontSize: 13, marginBottom: 20 }}>Démarre une conversation</div>
+              <div style={{ textAlign: 'center', padding: '50px 20px' }}>
+                <div style={{ fontSize: 11, color: '#333', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 24 }}>AnDy · Prêt</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   {SUGGESTIONS.slice(0, 4).map((s, i) => (
-                    <button key={i} onClick={() => sendMessage(s.text)} style={{ background: 'rgba(19,28,43,0.5)', border: '1px solid rgba(132,147,150,0.1)', borderRadius: 12, padding: '10px 12px', cursor: 'pointer', textAlign: 'left', color: '#bac9cc', fontSize: 12, display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <button key={i} onClick={() => sendMessage(s.text)} style={{ background: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: 12, padding: '10px 12px', cursor: 'pointer', textAlign: 'left', color: '#555', fontSize: 12, display: 'flex', alignItems: 'center', gap: 7, transition: 'all 150ms' }} onMouseEnter={e => { e.currentTarget.style.borderColor='rgba(0,255,128,0.2)'; e.currentTarget.style.color='#888' }} onMouseLeave={e => { e.currentTarget.style.borderColor='#1a1a1a'; e.currentTarget.style.color='#555' }}>
                       <span style={{ fontSize: 15 }}>{s.icon}</span><span>{s.text}</span>
                     </button>
                   ))}
@@ -1146,13 +1131,15 @@ export default function Andy() {
             )}
             {messages.map((msg, i) => <Bubble key={i} msg={msg} onSpeak={speakText} />)}
             {loading && (
-              <div style={{ display: 'flex', gap: 10, padding: '3px 0', marginTop: 4 }}>
-                <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, #00a3b8, #6600ea)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 10px rgba(0,218,243,0.25)' }}>
-                  <Bot size={13} color="white" />
+              <div style={{ display: 'flex', gap: 10, padding: '6px 0', marginTop: 4 }}>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: '#000', border: '1px solid rgba(0,218,243,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Bot size={13} color="#00daf3" />
                 </div>
-                <div style={{ background: 'rgba(19,28,43,0.6)', border: '1px solid rgba(132,147,150,0.1)', borderRadius: '4px 16px 16px 16px', padding: '12px 16px', display: 'flex', gap: 5, alignItems: 'center' }}>
-                  <Cpu size={12} style={{ color: '#00daf3', animation: 'andySpin 1s linear infinite' }} />
-                  <span style={{ fontSize: 12, color: '#4b6070', fontFamily: "'Space Grotesk', system-ui", letterSpacing: '0.1em', textTransform: 'uppercase' }}>Synthèse en cours…</span>
+                <div style={{ background: '#000', border: '1px solid #1a1a1a', borderRadius: '4px 16px 16px 16px', padding: '12px 16px', display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <span style={{ display: 'inline-flex', gap: 3 }}>
+                    {[0,1,2].map(i => <span key={i} style={{ width: 4, height: 4, borderRadius: '50%', background: '#00daf3', animation: `dotPulse 1.2s ease-in-out ${i*0.2}s infinite` }} />)}
+                  </span>
+                  {toolStatus && <span style={{ fontSize: 11, color: '#00daf3', marginLeft: 4 }}>{toolStatus}</span>}
                 </div>
               </div>
             )}
@@ -1160,10 +1147,10 @@ export default function Andy() {
           </div>
 
           {/* Input */}
-          <div style={{ borderTop: '1px solid rgba(132,147,150,0.08)', padding: '10px 16px', paddingBottom: 'max(14px, env(safe-area-inset-bottom, 0px))', background: 'rgba(6,10,22,0.92)', backdropFilter: 'blur(20px)', flexShrink: 0 }}>
-            {toolStatus && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, padding: '5px 10px', background: 'rgba(0,218,243,0.06)', border: '1px solid rgba(0,218,243,0.15)', borderRadius: 8 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#00daf3', animation: 'ping 1.2s ease-in-out infinite', flexShrink: 0 }} />
+          <div style={{ borderTop: '1px solid #111', padding: '10px 16px', paddingBottom: 'max(14px, env(safe-area-inset-bottom, 0px))', background: '#000', flexShrink: 0 }}>
+            {toolStatus && !loading && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#00daf3' }} />
                 <span style={{ fontSize: 11, color: '#00daf3' }}>{toolStatus}</span>
               </div>
             )}
@@ -1191,6 +1178,8 @@ export default function Andy() {
 
       <style>{`
         @keyframes andySpin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
+        @keyframes cursorBlink { from { opacity: 1 } to { opacity: 0 } }
+        @keyframes dotPulse { 0%,80%,100% { opacity: 0.2; transform: scale(0.8) } 40% { opacity: 1; transform: scale(1) } }
       `}</style>
     </div>
   )
