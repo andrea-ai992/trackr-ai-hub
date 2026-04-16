@@ -11,12 +11,13 @@ import dotenv from 'dotenv'
 const __dir = dirname(fileURLToPath(import.meta.url))
 dotenv.config({ path: `${__dir}/.env` })
 
-const BOT_TOKEN  = process.env.DISCORD_BOT_TOKEN
-const GUILD_ID   = process.env.DISCORD_GUILD_ID
-const APP_URL    = process.env.APP_URL || process.env.VERCEL_URL || 'https://trackr-app-nu.vercel.app'
-const PORT       = process.env.PORT || 3099
-const API        = 'https://discord.com/api/v10'
-const BOT_START  = Date.now()  // ignore messages older than this
+const BOT_TOKEN       = process.env.DISCORD_BOT_TOKEN
+const GUILD_ID        = process.env.DISCORD_GUILD_ID
+const APP_URL         = process.env.APP_URL || process.env.VERCEL_URL || 'https://trackr-app-nu.vercel.app'
+const ANTHROPIC_KEY   = process.env.ANTHROPIC_API_KEY
+const PORT            = process.env.PORT || 3099
+const API             = 'https://discord.com/api/v10'
+const BOT_START       = Date.now()  // ignore messages older than this
 
 // Extract creation timestamp from Discord snowflake ID
 function snowflakeMs(id) {
@@ -242,33 +243,81 @@ async function handleAdmin(text, userId) {
   return null
 }
 
-// ─── Call fast /api/chat (Claude Haiku JSON — 2-4s) ──────────────────────────
-async function callChat(message, channelName = '', mode = 'default', systemNote = null) {
+// ─── Claude direct streaming — updates Discord message live as tokens arrive ──
+const SYSTEM_BASE = `Tu es AnDy, l'IA personnelle d'Andrea. Tu réponds dans Discord.
+Règles: réponse COURTE (max 3-4 paragraphes), directe, utile. Pas d'intro inutile.
+Langue: français sauf si on te parle anglais.`
+
+async function callChat(message, channelName = '', mode = 'default', systemNote = null, onChunk = null) {
+  const system = systemNote || (
+    mode === 'think' ? `DEEP THINKING: Raisonne étape par étape avant de conclure.\n${SYSTEM_BASE}` :
+    mode === 'web'   ? `RECHERCHE MODE: Précise ce que tu sais vs ce qui pourrait avoir changé.\n${SYSTEM_BASE}` :
+    `${SYSTEM_BASE}\nChannel: #${channelName || 'discord'}`
+  )
+
   try {
-    const res = await fetch(`${APP_URL}/api/chat`, {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, channelName, mode, systemNote }),
-      signal: AbortSignal.timeout(mode === 'think' ? 58000 : 12000),
+      headers: {
+        'x-api-key': ANTHROPIC_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: mode === 'think' ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001',
+        max_tokens: mode === 'think' ? 2000 : 800,
+        stream: true,
+        system,
+        messages: [{ role: 'user', content: message }],
+      }),
+      signal: AbortSignal.timeout(mode === 'think' ? 55000 : 15000),
     })
+
     if (!res.ok) {
-      console.error(`callChat HTTP ${res.status}`)
-      return `❌ Erreur (${res.status}) — réessaie.`
+      const err = await res.text()
+      console.error('Claude API error:', res.status, err.slice(0, 100))
+      return `❌ Erreur Claude (${res.status})`
     }
-    const d = await res.json()
-    return d.reply?.trim() || null
+
+    const reader = res.body.getReader()
+    const dec = new TextDecoder()
+    let buf = '', text = '', lastEdit = 0
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buf += dec.decode(value, { stream: true })
+      const lines = buf.split('\n'); buf = lines.pop()
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        try {
+          const ev = JSON.parse(line.slice(6))
+          if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
+            text += ev.delta.text
+            // Update Discord message every 800ms while streaming
+            const now = Date.now()
+            if (onChunk && text.length > 20 && now - lastEdit > 800) {
+              lastEdit = now
+              onChunk(text + ' ▌').catch(() => {})
+            }
+          }
+        } catch {}
+      }
+    }
+
+    return text.trim().slice(0, 1990) || null
   } catch (e) {
     if (e.name === 'TimeoutError' || e.name === 'AbortError')
-      return '⏱️ Timeout — essaie `!think` pour les questions complexes.'
+      return '⏱️ Timeout — réessaie ou utilise `!think` pour une analyse longue.'
     console.error('callChat:', e.message)
     return null
   }
 }
 
-// ─── Legacy AnDy SSE fallback (think mode only) ───────────────────────────────
-async function callAnDy(message, channelName = '', mode = 'default', customSystemNote = null) {
-  // Use fast /api/chat for everything now
-  return callChat(message, channelName, mode, customSystemNote)
+// callAnDy kept for compatibility
+async function callAnDy(message, channelName = '', mode = 'default', systemNote = null, onChunk = null) {
+  return callChat(message, channelName, mode, systemNote, onChunk)
 }
 
 // ─── Call trading expert ──────────────────────────────────────────────────────
@@ -392,7 +441,10 @@ Réponds en 2 parties COURTES:
 2. 📋 2-3 prochaines étapes concrètes (bullets)
 Max 150 mots.`
 
-    const andyReply = await callChat(cleanContent, channelName, 'default', systemNote)
+    const onChunk = placeholder?.id
+      ? (partial) => editMessage(msg.channel_id, placeholder.id, `✅ **Tâche créée**: ${taskDesc}\n\n${partial}`)
+      : null
+    const andyReply = await callChat(cleanContent, channelName, 'default', systemNote, onChunk)
     const fullReply = [
       `✅ **Tâche créée**: ${taskDesc}`,
       `> Prise en compte au prochain cycle IA.`,
@@ -427,10 +479,15 @@ Max 150 mots.`
   try {
     let reply = null
 
+    // Live streaming callback — edits placeholder as tokens arrive
+    const onChunk = placeholder?.id
+      ? (partial) => editMessage(msg.channel_id, placeholder.id, partial)
+      : null
+
     if (route.agent === 'trading' && mode === 'default') {
       reply = await callTrading(cleanContent)
     } else {
-      reply = await callChat(cleanContent, channelName, mode)
+      reply = await callChat(cleanContent, channelName, mode, null, onChunk)
     }
 
     if (mode === 'think' && reply) reply = `🧠 **Thinking Mode**\n\n${reply}`
