@@ -54,6 +54,7 @@ async function askBrain(systemPrompt, userPrompt) {
       system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content: userPrompt }],
     }),
+    signal: AbortSignal.timeout(30000),
   })
   if (!r.ok) throw new Error(`Claude API → ${r.status}`)
   const d = await r.json()
@@ -68,6 +69,7 @@ async function ghGet(path) {
       Accept: 'application/vnd.github.v3+json',
       'User-Agent': 'TrackrBrain/1.0',
     },
+    signal: AbortSignal.timeout(10000),
   })
   if (!r.ok) return null
   return r.json()
