@@ -49,6 +49,8 @@ async function getQuickSignal(symbol, type) {
           !ct.includes('application/x-www-form-urlencoded')
         ) {
           console.warn(`Yahoo Finance ${symbol}: unexpected content-type "${ct}" (possible SSE/stream), skipping .json()`)
+          // Consume and discard the body to avoid resource leaks
+          await r.body?.cancel().catch(() => {})
           return null
         }
         try {
