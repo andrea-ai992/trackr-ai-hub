@@ -42,8 +42,13 @@ async function getQuickSignal(symbol, type) {
       .then(async r => {
         const ct = r.headers.get('content-type') || ''
         if (!r.ok) { console.warn(`Yahoo Finance ${symbol}: HTTP ${r.status}`); return null }
-        if (!ct.includes('application/json') && !ct.includes('text/json') && !ct.includes('text/plain')) {
-          console.warn(`Yahoo Finance ${symbol}: unexpected content-type "${ct}", skipping .json()`)
+        if (
+          !ct.includes('application/json') &&
+          !ct.includes('text/json') &&
+          !ct.includes('text/plain') &&
+          !ct.includes('application/x-www-form-urlencoded')
+        ) {
+          console.warn(`Yahoo Finance ${symbol}: unexpected content-type "${ct}" (possible SSE/stream), skipping .json()`)
           return null
         }
         try {
