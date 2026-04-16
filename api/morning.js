@@ -78,6 +78,11 @@ async function fetchStockQuoteYahoo(symbol) {
     { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(6000) }
   )
   if (!r.ok) return null
+  const ct = r.headers.get('content-type') || ''
+  if (!ct.includes('application/json') && !ct.includes('text/json')) {
+    console.warn(`Yahoo Finance ${symbol}: unexpected content-type "${ct}", skipping .json()`)
+    return null
+  }
   const data = await r.json()
   const meta = data?.chart?.result?.[0]?.meta
   if (!meta?.regularMarketPrice) return null
