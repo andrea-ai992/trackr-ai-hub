@@ -173,7 +173,6 @@ async function callClaude(message, { channelName = '', mode = 'default', systemN
     })
 
     if (!res.ok) {
-      const err = await res.text()
       // Debug: log exact key bytes being sent
       const keyBytes = Buffer.from(ANTHROPIC_KEY).toString('hex').slice(0, 20)
       console.error(`Claude ${res.status} | key-hex-start: ${keyBytes} | key-len: ${ANTHROPIC_KEY.length}`)
@@ -481,20 +480,8 @@ async function pollAll() {
   }
 }
 
-// ─── HTTP health check ────────────────────────────────────────────────────────
-http.createServer((req, res) => {
-  res.writeHead(200, { 'Content-Type': 'application/json' })
-  res.end(JSON.stringify({
-    status: 'online', version: '4.0',
-    channels: { active: monitoredChannels.size, dead: deadChannels.size },
-    admins: [...ADMIN_IDS],
-    uptime: Math.floor(process.uptime()),
-    ts: new Date().toISOString(),
-  }))
-}).listen(PORT, () => console.log(`🌐 Health: http://localhost:${PORT}`))
-
-// ─── Andrea's portfolio ───────────────────────────────────────────────────────
-const PORTFOLIO = [
+// ─── Portfolios séparés ───────────────────────────────────────────────────────
+const STOCKS_PORTFOLIO = [
   { ticker: 'WM',   name: 'Waste Management',  sector: 'Industrials/Defensive' },
   { ticker: 'CRWD', name: 'CrowdStrike',        sector: 'Cybersecurity' },
   { ticker: 'NVDA', name: 'Nvidia',             sector: 'AI/Semiconductors' },
@@ -510,12 +497,14 @@ const PORTFOLIO = [
   { ticker: 'TEM',  name: 'Tempus AI',          sector: 'AI Healthcare' },
 ]
 
-// ─── Daily market brief ───────────────────────────────────────────────────────
-const MARKET_CH_IDS = {
-  scanner:    process.env.DISCORD_CH_MARKET_SCANNER || '',
-  oracle:     process.env.DISCORD_CH_ORACLE         || '',
-  trading:    process.env.DISCORD_CH_TRADING_DESK   || '',
-}
+const CRYPTO_PORTFOLIO = [
+  { ticker: 'BTC',  name: 'Bitcoin',   },
+  { ticker: 'ETH',  name: 'Ethereum',  },
+  { ticker: 'SOL',  name: 'Solana',    },
+  { ticker: 'BNB',  name: 'BNB',       },
+  { ticker: 'AVAX', name: 'Avalanche', },
+  { ticker: 'LINK', name: 'Chainlink', },
+]
 
 async function postToChannel(channelId, content) {
   if (!channelId) return
@@ -526,101 +515,143 @@ async function postToChannel(channelId, content) {
   } catch (e) { console.error('postToChannel:', e.message) }
 }
 
-async function generateMarketBrief(isScheduled = false) {
+// Find channel ID by name in monitored channels
+function findChannel(...names) {
+  for (const [id, ch] of monitoredChannels) {
+    if (names.includes(ch.name)) return id
+  }
+  return null
+}
+
+// ─── Brief actions (NYSE/NASDAQ) ──────────────────────────────────────────────
+async function generateStocksBrief() {
   const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/New_York' })
-  const tickers = PORTFOLIO.map(p => `${p.ticker} (${p.name})`).join(', ')
+  const tickers = STOCKS_PORTFOLIO.map(p => `${p.ticker} (${p.name})`).join(', ')
 
-  const prompt = `Analyse pré-marché pour Andrea — ${today}
+  const prompt = `Analyse pré-marché ACTIONS pour Andrea — ${today}
 
-Son portfolio: ${tickers}
+Son portfolio actions: ${tickers}
 
-Fais une analyse COMPLÈTE style expert hedge fund:
+Fais une analyse style expert hedge fund:
 
-1. **MACRO DU JOUR** — contexte global (taux, Fed, dollar, VIX, futures)
-2. **SETUP TECHNIQUE PAR ACTION** — pour chaque ticker:
-   - Tendance (haussière/baissière/neutre)
-   - Niveaux clés S/R à surveiller
-   - Point d'entrée optimal si opportunité
-   - Signal du jour (achat/vente/attente)
-3. **TOP 3 CALLS DU JOUR** — les 3 meilleures opportunités avec entry/stop/target
-4. **RISQUES À SURVEILLER** — news, earnings, macro
+1. **MACRO DU JOUR** — contexte global (taux, Fed, dollar, VIX, futures S&P/Nasdaq)
+2. **SETUP PAR ACTION** — pour chaque ticker: tendance + niveau S/R clé + signal (achat/vente/attente)
+3. **TOP 3 OPPORTUNITÉS** — les 3 meilleurs setups du jour avec entry/stop/target
+4. **RISQUES** — earnings à venir, macro, news sectorielles
 
-Format Discord: utilise **gras**, emojis et sections claires. Max 1800 chars.
+Format Discord: **gras**, emojis, sections claires. Max 1800 chars.
 Note ta date de coupure si tu ne peux pas confirmer les prix actuels.`
 
-  console.log('📊 Generating market brief...')
-  const analysis = await callClaude(prompt, {
-    channelName: 'market-scanner',
-    mode: 'think',
-    systemNote: SYSTEM.trading(),
-  })
+  console.log('📈 Generating stocks brief...')
+  const analysis = await callClaude(prompt, { channelName: 'market-scanner', mode: 'think', systemNote: SYSTEM.trading() })
+  if (!analysis) { console.error('Stocks brief failed'); return null }
 
-  if (!analysis) { console.error('Market brief generation failed'); return }
-
-  const header = `📊 **BRIEF PRÉ-MARCHÉ — ${today.toUpperCase()}**\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n`
+  const header = `📈 **TRADING ACTIONS — ${today.toUpperCase()}**\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n`
   const full = (header + analysis).slice(0, 1990)
 
-  // Post to market channels
-  const channelId = process.env.DISCORD_CH_MARKET_SCANNER
+  const channelId = process.env.DISCORD_CH_MARKET_SCANNER || findChannel('market-scanner', 'trading-desk', 'trading')
   if (channelId) {
     await postToChannel(channelId, full)
-    console.log('✅ Market brief posted to #market-scanner')
-  } else {
-    // Fallback: find market-scanner in monitored channels
-    for (const [id, ch] of monitoredChannels) {
-      if (ch.name === 'market-scanner' || ch.name === 'oracle-predictions') {
-        await postToChannel(id, full)
-        console.log(`✅ Market brief posted to #${ch.name}`)
-        break
-      }
-    }
+    console.log('✅ Stocks brief posted')
   }
 
-  // Also notify via Vercel morning endpoint for app push notification
-  fetch(`${APP_URL}/api/morning?type=market&brief=${encodeURIComponent(analysis.slice(0,500))}`, {
-    signal: AbortSignal.timeout(5000)
-  }).catch(() => {})
-
+  fetch(`${APP_URL}/api/morning?type=stocks&brief=${encodeURIComponent(analysis.slice(0, 400))}`, { signal: AbortSignal.timeout(5000) }).catch(() => {})
   return full
 }
 
-// Schedule daily market brief — 8:30am ET (14:30 UTC / 16:30 Paris)
+// ─── Brief crypto ─────────────────────────────────────────────────────────────
+async function generateCryptoBrief() {
+  const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/New_York' })
+  const tickers = CRYPTO_PORTFOLIO.map(p => `${p.ticker} (${p.name})`).join(', ')
+
+  const prompt = `Analyse crypto pour Andrea — ${today}
+
+Cryptos à analyser: ${tickers}
+
+Fais une analyse style expert crypto:
+
+1. **DOMINANCE & MACRO CRYPTO** — BTC dominance, liquidités, sentiment marché (Fear & Greed), tendance globale
+2. **SETUP PAR COIN** — pour chaque crypto: tendance + support/résistance clé + signal (long/short/attente)
+3. **TOP 3 TRADES** — les 3 meilleures opportunités avec entry/stop/target
+4. **RISQUES** — news crypto, régulation, on-chain signals, corrélation BTC
+
+Format Discord: **gras**, emojis, sections claires. Max 1800 chars.
+Note ta date de coupure si tu ne peux pas confirmer les prix actuels.`
+
+  console.log('🪙 Generating crypto brief...')
+  const analysis = await callClaude(prompt, { channelName: 'crypto', mode: 'think', systemNote: SYSTEM.trading() })
+  if (!analysis) { console.error('Crypto brief failed'); return null }
+
+  const header = `🪙 **TRADING CRYPTO — ${today.toUpperCase()}**\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n`
+  const full = (header + analysis).slice(0, 1990)
+
+  const channelId = process.env.DISCORD_CH_CRYPTO || findChannel('crypto', 'bitcoin', 'defi')
+  if (channelId) {
+    await postToChannel(channelId, full)
+    console.log('✅ Crypto brief posted')
+  }
+
+  fetch(`${APP_URL}/api/morning?type=crypto&brief=${encodeURIComponent(analysis.slice(0, 400))}`, { signal: AbortSignal.timeout(5000) }).catch(() => {})
+  return full
+}
+
+// ─── Scheduler briefs — 8:30am ET (actions) + 8:00am ET (crypto, 24/7) ───────
 function scheduleDailyBrief() {
   const now = new Date()
-  const et = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }))
-  const target = new Date(et)
-  target.setHours(8, 30, 0, 0)
-  if (et >= target) target.setDate(target.getDate() + 1)
-  // Skip weekends
-  while (target.getDay() === 0 || target.getDay() === 6) target.setDate(target.getDate() + 1)
+  const et  = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }))
 
-  const msUntil = target - et
-  console.log(`📅 Next market brief in ${Math.round(msUntil/3600000)}h (8:30am ET)`)
-  setTimeout(async () => {
-    await generateMarketBrief(true)
-    scheduleDailyBrief()  // reschedule for next day
-  }, msUntil)
+  // Stocks: 8:30am ET, weekdays only
+  const stocksTarget = new Date(et)
+  stocksTarget.setHours(8, 30, 0, 0)
+  if (et >= stocksTarget) stocksTarget.setDate(stocksTarget.getDate() + 1)
+  while (stocksTarget.getDay() === 0 || stocksTarget.getDay() === 6) stocksTarget.setDate(stocksTarget.getDate() + 1)
+
+  // Crypto: 8:00am ET, every day (marché 24/7)
+  const cryptoTarget = new Date(et)
+  cryptoTarget.setHours(8, 0, 0, 0)
+  if (et >= cryptoTarget) cryptoTarget.setDate(cryptoTarget.getDate() + 1)
+
+  console.log(`📅 Next stocks brief in ${Math.round((stocksTarget - et)/3600000)}h (8:30am ET, weekdays)`)
+  console.log(`📅 Next crypto brief in ${Math.round((cryptoTarget - et)/3600000)}h (8:00am ET, daily)`)
+
+  setTimeout(async () => { await generateStocksBrief(); scheduleDailyBrief() }, stocksTarget - et)
+  setTimeout(async () => { await generateCryptoBrief(); scheduleDailyBrief() }, cryptoTarget - et)
 }
 
 // ─── HTTP health check ────────────────────────────────────────────────────────
 http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost')
 
-  // Manual trigger: GET /brief
+  if (url.pathname === '/brief/stocks') {
+    res.writeHead(200, { 'Content-Type': 'text/plain' })
+    res.end('Generating stocks brief...')
+    generateStocksBrief().catch(console.error)
+    return
+  }
+
+  if (url.pathname === '/brief/crypto') {
+    res.writeHead(200, { 'Content-Type': 'text/plain' })
+    res.end('Generating crypto brief...')
+    generateCryptoBrief().catch(console.error)
+    return
+  }
+
+  // Legacy /brief → stocks
   if (url.pathname === '/brief') {
     res.writeHead(200, { 'Content-Type': 'text/plain' })
     res.end('Generating brief...')
-    generateMarketBrief(false).catch(console.error)
+    generateStocksBrief().catch(console.error)
     return
   }
 
   res.writeHead(200, { 'Content-Type': 'application/json' })
   res.end(JSON.stringify({
-    status: 'online', version: '4.0',
+    status: 'online', version: '4.1',
     channels: { active: monitoredChannels.size, dead: deadChannels.size },
     admins: [...ADMIN_IDS],
     uptime: Math.floor(process.uptime()),
-    portfolio: PORTFOLIO.map(p => p.ticker),
+    stocks: STOCKS_PORTFOLIO.map(p => p.ticker),
+    crypto: CRYPTO_PORTFOLIO.map(p => p.ticker),
     ts: new Date().toISOString(),
   }))
 }).listen(PORT, () => console.log(`🌐 Health: http://localhost:${PORT}`))
