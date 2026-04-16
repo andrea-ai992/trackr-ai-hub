@@ -1,47 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776341222159",
-      "timestamp": "2026-04-16T12:07:02.159Z",
-      "type": "pattern_scan",
-      "focus": "bugs",
-      "findings": [
-        {
-          "id": "sse_json_parse",
-          "file": "api/discord.js",
-          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
-          "severity": "critical"
-        },
-        {
-          "id": "vercel_url_empty",
-          "file": "api/brain.js",
-          "description": "Using VERCEL_URL which is empty in production — use APP_URL instead",
-          "severity": "high"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/andy.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/brain.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/trading-expert.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        }
-      ],
-      "count": 5,
-      "applied": false,
-      "note": "Patterns detected before Claude analysis — guiding fix priority"
-    },
-    {
       "id": "mem_1776341223647",
       "timestamp": "2026-04-16T12:07:03.647Z",
       "type": "error",
@@ -3214,6 +3173,20 @@
       "learned": "Yahoo Finance peut retourner text/event-stream ou d'autres content-types non-JSON, il faut toujours wrapper .json() dans un try/catch ET vérifier le content-type avant d'appeler .json().",
       "applied": true,
       "fromAdminTask": null
+    },
+    {
+      "id": "mem_1776350543315",
+      "timestamp": "2026-04-16T14:42:23.315Z",
+      "type": "brain_cycle",
+      "hour": 14,
+      "successRate": 0,
+      "agentsRan": 4,
+      "improved": false,
+      "improvedFile": null,
+      "focus": "bugs",
+      "errors": 0,
+      "appHealthy": true,
+      "duration": 25
     }
   ]
 }
