@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Plane, Languages, Footprints, FolderOpen, Settings2, Plus, X,
-  TrendingUp, Bitcoin, ChevronRight, Sparkles, Lock, LayoutDashboard, Bot, Radio, Brain, Shield
+  TrendingUp, Bitcoin, ChevronRight, Sparkles, Lock, LayoutDashboard, Bot, Radio, Brain, Shield, Watch
 } from 'lucide-react'
 
 // All available modules
@@ -73,6 +73,18 @@ const ALL_MODULES = [
     desc: 'Collection & resell tracker',
     color: '#8b5cf6',
     glow: 'rgba(139,92,246,0.2)',
+    builtIn: true,
+  },
+  {
+    id: 'watches',
+    to: '/watches',
+    icon: Watch,
+    label: 'Montres',
+    desc: 'Collection · Prix Chrono24 en live',
+    color: '#c9a84c',
+    glow: 'rgba(201,168,76,0.2)',
+    badge: 'Live',
+    badgeColor: '#c9a84c',
     builtIn: true,
   },
   {

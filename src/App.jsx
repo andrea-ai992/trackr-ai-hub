@@ -17,6 +17,7 @@ import Translator from './pages/Translator'
 import Settings from './pages/Settings'
 import CategoryPage from './pages/CategoryPage'
 import Sneakers from './pages/Sneakers'
+import Watches from './pages/Watches'
 import Portfolio from './pages/Portfolio'
 import Widget from './pages/Widget'
 import Sports from './pages/Sports'
@@ -44,14 +45,14 @@ function getTabIndex(path) {
   if (path.startsWith('/news')) return 3
   if (
     path.startsWith('/more') || path.startsWith('/translator') ||
-    path.startsWith('/settings') || path.startsWith('/sneakers') ||
+    path.startsWith('/settings') || path.startsWith('/sneakers') || path.startsWith('/watches') ||
     path.startsWith('/portfolio') || path.startsWith('/category') ||
     path.startsWith('/flights')
   ) return 4
   return -1
 }
 
-const DETAIL_PREFIXES = ['/stocks/', '/crypto/', '/translator', '/settings', '/sneakers', '/portfolio', '/category/', '/flights', '/andy', '/agents', '/brain', '/admin']
+const DETAIL_PREFIXES = ['/stocks/', '/crypto/', '/translator', '/settings', '/sneakers', '/watches', '/portfolio', '/category/', '/flights', '/andy', '/agents', '/brain', '/admin']
 
 // Module-level so it persists across PageTransition renders without remounting
 let _prevPath = '/'
@@ -183,6 +184,7 @@ function AppInner() {
               <Route path="/translator" element={<ProtectedRoute><Translator /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/sneakers" element={<ProtectedRoute><Sneakers /></ProtectedRoute>} />
+              <Route path="/watches" element={<ProtectedRoute><Watches /></ProtectedRoute>} />
               <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
               <Route path="/category/:id" element={<ProtectedRoute><CategoryPage /></ProtectedRoute>} />
               <Route path="/sports" element={<ProtectedRoute><Sports /></ProtectedRoute>} />
