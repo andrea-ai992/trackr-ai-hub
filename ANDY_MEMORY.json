@@ -1,14 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776342120356",
-      "timestamp": "2026-04-16T12:22:00.356Z",
-      "type": "error",
-      "focus": "security",
-      "error": "Anthropic API → 400",
-      "applied": false
-    },
-    {
       "id": "mem_1776342121165",
       "timestamp": "2026-04-16T12:22:01.165Z",
       "type": "brain_cycle",
@@ -3240,6 +3232,19 @@
       "count": 4,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776351443489",
+      "timestamp": "2026-04-16T14:57:23.489Z",
+      "type": "improvement",
+      "focus": "bugs",
+      "file": "api/trading-expert.js",
+      "problem": "api/trading-expert.js fetch() calls without AbortSignal.timeout() — can hang indefinitely",
+      "severity": "medium",
+      "commit": "fix: guard against SSE/non-JSON responses in trading-expert fetchStockData",
+      "learned": "The Yahoo Finance SSE content-type bug (already fixed in discord.js and morning.js) was not yet applied to trading-expert.js's fetchStockData(), leaving it vulnerable to the same crash when Yahoo returns text/event-stream instead of JSON.",
+      "applied": true,
+      "fromAdminTask": null
     }
   ]
 }
