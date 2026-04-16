@@ -5,7 +5,11 @@
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
 
+import { securityCheck } from './_security.js'
+
 export default async function handler(req, res) {
+  const blocked = securityCheck(req, res, { route: '/api/business-plan', rateMax: 15, maxBodyKB: 30, checkInjection: true })
+  if (blocked) return
   if (req.method === 'GET') {
     const action = req.query?.action
     if (action === 'ideas') return generateIdeas(req, res)

@@ -6,6 +6,8 @@
 // - Oversized payloads
 // - CORS abuse
 // - Bot/scanner detection
+// - Malicious code injection via self-improve
+// - Compromised internal calls
 
 // ─── In-memory rate limiter (resets per serverless instance) ─────────────────
 const rateLimitMap = new Map()
@@ -51,11 +53,57 @@ const INJECTION_PATTERNS = [
   /\bsystem prompt\b.*\bignore\b/i,
   /\bDAN\b|\bjailbreak\b|\bunfiltered\b/i,
   /act as (an?|your) (evil|unrestricted|uncensored)/i,
+  /override.*security|bypass.*auth|disable.*filter/i,
+  /\bexfiltrate\b|\bexfil\b|\bdata theft\b/i,
 ]
 
 function detectInjection(text) {
   if (typeof text !== 'string') return false
   return INJECTION_PATTERNS.some(p => p.test(text))
+}
+
+// ─── Dangerous code patterns (for self-improve safety scan) ──────────────────
+const DANGEROUS_CODE_PATTERNS = [
+  // Shell execution
+  { pattern: /\bexec\s*\(|child_process|spawn\s*\(|execSync/,       label: 'shell execution' },
+  { pattern: /\brm\s+-rf\b|rimraf|deleteRecursive/,                  label: 'recursive delete' },
+  // Crypto miners / outbound exfil
+  { pattern: /\bcrypto\s*\.createHash.*secret|miner|cryptonight/i,   label: 'crypto miner pattern' },
+  { pattern: /fetch\(['"`]https?:\/\/(?!api\.(anthropic|coingecko|discord|github)\.com|query\d?\.finance\.yahoo)/i, label: 'unexpected outbound URL' },
+  // Credential access
+  { pattern: /process\.env\b.*(?:secret|token|key|pass|auth).*\blog\b/i, label: 'logging credentials' },
+  { pattern: /console\.(log|warn|error).*process\.env/i,             label: 'env var leak to logs' },
+  // Code execution tricks
+  { pattern: /\beval\s*\(|\bnew\s+Function\s*\(/,                    label: 'dynamic code execution' },
+  { pattern: /atob\s*\(|btoa\s*\(.*eval/i,                          label: 'base64 + eval pattern' },
+  // Self-modification guard
+  { pattern: /_security\.js|self-improve\.js/,                       label: 'modifying security files' },
+]
+
+// Returns array of findings — empty means safe
+export function scanCodeSafety(code) {
+  if (typeof code !== 'string') return []
+  return DANGEROUS_CODE_PATTERNS
+    .filter(({ pattern }) => pattern.test(code))
+    .map(({ label }) => label)
+}
+
+// ─── CRON / internal endpoint protection ─────────────────────────────────────
+// Returns true if blocked (caller should return immediately)
+export function requireCronSecret(req, res) {
+  const secret = process.env.CRON_SECRET
+  if (!secret) return false  // not configured — skip (dev mode)
+
+  const provided =
+    req.headers['x-cron-secret'] ||
+    req.headers['authorization']?.replace('Bearer ', '') ||
+    req.query?.secret
+
+  if (provided !== secret) {
+    res.status(401).json({ error: 'Unauthorized — CRON_SECRET required' })
+    return true
+  }
+  return false
 }
 
 // ─── Get client IP ────────────────────────────────────────────────────────────
@@ -84,13 +132,14 @@ export function setCORSHeaders(req, res) {
 }
 
 // ─── Main security check ─────────────────────────────────────────────────────
-// Returns null if OK, or { status, error } if blocked
+// Returns null if OK, or truthy if blocked
 export function securityCheck(req, res, options = {}) {
   const {
     maxBodyKB = 50,          // max payload size in KB
     rateWindowMs = 60_000,   // 1 minute window
-    rateMax = 30,            // max requests per window (generous for API)
+    rateMax = 30,            // max requests per window
     checkInjection = false,  // enable prompt injection check
+    cronOnly = false,        // restrict to cron/internal calls only
     route = req.url,
   } = options
 
@@ -102,6 +151,11 @@ export function securityCheck(req, res, options = {}) {
     return { preflight: true }
   }
 
+  // Cron-only endpoints require CRON_SECRET
+  if (cronOnly && requireCronSecret(req, res)) {
+    return { blocked: true }
+  }
+
   // Check origin for browser requests
   const origin = req.headers.origin
   if (origin && !isAllowedOrigin(origin)) {
@@ -111,7 +165,7 @@ export function securityCheck(req, res, options = {}) {
 
   // Block obviously malicious user agents
   const ua = req.headers['user-agent'] || ''
-  const badAgents = /sqlmap|nikto|masscan|nmap|zgrab|burpsuite|dirbuster/i
+  const badAgents = /sqlmap|nikto|masscan|nmap|zgrab|burpsuite|dirbuster|curl\/7\.[0-4]/i
   if (badAgents.test(ua)) {
     res.status(403).json({ error: 'Forbidden' })
     return { blocked: true }

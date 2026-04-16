@@ -4,7 +4,7 @@
 // POST { message, channelName, mode, systemNote }
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
-const APP_URL = process.env.APP_URL || 'https://trackr-app-nu.vercel.app'
+
 
 const BASE_SYSTEM = `Tu es AnDy, l'IA personnelle d'Andrea. Tu réponds dans Discord.
 
@@ -15,7 +15,11 @@ Règles absolues:
 - Tu réponds à TOUT: finance, crypto, immobilier, business, vie quotidienne, questions random, faits en live.
 - Si tu ne sais pas quelque chose de récent, dis-le clairement en une phrase.`
 
+import { securityCheck } from './_security.js'
+
 export default async function handler(req, res) {
+  const blocked = securityCheck(req, res, { route: '/api/chat', rateMax: 30, maxBodyKB: 20, checkInjection: true })
+  if (blocked) return
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' })
 
   const { message = '', channelName = '', mode = 'default', systemNote = '' } = req.body || {}

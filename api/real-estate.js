@@ -7,7 +7,11 @@
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
 const APP_URL = process.env.APP_URL || 'https://trackr-app-nu.vercel.app'
 
+import { securityCheck } from './_security.js'
+
 export default async function handler(req, res) {
+  const blocked = securityCheck(req, res, { route: '/api/real-estate', rateMax: 20, maxBodyKB: 30, checkInjection: true })
+  if (blocked) return
   const action = req.query?.action || (req.method === 'POST' ? 'analyze' : 'price')
 
   if (action === 'price') return handlePrice(req, res)

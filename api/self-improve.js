@@ -330,6 +330,12 @@ async function applyImprovement(improvement, fileContent, fileSha) {
     throw new Error('Cannot modify self-improve.js or memory.js')
   }
 
+  // Safety scan — block dangerous patterns before committing
+  const threats = scanCodeSafety(new_code)
+  if (threats.length > 0) {
+    throw new Error(`Code safety scan failed: ${threats.join(', ')}`)
+  }
+
   // Verify old_code actually exists in the file
   if (!fileContent.includes(old_code.trim())) {
     throw new Error(`old_code not found in ${file} — skipping to avoid corruption`)
@@ -347,17 +353,11 @@ async function applyImprovement(improvement, fileContent, fileSha) {
 }
 
 // ─── Main handler ─────────────────────────────────────────────────────────────
+import { requireCronSecret, scanCodeSafety } from './_security.js'
+
 export default async function handler(req, res) {
-  // Auth : GET libre (pour tests manuels), POST/cron vérifient le secret
-  const CRON_SECRET = process.env.CRON_SECRET
-  if (CRON_SECRET && req.method !== 'GET') {
-    const provided = req.headers['x-cron-secret']
-      || req.headers['authorization']?.replace('Bearer ', '')
-      || req.query?.secret
-    if (provided !== CRON_SECRET) {
-      return res.status(401).json({ error: 'Unauthorized' })
-    }
-  }
+  // Auth : CRON_SECRET requis sur toutes les méthodes — aucun accès libre
+  if (requireCronSecret(req, res)) return
 
   const focus    = req.query?.focus || 'bugs'
   const dryRun   = req.query?.dry === 'true'
