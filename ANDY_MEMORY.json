@@ -1,19 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776351133068",
-      "timestamp": "2026-04-16T14:52:13.068Z",
-      "type": "improvement",
-      "focus": "bugs",
-      "file": "api/brain.js",
-      "problem": "api/brain.js uses VERCEL_URL env var which is empty in production deployments",
-      "severity": "high",
-      "commit": "fix: use APP_URL instead of unreliable VERCEL_URL in brain.js",
-      "learned": "VERCEL_URL is a build-time variable that can point to preview deployments, making it unreliable for server-side self-referential fetch calls — APP_URL should always be the canonical production URL source.",
-      "applied": true,
-      "fromAdminTask": null
-    },
-    {
       "id": "mem_1776351140743",
       "timestamp": "2026-04-16T14:52:20.743Z",
       "type": "brain_cycle",
@@ -3974,6 +3961,14 @@
       "count": 4,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776364860686",
+      "timestamp": "2026-04-16T18:41:00.686Z",
+      "type": "error",
+      "focus": "bugs",
+      "error": "Anthropic API → 429",
+      "applied": false
     }
   ]
 }
