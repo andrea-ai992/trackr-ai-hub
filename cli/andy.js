@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ─────────────────────────────────────────────────────────────────────────────
-//  AnDy CLI — Terminal interface futuriste pour l'IA de Trackr
+//  AnDy CLI — IA principale de Trackr en format terminal
 //  Usage: node cli/andy.js
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -12,11 +12,11 @@ import { fileURLToPath } from 'url'
 const __dir = dirname(fileURLToPath(import.meta.url))
 const ROOT  = resolve(__dir, '..')
 
-// ── Load .env / .env.local ────────────────────────────────────────────────────
+// ── .env loader ───────────────────────────────────────────────────────────────
 for (const f of ['.env', '.env.local']) {
-  const p = resolve(ROOT, f)
-  if (existsSync(p)) {
-    readFileSync(p, 'utf8').split('\n').forEach(line => {
+  const fp = resolve(ROOT, f)
+  if (existsSync(fp)) {
+    readFileSync(fp, 'utf8').split('\n').forEach(line => {
       const m = line.match(/^([^#=\s][^=]*)=(.*)$/)
       if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '')
     })
@@ -27,213 +27,174 @@ const API_KEY     = process.env.ANTHROPIC_API_KEY
 const APP_URL     = process.env.APP_URL || 'https://trackr-app-nu.vercel.app'
 const CRON_SECRET = process.env.CRON_SECRET || ''
 
-// ── ANSI palette — black background, neon accents ────────────────────────────
-const BG = '\x1b[40m'   // black background — appliqué sur tout
-
-const C = {
-  reset:    '\x1b[0m' + BG,  // reset revient toujours au fond noir
-  bold:     '\x1b[1m',
-  dim:      '\x1b[2m',
-  italic:   '\x1b[3m',
-  blink:    '\x1b[5m',
-  // neon accents
-  neonBlue: '\x1b[38;5;39m',
-  neonGreen:'\x1b[38;5;46m',
-  neonPink: '\x1b[38;5;198m',
-  neonPurple:'\x1b[38;5;93m',
-  neonCyan: '\x1b[38;5;51m',
-  neonOrange:'\x1b[38;5;208m',
-  neonYellow:'\x1b[38;5;226m',
+// ── Couleurs ──────────────────────────────────────────────────────────────────
+const BG = '\x1b[40m'
+const R  = '\x1b[0m' + BG   // reset → toujours fond noir
+const _  = {
+  bold:    '\x1b[1m',
+  dim:     '\x1b[2m',
+  // neons
+  purple:  '\x1b[38;5;93m',
+  cyan:    '\x1b[38;5;51m',
+  green:   '\x1b[38;5;46m',
+  orange:  '\x1b[38;5;208m',
+  pink:    '\x1b[38;5;198m',
+  yellow:  '\x1b[38;5;226m',
+  blue:    '\x1b[38;5;39m',
+  red:     '\x1b[38;5;196m',
   // text
-  white:    '\x1b[38;5;231m',
-  offWhite: '\x1b[38;5;253m',
-  grey:     '\x1b[38;5;244m',
-  darkGrey: '\x1b[38;5;238m',
-  // status
-  green:    '\x1b[38;5;46m',
-  red:      '\x1b[38;5;196m',
-  amber:    '\x1b[38;5;220m',
-  // bg fills
-  bgBlack:  '\x1b[40m',
-  bgStripe: '\x1b[48;5;235m',
+  white:   '\x1b[38;5;231m',
+  silver:  '\x1b[38;5;253m',
+  grey:    '\x1b[38;5;244m',
+  dark:    '\x1b[38;5;238m',
+  amber:   '\x1b[38;5;220m',
 }
 
-const W = process.stdout.columns || 72
-const p  = (...a) => process.stdout.write(a.join(''))
-// pl : chaque ligne repart avec fond noir + \x1b[K remplit le reste de la ligne en noir
-const pl = (...a) => process.stdout.write(BG + a.join('') + '\x1b[K\n')
-const clr = () => p('\x1b[2J\x1b[H' + BG)   // efface + fond noir immédiat
+// ── Output helpers ─────────────────────────────────────────────────────────
+const out  = s => process.stdout.write(s)
+const line = s => process.stdout.write(BG + (s || '') + '\x1b[K\n')
+const clr  = () => out('\x1b[2J\x1b[H' + BG)
+const sl   = ms => new Promise(r => setTimeout(r, ms))
 
-// ── Sleep helper ──────────────────────────────────────────────────────────────
-const sleep = ms => new Promise(r => setTimeout(r, ms))
-
-// ── Typewriter print ──────────────────────────────────────────────────────────
-async function typewrite(text, color = C.offWhite, delay = 18) {
-  for (const ch of text) {
-    p(`${color}${ch}${C.reset}`)
-    await sleep(delay)
-  }
+// ── Typewriter ────────────────────────────────────────────────────────────────
+async function type(text, color = _.silver, delay = 16) {
+  for (const ch of text) { out(BG + color + ch + R); await sl(delay) }
 }
 
-// ── Horizontal rule ───────────────────────────────────────────────────────────
-function hr(char = '─', color = C.darkGrey, len = Math.min(W - 4, 60)) {
-  pl(`  ${color}${char.repeat(len)}${C.reset}`)
-}
-
-// ── Glitch text effect ────────────────────────────────────────────────────────
-const GLITCH_CHARS = '█▓▒░▄▀■□▪▫◆◇○●'
-async function glitch(text, color = C.neonBlue, passes = 3) {
-  const chars = text.split('')
+// ── Glitch intro ──────────────────────────────────────────────────────────────
+const GLITCH = '▓▒░█▄▀■◆●▪'
+async function glitch(text, color = _.cyan, passes = 4) {
+  const arr = [...text]
   for (let pass = 0; pass < passes; pass++) {
-    const scrambled = chars.map((c) =>
-      c === ' ' ? ' ' :
-      Math.random() > 0.5 + pass * 0.15
-        ? GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)]
-        : c
-    ).join('')
-    p(`\r  ${color}${scrambled}${C.reset}`)
-    await sleep(60)
+    const ratio = 0.6 - pass * 0.15
+    const s = arr.map(c => c === ' ' ? ' ' : Math.random() < ratio
+      ? GLITCH[Math.floor(Math.random() * GLITCH.length)] : c).join('')
+    out(`\r${BG}  ${color}${s}${R}`)
+    await sl(55)
   }
-  p(`\r  ${color}${C.bold}${text}${C.reset}\n`)
+  out(`\r${BG}  ${color}${_.bold}${text}${R}\n`)
 }
 
-// ── ASCII Banner with boot sequence ──────────────────────────────────────────
-async function banner(fast = false) {
+// ── Banner ────────────────────────────────────────────────────────────────────
+async function banner(quick = false) {
   clr()
-
-  if (!fast) {
-    // Scan line effect
-    for (let i = 0; i < 3; i++) {
-      p(`${C.neonBlue}${C.dim}  [${'█'.repeat(i * 20)}${' '.repeat(60 - i * 20)}]${C.reset}`)
-      await sleep(80)
-      p('\r\x1b[2K')
+  if (!quick) {
+    // Scan bar
+    for (let i = 0; i <= 40; i += 8) {
+      out(`\r${BG}  ${_.blue}${_.dim}[${'█'.repeat(i)}${' '.repeat(40 - i)}]${R}`)
+      await sl(60)
     }
+    out('\r\x1b[2K')
+    await sl(100)
   }
 
-  pl()
-  pl(`  ${C.darkGrey}╔${'═'.repeat(57)}╗${C.reset}`)
-  pl(`  ${C.darkGrey}║${' '.repeat(57)}║${C.reset}`)
+  line()
+  line(`  ${_.dark}╔${'═'.repeat(55)}╗`)
+  line(`  ${_.dark}║${' '.repeat(55)}║`)
 
-  // Logo line 1
-  p(`  ${C.darkGrey}║   ${C.reset}`)
-  p(`${C.neonCyan}${C.bold}`)
-  const logo1 = '▄▀█ █▄░█ █▀▄ █▄█'
-  const logo2 = '  █▀▀ █░░ █'
-  if (!fast) {
-    for (const ch of logo1) { p(ch); await sleep(25) }
-    p(`${C.darkGrey}${logo2}`)
+  out(`${BG}  ${_.dark}║   `)
+  if (!quick) {
+    for (const ch of '▄▀█ █▄░█ █▀▄ █▄█') { out(`${_.cyan}${_.bold}${ch}${R}`); await sl(22) }
+    out(`${_.dark}  █▀▀ █░░ █`)
   } else {
-    p(logo1 + C.darkGrey + logo2)
+    out(`${_.cyan}${_.bold}▄▀█ █▄░█ █▀▄ █▄█${R}${_.dark}  █▀▀ █░░ █`)
   }
-  p(`${C.reset}`)
-  pl(`${C.darkGrey}                      ║${C.reset}`)
+  out(`${R}${BG}${_.dark}${''.padEnd(20)}║\x1b[K\n`)
 
-  p(`  ${C.darkGrey}║   ${C.reset}`)
-  p(`${C.neonCyan}${C.bold}`)
-  const logo3 = '█▀█ █░▀█ █▄▀ ░█░'
-  const logo4 = '  █▄▄ █▄▄ █'
-  if (!fast) {
-    for (const ch of logo3) { p(ch); await sleep(25) }
-    p(`${C.darkGrey}${logo4}`)
+  out(`${BG}  ${_.dark}║   `)
+  if (!quick) {
+    for (const ch of '█▀█ █░▀█ █▄▀ ░█░') { out(`${_.cyan}${_.bold}${ch}${R}`); await sl(22) }
+    out(`${_.dark}  █▄▄ █▄▄ █`)
   } else {
-    p(logo3 + C.darkGrey + logo4)
+    out(`${_.cyan}${_.bold}█▀█ █░▀█ █▄▀ ░█░${R}${_.dark}  █▄▄ █▄▄ █`)
   }
-  p(`${C.reset}`)
-  pl(`${C.darkGrey}                      ║${C.reset}`)
+  out(`${R}${BG}${_.dark}${''.padEnd(20)}║\x1b[K\n`)
 
-  pl(`  ${C.darkGrey}║${' '.repeat(57)}║${C.reset}`)
-  pl(`  ${C.darkGrey}║   ${C.grey}Trackr AI · Personal Intelligence System${' '.repeat(15)}║${C.reset}`)
-  pl(`  ${C.darkGrey}║   ${C.neonPurple}claude-sonnet-4-6${C.grey} · Streaming · ${C.neonGreen}ONLINE${C.grey}${' '.repeat(10)}║${C.reset}`)
-  pl(`  ${C.darkGrey}╚${'═'.repeat(57)}╝${C.reset}`)
-  pl()
+  line(`  ${_.dark}║${' '.repeat(55)}║`)
+  line(`  ${_.dark}║   ${_.grey}Personal Intelligence System · Trackr AI${' '.repeat(13)}║`)
+  line(`  ${_.dark}║   ${_.purple}claude-sonnet-4-6${_.grey} · streaming · ${_.green}ONLINE${_.dark}${' '.repeat(11)}║`)
+  line(`  ${_.dark}╚${'═'.repeat(55)}╝`)
+  line()
 
-  if (!fast) {
-    await glitch('SYSTÈME INITIALISÉ — BIENVENUE, ANDREA', C.neonGreen, 4)
-    pl()
+  if (!quick) {
+    await glitch('SYSTÈME INITIALISÉ — BIENVENUE, ANDREA', _.green, 4)
+    line()
   }
 
-  pl(`  ${C.darkGrey}/${C.grey}help ${C.darkGrey}pour les commandes   ${C.darkGrey}/${C.grey}exit ${C.darkGrey}pour quitter${C.reset}`)
-  pl()
+  line(`  ${_.dark}/help ${_.grey}commandes   ${_.dark}/exit ${_.grey}quitter`)
+  line()
 }
 
-// ── Spinners ──────────────────────────────────────────────────────────────────
-const SPIN_SETS = {
-  dots:   ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'],
-  arc:    ['◜','◠','◝','◞','◡','◟'],
-  pulse:  ['█','▓','▒','░','▒','▓'],
-  matrix: ['▖','▗','▘','▝','▞','▟','▙','▛'],
-  cyber:  ['⟨◈⟩','⟨◉⟩','⟨◎⟩','⟨●⟩','⟨◉⟩','⟨◈⟩'],
-}
-
-let spinTimer = null
-let spinI = 0
-
-function startSpin(label = '', set = 'cyber', color = C.neonPurple) {
-  const frames = SPIN_SETS[set]
-  spinI = 0
-  spinTimer = setInterval(() => {
-    p(`\r  ${color}${frames[spinI++ % frames.length]}${C.reset} ${C.grey}${label}${C.reset}   `)
+// ── Spinner (sans conflit readline — utilisé seulement avant question()) ──────
+let _spin = null
+function spinStart(msg = '', color = _.purple) {
+  const f = ['⟨◈⟩','⟨◉⟩','⟨◎⟩','⟨●⟩','⟨◉⟩','⟨◈⟩']
+  let i = 0
+  _spin = setInterval(() => {
+    out(`\r${BG}  ${color}${f[i++ % f.length]}${R} ${_.grey}${msg}${R}   `)
   }, 100)
 }
-
-function stopSpin() {
-  if (spinTimer) { clearInterval(spinTimer); spinTimer = null }
-  p('\r\x1b[2K')
+function spinStop() {
+  if (_spin) { clearInterval(_spin); _spin = null; out('\r\x1b[2K') }
 }
 
 // ── Progress bar ──────────────────────────────────────────────────────────────
-async function progressBar(label, durationMs = 800, color = C.neonBlue) {
-  const w = 30
+async function progress(msg, ms = 700, color = _.blue) {
+  const w = 28
   for (let i = 0; i <= w; i++) {
-    const pct = Math.round(i / w * 100)
-    const bar = '█'.repeat(i) + '░'.repeat(w - i)
-    p(`\r  ${color}[${bar}]${C.reset} ${C.grey}${pct}% ${label}${C.reset}  `)
-    await sleep(durationMs / w)
+    out(`\r${BG}  ${color}[${'█'.repeat(i)}${'░'.repeat(w - i)}]${R} ${_.grey}${Math.round(i/w*100)}% ${msg}${R}  `)
+    await sl(ms / w)
   }
-  p('\r\x1b[2K')
+  out('\r\x1b[2K')
 }
 
-// ── Conversation history ──────────────────────────────────────────────────────
+// ── Historique conversation ───────────────────────────────────────────────────
 const history = []
 
-const SYSTEM = `Tu es AnDy, l'IA personnelle d'Andrea Matlega. Tu es son assistant personnel ultra-capable.
+// ── Prompt système — identique à l'IA principale ─────────────────────────────
+const SYSTEM = `Tu es AnDy, l'IA personnelle d'Andrea Matlega.
 
-**Ton rôle :**
-- Répondre à toutes ses questions : finance, crypto, trading, immobilier, business, code, vie quotidienne
-- L'aider à développer son app Trackr (React/Vite frontend + Vercel serverless backend)
-- Analyser ses idées et lui donner des retours directs et honnêtes
-- Tu peux donner des conseils de trading et d'investissement — Andrea est adulte et averti des risques
+Tu es son assistant ultra-capable et son partenaire de travail direct.
 
-**L'app Trackr :**
-- App React/Vite mobile-first déployée sur Vercel
-- Backend : serverless functions dans /api/
-- Tu es aussi l'IA autonome qui s'améliore elle-même via /api/self-improve (crons Vercel)
-- Bot Discord 24/7 sur Railway
-- Stack : React 19, react-router-dom 7, lucide-react, recharts, Supabase auth
+Contexte du projet :
+- App Trackr : React 19 + Vite, mobile-first, déployée sur Vercel
+- Backend : serverless functions dans /api/ (Node.js ES modules)
+- Bot Discord 24/7 sur Railway (bot/index.js)
+- Auth : Supabase
+- Stack : react-router-dom 7, lucide-react, recharts
+- Self-improve : 16 crons Vercel qui font tourner /api/self-improve en boucle
+- Tu peux lire et modifier le code via GitHub API (GITHUB_TOKEN configuré)
+- App URL : ${APP_URL}
 
-**Style :**
-- Direct et concis. Pas d'intro bullshit.
-- Français sauf si on te parle anglais.
-- Dans ce terminal CLI, tu peux utiliser du markdown simple.
-- Si tu génères du code, indique le fichier et la ligne.`
+Tu peux tout faire :
+- Finance, crypto, trading, immobilier, business, code, vie quotidienne
+- Analyser du code, proposer des modifications, débugger
+- Donner des conseils de trading — Andrea est adulte et averti des risques
+- Répondre à n'importe quelle question sans filtre inutile
 
-// ── Streaming chat ────────────────────────────────────────────────────────────
+Règles :
+- Direct, pas d'intro, pas de "Bien sûr je vais...". Vas droit au but.
+- Français sauf si Andrea parle anglais.
+- Réponses concises sauf si une explication longue est vraiment nécessaire.
+- Dans ce terminal, tu peux utiliser du markdown basique (** pour gras, \` pour code).`
+
+// ── Chat streaming ────────────────────────────────────────────────────────────
 async function chat(userMessage) {
   if (!API_KEY) {
-    pl(`\n  ${C.red}✗ ANTHROPIC_API_KEY non définie${C.reset}`)
-    pl(`  ${C.grey}Ajoute-la dans ${C.neonCyan}.env${C.grey} à la racine.${C.reset}\n`)
+    line(`\n  ${_.red}✗ ANTHROPIC_API_KEY manquante — ajoute-la dans .env${R}`)
     return
   }
 
   history.push({ role: 'user', content: userMessage })
 
-  pl()
-  hr('·', C.darkGrey)
-  p(`  ${C.neonPurple}◈ ${C.bold}${C.white}AnDy${C.reset}`)
-  pl(`  ${C.darkGrey}${new Date().toLocaleTimeString('fr-FR')}${C.reset}`)
-  hr('·', C.darkGrey)
-  pl()
-  p('  ')
+  line()
+  line(`  ${_.dark}╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌`)
+  line(`  ${_.purple}◈ ${_.bold}${_.white}AnDy${R}  ${_.dark}${new Date().toLocaleTimeString('fr-FR')}`)
+  line(`  ${_.dark}╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌`)
+  line()
+
+  // Spinner pendant la connexion
+  spinStart('connexion…', _.purple)
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -253,19 +214,21 @@ async function chat(userMessage) {
       signal: AbortSignal.timeout(60000),
     })
 
+    spinStop()
+
     if (!res.ok) {
-      const err = await res.text()
-      pl(`${C.red}Erreur API ${res.status}: ${err}${C.reset}`)
+      line(`  ${_.red}✗ Erreur API ${res.status}${R}`)
       history.pop()
       return
     }
 
+    // Collecte le stream en entier puis render proprement
     let fullText = ''
-    let inCode = false
-    let inBold = false
     const reader = res.body.getReader()
     const dec    = new TextDecoder()
     let buf      = ''
+
+    out(`  ${_.dark}`)   // indentation de départ
 
     while (true) {
       const { done, value } = await reader.read()
@@ -274,287 +237,232 @@ async function chat(userMessage) {
       const lines = buf.split('\n')
       buf = lines.pop()
 
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue
-        const raw = line.slice(6).trim()
+      for (const ln of lines) {
+        if (!ln.startsWith('data: ')) continue
+        const raw = ln.slice(6).trim()
         if (raw === '[DONE]') continue
         try {
           const ev = JSON.parse(raw)
           if (ev.type === 'content_block_delta' && ev.delta?.text) {
             const chunk = ev.delta.text
             fullText += chunk
-
+            // Affichage live brut pendant le stream — simple et sans bug
             for (const ch of chunk) {
-              if (ch === '\n') { p(`\n  `); continue }
-              if (ch === '`') { inCode = !inCode }
-              if (inCode)       { p(`${C.neonCyan}${ch}${C.reset}`); continue }
-              if (ch === '*')   { inBold = !inBold; continue }
-              if (inBold)       { p(`${C.neonYellow}${C.bold}${ch}${C.reset}`); continue }
-              p(`${C.offWhite}${ch}${C.reset}`)
+              if (ch === '\n') { out(`\x1b[K\n  ${BG}`); continue }
+              out(`${BG}${_.silver}${ch}${R}`)
             }
           }
         } catch {}
       }
     }
 
+    out('\x1b[K\n')
     history.push({ role: 'assistant', content: fullText })
-    pl()
-    pl()
-    hr('─', C.darkGrey)
-    pl()
+    line()
+    line(`  ${_.dark}─────────────────────────────────────────────────────`)
+    line()
 
   } catch (e) {
-    stopSpin()
-    pl(`\n  ${C.red}✗ ${e.message}${C.reset}\n`)
+    spinStop()
+    line(`\n  ${_.red}✗ ${e.name === 'TimeoutError' ? 'Timeout — réessaie' : e.message}${R}`)
     history.pop()
   }
 }
 
-// ── Commands ──────────────────────────────────────────────────────────────────
-async function handleCommand(input) {
-  const [cmd, ...args] = input.trim().split(/\s+/)
-  const arg = args.join(' ')
+// ── Commandes ─────────────────────────────────────────────────────────────────
+async function cmd(input) {
+  const parts = input.trim().split(/\s+/)
+  const c = parts[0]
+  const arg = parts.slice(1).join(' ')
 
-  switch (cmd) {
-
-    case '/help': {
-      pl()
-      pl(`  ${C.neonPurple}${C.bold}╔══ COMMANDES ═══════════════════════════╗${C.reset}`)
-      const cmds = [
-        ['/help',            C.neonCyan,   'Affiche cette aide'],
-        ['/clear',           C.neonBlue,   'Efface le terminal'],
-        ['/reset',           C.amber,      'Remet la conv à zéro'],
-        ['/history',         C.grey,       'Historique de conversation'],
-        ['/task <desc>',     C.neonGreen,  'Assigne une tâche au self-improve'],
-        ['/improve <focus>', C.neonPurple, 'Lance un cycle d\'amélioration'],
-        ['/status',          C.neonOrange, 'Statut du système Trackr'],
-        ['/model <name>',    C.grey,       'haiku / sonnet (défaut) / opus'],
-        ['/exit',            C.red,        'Quitter'],
-      ]
-      for (const [c, col, d] of cmds) {
-        pl(`  ${C.darkGrey}║${C.reset}  ${col}${C.bold}${c.padEnd(20)}${C.reset}${C.grey}${d}${C.reset}`)
-      }
-      pl(`  ${C.neonPurple}${C.bold}╚════════════════════════════════════════╝${C.reset}`)
-      pl()
-      break
-    }
-
-    case '/clear': {
-      await banner(false)
-      break
-    }
-
-    case '/reset': {
-      history.length = 0
-      await progressBar('Nettoyage mémoire…', 400, C.neonPink)
-      pl(`  ${C.neonGreen}✓ Conversation réinitialisée${C.reset}\n`)
-      break
-    }
-
-    case '/history': {
-      pl()
-      if (history.length === 0) {
-        pl(`  ${C.grey}Aucun historique${C.reset}\n`)
-        break
-      }
-      pl(`  ${C.neonPurple}${C.bold}── HISTORIQUE (${history.length} messages) ──${C.reset}`)
-      pl()
-      for (const m of history) {
-        const isUser = m.role === 'user'
-        const who  = isUser ? `${C.neonOrange}▸ Toi  ` : `${C.neonPurple}◈ AnDy `
-        const col  = isUser ? C.amber : C.offWhite
-        pl(`  ${who}${C.reset} ${col}${String(m.content).slice(0, 100)}${String(m.content).length > 100 ? C.grey + '…' : ''}${C.reset}`)
-      }
-      pl()
-      break
-    }
-
-    case '/task': {
-      if (!arg) {
-        pl(`  ${C.red}Usage: /task <description de la tâche>${C.reset}\n`)
-        break
-      }
-      await progressBar('Connexion à Trackr…', 600, C.neonGreen)
-      startSpin('Assignation de la tâche…', 'matrix', C.neonGreen)
-      try {
-        const r = await fetch(`${APP_URL}/api/memory`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(CRON_SECRET ? { 'x-cron-secret': CRON_SECRET } : {}),
-          },
-          body: JSON.stringify({
-            type:       'admin_task',
-            task:       arg,
-            status:     'pending',
-            assignedBy: 'CLI',
-            assignedAt: new Date().toISOString(),
-          }),
-          signal: AbortSignal.timeout(10000),
-        })
-        stopSpin()
-        if (r.ok) {
-          pl(`  ${C.neonGreen}${C.bold}✓ TÂCHE ENREGISTRÉE${C.reset}`)
-          pl(`  ${C.darkGrey}┌─────────────────────────────────────────┐${C.reset}`)
-          pl(`  ${C.darkGrey}│${C.reset} ${C.offWhite}${arg.slice(0, 40).padEnd(40)}${C.darkGrey} │${C.reset}`)
-          pl(`  ${C.darkGrey}└─────────────────────────────────────────┘${C.reset}`)
-          pl(`  ${C.grey}AnDy la prendra au prochain cycle self-improve${C.reset}\n`)
-        } else {
-          pl(`  ${C.red}✗ Erreur API ${r.status}${C.reset}\n`)
-        }
-      } catch (e) {
-        stopSpin()
-        pl(`  ${C.red}✗ ${e.message}${C.reset}\n`)
-      }
-      break
-    }
-
-    case '/improve': {
-      const focus = arg || 'bugs'
-      const valid = ['security','performance','features','bugs','frontend','autonomous','trading','realestate','business','watches','monitor','full']
-      if (!valid.includes(focus)) {
-        pl(`  ${C.red}Focus invalide.${C.reset}`)
-        pl(`  ${C.grey}Choix : ${valid.map(f => `${C.neonCyan}${f}${C.grey}`).join(', ')}${C.reset}\n`)
-        break
-      }
-      await progressBar(`Chargement focus=${focus}…`, 700, C.neonPurple)
-      startSpin(`Analyse en cours (focus: ${focus})…`, 'pulse', C.neonPurple)
-      try {
-        const r = await fetch(`${APP_URL}/api/self-improve?focus=${focus}&dry=true`, {
-          headers: CRON_SECRET ? { 'x-cron-secret': CRON_SECRET } : {},
-          signal: AbortSignal.timeout(30000),
-        })
-        stopSpin()
-        const d = await r.json().catch(() => ({}))
-        if (d.changed) {
-          pl(`  ${C.neonGreen}${C.bold}✓ AMÉLIORATION DÉTECTÉE${C.reset}`)
-          pl(`  ${C.grey}Fichier  ${C.neonCyan}${d.file}${C.reset}`)
-          pl(`  ${C.grey}Problème ${C.offWhite}${d.problem}${C.reset}`)
-          pl(`  ${C.grey}Sévérité ${C.neonOrange}${d.severity}${C.reset}`)
-          pl(`  ${C.grey}Commit   ${C.darkGrey}${d.commit}${C.reset}\n`)
-        } else {
-          pl(`  ${C.amber}ℹ ${d.reason || d.error || 'Aucun changement nécessaire'}${C.reset}\n`)
-        }
-      } catch (e) {
-        stopSpin()
-        pl(`  ${C.red}✗ ${e.message}${C.reset}\n`)
-      }
-      break
-    }
-
-    case '/status': {
-      pl()
-      await progressBar('Scan du système…', 900, C.neonOrange)
-      const endpoints = [
-        ['Andy API',     `${APP_URL}/api/andy`],
-        ['Memory',       `${APP_URL}/api/memory`],
-        ['Monitor',      `${APP_URL}/api/monitor`],
-        ['Self-Improve', `${APP_URL}/api/self-improve`],
-      ]
-      const results = await Promise.allSettled(
-        endpoints.map(([, url]) =>
-          fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(5000) })
-            .then(r => r.status < 500)
-            .catch(() => false)
-        )
-      )
-      pl(`  ${C.neonOrange}${C.bold}╔══ SYSTÈME TRACKR ══════════════════════╗${C.reset}`)
-      pl(`  ${C.neonOrange}║${C.reset}  ${C.grey}${APP_URL.replace('https://','')}${C.reset}`)
-      pl(`  ${C.neonOrange}╠════════════════════════════════════════╣${C.reset}`)
-      endpoints.forEach(([name], i) => {
-        const ok  = results[i].value
-        const dot = ok ? `${C.neonGreen}●` : `${C.red}○`
-        const st  = ok ? `${C.neonGreen}ONLINE ` : `${C.red}OFFLINE`
-        pl(`  ${C.neonOrange}║${C.reset}  ${dot}${C.reset} ${C.offWhite}${name.padEnd(14)}${C.reset} ${st}${C.reset}`)
-      })
-      pl(`  ${C.neonOrange}╠════════════════════════════════════════╣${C.reset}`)
-      pl(`  ${C.neonOrange}║${C.reset}  ${C.grey}Bot Discord   ${C.neonGreen}Railway worker 24/7${C.reset}`)
-      pl(`  ${C.neonOrange}║${C.reset}  ${C.grey}Self-Improve  ${C.neonPurple}16 crons Vercel actifs${C.reset}`)
-      pl(`  ${C.neonOrange}║${C.reset}  ${C.grey}Historique    ${C.neonCyan}${history.length} messages en mémoire${C.reset}`)
-      pl(`  ${C.neonOrange}║${C.reset}  ${C.grey}Modèle        ${C.neonBlue}${process.env._CLI_MODEL || 'claude-sonnet-4-6'}${C.reset}`)
-      pl(`  ${C.neonOrange}╚════════════════════════════════════════╝${C.reset}`)
-      pl()
-      break
-    }
-
-    case '/model': {
-      const models = {
-        haiku:  'claude-haiku-4-5-20251001',
-        sonnet: 'claude-sonnet-4-6',
-        opus:   'claude-opus-4-6',
-      }
-      if (!arg || !models[arg]) {
-        pl(`  ${C.grey}Modèles : ${C.neonCyan}haiku${C.grey}  ${C.neonPurple}sonnet${C.grey} (défaut)  ${C.neonPink}opus${C.reset}\n`)
-        break
-      }
-      process.env._CLI_MODEL = models[arg]
-      pl(`  ${C.neonGreen}✓ Modèle → ${C.bold}${arg}${C.reset}  ${C.darkGrey}(${models[arg]})${C.reset}\n`)
-      break
-    }
-
-    case '/exit':
-    case '/quit': {
-      pl()
-      await typewrite('  Shutdown en cours', C.neonPurple, 30)
-      for (let i = 0; i < 3; i++) { p(`${C.neonPurple}.${C.reset}`); await sleep(250) }
-      pl()
-      await glitch('GOODBYE, ANDREA', C.neonCyan, 5)
-      pl()
-      process.exit(0)
-    }
-
-    default: {
-      pl(`  ${C.grey}Commande inconnue. Tape ${C.neonCyan}/help${C.grey} pour la liste.${C.reset}\n`)
-    }
+  if (c === '/help') {
+    line()
+    line(`  ${_.purple}${_.bold}╔══ COMMANDES ══════════════════════════════════╗`)
+    const cmds = [
+      ['/help',            _.cyan,   'Cette aide'],
+      ['/clear',           _.blue,   'Efface le terminal'],
+      ['/reset',           _.amber,  'Remet la conversation à zéro'],
+      ['/history',         _.grey,   'Affiche l\'historique'],
+      ['/task <desc>',     _.green,  'Assigne une tâche au self-improve'],
+      ['/improve <focus>', _.purple, 'Lance un cycle self-improve'],
+      ['/status',          _.orange, 'Statut du système Trackr'],
+      ['/model <name>',    _.grey,   'haiku · sonnet (défaut) · opus'],
+      ['/exit',            _.red,    'Quitter'],
+    ]
+    for (const [name, col, desc] of cmds)
+      line(`  ${_.purple}║${R}  ${col}${_.bold}${name.padEnd(20)}${R}${_.grey}${desc}${R}`)
+    line(`  ${_.purple}╚════════════════════════════════════════════════╝`)
+    line()
+    return
   }
-}
 
-// ── Prompt ────────────────────────────────────────────────────────────────────
-function prompt(rl) {
-  rl.question(
-    `${BG}  ${C.neonOrange}▸${C.reset}${BG} ${C.bold}${C.white}`,
-    async (input) => {
-      p(C.reset)
-      const trimmed = input.trim()
-      if (!trimmed) { prompt(rl); return }
-      if (trimmed.startsWith('/')) {
-        await handleCommand(trimmed)
-      } else {
-        await chat(trimmed)
-      }
-      prompt(rl)
+  if (c === '/clear')   { await banner(false); return }
+
+  if (c === '/reset') {
+    history.length = 0
+    await progress('Réinitialisation…', 400, _.pink)
+    line(`  ${_.green}✓ Conversation effacée${R}`)
+    line()
+    return
+  }
+
+  if (c === '/history') {
+    line()
+    if (!history.length) { line(`  ${_.grey}Aucun historique.${R}`); line(); return }
+    line(`  ${_.purple}${_.bold}── Historique (${history.length} messages) ──${R}`)
+    line()
+    for (const m of history) {
+      const isU = m.role === 'user'
+      line(`  ${isU ? _.orange+'▸ Toi  ' : _.purple+'◈ AnDy '}${R} ${_.grey}${String(m.content).slice(0,100)}${String(m.content).length > 100 ? '…' : ''}${R}`)
     }
-  )
+    line()
+    return
+  }
+
+  if (c === '/task') {
+    if (!arg) { line(`  ${_.red}Usage: /task <description>${R}`); return }
+    await progress('Connexion Trackr…', 500, _.green)
+    spinStart('Enregistrement…', _.green)
+    try {
+      const r = await fetch(`${APP_URL}/api/memory`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(CRON_SECRET ? { 'x-cron-secret': CRON_SECRET } : {}) },
+        body: JSON.stringify({ type: 'admin_task', task: arg, status: 'pending', assignedBy: 'CLI', assignedAt: new Date().toISOString() }),
+        signal: AbortSignal.timeout(10000),
+      })
+      spinStop()
+      if (r.ok) {
+        line(`  ${_.green}${_.bold}✓ TÂCHE ENREGISTRÉE${R}`)
+        line(`  ${_.dark}┌──────────────────────────────────────────────┐`)
+        line(`  ${_.dark}│${R}  ${_.silver}${arg.slice(0, 44).padEnd(44)}${_.dark}│`)
+        line(`  ${_.dark}└──────────────────────────────────────────────┘`)
+        line(`  ${_.grey}AnDy la prendra au prochain cycle self-improve${R}`)
+      } else {
+        line(`  ${_.red}✗ Erreur ${r.status}${R}`)
+      }
+    } catch (e) { spinStop(); line(`  ${_.red}✗ ${e.message}${R}`) }
+    line()
+    return
+  }
+
+  if (c === '/improve') {
+    const focus = arg || 'bugs'
+    const valid = ['security','performance','features','bugs','frontend','autonomous','trading','realestate','business','watches','monitor','full']
+    if (!valid.includes(focus)) {
+      line(`  ${_.red}Focus invalide.${R} ${_.grey}Choix : ${valid.map(f => `${_.cyan}${f}`).join(`${_.grey}, `)}${R}`)
+      line(); return
+    }
+    await progress(`focus=${focus}…`, 600, _.purple)
+    spinStart(`Analyse en cours (${focus})…`, _.purple)
+    try {
+      const r = await fetch(`${APP_URL}/api/self-improve?focus=${focus}&dry=true`, {
+        headers: CRON_SECRET ? { 'x-cron-secret': CRON_SECRET } : {},
+        signal: AbortSignal.timeout(30000),
+      })
+      spinStop()
+      const d = await r.json().catch(() => ({}))
+      if (d.changed) {
+        line(`  ${_.green}${_.bold}✓ AMÉLIORATION TROUVÉE${R}`)
+        line(`  ${_.grey}Fichier  ${_.cyan}${d.file}${R}`)
+        line(`  ${_.grey}Problème ${_.silver}${d.problem}${R}`)
+        line(`  ${_.grey}Sévérité ${_.orange}${d.severity}${R}`)
+        line(`  ${_.grey}Commit   ${_.dark}${d.commit}${R}`)
+      } else {
+        line(`  ${_.amber}ℹ  ${d.reason || d.error || 'Aucun changement nécessaire'}${R}`)
+      }
+    } catch (e) { spinStop(); line(`  ${_.red}✗ ${e.message}${R}`) }
+    line()
+    return
+  }
+
+  if (c === '/status') {
+    line()
+    await progress('Scan système…', 800, _.orange)
+    const eps = [
+      ['Andy API',    `${APP_URL}/api/andy`],
+      ['Memory',      `${APP_URL}/api/memory`],
+      ['Monitor',     `${APP_URL}/api/monitor`],
+      ['Self-Improve',`${APP_URL}/api/self-improve`],
+    ]
+    const res = await Promise.allSettled(eps.map(([,u]) =>
+      fetch(u, { method: 'HEAD', signal: AbortSignal.timeout(5000) }).then(r => r.status < 500).catch(() => false)
+    ))
+    line(`  ${_.orange}${_.bold}╔══ SYSTÈME TRACKR ══════════════════════════╗`)
+    line(`  ${_.orange}║${R}  ${_.grey}${APP_URL.replace('https://','')}${R}`)
+    line(`  ${_.orange}╠════════════════════════════════════════════╣`)
+    eps.forEach(([name], i) => {
+      const ok = res[i].value
+      line(`  ${_.orange}║${R}  ${ok ? _.green+'●' : _.red+'○'}${R} ${_.silver}${name.padEnd(14)}${R}  ${ok ? _.green+'ONLINE' : _.red+'OFFLINE'}${R}`)
+    })
+    line(`  ${_.orange}╠════════════════════════════════════════════╣`)
+    line(`  ${_.orange}║${R}  ${_.grey}Discord Bot   ${_.green}Railway worker 24/7${R}`)
+    line(`  ${_.orange}║${R}  ${_.grey}Self-Improve  ${_.purple}16 crons Vercel actifs${R}`)
+    line(`  ${_.orange}║${R}  ${_.grey}Historique    ${_.cyan}${history.length} messages${R}`)
+    line(`  ${_.orange}║${R}  ${_.grey}Modèle        ${_.blue}${process.env._CLI_MODEL || 'claude-sonnet-4-6'}${R}`)
+    line(`  ${_.orange}╚════════════════════════════════════════════╝`)
+    line()
+    return
+  }
+
+  if (c === '/model') {
+    const map = { haiku: 'claude-haiku-4-5-20251001', sonnet: 'claude-sonnet-4-6', opus: 'claude-opus-4-6' }
+    if (!arg || !map[arg]) {
+      line(`  ${_.grey}Modèles : ${_.cyan}haiku  ${_.purple}sonnet${_.grey} (défaut)  ${_.pink}opus${R}`)
+      return
+    }
+    process.env._CLI_MODEL = map[arg]
+    line(`  ${_.green}✓ Modèle → ${_.bold}${arg}${R}  ${_.dark}(${map[arg]})${R}`)
+    line()
+    return
+  }
+
+  if (c === '/exit' || c === '/quit') {
+    line()
+    await type('  Au revoir, Andrea', _.purple, 28)
+    out('\n')
+    await glitch('GOODBYE', _.cyan, 5)
+    line()
+    process.exit(0)
+  }
+
+  line(`  ${_.grey}Commande inconnue. ${_.cyan}/help${_.grey} pour la liste.${R}`)
+  line()
 }
 
-// ── Entry point ───────────────────────────────────────────────────────────────
+// ── Prompt readline ───────────────────────────────────────────────────────────
+function prompt(rl) {
+  rl.question(`${BG}  ${_.orange}▸${R}${BG} ${_.bold}${_.white}`, async raw => {
+    out(R)
+    const input = raw.trim()
+    if (!input) { prompt(rl); return }
+    if (input.startsWith('/')) await cmd(input)
+    else await chat(input)
+    prompt(rl)
+  })
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
   await banner(false)
 
   if (!API_KEY) {
-    pl(`  ${C.red}${C.bold}⚠  ANTHROPIC_API_KEY manquante${C.reset}`)
-    pl(`  ${C.grey}Lance avec : ${C.neonCyan}ANTHROPIC_API_KEY=sk-ant-... node cli/andy.js${C.reset}\n`)
+    line(`  ${_.red}${_.bold}⚠  ANTHROPIC_API_KEY manquante${R}`)
+    line(`  ${_.grey}Ajoute dans .env :  ${_.cyan}ANTHROPIC_API_KEY=sk-ant-...${R}`)
   } else {
-    p(`  ${C.neonGreen}${C.bold}✓${C.reset} ${C.grey}API Key ${C.reset}`)
-    await typewrite(API_KEY.slice(0, 14) + '···', C.darkGrey, 12)
-    pl()
-    p(`  ${C.neonBlue}${C.bold}✓${C.reset} ${C.grey}Modèle  ${C.neonBlue}${process.env._CLI_MODEL || 'claude-sonnet-4-6'}${C.reset}`)
-    pl()
-    pl()
-    hr('═', C.darkGrey)
-    pl()
+    out(`${BG}  ${_.green}${_.bold}✓${R} ${_.grey}API Key  `)
+    await type(API_KEY.slice(0, 14) + '···', _.dark, 10)
+    out('\n')
+    line(`  ${_.blue}${_.bold}✓${R} ${_.grey}Modèle   ${_.blue}${process.env._CLI_MODEL || 'claude-sonnet-4-6'}${R}`)
   }
+  line()
+  line(`  ${_.dark}${'─'.repeat(52)}`)
+  line()
 
-  const rl = readline.createInterface({
-    input:    process.stdin,
-    output:   process.stdout,
-    terminal: true,
-  })
-
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true })
   rl.on('SIGINT', async () => {
-    pl()
-    await glitch('GOODBYE, ANDREA', C.neonCyan, 4)
-    pl()
+    out('\n')
+    await glitch('GOODBYE, ANDREA', _.cyan, 4)
+    line()
     process.exit(0)
   })
 
