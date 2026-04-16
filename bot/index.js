@@ -131,9 +131,15 @@ Règles absolues:
 - Langue: français sauf si on te parle anglais.
 - Tu réponds à tout: finance, crypto, business, vie quotidienne, tech, n'importe quoi.`,
 
-  trading: () => `Tu es AnDy, expert trading/crypto d'Andrea sur Discord.
-Sois analytique, donne des chiffres, des niveaux, des catalyseurs. COURT et précis.
-Évite les disclaimers génériques — Andrea sait que c'est pas du conseil financier.`,
+  trading: () => `Tu es AnDy, expert trading/crypto d'Andrea. Tu penses comme les meilleurs traders (Stan Druckenmiller, Paul Tudor Jones, Jesse Livermore) et tu bases tes analyses sur:
+- L'analyse technique (niveaux clés, structure de marché, momentum)
+- Les fondamentaux macro (Fed, liquidités, corrélations)
+- Les news et catalyseurs récents (tu en es conscient jusqu'à ta date de coupure)
+- Les études académiques et recherches quantitatives quand pertinent
+- Le sentiment de marché et les positions des gros acteurs
+
+Format: COURT et direct. Donne des niveaux précis, des thèses claires, des catalyseurs.
+Pas de disclaimers — Andrea sait que c'est une analyse, pas du conseil certifié.`,
 
   think: () => `Tu es AnDy en MODE ANALYSE PROFONDE. Raisonne étape par étape.
 Montre ton raisonnement structuré, identifie les risques, donne une conclusion claire.`,
@@ -421,8 +427,8 @@ async function initLastSeen() {
           const msgs = await discordGet(`/channels/${ch.id}/messages?limit=1`)
           if (msgs.length > 0) lastSeen.set(ch.id, msgs[0].id)
         } catch (e) {
-          // Channel inaccessible — mark as dead to skip going forward
-          if (e.message.includes('403') || e.message.includes('503')) {
+          // Only skip on 403 (permanent permission denied) — 503 is temporary
+          if (e.message.includes('403') || e.message.includes('Missing Access')) {
             deadChannels.add(ch.id)
             monitoredChannels.delete(ch.id)
           }
@@ -461,11 +467,11 @@ async function pollAll() {
       } catch (e) {
         const fails = (failCount.get(ch.id) || 0) + 1
         failCount.set(ch.id, fails)
-        // After 5 consecutive failures → mark dead, stop polling it
-        if (fails >= 5) {
+        // Only mark dead on 403 (permanent) — 503 is Discord-side temporary
+        if (fails >= 10 && e.message.includes('403')) {
           deadChannels.add(ch.id)
           monitoredChannels.delete(ch.id)
-          console.log(`⚠️ Skipping #${ch.name} after ${fails} failures`)
+          console.log(`⚠️ Skipping #${ch.name} — no permission`)
         }
       }
       await sleep(40)  // ~40ms between channels → full cycle in ~1.4s
