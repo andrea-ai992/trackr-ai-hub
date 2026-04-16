@@ -25,6 +25,18 @@
       "errors": 5,
       "appHealthy": false,
       "duration": 10
+    },
+    {
+      "id": "mem_1776305086221",
+      "timestamp": "2026-04-16T02:04:46.221Z",
+      "type": "dry_run",
+      "focus": "bugs",
+      "file": "api/andy.js",
+      "problem": "Dans computeMACD, prevLine peut être NaN si computeEMA retourne null sur le slice court (closes.slice(0, -1) peut avoir moins de 26 éléments)",
+      "severity": "high",
+      "learned": "Les opérations arithmétiques entre valeurs potentiellement null produisent NaN qui passe inaperçu à travers les guards || 0, il faut vérifier la nullité avant toute soustraction.",
+      "applied": false,
+      "dryRun": true
     }
   ]
 }
