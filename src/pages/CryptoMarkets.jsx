@@ -1,23 +1,137 @@
-```jsx
-import { useState, useEffect, useCallback, useMemo } from "react";
+src/hooks/useVirtualScroll.js
+import { useState, useEffect, useRef, useCallback } from "react";
+
+const useVirtualScroll = ({
+  itemCount,
+  itemHeight,
+  containerHeight,
+  overscan = 3,
+}) => {
+  const [scrollTop, setScrollTop] = useState(0);
+  const rafRef = useRef(null);
+  const scrollElementRef = useRef(null);
+
+  const handleScroll = useCallback((e) => {
+    const currentScrollTop = e.target.scrollTop;
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+    }
+    rafRef.current = requestAnimationFrame(() => {
+      setScrollTop(currentScrollTop);
+      rafRef.current = null;
+    });
+  }, []);
+
+  useEffect(() => {
+    const el = scrollElementRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      el.removeEventListener("scroll", handleScroll);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [handleScroll]);
+
+  const totalHeight = itemCount * itemHeight;
+
+  const startIndex = Math.max(
+    0,
+    Math.floor(scrollTop / itemHeight) - overscan
+  );
+  const visibleCount = Math.ceil(containerHeight / itemHeight) + 2 * overscan;
+  const endIndex = Math.min(itemCount - 1, startIndex + visibleCount);
+
+  const offsetY = startIndex * itemHeight;
+
+  const visibleItems = [];
+  for (let i = startIndex; i <= endIndex; i++) {
+    visibleItems.push(i);
+  }
+
+  return {
+    scrollElementRef,
+    visibleItems,
+    totalHeight,
+    offsetY,
+    scrollTop,
+  };
+};
+
+export default useVirtualScroll;
+
+
+src/pages/CryptoMarkets.jsx
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { LineChart, Line, ResponsiveContainer, Tooltip } from "recharts";
+import useVirtualScroll from "../hooks/useVirtualScroll";
 
 const COINGECKO_URL =
   "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&page=1&sparkline=true&price_change_percentage=24h";
 
 const REFRESH_INTERVAL = 60000;
+const ITEM_HEIGHT = 220;
+const CONTAINER_HEIGHT = typeof window !== "undefined" ? window.innerHeight - 160 : 600;
 
-const shimmerStyle = `
+const globalStyles = `
   @keyframes shimmer {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(100%); }
+  }
+
+  .crypto-scroll-container {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: scroll;
+    overscroll-behavior: contain;
+    overscroll-behavior-y: contain;
+    scroll-behavior: auto;
+    will-change: scroll-position;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  .coin-card {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    will-change: auto;
+  }
+
+  .coin-card:active {
+    transform: scale(0.99) translateZ(0);
+    -webkit-transform: scale(0.99) translateZ(0);
+  }
+
+  @media (hover: hover) {
+    .coin-card:hover {
+      transform: translateY(-2px) translateZ(0);
+      -webkit-transform: translateY(-2px) translateZ(0);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.4) !important;
+    }
+  }
+
+  .filter-btn {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .search-input:focus {
+    border-color: #6366f1 !important;
   }
 `;
 
 function SparklineChart({ data, isPositive }) {
   if (!data || data.length === 0) return null;
-  const chartData = data.map((price, index) => ({ index, price }));
+  const chartData = useMemo(
+    () => data.map((price, index) => ({ index, price })),
+    [data]
+  );
+
   return (
     <ResponsiveContainer width="100%" height={50}>
       <LineChart data={chartData}>
@@ -59,12 +173,12 @@ function SparklineChart({ data, isPositive }) {
   );
 }
 
-function CoinCard({ coin, rank }) {
+const CoinCard = ({ coin, rank, style }) => {
   const isPositive = coin.price_change_percentage_24h >= 0;
   const changeColor = isPositive ? "#22c55e" : "#ef4444";
   const changeBg = isPositive ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)";
 
-  const formatPrice = (price) => {
+  const formatPrice = useCallback((price) => {
     if (price == null) return "N/A";
     if (price >= 1)
       return (
@@ -81,35 +195,34 @@ function CoinCard({ coin, rank }) {
         maximumFractionDigits: 6,
       })
     );
-  };
+  }, []);
 
-  const formatLargeNumber = (n) => {
+  const formatLargeNumber = useCallback((n) => {
     if (n == null) return "N/A";
     if (n >= 1e12) return "$" + (n / 1e12).toFixed(2) + "T";
     if (n >= 1e9) return "$" + (n / 1e9).toFixed(2) + "B";
     if (n >= 1e6) return "$" + (n / 1e6).toFixed(2) + "M";
     return "$" + n.toLocaleString();
-  };
+  }, []);
+
+  const sparklineData = useMemo(
+    () => coin.sparkline_in_7d?.price,
+    [coin.sparkline_in_7d]
+  );
 
   return (
     <div
+      className="coin-card"
       style={{
+        ...style,
         background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
         border: "1px solid #334155",
         borderRadius: "16px",
         padding: "16px",
-        marginBottom: "12px",
         boxShadow: "0 4px 6px rgba(0,0,0,0.3)",
-        transition: "transform 0.2s ease, box-shadow 0.2s ease",
         cursor: "pointer",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = "translateY(-2px)";
-        e.currentTarget.style.boxShadow = "0 8px 16px rgba(0,0,0,0.4)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = "translateY(0)";
-        e.currentTarget.style.boxShadow = "0 4px 6px rgba(0,0,0,0.3)";
+        transition: "box-shadow 0.2s ease",
+        boxSizing: "border-box",
       }}
     >
       <div
@@ -140,6 +253,8 @@ function CoinCard({ coin, rank }) {
             alt={coin.name}
             width={36}
             height={36}
+            loading="lazy"
+            decoding="async"
             style={{ borderRadius: "50%", objectFit: "cover" }}
             onError={(e) => {
               e.target.style.display = "none";
@@ -199,10 +314,7 @@ function CoinCard({ coin, rank }) {
       </div>
 
       <div style={{ marginBottom: "12px" }}>
-        <SparklineChart
-          data={coin.sparkline_in_7d?.price}
-          isPositive={isPositive}
-        />
+        <SparklineChart data={sparklineData} isPositive={isPositive} />
       </div>
 
       <div
@@ -215,74 +327,37 @@ function CoinCard({ coin, rank }) {
         }}
       >
         <div style={{ flex: 1 }}>
-          <div
-            style={{
-              color: "#64748b",
-              fontSize: "11px",
-              marginBottom: "2px",
-            }}
-          >
+          <div style={{ color: "#64748b", fontSize: "11px", marginBottom: "2px" }}>
             Market Cap
           </div>
-          <div
-            style={{
-              color: "#94a3b8",
-              fontSize: "12px",
-              fontWeight: "600",
-            }}
-          >
+          <div style={{ color: "#94a3b8", fontSize: "12px", fontWeight: "600" }}>
             {formatLargeNumber(coin.market_cap)}
           </div>
         </div>
         <div style={{ flex: 1, textAlign: "center" }}>
-          <div
-            style={{
-              color: "#64748b",
-              fontSize: "11px",
-              marginBottom: "2px",
-            }}
-          >
+          <div style={{ color: "#64748b", fontSize: "11px", marginBottom: "2px" }}>
             Volume 24h
           </div>
-          <div
-            style={{
-              color: "#94a3b8",
-              fontSize: "12px",
-              fontWeight: "600",
-            }}
-          >
+          <div style={{ color: "#94a3b8", fontSize: "12px", fontWeight: "600" }}>
             {formatLargeNumber(coin.total_volume)}
           </div>
         </div>
         <div style={{ flex: 1, textAlign: "right" }}>
-          <div
-            style={{
-              color: "#64748b",
-              fontSize: "11px",
-              marginBottom: "2px",
-            }}
-          >
+          <div style={{ color: "#64748b", fontSize: "11px", marginBottom: "2px" }}>
             ATH
           </div>
-          <div
-            style={{
-              color: "#94a3b8",
-              fontSize: "12px",
-              fontWeight: "600",
-            }}
-          >
+          <div style={{ color: "#94a3b8", fontSize: "12px", fontWeight: "600" }}>
             {formatPrice(coin.ath)}
           </div>
         </div>
       </div>
     </div>
   );
-}
+};
 
 function LoadingSkeleton() {
   return (
     <>
-      <style>{shimmerStyle}</style>
       {[...Array(5)].map((_, i) => (
         <div
           key={i}
@@ -292,7 +367,7 @@ function LoadingSkeleton() {
             borderRadius: "16px",
             padding: "16px",
             marginBottom: "12px",
-            height: "160px",
+            height: `${ITEM_HEIGHT - 12}px`,
             position: "relative",
             overflow: "hidden",
           }}
@@ -359,94 +434,99 @@ function SearchAndFilter({ searchParams, setSearchParams }) {
   const filter = searchParams.get("filter") || "all";
   const sort = searchParams.get("sort") || "market_cap_desc";
 
-  const update = (key, value) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (value === "" || value === null) {
-        next.delete(key);
-      } else {
-        next.set(key, value);
-      }
-      return next;
-    });
-  };
+  const update = useCallback(
+    (key, value) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        if (value === "" || value === null) {
+          next.delete(key);
+        } else {
+          next.set(key, value);
+        }
+        return next;
+      });
+    },
+    [setSearchParams]
+  );
 
   return (
     <div
       style={{
-        background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
-        border: "1px solid #334155",
-        borderRadius: "16px",
-        padding: "14px",
-        marginBottom: "16px",
-        display: "flex",
-        flexDirection: "column",
-        gap: "10px",
+        position: "sticky",
+        top: 0,
+        zIndex: 20,
+        background: "#0a0f1e",
+        paddingBottom: "12px",
+        paddingTop: "4px",
       }}
     >
-      {/* Search input */}
-      <div style={{ position: "relative" }}>
+      <div style={{ position: "relative", marginBottom: "10px" }}>
         <span
           style={{
             position: "absolute",
             left: "10px",
             top: "50%",
             transform: "translateY(-50%)",
-            color: "#64748b",
-            fontSize: "15px",
+            fontSize: "16px",
             pointerEvents: "none",
-            lineHeight: 1,
+            zIndex: 1,
           }}
         >
           🔍
         </span>
         <input
-          type="text"
+          className="search-input"
+          type="search"
+          placeholder="Search coins..."
           value={query}
           onChange={(e) => update("q", e.target.value)}
-          placeholder="Search by name or symbol…"
           style={inputStyle}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = "#6366f1";
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = "#334155";
-          }}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck="false"
         />
       </div>
 
-      {/* Filter + Sort row */}
-      <div style={{ display: "flex", gap: "8px" }}>
-        {/* Variation filter */}
-        <div style={{ position: "relative", flex: 1 }}>
-          <select
-            value={filter}
-            onChange={(e) => update("filter", e.target.value)}
-            style={selectStyle}
-          >
-            {FILTER_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-          <span
-            style={{
-              position: "absolute",
-              right: "10px",
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: "#64748b",
-              fontSize: "11px",
-              pointerEvents: "none",
-            }}
-          >
-            ▼
-          </span>
+      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "6px",
+            flex: 1,
+            overflowX: "auto",
+            scrollbarWidth: "none",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
+          {FILTER_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              className="filter-btn"
+              onClick={() => update("filter", opt.value === "all" ? null : opt.value)}
+              style={{
+                whiteSpace: "nowrap",
+                padding: "7px 14px",
+                borderRadius: "20px",
+                border: "1px solid",
+                borderColor: filter === opt.value ? "#6366f1" : "#334155",
+                background:
+                  filter === opt.value
+                    ? "rgba(99,102,241,0.15)"
+                    : "transparent",
+                color: filter === opt.value ? "#818cf8" : "#64748b",
+                fontSize: "13px",
+                fontWeight: filter === opt.value ? "600" : "400",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
 
-        {/* Sort select */}
-        <div style={{ position: "relative", flex: 1 }}>
+        <div style={{ position: "relative", minWidth: "120px" }}>
           <select
             value={sort}
             onChange={(e) => update("sort", e.target.value)}
@@ -461,12 +541,12 @@ function SearchAndFilter({ searchParams, setSearchParams }) {
           <span
             style={{
               position: "absolute",
-              right: "10px",
+              right: "8px",
               top: "50%",
               transform: "translateY(-50%)",
-              color: "#64748b",
-              fontSize: "11px",
               pointerEvents: "none",
+              fontSize: "10px",
+              color: "#64748b",
             }}
           >
             ▼
@@ -477,248 +557,23 @@ function SearchAndFilter({ searchParams, setSearchParams }) {
   );
 }
 
-function applyFiltersAndSort(coins, query, filter, sort) {
-  let result = [...coins];
-
-  // Search filter
-  if (query.trim()) {
-    const q = query.trim().toLowerCase();
-    result = result.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        c.symbol.toLowerCase().includes(q)
-    );
-  }
-
-  // Variation filter
-  if (filter === "gainers") {
-    result = result.filter((c) => c.price_change_percentage_24h >= 0);
-  } else if (filter === "losers") {
-    result = result.filter((c) => c.price_change_percentage_24h < 0);
-  }
-
-  // Sort
-  switch (sort) {
-    case "market_cap_desc":
-      result.sort((a, b) => (b.market_cap ?? 0) - (a.market_cap ?? 0));
-      break;
-    case "market_cap_asc":
-      result.sort((a, b) => (a.market_cap ?? 0) - (b.market_cap ?? 0));
-      break;
-    case "price_desc":
-      result.sort((a, b) => (b.current_price ?? 0) - (a.current_price ?? 0));
-      break;
-    case "price_asc":
-      result.sort((a, b) => (a.current_price ?? 0) - (b.current_price ?? 0));
-      break;
-    case "change_desc":
-      result.sort(
-        (a, b) =>
-          (b.price_change_percentage_24h ?? 0) -
-          (a.price_change_percentage_24h ?? 0)
-      );
-      break;
-    case "change_asc":
-      result.sort(
-        (a, b) =>
-          (a.price_change_percentage_24h ?? 0) -
-          (b.price_change_percentage_24h ?? 0)
-      );
-      break;
-    default:
-      break;
-  }
-
-  return result;
-}
-
-export default function CryptoMarkets() {
-  const [coins, setCoins] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const query = searchParams.get("q") || "";
-  const filter = searchParams.get("filter") || "all";
-  const sort = searchParams.get("sort") || "market_cap_desc";
-
-  const fetchCoins = useCallback(async () => {
-    try {
-      const res = await fetch(COINGECKO_URL);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setCoins(data);
-      setLastUpdated(new Date());
-      setError(null);
-    } catch (err) {
-      setError(err.message || "Failed to fetch data");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+function VirtualCoinList({ coins }) {
+  const [containerHeight, setContainerHeight] = useState(CONTAINER_HEIGHT);
+  const containerRef = useRef(null);
 
   useEffect(() => {
-    fetchCoins();
-    const interval = setInterval(fetchCoins, REFRESH_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchCoins]);
+    const updateHeight = () => {
+      if (containerRef.current) {
+        setContainerHeight(containerRef.current.clientHeight);
+      }
+    };
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    if (containerRef.current) observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
 
-  const filteredCoins = useMemo(
-    () => applyFiltersAndSort(coins, query, filter, sort),
-    [coins, query, filter, sort]
-  );
-
-  const hasActiveFilters = query || filter !== "all" || sort !== "market_cap_desc";
-
-  return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#020817",
-        padding: "16px",
-        maxWidth: "480px",
-        margin: "0 auto",
-        fontFamily:
-          "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-      }}
-    >
-      {/* Header */}
-      <div style={{ marginBottom: "20px" }}>
-        <h1
-          style={{
-            color: "#f1f5f9",
-            fontSize: "22px",
-            fontWeight: "800",
-            margin: "0 0 4px 0",
-            letterSpacing: "-0.02em",
-          }}
-        >
-          Crypto Markets
-        </h1>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <p style={{ color: "#64748b", fontSize: "13px", margin: 0 }}>
-            Top 50 by market cap · auto-refresh 60s
-          </p>
-          {lastUpdated && (
-            <span style={{ color: "#475569", fontSize: "11px" }}>
-              {lastUpdated.toLocaleTimeString()}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Search & Filter */}
-      <SearchAndFilter
-        searchParams={searchParams}
-        setSearchParams={setSearchParams}
-      />
-
-      {/* Results info */}
-      {!loading && !error && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: "12px",
-          }}
-        >
-          <span style={{ color: "#64748b", fontSize: "12px" }}>
-            {filteredCoins.length} result{filteredCoins.length !== 1 ? "s" : ""}
-            {hasActiveFilters ? " (filtered)" : ""}
-          </span>
-          {hasActiveFilters && (
-            <button
-              onClick={() => setSearchParams({})}
-              style={{
-                background: "none",
-                border: "1px solid #334155",
-                borderRadius: "8px",
-                color: "#94a3b8",
-                fontSize: "11px",
-                padding: "3px 10px",
-                cursor: "pointer",
-              }}
-            >
-              Clear filters
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Error */}
-      {error && (
-        <div
-          style={{
-            background: "rgba(239,68,68,0.1)",
-            border: "1px solid rgba(239,68,68,0.3)",
-            borderRadius: "12px",
-            padding: "14px",
-            marginBottom: "16px",
-            color: "#fca5a5",
-            fontSize: "14px",
-            textAlign: "center",
-          }}
-        >
-          ⚠️ {error}
-          <button
-            onClick={fetchCoins}
-            style={{
-              display: "block",
-              margin: "8px auto 0",
-              background: "rgba(239,68,68,0.2)",
-              border: "1px solid rgba(239,68,68,0.4)",
-              borderRadius: "8px",
-              color: "#fca5a5",
-              fontSize: "12px",
-              padding: "4px 14px",
-              cursor: "pointer",
-            }}
-          >
-            Retry
-          </button>
-        </div>
-      )}
-
-      {/* Loading */}
-      {loading && <LoadingSkeleton />}
-
-      {/* Empty state */}
-      {!loading && !error && filteredCoins.length === 0 && (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "48px 16px",
-            color: "#475569",
-          }}
-        >
-          <div style={{ fontSize: "36px", marginBottom: "12px" }}>🔍</div>
-          <div style={{ fontSize: "15px", fontWeight: "600", color: "#64748b" }}>
-            No results found
-          </div>
-          <div style={{ fontSize: "13px", marginTop: "4px" }}>
-            Try a different search or filter
-          </div>
-        </div>
-      )}
-
-      {/* Coin list */}
-      {!loading &&
-        !error &&
-        filteredCoins.map((coin, idx) => (
-          <CoinCard
-            key={coin.id}
-            coin={coin}
-            rank={coins.indexOf(coin) + 1}
-          />
-        ))}
-    </div>
-  );
-}
+  const { scrollElementRef, visibleItems, totalHeight, offsetY } =
+    useVirtualScroll({
+      itemCount: coins.length,
+      itemHeight: ITEM_HEIGHT,
