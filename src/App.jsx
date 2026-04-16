@@ -1,6 +1,7 @@
 ```jsx
-// src/pages/MMA.jsx
-import { useState } from 'react'
+// src/pages/CryptoMarkets.jsx
+import { useState, useEffect, useCallback } from 'react'
+import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts'
 
 const COLORS = {
   bg: '#0a0a0f',
@@ -11,652 +12,475 @@ const COLORS = {
   purpleDim: 'rgba(102,0,234,0.12)',
   red: '#ff2d55',
   redDim: 'rgba(255,45,85,0.12)',
-  gold: '#ffd60a',
-  goldDim: 'rgba(255,214,10,0.12)',
   green: '#30d158',
   greenDim: 'rgba(48,209,88,0.12)',
+  gold: '#ffd60a',
+  goldDim: 'rgba(255,214,10,0.12)',
   text: '#ffffff',
   textSub: 'rgba(255,255,255,0.55)',
   textDim: 'rgba(255,255,255,0.35)',
   border: 'rgba(255,255,255,0.06)',
 }
 
-/* ─── MOCK DATA ─────────────────────────────────────────────────────────────
-   Replace fetchEvents() / fetchFighters() below with secure server-side
-   API calls (e.g. /api/ufc/events) when a real data source is available.
-   ─────────────────────────────────────────────────────────────────────────── */
-const MOCK_EVENTS = [
-  {
-    id: 'ufc-310',
-    name: 'UFC 310',
-    subtitle: 'Pantoja vs Asakura',
-    date: '2024-12-07',
-    location: 'T-Mobile Arena, Las Vegas, NV',
-    status: 'completed',
-    mainCard: [
-      {
-        id: 'f1',
-        fighter1: { name: 'Alexandre Pantoja', country: '🇧🇷', record: '27-5', ranking: 'C' },
-        fighter2: { name: 'Kai Asakura', country: '🇯🇵', record: '19-4', ranking: '#1' },
-        weightClass: 'Flyweight',
-        result: { winner: 'fighter1', method: 'Decision (Unanimous)', round: 5, time: '5:00' },
-        isTitle: true,
-      },
-      {
-        id: 'f2',
-        fighter1: { name: 'Shavkat Rakhmonov', country: '🇰🇿', record: '18-0', ranking: '#3' },
-        fighter2: { name: 'Ian Machado Garry', country: '🇮🇪', record: '15-0', ranking: '#5' },
-        weightClass: 'Welterweight',
-        result: { winner: 'fighter1', method: 'Submission (Rear Naked Choke)', round: 3, time: '4:23' },
-        isTitle: false,
-      },
-      {
-        id: 'f3',
-        fighter1: { name: 'Jonathon Martinez', country: '🇺🇸', record: '16-4', ranking: '#12' },
-        fighter2: { name: 'Deiveson Figueiredo', country: '🇧🇷', record: '23-4-1', ranking: '#7' },
-        weightClass: 'Bantamweight',
-        result: { winner: 'fighter2', method: 'KO/TKO', round: 1, time: '2:45' },
-        isTitle: false,
-      },
-    ],
-    prelimCard: [
-      {
-        id: 'f4',
-        fighter1: { name: 'Umar Nurmagomedov', country: '🇷🇺', record: '17-0', ranking: '#2' },
-        fighter2: { name: 'Cub Swanson', country: '🇺🇸', record: '29-12', ranking: 'NR' },
-        weightClass: 'Bantamweight',
-        result: { winner: 'fighter1', method: 'Decision (Unanimous)', round: 3, time: '5:00' },
-        isTitle: false,
-      },
-      {
-        id: 'f5',
-        fighter1: { name: 'Roman Kopylov', country: '🇷🇺', record: '12-1', ranking: 'NR' },
-        fighter2: { name: 'Michel Pereira', country: '🇧🇷', record: '30-11-2', ranking: '#10' },
-        weightClass: 'Middleweight',
-        result: { winner: 'fighter1', method: 'KO/TKO', round: 2, time: '1:12' },
-        isTitle: false,
-      },
-    ],
-  },
-  {
-    id: 'ufc-311',
-    name: 'UFC 311',
-    subtitle: 'Makhachev vs Moicano',
-    date: '2025-01-18',
-    location: 'Intuit Dome, Inglewood, CA',
-    status: 'upcoming',
-    mainCard: [
-      {
-        id: 'f6',
-        fighter1: { name: 'Islam Makhachev', country: '🇷🇺', record: '26-1', ranking: 'C' },
-        fighter2: { name: 'Renato Moicano', country: '🇧🇷', record: '21-5-1', ranking: '#5' },
-        weightClass: 'Lightweight',
-        result: null,
-        isTitle: true,
-      },
-      {
-        id: 'f7',
-        fighter1: { name: 'Merab Dvalishvili', country: '🇬🇪', record: '17-4', ranking: 'C' },
-        fighter2: { name: 'Umar Nurmagomedov', country: '🇷🇺', record: '17-0', ranking: '#2' },
-        weightClass: 'Bantamweight',
-        result: null,
-        isTitle: true,
-      },
-      {
-        id: 'f8',
-        fighter1: { name: 'Mauricio Ruffy', country: '🇧🇷', record: '10-1', ranking: '#13' },
-        fighter2: { name: 'Joe Solecki', country: '🇺🇸', record: '16-5', ranking: 'NR' },
-        weightClass: 'Lightweight',
-        result: null,
-        isTitle: false,
-      },
-    ],
-    prelimCard: [
-      {
-        id: 'f9',
-        fighter1: { name: 'Mateusz Gamrot', country: '🇵🇱', record: '24-2', ranking: '#9' },
-        fighter2: { name: 'Jalin Turner', country: '🇺🇸', record: '14-7', ranking: 'NR' },
-        weightClass: 'Lightweight',
-        result: null,
-        isTitle: false,
-      },
-      {
-        id: 'f10',
-        fighter1: { name: 'Johnny Walker', country: '🇧🇷', record: '21-8', ranking: 'NR' },
-        fighter2: { name: 'Dominic Reyes', country: '🇺🇸', record: '12-5', ranking: 'NR' },
-        weightClass: 'Light Heavyweight',
-        result: null,
-        isTitle: false,
-      },
-    ],
-  },
-  {
-    id: 'ufc-312',
-    name: 'UFC 312',
-    subtitle: 'Du Plessis vs Strickland 2',
-    date: '2025-02-22',
-    location: 'Qudos Bank Arena, Sydney, Australia',
-    status: 'upcoming',
-    mainCard: [
-      {
-        id: 'f11',
-        fighter1: { name: 'Dricus Du Plessis', country: '🇿🇦', record: '22-2', ranking: 'C' },
-        fighter2: { name: 'Sean Strickland', country: '🇺🇸', record: '29-6', ranking: '#1' },
-        weightClass: 'Middleweight',
-        result: null,
-        isTitle: true,
-      },
-      {
-        id: 'f12',
-        fighter1: { name: 'Jack Della Maddalena', country: '🇦🇺', record: '16-2', ranking: '#7' },
-        fighter2: { name: 'Gilbert Burns', country: '🇧🇷', record: '22-7', ranking: '#10' },
-        weightClass: 'Welterweight',
-        result: null,
-        isTitle: false,
-      },
-    ],
-    prelimCard: [
-      {
-        id: 'f13',
-        fighter1: { name: 'Justin Tafa', country: '🇦🇺', record: '8-3', ranking: 'NR' },
-        fighter2: { name: 'Tallison Teixeira', country: '🇧🇷', record: '10-1', ranking: 'NR' },
-        weightClass: 'Heavyweight',
-        result: null,
-        isTitle: false,
-      },
-    ],
-  },
-]
+const COINGECKO_URL =
+  'https://api.coingecko.com/api/v3/coins/markets' +
+  '?vs_currency=usd' +
+  '&order=market_cap_desc' +
+  '&per_page=10' +
+  '&page=1' +
+  '&sparkline=true' +
+  '&price_change_percentage=24h'
 
-const TOP_FIGHTERS = [
-  {
-    id: 'tf1',
-    name: 'Jon Jones',
-    country: '🇺🇸',
-    nickname: 'Bones',
-    weightClass: 'Heavyweight',
-    record: '27-1 NC',
-    ranking: 'C',
-    age: 37,
-    wins: { ko: 10, sub: 1, dec: 16 },
-    losses: 1,
-    streak: { type: 'win', count: 5 },
-    reachIn: 84.5,
-  },
-  {
-    id: 'tf2',
-    name: 'Islam Makhachev',
-    country: '🇷🇺',
-    nickname: '',
-    weightClass: 'Lightweight',
-    record: '26-1',
-    ranking: 'C',
-    age: 32,
-    wins: { ko: 4, sub: 11, dec: 11 },
-    losses: 1,
-    streak: { type: 'win', count: 14 },
-    reachIn: 70.5,
-  },
-  {
-    id: 'tf3',
-    name: 'Alexandre Pantoja',
-    country: '🇧🇷',
-    nickname: 'The Cannibal',
-    weightClass: 'Flyweight',
-    record: '27-5',
-    ranking: 'C',
-    age: 34,
-    wins: { ko: 7, sub: 10, dec: 10 },
-    losses: 5,
-    streak: { type: 'win', count: 6 },
-    reachIn: 67,
-  },
-  {
-    id: 'tf4',
-    name: 'Dricus Du Plessis',
-    country: '🇿🇦',
-    nickname: 'Stillknocks',
-    weightClass: 'Middleweight',
-    record: '22-2',
-    ranking: 'C',
-    age: 30,
-    wins: { ko: 11, sub: 5, dec: 6 },
-    losses: 2,
-    streak: { type: 'win', count: 7 },
-    reachIn: 76,
-  },
-]
-
-/* ─── HELPERS ─────────────────────────────────────────────────────────────── */
-function formatDate(dateStr) {
-  const d = new Date(dateStr)
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-function daysUntil(dateStr) {
-  const now = new Date()
-  const d = new Date(dateStr)
-  return Math.ceil((d - now) / (1000 * 60 * 60 * 24))
-}
-
-/* ─── SUB-COMPONENTS ──────────────────────────────────────────────────────── */
-function StatusBadge({ status, date }) {
-  if (status === 'completed') {
-    return (
-      <span style={{
-        fontSize: 11, fontWeight: 700, color: COLORS.textSub,
-        background: 'rgba(255,255,255,0.06)', borderRadius: 6,
-        padding: '3px 8px', letterSpacing: '0.5px', textTransform: 'uppercase',
-      }}>
-        Completed
-      </span>
-    )
+const SPIN_STYLE = `
+  @keyframes spin {
+    to { transform: rotate(360deg); }
   }
-  const days = daysUntil(date)
-  const urgent = days <= 7
-  return (
-    <span style={{
-      fontSize: 11, fontWeight: 700,
-      color: urgent ? COLORS.red : COLORS.purpleLight,
-      background: urgent ? COLORS.redDim : COLORS.purpleDim,
-      borderRadius: 6, padding: '3px 8px',
-      letterSpacing: '0.5px', textTransform: 'uppercase',
-    }}>
-      {days <= 0 ? 'Today' : `In ${days}d`}
-    </span>
-  )
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+`
+
+function formatPrice(price) {
+  if (price >= 1000) {
+    return '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
+  if (price >= 1) {
+    return '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })
+  }
+  return '$' + price.toFixed(6)
 }
 
-function MethodBadge({ method }) {
-  let color = COLORS.textSub
-  let bg = 'rgba(255,255,255,0.06)'
-  if (method.startsWith('KO'))  { color = COLORS.red;  bg = COLORS.redDim }
-  else if (method.startsWith('Sub')) { color = COLORS.gold; bg = COLORS.goldDim }
-  else if (method.startsWith('Dec')) { color = COLORS.green; bg = COLORS.greenDim }
-  return (
-    <span style={{
-      fontSize: 10, fontWeight: 700, color, background: bg,
-      borderRadius: 5, padding: '2px 7px',
-      letterSpacing: '0.3px', whiteSpace: 'nowrap',
-    }}>
-      {method}
-    </span>
-  )
+function formatMarketCap(val) {
+  if (val >= 1e12) return '$' + (val / 1e12).toFixed(2) + 'T'
+  if (val >= 1e9)  return '$' + (val / 1e9).toFixed(2) + 'B'
+  if (val >= 1e6)  return '$' + (val / 1e6).toFixed(2) + 'M'
+  return '$' + val.toLocaleString()
 }
 
-function FighterName({ fighter, isWinner, isLoser }) {
-  return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', gap: 2,
-      opacity: isLoser ? 0.45 : 1,
-      flex: 1,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-        <span style={{ fontSize: 14 }}>{fighter.country}</span>
-        <span style={{
-          fontSize: 13, fontWeight: isWinner ? 700 : 500,
-          color: isWinner ? COLORS.text : COLORS.textSub,
-          lineHeight: 1.2,
-        }}>
-          {fighter.name}
-        </span>
-        {isWinner && (
-          <span style={{ fontSize: 11 }}>✓</span>
-        )}
-      </div>
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        <span style={{ fontSize: 10, color: COLORS.textDim }}>{fighter.record}</span>
-        <span style={{
-          fontSize: 9, fontWeight: 700,
-          color: fighter.ranking === 'C' ? COLORS.gold : COLORS.purpleLight,
-          background: fighter.ranking === 'C' ? COLORS.goldDim : COLORS.purpleDim,
-          borderRadius: 4, padding: '1px 5px',
-        }}>
-          {fighter.ranking === 'C' ? '👑 CHAMP' : fighter.ranking}
-        </span>
-      </div>
-    </div>
-  )
+function formatVolume(val) {
+  return formatMarketCap(val)
 }
 
-function FightRow({ fight, compact = false }) {
-  const { fighter1, fighter2, weightClass, result, isTitle } = fight
-  const winner = result ? result.winner : null
+function SparklineChart({ data, positive }) {
+  if (!data || data.length === 0) return null
+  const chartData = data.map((v, i) => ({ i, v }))
+  const color = positive ? COLORS.green : COLORS.red
 
   return (
-    <div style={{
-      padding: compact ? '12px 0' : '16px 0',
-      borderBottom: `1px solid ${COLORS.border}`,
-    }}>
-      {isTitle && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-          <span style={{ fontSize: 13 }}>🏆</span>
-          <span style={{
-            fontSize: 10, fontWeight: 700, color: COLORS.gold,
-            letterSpacing: '0.8px', textTransform: 'uppercase',
-          }}>
-            Title Fight
-          </span>
-          <span style={{ fontSize: 10, color: COLORS.textDim, marginLeft: 2 }}>
-            · {weightClass}
-          </span>
-        </div>
-      )}
-      {!isTitle && (
-        <div style={{ fontSize: 10, color: COLORS.textDim, marginBottom: 8, letterSpacing: '0.3px' }}>
-          {weightClass}
-        </div>
-      )}
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <FighterName
-          fighter={fighter1}
-          isWinner={winner === 'fighter1'}
-          isLoser={winner === 'fighter2'}
+    <ResponsiveContainer width="100%" height={52}>
+      <LineChart data={chartData} margin={{ top: 4, right: 0, bottom: 4, left: 0 }}>
+        <Line
+          type="monotone"
+          dataKey="v"
+          stroke={color}
+          strokeWidth={1.5}
+          dot={false}
+          isAnimationActive={false}
         />
-        <span style={{
-          fontSize: 11, fontWeight: 700, color: COLORS.textDim,
-          flexShrink: 0, padding: '0 4px',
-        }}>
-          VS
-        </span>
-        <FighterName
-          fighter={fighter2}
-          isWinner={winner === 'fighter2'}
-          isLoser={winner === 'fighter1'}
-        />
-      </div>
-
-      {result && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          marginTop: 10, flexWrap: 'wrap',
-        }}>
-          <MethodBadge method={result.method} />
-          <span style={{ fontSize: 10, color: COLORS.textDim }}>
-            R{result.round} · {result.time}
-          </span>
-        </div>
-      )}
-
-      {!result && (
-        <div style={{ marginTop: 8 }}>
-          <span style={{
-            fontSize: 10, color: COLORS.purpleLight,
-            background: COLORS.purpleDim, borderRadius: 5,
-            padding: '2px 8px', fontWeight: 600,
-          }}>
-            Scheduled
-          </span>
-        </div>
-      )}
-    </div>
+        <Tooltip content={() => null} />
+      </LineChart>
+    </ResponsiveContainer>
   )
 }
 
-function EventCard({ event, isSelected, onSelect }) {
-  const [showPrelims, setShowPrelims] = useState(false)
+function CoinCard({ coin, rank }) {
+  const change = coin.price_change_percentage_24h || 0
+  const positive = change >= 0
+  const changeColor = positive ? COLORS.green : COLORS.red
+  const changeBg = positive ? COLORS.greenDim : COLORS.redDim
+  const sparkData = coin.sparkline_in_7d?.price || []
 
   return (
     <div
-      onClick={onSelect}
       style={{
         background: COLORS.card,
-        border: `1px solid ${isSelected ? COLORS.purple : COLORS.cardBorder}`,
+        border: `1px solid ${COLORS.cardBorder}`,
         borderRadius: 16,
-        overflow: 'hidden',
-        cursor: 'pointer',
+        padding: '16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
         transition: 'border-color 0.2s',
-        boxShadow: isSelected ? `0 0 0 1px ${COLORS.purple}` : 'none',
       }}
     >
-      {/* Header */}
-      <div style={{
-        padding: '16px 18px 14px',
-        borderBottom: `1px solid ${COLORS.border}`,
-        background: isSelected
-          ? 'linear-gradient(135deg, rgba(102,0,234,0.15) 0%, transparent 60%)'
-          : 'transparent',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <span style={{
-                fontSize: 18, fontWeight: 800, color: COLORS.text,
-                letterSpacing: '-0.3px',
-              }}>
-                {event.name}
-              </span>
-              <StatusBadge status={event.status} date={event.date} />
-            </div>
-            <div style={{ fontSize: 13, color: COLORS.textSub, fontWeight: 500, marginBottom: 6 }}>
-              {event.subtitle}
-            </div>
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 11, color: COLORS.textDim }}>
-                📅 {formatDate(event.date)}
-              </span>
-              <span style={{ fontSize: 11, color: COLORS.textDim }}>
-                📍 {event.location}
-              </span>
-            </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <img
+            src={coin.image}
+            alt={coin.name}
+            width={40}
+            height={40}
+            style={{ borderRadius: '50%', display: 'block' }}
+            onError={(e) => { e.target.style.display = 'none' }}
+          />
+          <span style={{
+            position: 'absolute',
+            bottom: -4,
+            right: -6,
+            fontSize: 9,
+            fontWeight: 700,
+            color: COLORS.textDim,
+            background: COLORS.bg,
+            borderRadius: 4,
+            padding: '1px 4px',
+            border: `1px solid ${COLORS.border}`,
+            lineHeight: 1.4,
+          }}>
+            #{rank}
+          </span>
+        </div>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>
+              {coin.name}
+            </span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: COLORS.textDim, textTransform: 'uppercase' }}>
+              {coin.symbol}
+            </span>
+          </div>
+          <div style={{ fontSize: 12, color: COLORS.textSub, marginTop: 2 }}>
+            MCap {formatMarketCap(coin.market_cap)}
           </div>
         </div>
-      </div>
 
-      {/* Main Card */}
-      <div style={{ padding: '0 18px' }}>
-        <div style={{
-          fontSize: 10, fontWeight: 700, color: COLORS.purpleLight,
-          letterSpacing: '0.8px', textTransform: 'uppercase',
-          padding: '12px 0 4px',
-        }}>
-          Main Card
-        </div>
-        {event.mainCard.map((fight) => (
-          <FightRow key={fight.id} fight={fight} />
-        ))}
-      </div>
-
-      {/* Prelims Toggle */}
-      <div style={{ padding: '0 18px 4px' }}>
-        <button
-          onClick={(e) => { e.stopPropagation(); setShowPrelims((v) => !v) }}
-          style={{
-            width: '100%', background: 'transparent', border: 'none',
-            cursor: 'pointer', padding: '12px 0',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          }}
-        >
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+          <span style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, whiteSpace: 'nowrap' }}>
+            {formatPrice(coin.current_price)}
+          </span>
           <span style={{
-            fontSize: 10, fontWeight: 700, color: COLORS.textSub,
-            letterSpacing: '0.8px', textTransform: 'uppercase',
+            fontSize: 12,
+            fontWeight: 700,
+            color: changeColor,
+            background: changeBg,
+            borderRadius: 6,
+            padding: '2px 8px',
           }}>
-            Preliminary Card ({event.prelimCard.length} fights)
+            {positive ? '+' : ''}{change.toFixed(2)}%
           </span>
-          <span style={{ fontSize: 14, color: COLORS.textDim }}>
-            {showPrelims ? '▲' : '▼'}
-          </span>
-        </button>
+        </div>
+      </div>
 
-        {showPrelims && event.prelimCard.map((fight) => (
-          <FightRow key={fight.id} fight={fight} compact />
-        ))}
+      {sparkData.length > 0 && (
+        <div style={{ marginTop: -4 }}>
+          <div style={{ fontSize: 10, color: COLORS.textDim, marginBottom: 2 }}>7-day chart</div>
+          <SparklineChart data={sparkData} positive={positive} />
+        </div>
+      )}
 
-        {showPrelims && (
-          <div style={{ height: 12 }} />
-        )}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: 8,
+        paddingTop: 8,
+        borderTop: `1px solid ${COLORS.border}`,
+      }}>
+        <div>
+          <div style={{ fontSize: 10, color: COLORS.textDim, marginBottom: 2, letterSpacing: '0.3px' }}>24h HIGH</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.green }}>
+            {formatPrice(coin.high_24h || 0)}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 10, color: COLORS.textDim, marginBottom: 2, letterSpacing: '0.3px' }}>24h LOW</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.red }}>
+            {formatPrice(coin.low_24h || 0)}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 10, color: COLORS.textDim, marginBottom: 2, letterSpacing: '0.3px' }}>VOLUME</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.textSub }}>
+            {formatVolume(coin.total_volume || 0)}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 10, color: COLORS.textDim, marginBottom: 2, letterSpacing: '0.3px' }}>SUPPLY</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.textSub }}>
+            {coin.circulating_supply
+              ? (coin.circulating_supply / 1e6).toFixed(2) + 'M'
+              : '—'}
+          </div>
+        </div>
       </div>
     </div>
   )
 }
 
-function FighterCard({ fighter }) {
-  const totalWins = fighter.wins.ko + fighter.wins.sub + fighter.wins.dec
-  const koRate = totalWins > 0 ? Math.round((fighter.wins.ko / totalWins) * 100) : 0
-  const subRate = totalWins > 0 ? Math.round((fighter.wins.sub / totalWins) * 100) : 0
-  const decRate = totalWins > 0 ? Math.round((fighter.wins.dec / totalWins) * 100) : 0
-
+function LoadingCard() {
   return (
     <div style={{
       background: COLORS.card,
       border: `1px solid ${COLORS.cardBorder}`,
       borderRadius: 16,
       padding: '16px',
+      height: 220,
       display: 'flex',
-      flexDirection: 'column',
-      gap: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
     }}>
-      {/* Identity */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-            <span style={{ fontSize: 20 }}>{fighter.country}</span>
-            <span style={{
-              fontSize: 9, fontWeight: 700, color: COLORS.gold,
-              background: COLORS.goldDim, borderRadius: 4,
-              padding: '2px 6px', letterSpacing: '0.5px',
-            }}>
-              👑 CHAMPION
-            </span>
-          </div>
-          <div style={{ fontSize: 15, fontWeight: 800, color: COLORS.text, lineHeight: 1.2, marginBottom: 2 }}>
-            {fighter.name}
-          </div>
-          {fighter.nickname && (
-            <div style={{ fontSize: 11, color: COLORS.textDim, fontStyle: 'italic' }}>
-              "{fighter.nickname}"
-            </div>
-          )}
-        </div>
-        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>{fighter.record}</div>
-          <div style={{ fontSize: 10, color: COLORS.textDim, marginTop: 2 }}>{fighter.weightClass}</div>
-          <div style={{ fontSize: 10, color: COLORS.textDim }}>Age {fighter.age}</div>
-        </div>
-      </div>
-
-      {/* Streak */}
-      <div style={{
-        background: fighter.streak.type === 'win' ? COLORS.greenDim : COLORS.redDim,
-        borderRadius: 8, padding: '8px 12px',
-        display: 'flex', alignItems: 'center', gap: 8,
-      }}>
-        <span style={{ fontSize: 14 }}>{fighter.streak.type === 'win' ? '🔥' : '📉'}</span>
-        <span style={{
-          fontSize: 12, fontWeight: 700,
-          color: fighter.streak.type === 'win' ? COLORS.green : COLORS.red,
-        }}>
-          {fighter.streak.count}-Fight {fighter.streak.type === 'win' ? 'Win' : 'Losing'} Streak
-        </span>
-      </div>
-
-      {/* Win breakdown */}
-      <div>
-        <div style={{ fontSize: 10, color: COLORS.textDim, marginBottom: 8, letterSpacing: '0.3px' }}>
-          Win Breakdown · {totalWins} total
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {[
-            { label: 'KO/TKO', value: fighter.wins.ko, pct: koRate, color: COLORS.red, bg: COLORS.redDim },
-            { label: 'SUB', value: fighter.wins.sub, pct: subRate, color: COLORS.gold, bg: COLORS.goldDim },
-            { label: 'DEC', value: fighter.wins.dec, pct: decRate, color: COLORS.green, bg: COLORS.greenDim },
-          ].map(({ label, value, pct, color, bg }) => (
-            <div key={label} style={{
-              flex: 1, background: bg, borderRadius: 8,
-              padding: '8px', textAlign: 'center',
-            }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color }}>{value}</div>
-              <div style={{ fontSize: 9, color, fontWeight: 600, marginTop: 1 }}>{label}</div>
-              <div style={{ fontSize: 9, color: COLORS.textDim, marginTop: 2 }}>{pct}%</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Reach */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '8px 12px', background: COLORS.purpleDim, borderRadius: 8,
-      }}>
-        <span style={{ fontSize: 11, color: COLORS.textSub }}>Reach</span>
-        <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.purpleLight }}>
-          {fighter.reachIn}"
-        </span>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+        <div style={{
+          width: 32,
+          height: 32,
+          borderRadius: '50%',
+          border: `2px solid ${COLORS.purpleLight}`,
+          borderTopColor: 'transparent',
+          animation: 'spin 0.8s linear infinite',
+        }} />
+        <span style={{ fontSize: 12, color: COLORS.textDim }}>Loading...</span>
       </div>
     </div>
   )
 }
 
-/* ─── MAIN DASHBOARD ──────────────────────────────────────────────────────── */
-function MMADashboard() {
-  const [activeTab, setActiveTab] = useState('events') // 'events' | 'fighters'
-  const [selectedEventId, setSelectedEventId] = useState(MOCK_EVENTS[0].id)
-
-  const upcomingEvents = MOCK_EVENTS.filter((e) => e.status === 'upcoming')
-  const completedEvents = MOCK_EVENTS.filter((e) => e.status === 'completed')
-
-  const tabs = [
-    { id: 'events', label: '🥊 Events' },
-    { id: 'fighters', label: '🏆 Champions' },
-  ]
+function MarketSummaryBar({ coins }) {
+  if (!coins.length) return null
+  const gainers = coins.filter(c => (c.price_change_percentage_24h || 0) >= 0).length
+  const losers = coins.length - gainers
+  const avgChange = coins.reduce((s, c) => s + (c.price_change_percentage_24h || 0), 0) / coins.length
+  const positive = avgChange >= 0
 
   return (
     <div style={{
-      minHeight: '100vh',
-      background: COLORS.bg,
-      color: COLORS.text,
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      WebkitFontSmoothing: 'antialiased',
+      display: 'flex',
+      gap: 12,
+      padding: '12px 16px',
+      background: COLORS.card,
+      border: `1px solid ${COLORS.cardBorder}`,
+      borderRadius: 12,
+      marginBottom: 16,
+      flexWrap: 'wrap',
     }}>
-      {/* Page Header */}
-      <div style={{
-        padding: '24px 16px 0',
-        background: 'linear-gradient(180deg, rgba(102,0,234,0.08) 0%, transparent 100%)',
-        borderBottom: `1px solid ${COLORS.border}`,
-        paddingBottom: 0,
-      }}>
-        <div style={{ maxWidth: 680, margin: '0 auto' }}>
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-              <span style={{ fontSize: 24 }}>🥊</span>
-              <h1 style={{
-                fontSize: 26, fontWeight: 900, margin: 0,
-                letterSpacing: '-0.5px', color: COLORS.text,
-              }}>
-                MMA Hub
-              </h1>
-            </div>
-            <p style={{ fontSize: 13, color: COLORS.textSub, margin: 0 }}>
-              UFC events, fighter stats &amp; results
-            </p>
-          </div>
-
-          {/* Tabs */}
-          <div style={{ display: 'flex', gap: 0 }}>
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                style={{
-                  flex: 1, background: 'transparent', border: 'none',
-                  cursor: 'pointer', padding: '10px 0',
-                  fontSize: 13, fontWeight: 600,
-                  color: activeTab === tab.id ? COLORS.purpleLight : COLORS.textDim,
-                  borderBottom: `2px solid ${activeTab === tab.id ? COLORS.purple : 'transparent'}`,
-                  transition: 'all 0.2s',
-                }}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+      <div style={{ flex: 1, minWidth: 80 }}>
+        <div style={{ fontSize: 10, color: COLORS.textDim, marginBottom: 2 }}>AVG 24H</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: positive ? COLORS.green : COLORS.red }}>
+          {positive ? '+' : ''}{avgChange.toFixed(2)}%
         </div>
       </div>
+      <div style={{ flex: 1, minWidth: 80 }}>
+        <div style={{ fontSize: 10, color: COLORS.textDim, marginBottom: 2 }}>GAINERS</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.green }}>{gainers} 📈</div>
+      </div>
+      <div style={{ flex: 1, minWidth: 80 }}>
+        <div style={{ fontSize: 10, color: COLORS.textDim, marginBottom: 2 }}>LOSERS</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.red }}>{losers} 📉</div>
+      </div>
+      <div style={{ flex: 1, minWidth: 80 }}>
+        <div style={{ fontSize: 10, color: COLORS.textDim, marginBottom: 2 }}>TRACKED</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text }}>{coins.length} 🪙</div>
+      </div>
+    </div>
+  )
+}
 
-      {/* Content */}
-      <div style={{ padding: '20px 16px 40px', maxWidth: 680, margin: '0 auto' }}>
+export default function CryptoMarkets() {
+  const [coins, setCoins] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [lastUpdated, setLastUpdated] = useState(null)
+  const [refreshing, setRefreshing] = useState(false)
+  const [countdown, setCountdown] = useState(60)
 
-        {/* ── EVENTS TAB ── */}
-        {activeTab === 'events' && (
-          <div style={{ display: 'flex', flex
+  const fetchCoins = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
+    else setRefreshing(true)
+    setError(null)
+
+    try {
+      const res = await fetch(COINGECKO_URL, {
+        headers: { Accept: 'application/json' },
+      })
+
+      if (res.status === 429) {
+        throw new Error('Rate limit reached. Please wait a moment.')
+      }
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status} ${res.statusText}`)
+      }
+
+      const data = await res.json()
+      if (!Array.isArray(data) || data.length === 0) {
+        throw new Error('No data received from CoinGecko.')
+      }
+
+      setCoins(data)
+      setLastUpdated(new Date())
+      setCountdown(60)
+    } catch (err) {
+      setError(err.message || 'Failed to fetch market data.')
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }, [])
+
+  // Initial fetch
+  useEffect(() => {
+    fetchCoins(false)
+  }, [fetchCoins])
+
+  // Auto-refresh every 60s
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchCoins(true)
+    }, 60_000)
+    return () => clearInterval(interval)
+  }, [fetchCoins])
+
+  // Countdown timer
+  useEffect(() => {
+    if (loading) return
+    const tick = setInterval(() => {
+      setCountdown(prev => (prev <= 1 ? 60 : prev - 1))
+    }, 1000)
+    return () => clearInterval(tick)
+  }, [loading])
+
+  const handleManualRefresh = () => {
+    if (!refreshing && !loading) {
+      fetchCoins(true)
+    }
+  }
+
+  return (
+    <>
+      <style>{SPIN_STYLE}</style>
+      <div style={{
+        minHeight: '100vh',
+        background: COLORS.bg,
+        padding: '0 0 80px 0',
+      }}>
+        {/* Header */}
+        <div style={{
+          padding: '20px 16px 12px',
+          borderBottom: `1px solid ${COLORS.border}`,
+          position: 'sticky',
+          top: 0,
+          background: COLORS.bg,
+          zIndex: 10,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h1 style={{
+                fontSize: 20,
+                fontWeight: 800,
+                color: COLORS.text,
+                margin: 0,
+                letterSpacing: '-0.3px',
+              }}>
+                Crypto Markets
+              </h1>
+              <div style={{ fontSize: 11, color: COLORS.textDim, marginTop: 2 }}>
+                {lastUpdated
+                  ? `Updated ${lastUpdated.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} · refresh in ${countdown}s`
+                  : 'Fetching live data…'}
+              </div>
+            </div>
+            <button
+              onClick={handleManualRefresh}
+              disabled={refreshing || loading}
+              style={{
+                background: COLORS.purpleDim,
+                border: `1px solid ${COLORS.purple}`,
+                borderRadius: 10,
+                padding: '8px 14px',
+                color: COLORS.purpleLight,
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: refreshing || loading ? 'not-allowed' : 'pointer',
+                opacity: refreshing || loading ? 0.5 : 1,
+                transition: 'opacity 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <span style={{
+                display: 'inline-block',
+                animation: refreshing ? 'spin 0.8s linear infinite' : 'none',
+              }}>
+                ↻
+              </span>
+              {refreshing ? 'Updating…' : 'Refresh'}
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div style={{ padding: '16px 16px 0' }}>
+          {/* Error state */}
+          {error && (
+            <div style={{
+              background: COLORS.redDim,
+              border: `1px solid ${COLORS.red}`,
+              borderRadius: 12,
+              padding: '14px 16px',
+              marginBottom: 16,
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 10,
+            }}>
+              <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.red, marginBottom: 4 }}>
+                  Failed to load market data
+                </div>
+                <div style={{ fontSize: 12, color: COLORS.textSub }}>{error}</div>
+                <button
+                  onClick={handleManualRefresh}
+                  style={{
+                    marginTop: 10,
+                    background: 'transparent',
+                    border: `1px solid ${COLORS.red}`,
+                    borderRadius: 8,
+                    padding: '5px 12px',
+                    color: COLORS.red,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Try again
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Loading state */}
+          {loading && !error && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <LoadingCard key={i} />
+              ))}
+            </div>
+          )}
+
+          {/* Data state */}
+          {!loading && !error && coins.length > 0 && (
+            <>
+              <MarketSummaryBar coins={coins} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {coins.map((coin, idx) => (
+                  <CoinCard key={coin.id} coin={coin} rank={idx + 1} />
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Empty state (should not occur normally) */}
+          {!loading && !error && coins.length === 0 && (
+            <div style={{
+              textAlign: 'center',
+              padding: '60px 20px',
+              color: COLORS.textDim,
+              fontSize: 14,
+            }}>
+              No market data available.
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
