@@ -349,6 +349,96 @@ async function handleAskAgent(agentKey, options, interactionToken) {
   await patchReply(interactionToken, agentEmbed(agentKey, reply))
 }
 
+// ─── /dev — Admin control command ────────────────────────────────────────────
+async function handleDevCommand(options, interactionToken) {
+  const action = options.find(o => o.name === 'action')?.value || 'status'
+  const description = options.find(o => o.name === 'description')?.value || ''
+  const focus = options.find(o => o.name === 'focus')?.value || 'bugs'
+
+  // ── status: show system health ────────────────────────────────────────────
+  if (action === 'status') {
+    try {
+      const r = await fetch(`${APP_URL}/api/reports?type=status`, { signal: AbortSignal.timeout(20000) })
+      const data = await r.json()
+      const ok = data.services?.ok || 0
+      const ko = data.services?.ko || 0
+      await patchReply(interactionToken, {
+        author: { name: '🔐 Admin — Statut Système' },
+        color: ko === 0 ? 0x00c853 : ko > 2 ? 0xff1744 : 0xffa000,
+        title: ko === 0 ? '✅ Tous les systèmes OK' : `⚠️ ${ko} service(s) en erreur`,
+        description: `**${ok}** OK · **${ko}** KO · Variables: ${data.missing?.length === 0 ? 'Toutes ✅' : `${data.missing?.join(', ')} manquantes`}`,
+        fields: (data.results || []).map(r => ({
+          name: r.ok ? `✅ ${r.name}` : `❌ ${r.name}`,
+          value: r.ok ? `${r.ms || '—'}ms${r.note ? ` — ${r.note}` : ''}` : (r.error || `HTTP ${r.status}`),
+          inline: true,
+        })),
+        footer: { text: 'Admin Control · Trackr AI Hub' },
+        timestamp: new Date().toISOString(),
+      })
+    } catch (e) {
+      await patchReply(interactionToken, agentEmbed('pulse', `❌ Impossible de vérifier le statut: ${e.message}`))
+    }
+    return
+  }
+
+  // ── task: assign a task to the AI ────────────────────────────────────────
+  if (action === 'task') {
+    if (!description) {
+      await patchReply(interactionToken, agentEmbed('nexus', '❌ Décris la tâche avec `description:...`'))
+      return
+    }
+    // Store in memory as pending admin task
+    try {
+      await fetch(`${APP_URL}/api/memory`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'admin_task', task: description, focus, status: 'pending', assignedBy: 'admin-discord' }),
+        signal: AbortSignal.timeout(15000),
+      })
+    } catch {}
+    await patchReply(interactionToken, {
+      author: { name: '📋 Admin — Tâche assignée' },
+      color: 0x6600ea,
+      title: `✅ Tâche en file d'attente`,
+      description: description,
+      fields: [
+        { name: '🎯 Focus', value: focus, inline: true },
+        { name: '⏰ Exécution', value: 'Prochain cycle self-improve (~1-4h)', inline: true },
+        { name: '🚀 Forcer maintenant', value: `\`/dev action:run focus:${focus}\``, inline: false },
+      ],
+      footer: { text: 'Tâche sauvegardée · L\'IA la traitera au prochain cycle' },
+      timestamp: new Date().toISOString(),
+    })
+    return
+  }
+
+  // ── run: trigger immediate self-improve ──────────────────────────────────
+  if (action === 'run' || action === 'improve') {
+    await patchReply(interactionToken, {
+      author: { name: '⚡ Admin — Self-Improve déclenché' },
+      color: 0x00daf3,
+      description: `🔄 **Focus \`${focus}\` lancé immédiatement...**\n\nL'IA lit le code, analyse et applique une amélioration. Résultats dans **#code-review** dans ~30s.`,
+      fields: [{ name: '🎯 Focus actif', value: focus, inline: true }],
+      footer: { text: 'AnDy Self-Improve · Cycle forcé par admin' },
+      timestamp: new Date().toISOString(),
+    })
+    // Fire in background
+    fetch(`${APP_URL}/api/self-improve?focus=${focus}`, { signal: AbortSignal.timeout(55000) }).catch(() => {})
+    return
+  }
+
+  // ── report: generate and post report ─────────────────────────────────────
+  if (action === 'report') {
+    await patchReply(interactionToken, agentEmbed('report_bot',
+      `📊 **Génération rapport quotidien...**\n\nLe rapport sera posté dans **#reports** dans ~10s.`
+    ))
+    fetch(`${APP_URL}/api/reports?type=daily&post=true`, { signal: AbortSignal.timeout(30000) }).catch(() => {})
+    return
+  }
+
+  await patchReply(interactionToken, agentEmbed('nexus', `Action "${action}" inconnue. Options: status | task | run | report`))
+}
+
 async function handleGuideCommand(options, interactionToken) {
   const niveau = options.find(o => o.name === 'niveau')?.value || 'auto'
 
@@ -579,6 +669,7 @@ async function processInteraction(body) {
     case 'brain':     return handleBrainCommand(token)
     case 'help':      return handleHelpCommand(token)
     case 'guide':     return handleGuideCommand(opts, token)
+    case 'dev':       return handleDevCommand(opts, token)
     // Generic agent commands (oracle, risk_metrics, etc.)
     default:
       if (AGENTS[cmd]) return handleAskAgent(cmd, opts, token)

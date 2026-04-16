@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Plane, Languages, Footprints, FolderOpen, Settings2, Plus, X,
-  TrendingUp, Bitcoin, ChevronRight, Sparkles, Lock, LayoutDashboard, Bot, Radio, Brain
+  TrendingUp, Bitcoin, ChevronRight, Sparkles, Lock, LayoutDashboard, Bot, Radio, Brain, Shield
 } from 'lucide-react'
 
 // All available modules
@@ -115,6 +115,18 @@ const ALL_MODULES = [
     desc: 'App preferences & data',
     color: '#64748b',
     glow: 'rgba(100,116,139,0.15)',
+    builtIn: true,
+  },
+  {
+    id: 'admin',
+    to: '/admin',
+    icon: Shield,
+    label: 'Admin Dev',
+    desc: 'Tâches IA · Agents · Statut système',
+    color: '#ef4444',
+    glow: 'rgba(239,68,68,0.2)',
+    badge: 'Admin',
+    badgeColor: '#ef4444',
     builtIn: true,
   },
 ]

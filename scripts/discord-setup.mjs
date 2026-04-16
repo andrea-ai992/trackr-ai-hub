@@ -212,6 +212,34 @@ const COMMANDS = [
     description: '🌌 Liste tous les 45 agents disponibles',
     options: [],
   },
+  {
+    name: 'dev',
+    description: '🔐 Admin Control — Assigne des tâches, vérifie le statut, déclenche l\'IA',
+    options: [
+      {
+        type: 3, name: 'action', description: 'Action à effectuer', required: true,
+        choices: [
+          { name: '📊 Statut système', value: 'status' },
+          { name: '📋 Assigner une tâche à l\'IA', value: 'task' },
+          { name: '⚡ Lancer self-improve maintenant', value: 'run' },
+          { name: '📈 Générer rapport quotidien', value: 'report' },
+        ],
+      },
+      { type: 3, name: 'description', description: 'Description de la tâche (pour action:task)', required: false },
+      {
+        type: 3, name: 'focus', description: 'Focus de l\'IA', required: false,
+        choices: [
+          { name: '🐛 Bugs', value: 'bugs' },
+          { name: '🔐 Sécurité', value: 'security' },
+          { name: '🎨 Frontend/Design', value: 'frontend' },
+          { name: '⚡ Performance', value: 'performance' },
+          { name: '✨ Nouvelles features', value: 'features' },
+          { name: '📊 Trading', value: 'trading' },
+          { name: '🤖 Système autonome', value: 'autonomous' },
+        ],
+      },
+    ],
+  },
 ]
 
 // ─── Main setup ───────────────────────────────────────────────────────────────

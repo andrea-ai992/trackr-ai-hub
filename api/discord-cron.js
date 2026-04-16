@@ -60,14 +60,29 @@ async function fetchCrypto(coinId) {
 
 async function callAnDy(prompt) {
   try {
-    const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'
+    const baseUrl = process.env.APP_URL || 'https://trackr-app-nu.vercel.app'
     const res = await fetch(`${baseUrl}/api/andy`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], portfolio: [], crypto: [], sneakers: [], alerts: [], watchlist: [] }),
+      signal: AbortSignal.timeout(50000),
     })
-    const data = await res.json()
-    return (data.text || '').replace(/\[CHART:[^\]]+\]/g, '').slice(0, 1800)
+    if (!res.ok) return null
+    // Read SSE stream
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buf = '', fullText = ''
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buf += decoder.decode(value, { stream: true })
+      const lines = buf.split('\n'); buf = lines.pop()
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        try { const ev = JSON.parse(line.slice(6)); if (ev.type === 'token') fullText += ev.text } catch {}
+      }
+    }
+    return fullText.replace(/\[CHART:[^\]]+\]/g, '').trim().slice(0, 1800) || null
   } catch { return null }
 }
 

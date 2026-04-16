@@ -169,8 +169,12 @@ export default async function handler(req, res) {
       if (req.query?.type === 'agents-log') {
         return handleAgentsLog(req, res)
       }
-      const limit   = Math.min(parseInt(req.query?.limit || '30'), 100)
-      const entries = await getMemoryEntries(limit)
+      const limit     = Math.min(parseInt(req.query?.limit || '30'), 100)
+      const typeFilter = req.query?.type   // filter by entry type
+      const statusFilter = req.query?.status // filter by status field
+      let entries = await getMemoryEntries(limit)
+      if (typeFilter) entries = entries.filter(e => e.type === typeFilter)
+      if (statusFilter) entries = entries.filter(e => e.status === statusFilter)
       return res.json({ ok: true, entries, count: entries.length })
     }
 

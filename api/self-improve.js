@@ -12,6 +12,8 @@ const GITHUB_API = 'https://api.github.com'
 const DISCORD_API = 'https://discord.com/api/v10'
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN
 const CODE_REVIEW_CH = process.env.DISCORD_CH_CODE_REVIEW
+const ANNONCES_CH = process.env.DISCORD_CH_ANNONCES
+const APP_URL = process.env.APP_URL || 'https://trackr-app-nu.vercel.app'
 
 // ─── Files AnDy can read and improve ─────────────────────────────────────────
 // L'IA peut lire et corriger tous ces fichiers, y compris ses propres orchestrateurs
@@ -110,6 +112,49 @@ async function postDiscord(title, description, fields = [], color = 0x8b5cf6) {
       }],
     }),
   }).catch(() => {})
+}
+
+// ─── Notify admin (#annonces) for critical changes ────────────────────────────
+async function notifyAdminCritical(improvement) {
+  if (!ANNONCES_CH || !BOT_TOKEN) return
+  const severityColor = { critical: 0xef4444, high: 0xf97316, medium: 0x6600ea, low: 0x374151 }
+  const shouldNotify = improvement.severity === 'critical' || improvement.severity === 'high'
+  if (!shouldNotify) return
+
+  await fetch(`${DISCORD_API}/channels/${ANNONCES_CH}/messages`, {
+    method: 'POST',
+    headers: { Authorization: `Bot ${BOT_TOKEN}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      content: improvement.severity === 'critical' ? '🚨 **Correction critique appliquée — Mise à jour en cours**' : null,
+      embeds: [{
+        author: { name: '⚡ AnDy — Changement important détecté & corrigé' },
+        title: `[${improvement.severity.toUpperCase()}] ${improvement.problem}`,
+        description: improvement.explanation,
+        color: severityColor[improvement.severity] || 0x6600ea,
+        fields: [
+          { name: '📂 Fichier modifié', value: `\`${improvement.file}\``, inline: true },
+          { name: '🌿 Commit', value: improvement.commit_message, inline: true },
+          { name: '🔗 Voir l\'app', value: `[trackr-app-nu.vercel.app](${APP_URL})`, inline: false },
+          ...(improvement.learned ? [{ name: '💡 Leçon apprise', value: improvement.learned, inline: false }] : []),
+        ],
+        footer: { text: 'AnDy Auto-Improve · Déploiement Vercel déclenché automatiquement' },
+        timestamp: new Date().toISOString(),
+      }],
+    }),
+  }).catch(() => {})
+}
+
+// ─── Fetch pending admin tasks from memory ────────────────────────────────────
+async function getPendingAdminTask() {
+  try {
+    const r = await fetch(`${APP_URL}/api/memory?type=admin_task&status=pending&limit=50`, {
+      signal: AbortSignal.timeout(8000),
+    })
+    if (!r.ok) return null
+    const data = await r.json()
+    const tasks = (data.entries || []).filter(e => e.status === 'pending')
+    return tasks.length > 0 ? tasks[tasks.length - 1] : null // oldest pending first
+  } catch { return null }
 }
 
 // ─── Known error patterns to scan for proactively ────────────────────────────
@@ -322,15 +367,24 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Could not load any files from GitHub' })
     }
 
-    // 3. Détection proactive de patterns d'erreurs connus
+    // 3. Vérifier si un admin a assigné une tâche spécifique
+    const adminTask = await getPendingAdminTask()
+    let adminContext = ''
+    let activeFocus = focus
+    if (adminTask) {
+      console.log(`📋 Admin task found: "${adminTask.task}" (focus: ${adminTask.focus || focus})`)
+      adminContext = `\n\n**📋 TÂCHE PRIORITAIRE assignée par l'administrateur :**\n"${adminTask.task}"\nFocus: ${adminTask.focus || focus}\n\nTraite cette tâche EN PRIORITÉ avant toute autre amélioration générale.`
+      if (adminTask.focus) activeFocus = adminTask.focus
+    }
+
+    // 4. Détection proactive de patterns d'erreurs connus
     const patternFindings = await detectKnownPatterns(loaded.map(([p, c]) => [p, c]))
     if (patternFindings.length > 0) {
       const patternSummary = patternFindings.map(f => `- [${f.severity.toUpperCase()}] ${f.file}: ${f.description}`).join('\n')
       console.log(`🔍 Known patterns found:\n${patternSummary}`)
-      // Store in memory for learning
       await addMemoryEntry({
         type: 'pattern_scan',
-        focus,
+        focus: activeFocus,
         findings: patternFindings,
         count: patternFindings.length,
         applied: false,
@@ -338,11 +392,11 @@ export default async function handler(req, res) {
       }).catch(() => {})
     }
 
-    // 3b. Ask Claude to analyze (avec contexte mémoire + patterns détectés)
+    // 4b. Ask Claude to analyze (avec contexte mémoire + patterns + tâche admin)
     const patternContext = patternFindings.length > 0
       ? `\n\n**🚨 Patterns d'erreurs détectés automatiquement (PRIORITÉ) :**\n${patternFindings.map(f => `- [${f.severity.toUpperCase()}] \`${f.file}\`: ${f.description}`).join('\n')}\nFixe le plus critique en premier.`
       : ''
-    const improvement = await analyzeWithClaude(loaded.map(([p, c]) => [p, c]), focus, memoryContext + patternContext)
+    const improvement = await analyzeWithClaude(loaded.map(([p, c]) => [p, c]), activeFocus, memoryContext + adminContext + patternContext)
 
     // No change needed
     if (improvement.no_change) {
@@ -413,14 +467,31 @@ export default async function handler(req, res) {
     // 8. Enregistrer en mémoire (apprentissage persistant)
     await addMemoryEntry({
       type:     'improvement',
-      focus,
+      focus:    activeFocus,
       file:     improvement.file,
       problem:  improvement.problem,
       severity: improvement.severity,
       commit:   improvement.commit_message,
       learned:  improvement.learned || null,
       applied:  true,
+      fromAdminTask: adminTask ? adminTask.task : null,
     }).catch(e => console.error('memory save failed:', e.message))
+
+    // 9. Notifier l'admin si changement critique/élevé (#annonces)
+    await notifyAdminCritical(improvement).catch(() => {})
+
+    // 10. Marquer la tâche admin comme done si elle existait
+    if (adminTask) {
+      await addMemoryEntry({
+        type:   'admin_task',
+        task:   adminTask.task,
+        focus:  adminTask.focus || activeFocus,
+        status: 'done',
+        result: improvement.problem,
+        commit: improvement.commit_message,
+        assignedBy: adminTask.assignedBy,
+      }).catch(() => {})
+    }
 
     return res.status(200).json({
       ok: true,
