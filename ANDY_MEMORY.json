@@ -77,6 +77,18 @@
       "errors": 0,
       "appHealthy": true,
       "duration": 24
+    },
+    {
+      "id": "mem_1776306081181",
+      "timestamp": "2026-04-16T02:21:21.181Z",
+      "type": "trading_learning",
+      "symbol": "BTC",
+      "assetType": "crypto",
+      "technique": "EMA_Triple_Alignment_Bullish",
+      "verdict": "ACHAT",
+      "conviction": 68,
+      "result": "BTC à ce niveau de prix (~$74,645) respecte avec discipline les niveaux Fibonacci et EMAs comme supports/résistances dynamiques — comportement typique d'un actif avec forte participation algorithmique. La confluence EMA9/Fib23.6% autour de $74,387-$74,599 crée une zone d'entrée haute probabilité en swing. L'ATR de $913 impose une gestion de position avec stops larges (minimum 1.5-2x ATR) pour éviter le bruit — BTC punira systématiquement les stops trop serrés sous ces conditions de volatilité. À retenir : le MACD à +724 sur BTC est un signal de momentum fort mais retardé — privilégier le RSI et les EMAs pour le timing d'entrée précis.",
+      "score": 72
     }
   ]
 }
