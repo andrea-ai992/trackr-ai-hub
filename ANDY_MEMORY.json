@@ -1,20 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776341220869",
-      "timestamp": "2026-04-16T12:07:00.869Z",
-      "type": "brain_cycle",
-      "hour": 12,
-      "successRate": 0,
-      "agentsRan": 0,
-      "improved": false,
-      "improvedFile": null,
-      "focus": null,
-      "errors": 0,
-      "appHealthy": true,
-      "duration": 2
-    },
-    {
       "id": "mem_1776341222159",
       "timestamp": "2026-04-16T12:07:02.159Z",
       "type": "pattern_scan",
@@ -3215,6 +3201,19 @@
       "count": 5,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776350537219",
+      "timestamp": "2026-04-16T14:42:17.219Z",
+      "type": "improvement",
+      "focus": "bugs",
+      "file": "api/discord.js",
+      "problem": "api/discord.js appelle .json() sur une réponse SSE (text/event-stream) de Yahoo Finance",
+      "severity": "critical",
+      "commit": "fix(discord): guard against SSE/non-JSON response from Yahoo Finance in getQuickSignal",
+      "learned": "Yahoo Finance peut retourner text/event-stream ou d'autres content-types non-JSON, il faut toujours wrapper .json() dans un try/catch ET vérifier le content-type avant d'appeler .json().",
+      "applied": true,
+      "fromAdminTask": null
     }
   ]
 }
