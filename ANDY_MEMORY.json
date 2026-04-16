@@ -1,41 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776375054214",
-      "timestamp": "2026-04-16T21:30:54.214Z",
-      "type": "pattern_scan",
-      "focus": "bugs",
-      "findings": [
-        {
-          "id": "sse_json_parse",
-          "file": "api/discord.js",
-          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
-          "severity": "critical"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/andy.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/brain.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/trading-expert.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        }
-      ],
-      "count": 4,
-      "applied": false,
-      "note": "Patterns detected before Claude analysis — guiding fix priority"
-    },
-    {
       "id": "mem_1776375055006",
       "timestamp": "2026-04-16T21:30:55.006Z",
       "type": "error",
@@ -2926,6 +2891,14 @@
       "learned": "The fetch_price tool in api/andy.js was calling .json() on Yahoo Finance without checking content-type (SSE risk) and was dividing by meta.previousClose which can be undefined/null causing NaN in change/pct calculations.",
       "applied": true,
       "fromAdminTask": null
+    },
+    {
+      "id": "mem_1776380070447",
+      "timestamp": "2026-04-16T22:54:30.447Z",
+      "type": "no_change",
+      "focus": "bugs",
+      "reason": "fetch_price and fetch_crypto_price in api/andy.js already use AbortSignal.timeout(). The Anthropic agentic loop call is inside the exported handler which is not shown in the truncated source. The [MEDIUM] flag for api/andy.js likely refers to the top-level Anthropic messages call in the handler body (not shown). Without seeing that code, a safe targeted fix cannot be produced without risk of introducing errors. The discord.js [CRITICAL] SSE issue was already fixed in a previous cycle. All visible fetch() calls in the provided snippets already have AbortSignal.timeout() applied.",
+      "applied": false
     }
   ]
 }
