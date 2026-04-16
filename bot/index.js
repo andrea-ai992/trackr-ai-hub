@@ -87,6 +87,80 @@ function routeChannel(name) {
 
 function isAdmin(userId) { return ADMIN_IDS.has(userId) }
 
+// ─── Intent detection ─────────────────────────────────────────────────────────
+// Returns: 'task' | 'develop' | 'lost' | 'question' | 'chat'
+function detectIntent(text) {
+  const t = text.toLowerCase()
+
+  // Task creation intent
+  if (/^!task\b/.test(t)) return 'task_cmd'
+
+  // "I want to build / develop / add X"
+  if (/\b(je veux|j'aimerais|fais moi|développe|crée|ajoute|implémente|build|make me|create)\b.{0,60}\b(une? |le |la |des |un )/i.test(text) ||
+      /\b(je veux qu[e']?|je voudrais que)\b/i.test(text)) return 'develop'
+
+  // Lost / confused / need help navigating
+  if (/\b(perdu|sais pas|pas sûr|aide|comment faire|par où|où est|guide|quoi faire|help me|i('m| am) lost)\b/i.test(t) ||
+      t.length < 20 && /\?$/.test(t.trim()) && !/[\w]{4,}/.test(t)) return 'lost'
+
+  // Explicit question
+  if (/\?/.test(text) || /^(c'?est quoi|comment|pourquoi|quand|qui|quel|quelle|combien|est-ce|what|how|why|when|who)/i.test(t)) return 'question'
+
+  return 'chat'
+}
+
+// ─── Channel guide ────────────────────────────────────────────────────────────
+const CHANNEL_GUIDE = [
+  { channels: ['andy-chat', 'nexus-hub'], desc: '🧠 Chat général avec AnDy — questions, conseils, idées' },
+  { channels: ['crypto', 'trading', 'market-scanner'], desc: '📊 Crypto & marchés — prix, analyses, signaux' },
+  { channels: ['portfolio-watch'], desc: '💼 Suivi de ton portfolio stocks & crypto' },
+  { channels: ['brain-cycles'], desc: '🤖 Activité de l\'IA autonome — cycles, améliorations' },
+  { channels: ['reports'], desc: '📋 Rapports quotidiens & hebdo générés par l\'IA' },
+  { channels: ['admin-tasks'], desc: '🔐 Tâches de développement (admin seulement)' },
+  { channels: ['agent-forge'], desc: '⚡ Création et activité des agents IA' },
+  { channels: ['bugs', 'performance'], desc: '🐛 Suivi des problèmes détectés et corrigés' },
+]
+
+function getGuideText(currentChannel = '') {
+  const lines = [
+    `**🗺️ Guide des channels Trackr**`,
+    `Tu es dans **#${currentChannel}**. Voici où aller selon ce que tu veux faire:`,
+    '',
+  ]
+  for (const { channels, desc } of CHANNEL_GUIDE) {
+    lines.push(`**#${channels[0]}** ${channels.length > 1 ? `(ou #${channels.slice(1).join(', #')})` : ''}`)
+    lines.push(`  ${desc}`)
+  }
+  lines.push('')
+  lines.push(`**💡 Tu peux aussi rester ici et me parler directement.**`)
+  lines.push(`Dis-moi ce que tu veux faire et je m'occupe du reste.`)
+  return lines.join('\n')
+}
+
+// ─── Auto task creation from natural language ────────────────────────────────
+async function createTaskFromText(text, username) {
+  // Clean up the text to extract the core task
+  const taskDesc = text
+    .replace(/^(je veux|j'aimerais|fais|développe|crée|ajoute|implémente)\s+/i, '')
+    .replace(/^(que tu|que l'ia|à l'ia)\s+/i, '')
+    .trim()
+
+  await fetch(`${APP_URL}/api/memory`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type: 'admin_task',
+      status: 'pending',
+      source: `discord-${username}`,
+      description: taskDesc,
+      originalMessage: text,
+      createdAt: new Date().toISOString(),
+    }),
+  }).catch(() => {})
+
+  return taskDesc
+}
+
 // ─── Message mode parsing ─────────────────────────────────────────────────────
 function parseMode(text) {
   if (/^!think\s+/i.test(text))  return { mode: 'think',  content: text.replace(/^!think\s+/i, '') }
@@ -135,19 +209,27 @@ async function handleAdmin(text, userId) {
     return `📡 Monitor lancé. Résultats dans #app-pulse dans quelques secondes.`
   }
 
+  if (lower === '!guide') {
+    return getGuideText()
+  }
+
   if (lower === '!help') {
     return [
       '**🔐 Commandes Admin**',
       '`!task <desc>` — Créer une tâche pour l\'IA',
-      '`!run <focus>` — Lancer auto-amélioration (bugs/performance/ui/agents/brain/discord/security/full)',
+      '`!run <focus>` — Lancer auto-amélioration (bugs/performance/ui/agents/brain/discord/security/realestate/business/full)',
       '`!status` — Statut du bot',
       '`!monitor` — Lancer le monitoring maintenant',
+      '`!guide` — Voir le guide des channels',
       '',
       '**💬 Modes (tous les channels)**',
-      '`!think <question>` — Réflexion approfondie',
-      '`!web <question>` — Recherche d\'infos récentes',
+      '`!think <question>` — Réflexion approfondie (Claude extended thinking)',
+      '`!web <question>` — Mode recherche, infos récentes',
       '',
-      'Sinon parle normalement — AnDy répond à TOUT (questions de vie, finance, tech, random...)',
+      '**✨ Création naturelle (parle normalement)**',
+      '"Je veux développer X" → crée une tâche + AnDy répond',
+      '"Je suis perdu" → guide des channels',
+      'N\'importe quoi d\'autre → AnDy répond directement',
     ].join('\n')
   }
 
@@ -155,9 +237,9 @@ async function handleAdmin(text, userId) {
 }
 
 // ─── Call AnDy (SSE stream) ───────────────────────────────────────────────────
-async function callAnDy(message, channelName = '', mode = 'default') {
+async function callAnDy(message, channelName = '', mode = 'default', customSystemNote = null) {
   const systemNotes = {
-    default: `Tu es AnDy, l'IA personnelle d'Andrea sur Discord (channel: #${channelName || 'discord'}). Tu réponds à TOUT — vie quotidienne, questions random, vérifications en live, finance, tech, ou n'importe quoi d'autre. Sois direct et utile. Réponds en français sauf si on te parle en anglais.`,
+    default: `Tu es AnDy, l'IA personnelle d'Andrea sur Discord (channel: #${channelName || 'discord'}). Tu réponds à TOUT — vie quotidienne, questions random, vérifications en live, finance, tech, immobilier, business ou n'importe quoi d'autre. Sois direct, utile et concis. Réponds en français sauf si on te parle en anglais.`,
     think:   `Tu es AnDy en MODE THINKING. Raisonne étape par étape de façon exhaustive. Montre ton raisonnement complet avant de conclure.`,
     web:     `Tu es AnDy en MODE RECHERCHE. L'utilisateur veut des infos récentes. Utilise tes connaissances les plus récentes, précise clairement si l'info pourrait être dépassée.`,
   }
@@ -169,12 +251,15 @@ async function callAnDy(message, channelName = '', mode = 'default') {
       body: JSON.stringify({
         messages: [{ role: 'user', content: message }],
         portfolio: [], crypto: [], sneakers: [], alerts: [], watchlist: [],
-        systemNote: systemNotes[mode] || systemNotes.default,
+        systemNote: customSystemNote || systemNotes[mode] || systemNotes.default,
       }),
       signal: AbortSignal.timeout(mode === 'think' ? 90000 : 55000),
     })
 
-    if (!res.ok) return `❌ Erreur AnDy (${res.status})`
+    if (!res.ok) {
+      console.error(`callAnDy HTTP ${res.status} for: ${message.slice(0, 50)}`)
+      return `❌ Erreur AnDy (${res.status})`
+    }
 
     const reader = res.body.getReader()
     const decoder = new TextDecoder()
@@ -258,19 +343,61 @@ async function processMessage(msg, channelName) {
     return
   }
 
-  // Admin commands
-  if (content.startsWith('!') && isAdmin(msg.author?.id)) {
-    const adminReply = await handleAdmin(content, msg.author?.id)
+  // ── 1. Admin commands (!task, !run, !status, !guide, !help) ─────────────────
+  if (content.startsWith('!') && isAdmin(userId)) {
+    const adminReply = await handleAdmin(content, userId)
     if (adminReply) { await sendReply(msg.channel_id, msg.id, adminReply); return }
   }
 
+  // ── 2. Mode prefixes (!think, !web, !search) ──────────────────────────────
   const { mode, content: cleanContent } = parseMode(content)
-
-  // Skip very short non-command messages
   if (cleanContent.length < 4 && mode === 'default') return
 
-  console.log(`💬 [#${channelName}] ${msg.author?.username}: ${cleanContent.slice(0, 80)}`)
+  console.log(`💬 [#${channelName}] ${username}: ${cleanContent.slice(0, 80)}`)
 
+  // ── 3. Intent detection ───────────────────────────────────────────────────
+  const intent = mode === 'default' ? detectIntent(cleanContent) : 'chat'
+
+  // Lost/confused → guide + offer to help
+  if (intent === 'lost') {
+    const guideReply = [
+      getGuideText(channelName),
+      '',
+      `> Dis-moi ce que tu veux faire et je m'en occupe directement.`,
+    ].join('\n')
+    await sendReply(msg.channel_id, msg.id, guideReply.slice(0, 1990))
+    return
+  }
+
+  // "Je veux développer X" → auto-create task + AnDy explains next steps
+  if (intent === 'develop' && isAdmin(userId)) {
+    await sendTyping(msg.channel_id)
+    const taskDesc = await createTaskFromText(cleanContent, username)
+    const typingInterval = setInterval(() => sendTyping(msg.channel_id), 8000)
+    try {
+      const systemNote = `Tu es AnDy, l'IA de développement d'Andrea. Une tâche vient d'être créée automatiquement depuis Discord.
+Réponds en 2 parties COURTES:
+1. ✅ Confirme que tu as compris la demande (1 phrase)
+2. 📋 Donne 2-3 prochaines étapes concrètes pour réaliser ça (bullets)
+Max 200 mots total.`
+
+      const andyReply = await callAnDy(cleanContent, channelName, 'default', systemNote)
+      const fullReply = [
+        `✅ **Tâche créée**: ${taskDesc}`,
+        `> Prise en compte au prochain cycle IA (toutes les heures).`,
+        '',
+        andyReply || '',
+      ].filter(Boolean).join('\n')
+
+      await sendReply(msg.channel_id, msg.id, fullReply.slice(0, 1990))
+      console.log(`✅ [develop] Task created + replied`)
+    } finally {
+      clearInterval(typingInterval)
+    }
+    return
+  }
+
+  // ── 4. Regular message → route to right agent ─────────────────────────────
   await sendTyping(msg.channel_id)
   const typingInterval = setInterval(() => sendTyping(msg.channel_id), 8000)
 
@@ -288,9 +415,10 @@ async function processMessage(msg, channelName) {
 
     if (reply) {
       await sendReply(msg.channel_id, msg.id, reply)
-      console.log(`✅ Replied (${mode})`)
+      console.log(`✅ Replied (${mode}/${intent})`)
     } else {
-      await sendReply(msg.channel_id, msg.id, '❌ Pas de réponse. Réessaie dans quelques secondes.')
+      await sendReply(msg.channel_id, msg.id,
+        `❌ Pas de réponse. Réessaie.\n> Tape \`!guide\` pour voir les channels ou \`!help\` pour les commandes.`)
     }
   } finally {
     clearInterval(typingInterval)
