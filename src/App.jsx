@@ -40,51 +40,37 @@ function ProtectedRoute({ children }) {
   return children
 }
 
+function ProtectedLayout({ Page }) {
+  return (
+    <ProtectedRoute>
+      <Suspense fallback={<PageLoader />}>
+        <Page />
+      </Suspense>
+      <BottomNav />
+    </ProtectedRoute>
+  )
+}
+
 export default function App() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/" element={
-            <ProtectedRoute>
-              <Dashboard />
-              <BottomNav />
-            </ProtectedRoute>
-          } />
-          <Route path="/finance" element={
-            <ProtectedRoute>
-              <Finance />
-              <BottomNav />
-            </ProtectedRoute>
-          } />
-          <Route path="/crypto" element={
-            <ProtectedRoute>
-              <Crypto />
-              <BottomNav />
-            </ProtectedRoute>
-          } />
-          <Route path="/sports" element={
-            <ProtectedRoute>
-              <Sports />
-              <BottomNav />
-            </ProtectedRoute>
-          } />
-          <Route path="/ai" element={
-            <ProtectedRoute>
-              <AI />
-              <BottomNav />
-            </ProtectedRoute>
-          } />
-          <Route path="/settings" element={
-            <ProtectedRoute>
-              <Settings />
-              <BottomNav />
-            </ProtectedRoute>
-          } />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <Login />
+            </Suspense>
+          }
+        />
+        <Route path="/" element={<ProtectedLayout Page={Dashboard} />} />
+        <Route path="/finance" element={<ProtectedLayout Page={Finance} />} />
+        <Route path="/crypto" element={<ProtectedLayout Page={Crypto} />} />
+        <Route path="/sports" element={<ProtectedLayout Page={Sports} />} />
+        <Route path="/ai" element={<ProtectedLayout Page={AI} />} />
+        <Route path="/settings" element={<ProtectedLayout Page={Settings} />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </BrowserRouter>
   )
 }
