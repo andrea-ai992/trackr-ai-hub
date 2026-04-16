@@ -1228,13 +1228,16 @@ async function cmd(input) {
         push(`  ${_.dark}✓ ${_.silver}${t.name.slice(0, 32).padEnd(32)}${R} ${_.dark}${t.dur.padStart(5)}${R}  ${liveCol}${liveTag}${R}`)
       }
 
-      // Errors (max 2)
+      // Errors (max 3) — fallback sur fichiers .error
       if (files.error.length) {
         push(`  ${_.dark}${'─'.repeat(W)}${R}`)
         push(`  ${_.red}ERRORS (${files.error.length})${R}`)
-        const errs = status.filter(t => t.status === 'ERROR').slice(-2).reverse()
-        for (const t of errs)
-          push(`  ${_.red}✗ ${_.dark}${t.name.slice(0, 30).padEnd(30)}${R}  ${_.red}${(t.error || '').slice(0, 22)}${R}`)
+        const errFromStatus = status.filter(t => t.status === 'ERROR').slice(-3).reverse()
+        const errList = errFromStatus.length
+          ? errFromStatus.map(t => ({ name: t.name, msg: (t.error || '').slice(0, 24) }))
+          : files.error.slice(-3).reverse().map(n => ({ name: n, msg: 'voir logs serveur' }))
+        for (const t of errList)
+          push(`  ${_.red}✗ ${_.dark}${t.name.slice(0, 28).padEnd(28)}${R}  ${_.red}${t.msg}${R}`)
       }
 
       // Render — erase exactly as many lines as we drew last time
