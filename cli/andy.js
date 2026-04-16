@@ -1218,19 +1218,17 @@ async function cmd(input) {
 
       push(`  ${_.dark}${'─'.repeat(W)}${R}`)
 
-      // Done (last 6)
-      const done = status.filter(t => t.status === 'DONE').slice(-6).reverse()
+      // Done (last 6) — fallback sur les fichiers si pas de status JSON
+      const doneFromStatus = status.filter(t => t.status === 'DONE').slice(-6).reverse()
+      const doneList = doneFromStatus.length
+        ? doneFromStatus.map(t => ({ name: t.name, dur: t.dur ? `${t.dur}s` : '—', live: !!t.stages?.live }))
+        : files.done.slice(-6).reverse().map(n => ({ name: n, dur: '—', live: true }))
+
       push(`  ${_.green}DONE (${files.done.length})${R}`)
-      if (done.length) {
-        for (const t of done) {
-          const isLive = !!t.stages?.live
-          const liveCol = isLive ? _.green : _.amber
-          const liveTag = isLive ? 'LIVE' : 'DONE'
-          const dur = t.dur ? `${t.dur}s` : '—'
-          push(`  ${_.dark}✓ ${_.silver}${t.name.slice(0, 32).padEnd(32)}${R} ${_.dark}${dur.padStart(5)}${R}  ${liveCol}${liveTag}${R}`)
-        }
-      } else {
-        push(`  ${_.dark}  aucune tâche terminée${R}`)
+      for (const t of doneList) {
+        const liveCol = t.live ? _.green : _.amber
+        const liveTag = t.live ? 'LIVE' : 'DONE'
+        push(`  ${_.dark}✓ ${_.silver}${t.name.slice(0, 32).padEnd(32)}${R} ${_.dark}${t.dur.padStart(5)}${R}  ${liveCol}${liveTag}${R}`)
       }
 
       // Errors
