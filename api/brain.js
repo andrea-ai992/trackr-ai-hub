@@ -35,6 +35,7 @@ async function discord(channelId, embed) {
     method: 'POST',
     headers: { Authorization: `Bot ${BOT_TOKEN}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ embeds: [{ ...embed, timestamp: new Date().toISOString() }] }),
+    signal: AbortSignal.timeout(8000),
   }).catch(() => {})
 }
 
