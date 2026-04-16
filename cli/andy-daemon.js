@@ -157,7 +157,12 @@ async function generateRaw(prompt, maxTokens = 8192) {
 }
 
 // ── Execute task ──────────────────────────────────────────────────────────────
-async function executeTask(taskContent) {
+async function executeTask(taskContent, taskName = '') {
+  const ts = () => new Date().toISOString()
+  const stage = (s, extra = {}) => {
+    if (taskName) updateTaskStatus(taskName, { stage: s, stages: { [s]: ts() }, ...extra })
+  }
+
   const planPrompt = [
     'TÂCHE: ' + taskContent.slice(0, 600),
     'Identifie les fichiers à créer ou modifier dans le projet Trackr (React+Vite).',
@@ -167,6 +172,7 @@ async function executeTask(taskContent) {
     'Max 3 fichiers, chemins relatifs. Rien d\'autre.',
   ].join('\n')
 
+  stage('planning')
   const plan    = await generateRaw(planPrompt, 400)
   const fileOps = plan.split('\n')
     .map(l => l.match(/^(CREATE|MODIFY):(.+\.[\w]+)/i))
@@ -175,6 +181,8 @@ async function executeTask(taskContent) {
     .slice(0, 3)
 
   if (!fileOps.length) throw new Error('Plan vide')
+
+  stage('generating', { files: fileOps.map(o => o.path) })
 
   for (const op of fileOps) {
     log(`${op.action} ${op.path}`)
@@ -200,6 +208,7 @@ async function executeTask(taskContent) {
     let clean = newCode.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim()
 
     // Review superviseur
+    stage('testing')
     const reviewPrompt = [
       'Superviseur: vérifie ce code pour ' + op.path + ' (Trackr React+Vite).',
       'TÂCHE: ' + taskContent.slice(0, 300),
@@ -218,9 +227,12 @@ async function executeTask(taskContent) {
       log(`review OK: ${op.path}`)
     }
 
+    stage('safe')
+
     const msg = `[AnDy] ${op.action === 'CREATE' ? 'feat' : 'update'}: ${op.path}`
     const ok  = await ghWriteFile(op.path, clean, msg, sha)
     if (ok) {
+      stage('live')
       log(`pushed: ${op.path} → Vercel deploying`)
     } else {
       const online = await checkOnline()
@@ -237,10 +249,29 @@ async function executeTask(taskContent) {
 }
 
 // ── Task runner ───────────────────────────────────────────────────────────────
-const TASKS_DIR = resolve(ROOT, 'andy-tasks')
-const taskLog   = []
-const errorLog  = []
+const TASKS_DIR   = resolve(ROOT, 'andy-tasks')
+const STATUS_FILE = resolve(ROOT, 'andy-tasks', '.task-status.json')
+const taskLog     = []
+const errorLog    = []
 let   autoGenCount = 0
+
+function readStatus() {
+  try { return JSON.parse(readFileSync(STATUS_FILE, 'utf8')) } catch { return [] }
+}
+
+function updateTaskStatus(name, updates) {
+  mkdirSync(TASKS_DIR, { recursive: true })
+  const list = readStatus()
+  const idx  = list.findIndex(t => t.name === name)
+  if (idx >= 0) {
+    const e = list[idx]
+    if (updates.stages) e.stages = { ...e.stages, ...updates.stages }
+    Object.assign(e, { ...updates, stages: e.stages })
+  } else {
+    list.push({ name, stages: {}, ...updates })
+  }
+  try { writeFileSync(STATUS_FILE, JSON.stringify(list.slice(-100), null, 2), 'utf8') } catch {}
+}
 
 // Priorités ordonnées : qualité + design > features > infra
 const TASK_DOMAINS = [
@@ -288,6 +319,18 @@ async function runTask(filePath) {
 
   const startTime = Date.now()
   log(`TASK START: ${name}`)
+
+  updateTaskStatus(name, {
+    desc: content.slice(0, 80),
+    startedAt: new Date().toISOString(),
+    stage: 'started',
+    stages: { started: new Date().toISOString() },
+    files: [],
+    status: 'RUNNING',
+    dur: 0,
+    error: null,
+  })
+
   taskLog.push({ name, desc: content.slice(0, 60), status: 'RUNNING', dur: 0 })
   const entry = taskLog[taskLog.length - 1]
 
@@ -295,15 +338,17 @@ async function runTask(filePath) {
   renameSync(filePath, runningPath)
 
   try {
-    await executeTask(content)
+    await executeTask(content, name)
     const dur = Math.round((Date.now() - startTime) / 1000)
     entry.status = 'DONE'; entry.dur = dur
+    updateTaskStatus(name, { status: 'DONE', dur })
     renameSync(runningPath, runningPath.replace(/\.running$/, '.done'))
     log(`TASK DONE: ${name} (${dur}s)`)
   } catch (err) {
     const dur = Math.round((Date.now() - startTime) / 1000)
     entry.status = 'ERROR'; entry.dur = dur
     errorLog.push({ name, error: err.message, ts: new Date().toISOString() })
+    updateTaskStatus(name, { status: 'ERROR', stage: 'error', dur, error: err.message })
     renameSync(runningPath, runningPath.replace(/\.running$/, '.error'))
     log(`TASK ERROR: ${name} — ${err.message}`)
   }

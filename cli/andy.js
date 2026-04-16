@@ -864,6 +864,7 @@ async function cmd(input) {
       ['/monitor',             _.blue,   'Déclenche le monitoring Trackr'],
       ['/status',              _.orange, 'Statut APIs Trackr'],
       ['─── TÂCHES ───────────────────────────────────', _.dark,   ''],
+      ['/tasks',               _.cyan,   'Pipeline live : PLAN › CODE › TEST › SAFE › LIVE'],
       ['/watch',               _.green,  'Live : progression serveur, tâches, logs en temps réel'],
       ['/daemon',              _.green,  'Surveille andy-tasks/ et exécute les .txt'],
       ['─── GITHUB ───────────────────────────────────', _.dark,   ''],
@@ -1128,6 +1129,133 @@ async function cmd(input) {
   // ── /git ─────────────────────────────────────────────────────────────────────
   if (c === '/git') {
     await cmdGit(parts)
+    return
+  }
+
+  // ── /tasks — live task pipeline tracker ──────────────────────────────────────
+  if (c === '/tasks') {
+    const STATUS_FILE = resolve(TASKS_DIR, '.task-status.json')
+    const STAGES = ['planning', 'generating', 'testing', 'safe', 'live']
+    const SLABEL = { planning: 'PLAN', generating: 'CODE', testing: 'TEST', safe: 'SAFE', live: 'LIVE' }
+
+    function readStatus() {
+      try { return JSON.parse(readFileSync(STATUS_FILE, 'utf8')) } catch { return [] }
+    }
+
+    function scanFiles() {
+      try {
+        const all = readdirSync(TASKS_DIR).filter(f => !f.startsWith('.'))
+        return {
+          queue:   all.filter(f => f.endsWith('.txt')).map(f => f.replace(/\.txt$/, '')),
+          running: all.filter(f => f.endsWith('.running')).map(f => f.replace(/\.running$/, '')),
+          done:    all.filter(f => f.endsWith('.done')).map(f => f.replace(/\.done$/, '')),
+          error:   all.filter(f => f.endsWith('.error')).map(f => f.replace(/\.error$/, '')),
+        }
+      } catch { return { queue: [], running: [], done: [], error: [] } }
+    }
+
+    function pipeline(stage) {
+      const cur = STAGES.indexOf(stage)
+      return STAGES.map((s, i) => {
+        const lbl = SLABEL[s]
+        if (i < cur)   return `${_.green}${lbl}${R}`
+        if (i === cur) return `${_.amber}${_.bold}[${lbl}]${R}`
+        return `${_.dark}${lbl}${R}`
+      }).join(`${_.dark}›${R}`)
+    }
+
+    const ROWS = 24
+    let firstDraw = true
+    let active = true
+    const onSigint = () => { active = false }
+    process.once('SIGINT', onSigint)
+
+    line()
+    line(`  ${_.cyan}${_.bold}╔══ TASK TRACKER — LIVE ════════════════════════════╗${R}`)
+    line(`  ${_.cyan}║${R}  ${_.grey}Suivi pipeline : PLAN › CODE › TEST › SAFE › LIVE${R}`)
+    line(`  ${_.cyan}║${R}  ${_.dark}Ctrl+C pour quitter${R}`)
+    line(`  ${_.cyan}╚════════════════════════════════════════════════════╝${R}`)
+    line()
+
+    while (active) {
+      const rows = []
+      const push = s => rows.push(s ?? '')
+
+      const files  = scanFiles()
+      const status = readStatus()
+      const ts     = new Date().toLocaleTimeString('fr-FR')
+      const W      = 56
+
+      push(`  ${_.dark}${ts}${R}  ${_.green}● LIVE${R}  ${_.dark}DONE${R} ${_.green}${files.done.length}${R}  ${_.dark}QUEUE${R} ${_.cyan}${files.queue.length}${R}  ${_.dark}RUN${R} ${_.amber}${files.running.length}${R}  ${_.dark}ERR${R} ${_.red}${files.error.length}${R}`)
+      push(`  ${_.dark}${'─'.repeat(W)}${R}`)
+
+      // Running
+      if (files.running.length) {
+        for (const name of files.running.slice(0, 2)) {
+          const e = status.find(t => t.name === name)
+          push(`  ${_.amber}⟳ ${_.bold}RUNNING${R}  ${_.silver}${name.slice(0, 34)}${R}`)
+          push(`    ${pipeline(e?.stage || 'planning')}`)
+          if (e?.desc) push(`    ${_.dark}${e.desc.slice(0, 52)}${R}`)
+          else push('')
+        }
+      } else {
+        push(`  ${_.dark}⟨◈⟩ Idle — aucune tâche en cours${R}`)
+        push('')
+        push('')
+      }
+
+      push(`  ${_.dark}${'─'.repeat(W)}${R}`)
+
+      // Queue (next 3)
+      if (files.queue.length) {
+        push(`  ${_.cyan}QUEUE (${files.queue.length})${R}`)
+        for (const name of files.queue.slice(0, 3))
+          push(`  ${_.dark}· ${_.grey}${name.slice(0, 52)}${R}`)
+        if (files.queue.length > 3) push(`  ${_.dark}  … +${files.queue.length - 3} de plus${R}`)
+      } else {
+        push(`  ${_.dark}Queue vide${R}`)
+      }
+
+      push(`  ${_.dark}${'─'.repeat(W)}${R}`)
+
+      // Done (last 6)
+      const done = status.filter(t => t.status === 'DONE').slice(-6).reverse()
+      push(`  ${_.green}DONE (${files.done.length})${R}`)
+      if (done.length) {
+        for (const t of done) {
+          const isLive = !!t.stages?.live
+          const liveCol = isLive ? _.green : _.amber
+          const liveTag = isLive ? 'LIVE' : 'DONE'
+          const dur = t.dur ? `${t.dur}s` : '—'
+          push(`  ${_.dark}✓ ${_.silver}${t.name.slice(0, 32).padEnd(32)}${R} ${_.dark}${dur.padStart(5)}${R}  ${liveCol}${liveTag}${R}`)
+        }
+      } else {
+        push(`  ${_.dark}  aucune tâche terminée${R}`)
+      }
+
+      // Errors
+      if (files.error.length) {
+        push(`  ${_.dark}${'─'.repeat(W)}${R}`)
+        push(`  ${_.red}ERRORS (${files.error.length})${R}`)
+        const errs = status.filter(t => t.status === 'ERROR').slice(-3).reverse()
+        for (const t of errs)
+          push(`  ${_.red}✗ ${_.dark}${t.name.slice(0, 30).padEnd(30)}${R}  ${_.red}${(t.error || '').slice(0, 22)}${R}`)
+      }
+
+      // Render fixed-height panel
+      if (!firstDraw) process.stdout.write(`\x1b[${ROWS}A\x1b[0J`)
+      else firstDraw = false
+
+      for (let i = 0; i < ROWS; i++)
+        process.stdout.write(BG + (rows[i] ?? '') + '\x1b[K\n')
+
+      if (active) await sl(2000)
+    }
+
+    process.removeListener('SIGINT', onSigint)
+    line()
+    line(`  ${_.dark}⟨◈⟩ Task tracker fermé.${R}`)
+    line()
     return
   }
 
