@@ -22,6 +22,7 @@ import Widget from './pages/Widget'
 import Sports from './pages/Sports'
 import Andy from './pages/Andy'
 import Agents from './pages/Agents'
+import BrainStatus from './pages/BrainStatus'
 import Login from './pages/Login'
 import Admin from './pages/Admin'
 import { useAlerts } from './hooks/useAlerts'
@@ -180,6 +181,7 @@ function AppInner() {
               <Route path="/widget" element={<ProtectedRoute><Widget /></ProtectedRoute>} />
               <Route path="/andy" element={<ProtectedRoute><Andy /></ProtectedRoute>} />
               <Route path="/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
+              <Route path="/brain" element={<ProtectedRoute><BrainStatus /></ProtectedRoute>} />
 
               {/* Admin only */}
               <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />

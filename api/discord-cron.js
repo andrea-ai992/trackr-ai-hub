@@ -1,6 +1,7 @@
-// ─── Discord Cron — Scheduled Agent Tasks ────────────────────────────────────
-// Runs every hour (Vercel Hobby free tier)
-// Posts market updates, code/design reviews to Discord channels
+// ─── Discord Cron — Market Data Feeds ────────────────────────────────────────
+// Runs every hour · déclenché par le Brain ou en standalone
+// Gère uniquement les feeds de données (marché, crypto, santé app)
+// Les décisions IA et l'orchestration sont dans api/brain.js
 
 import { AGENTS } from './discord.js'
 
@@ -163,6 +164,69 @@ async function runDailyReport() {
   ]))
 }
 
+// ─── Weekly Learning Summary — dimanche 9h UTC ───────────────────────────────
+async function runLearningSummary() {
+  const now = new Date()
+  const dayOfWeek = now.getUTCDay()   // 0 = dimanche
+  const hour      = now.getUTCHours()
+  if (dayOfWeek !== 0 || hour !== 9) return
+
+  let entries = []
+  try { entries = await getMemoryEntries(50) } catch { return }
+
+  if (entries.length === 0) return
+
+  // Calcul des stats de la semaine
+  const weekAgo = Date.now() - 7 * 86400000
+  const weekEntries = entries.filter(e => new Date(e.timestamp).getTime() > weekAgo)
+
+  const applied   = weekEntries.filter(e => e.applied).length
+  const skipped   = weekEntries.filter(e => e.skipped).length
+  const errors    = weekEntries.filter(e => e.type === 'error').length
+  const noChange  = weekEntries.filter(e => e.type === 'no_change').length
+
+  const bySeverity = { critical: 0, high: 0, medium: 0, low: 0 }
+  weekEntries.filter(e => e.severity).forEach(e => { bySeverity[e.severity] = (bySeverity[e.severity] || 0) + 1 })
+
+  // Extraire les leçons apprises
+  const lessons = weekEntries
+    .filter(e => e.learned)
+    .slice(0, 5)
+    .map(e => `• ${e.learned}`)
+    .join('\n')
+
+  // Fichiers les plus touchés
+  const fileCounts = {}
+  weekEntries.filter(e => e.file).forEach(e => { fileCounts[e.file] = (fileCounts[e.file] || 0) + 1 })
+  const topFiles = Object.entries(fileCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([f, n]) => `\`${f}\` (${n}×)`)
+    .join(', ')
+
+  const description = [
+    `**${applied} améliorations appliquées** cette semaine · ${errors} erreurs · ${noChange} cycles sans changement`,
+    '',
+    `**Par sévérité :** 🔴 critical: ${bySeverity.critical} · 🟠 high: ${bySeverity.high} · 🟡 medium: ${bySeverity.medium} · ⚪ low: ${bySeverity.low}`,
+    topFiles ? `**Fichiers les plus améliorés :** ${topFiles}` : '',
+    lessons ? `\n**💡 Ce qu'AnDy a appris :**\n${lessons}` : '',
+  ].filter(Boolean).join('\n')
+
+  await discordPost(CHANNELS['code-review'], {
+    author: { name: '🧠 AnDy — Rapport d\'apprentissage hebdomadaire' },
+    title: `📊 Semaine du ${new Date(weekAgo).toLocaleDateString('fr-FR')} — ${weekEntries.length} cycles auto-apprenants`,
+    description: description.slice(0, 3000),
+    color: 0x6600ea,
+    fields: [
+      { name: 'Total mémoire',     value: `${entries.length} entrées`,   inline: true },
+      { name: 'Cycles cette sem.', value: `${weekEntries.length}`,        inline: true },
+      { name: 'Taux de succès',    value: weekEntries.length > 0 ? `${Math.round(applied / weekEntries.length * 100)}%` : 'N/A', inline: true },
+    ],
+    footer: { text: 'Trackr Auto-Learn · Résumé hebdomadaire' },
+    timestamp: new Date().toISOString(),
+  })
+}
+
 // ─── App Pulse — health check every hour ─────────────────────────────────────
 async function runAppPulse() {
   const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null
@@ -209,13 +273,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Run all scheduled tasks in parallel
+    // Feeds de données de marché uniquement (pas d'IA ici — Brain s'en charge)
     await Promise.allSettled([
       runMarketScanner(),
       runCryptoTracker(),
-      runCodeReview(),
-      runUIInspector(),
-      runDailyReport(),
       runAppPulse(),
     ])
     res.json({ ok: true, ran: new Date().toISOString() })

@@ -252,11 +252,35 @@ async function handleAlertCommand(options, interactionToken) {
 
 async function handleReportCommand(options, interactionToken) {
   const type = options.find(o => o.name === 'type')?.value || 'daily'
-  const reply = await callAnDy(`Génère un rapport ${type === 'weekly' ? 'hebdomadaire' : 'quotidien'} de marché. Inclus: 1) État général des marchés, 2) Top movers (hausses/baisses notables), 3) Crypto sentiment, 4) Setup de trade du moment, 5) Risques à surveiller. Format clair avec sections.`)
-  await patchReply(interactionToken, agentEmbed('report_bot', reply, [
-    { name: 'Type', value: type === 'weekly' ? 'Hebdomadaire 📅' : 'Quotidien 📆', inline: true },
-    { name: 'Date', value: new Date().toLocaleDateString('fr-FR'), inline: true },
-  ]))
+  // Appelle l'endpoint reports dédié (avec mémoire + Claude Haiku)
+  try {
+    const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://trackr-app-nu.vercel.app'
+    const r = await fetch(`${baseUrl}/api/reports?type=${type}`)
+    const data = await r.json()
+    await patchReply(interactionToken, agentEmbed('report_bot',
+      `✅ Rapport **${type}** généré — ${data.stats?.improvements ?? 0} améliorations · ${data.stats?.successRate ?? 0}% succès`,
+      [
+        { name: 'Type',    value: type === 'weekly' ? 'Hebdomadaire 📅' : 'Quotidien 📆', inline: true },
+        { name: 'Date',    value: new Date().toLocaleDateString('fr-FR'), inline: true },
+        { name: 'Cycles',  value: `${data.stats?.brainCycles ?? '?'} cycles Brain`, inline: true },
+      ]
+    ))
+  } catch {
+    const reply = await callAnDy(`Génère un rapport ${type === 'weekly' ? 'hebdomadaire' : 'quotidien'} de marché. Inclus: 1) État général des marchés, 2) Top movers, 3) Crypto sentiment, 4) Setup de trade, 5) Risques.`)
+    await patchReply(interactionToken, agentEmbed('report_bot', reply))
+  }
+}
+
+async function handleBrainCommand(interactionToken) {
+  await patchReply(interactionToken, agentEmbed('andy',
+    '🧠 **Cycle Brain déclenché manuellement...**\n\nLe Brain va analyser la mémoire, décider des agents à activer, et potentiellement améliorer du code. Résultats dans #brain-cycles dans ~30s.',
+    [{ name: '⚡ Statut', value: 'En cours d\'exécution', inline: true }]
+  ))
+  // Déclenche le brain en background
+  try {
+    const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://trackr-app-nu.vercel.app'
+    fetch(`${baseUrl}/api/brain`).catch(() => {})
+  } catch {}
 }
 
 async function handleAskAgent(agentKey, options, interactionToken) {
@@ -435,6 +459,7 @@ async function processInteraction(body) {
     case 'portfolio': return handlePortfolioCommand(opts, token)
     case 'alert':     return handleAlertCommand(opts, token)
     case 'report':    return handleReportCommand(opts, token)
+    case 'brain':     return handleBrainCommand(token)
     case 'help':      return handleHelpCommand(token)
     case 'guide':     return handleGuideCommand(opts, token)
     // Generic agent commands (oracle, risk_metrics, etc.)

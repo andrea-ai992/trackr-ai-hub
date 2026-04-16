@@ -2,11 +2,23 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Plane, Languages, Footprints, FolderOpen, Settings2, Plus, X,
-  TrendingUp, Bitcoin, ChevronRight, Sparkles, Lock, LayoutDashboard, Bot, Radio
+  TrendingUp, Bitcoin, ChevronRight, Sparkles, Lock, LayoutDashboard, Bot, Radio, Brain
 } from 'lucide-react'
 
 // All available modules
 const ALL_MODULES = [
+  {
+    id: 'brain',
+    to: '/brain',
+    icon: Brain,
+    label: 'Brain — IA Autonome',
+    desc: 'Cycles auto · mémoire · agents forgés · rapports',
+    color: '#6600ea',
+    glow: 'rgba(102,0,234,0.25)',
+    badge: '24/7',
+    badgeColor: '#6600ea',
+    builtIn: true,
+  },
   {
     id: 'agents',
     to: '/agents',

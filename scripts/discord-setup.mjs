@@ -102,9 +102,17 @@ const STRUCTURE = [
   {
     name: '🔔 RAPPORTS',
     channels: [
-      { name: 'reports',       type: 0, topic: '/report — ReportBot : briefing matinal quotidien à 8h UTC' },
-      { name: 'notifications', type: 0, topic: 'Notifier : alertes intelligentes prioritisées' },
-      { name: 'scheduler',     type: 0, topic: 'Scheduler : tâches planifiées et automatisations' },
+      { name: 'morning-briefing', type: 0, topic: 'Briefing matinal automatique — marchés + IA + plan du jour · 9h00 UTC' },
+      { name: 'reports',          type: 0, topic: '/report — ReportBot : rapports quotidiens à 8h UTC' },
+      { name: 'notifications',    type: 0, topic: 'Notifier : alertes intelligentes prioritisées' },
+      { name: 'scheduler',        type: 0, topic: 'Scheduler : tâches planifiées et automatisations' },
+    ],
+  },
+  {
+    name: '🧠 BRAIN AUTONOME',
+    channels: [
+      { name: 'brain-cycles',  type: 0, topic: 'Brain — Cycles autonomes toutes les heures · décisions · améliorations appliquées' },
+      { name: 'agent-forge',   type: 0, topic: 'Agent Forge — Nouveaux agents créés automatiquement par le Brain' },
     ],
   },
 ]
@@ -115,6 +123,20 @@ const COMMANDS = [
     name: 'andy',
     description: '🧠 Parle directement à AnDy AI (Claude Sonnet 4.6)',
     options: [{ type: 3, name: 'message', description: 'Ton message pour AnDy', required: true }],
+  },
+  {
+    name: 'brain',
+    description: '🧠 Déclencher un cycle autonome du Brain maintenant',
+    options: [],
+  },
+  {
+    name: 'report',
+    description: '📊 Générer un rapport IA (daily ou weekly)',
+    options: [{ type: 3, name: 'type', description: 'Type de rapport', required: false, choices: [
+      { name: 'Quotidien', value: 'daily' },
+      { name: 'Hebdomadaire', value: 'weekly' },
+      { name: 'Résumé', value: 'summary' },
+    ]}],
   },
   {
     name: 'scan',
@@ -306,6 +328,13 @@ async function setup() {
   console.log(`DISCORD_CH_REPORTS=${channelIds['reports'] || ''}`)
   console.log(`DISCORD_CH_PRICE_ALERTS=${channelIds['price-alerts'] || ''}`)
   console.log(`DISCORD_CH_APP_PULSE=${channelIds['app-pulse'] || ''}`)
+  console.log(`DISCORD_CH_BRAIN=${channelIds['brain-cycles'] || ''}`)
+  console.log(`DISCORD_CH_AGENT_FORGE=${channelIds['agent-forge'] || ''}`)
+  console.log(`DISCORD_CH_MORNING=${channelIds['morning-briefing'] || ''}`)
+  console.log('')
+  console.log('# Ajouter manuellement :')
+  console.log('GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx')
+  console.log('CRON_SECRET=un_secret_aleatoire_long')
   console.log('─'.repeat(60))
   console.log('\n🎯 Next steps:')
   console.log('   1. Click the invite link above to join your server')
