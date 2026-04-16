@@ -3754,6 +3754,14 @@
       "count": 5,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776323828023",
+      "timestamp": "2026-04-16T07:17:08.023Z",
+      "type": "error",
+      "focus": "bugs",
+      "error": "Anthropic API → 529",
+      "applied": false
     }
   ]
 }
