@@ -1164,9 +1164,9 @@ async function cmd(input) {
       }).join(`${_.dark}›${R}`)
     }
 
-    const ROWS = 24
+    let prevRows  = 0
     let firstDraw = true
-    let active = true
+    let active    = true
     const onSigint = () => { active = false }
     process.once('SIGINT', onSigint)
 
@@ -1189,19 +1189,16 @@ async function cmd(input) {
       push(`  ${_.dark}${ts}${R}  ${_.green}● LIVE${R}  ${_.dark}DONE${R} ${_.green}${files.done.length}${R}  ${_.dark}QUEUE${R} ${_.cyan}${files.queue.length}${R}  ${_.dark}RUN${R} ${_.amber}${files.running.length}${R}  ${_.dark}ERR${R} ${_.red}${files.error.length}${R}`)
       push(`  ${_.dark}${'─'.repeat(W)}${R}`)
 
-      // Running
+      // Running (max 2)
       if (files.running.length) {
         for (const name of files.running.slice(0, 2)) {
           const e = status.find(t => t.name === name)
           push(`  ${_.amber}⟳ ${_.bold}RUNNING${R}  ${_.silver}${name.slice(0, 34)}${R}`)
           push(`    ${pipeline(e?.stage || 'planning')}`)
-          if (e?.desc) push(`    ${_.dark}${e.desc.slice(0, 52)}${R}`)
-          else push('')
+          push(e?.desc ? `    ${_.dark}${e.desc.slice(0, 52)}${R}` : '')
         }
       } else {
         push(`  ${_.dark}⟨◈⟩ Idle — aucune tâche en cours${R}`)
-        push('')
-        push('')
       }
 
       push(`  ${_.dark}${'─'.repeat(W)}${R}`)
@@ -1218,11 +1215,11 @@ async function cmd(input) {
 
       push(`  ${_.dark}${'─'.repeat(W)}${R}`)
 
-      // Done (last 6) — fallback sur les fichiers si pas de status JSON
-      const doneFromStatus = status.filter(t => t.status === 'DONE').slice(-6).reverse()
+      // Done (last 5) — fallback sur fichiers si pas de status JSON
+      const doneFromStatus = status.filter(t => t.status === 'DONE').slice(-5).reverse()
       const doneList = doneFromStatus.length
         ? doneFromStatus.map(t => ({ name: t.name, dur: t.dur ? `${t.dur}s` : '—', live: !!t.stages?.live }))
-        : files.done.slice(-6).reverse().map(n => ({ name: n, dur: '—', live: true }))
+        : files.done.slice(-5).reverse().map(n => ({ name: n, dur: '—', live: true }))
 
       push(`  ${_.green}DONE (${files.done.length})${R}`)
       for (const t of doneList) {
@@ -1231,22 +1228,23 @@ async function cmd(input) {
         push(`  ${_.dark}✓ ${_.silver}${t.name.slice(0, 32).padEnd(32)}${R} ${_.dark}${t.dur.padStart(5)}${R}  ${liveCol}${liveTag}${R}`)
       }
 
-      // Errors
+      // Errors (max 2)
       if (files.error.length) {
         push(`  ${_.dark}${'─'.repeat(W)}${R}`)
         push(`  ${_.red}ERRORS (${files.error.length})${R}`)
-        const errs = status.filter(t => t.status === 'ERROR').slice(-3).reverse()
+        const errs = status.filter(t => t.status === 'ERROR').slice(-2).reverse()
         for (const t of errs)
           push(`  ${_.red}✗ ${_.dark}${t.name.slice(0, 30).padEnd(30)}${R}  ${_.red}${(t.error || '').slice(0, 22)}${R}`)
       }
 
-      // Render fixed-height panel
-      if (!firstDraw) process.stdout.write(`\x1b[${ROWS}A\x1b[0J`)
+      // Render — erase exactly as many lines as we drew last time
+      if (!firstDraw) process.stdout.write(`\x1b[${prevRows}A\x1b[0J`)
       else firstDraw = false
 
-      for (let i = 0; i < ROWS; i++)
-        process.stdout.write(BG + (rows[i] ?? '') + '\x1b[K\n')
+      for (const l of rows)
+        process.stdout.write(BG + l + '\x1b[K\n')
 
+      prevRows = rows.length
       if (active) await sl(2000)
     }
 
