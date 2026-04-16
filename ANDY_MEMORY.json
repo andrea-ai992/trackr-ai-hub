@@ -1,47 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776345122821",
-      "timestamp": "2026-04-16T13:12:02.821Z",
-      "type": "pattern_scan",
-      "focus": "bugs",
-      "findings": [
-        {
-          "id": "sse_json_parse",
-          "file": "api/discord.js",
-          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
-          "severity": "critical"
-        },
-        {
-          "id": "vercel_url_empty",
-          "file": "api/brain.js",
-          "description": "Using VERCEL_URL which is empty in production — use APP_URL instead",
-          "severity": "high"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/andy.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/brain.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/trading-expert.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        }
-      ],
-      "count": 5,
-      "applied": false,
-      "note": "Patterns detected before Claude analysis — guiding fix priority"
-    },
-    {
       "id": "mem_1776345123847",
       "timestamp": "2026-04-16T13:12:03.847Z",
       "type": "error",
@@ -3523,6 +3482,20 @@
       "count": 4,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776357354923",
+      "timestamp": "2026-04-16T16:35:54.923Z",
+      "type": "brain_cycle",
+      "hour": 16,
+      "successRate": 0,
+      "agentsRan": 4,
+      "improved": false,
+      "improvedFile": null,
+      "focus": "bugs",
+      "errors": 0,
+      "appHealthy": true,
+      "duration": 23
     }
   ]
 }
