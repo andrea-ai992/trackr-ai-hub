@@ -1,19 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776323551580",
-      "timestamp": "2026-04-16T07:12:31.580Z",
-      "type": "improvement",
-      "focus": "bugs",
-      "file": "api/morning.js",
-      "problem": "api/discord.js appelle .json() sur une réponse SSE (text/event-stream) de Yahoo Finance au lieu de vérifier le content-type",
-      "severity": "critical",
-      "commit": "fix: check content-type before calling .json() on Yahoo Finance response in morning.js to prevent SSE parse crash",
-      "learned": "Yahoo Finance peut retourner text/event-stream au lieu de JSON (rate limiting/bot detection), donc toute fonction qui consomme son API doit vérifier le content-type avant d'appeler .json() — le pattern de protection existe déjà dans discord.js mais manquait dans morning.js.",
-      "applied": true,
-      "fromAdminTask": null
-    },
-    {
       "id": "mem_1776323552404",
       "timestamp": "2026-04-16T07:12:32.404Z",
       "type": "brain_cycle",
@@ -3257,6 +3244,14 @@
       "timestamp": "2026-04-16T09:52:02.772Z",
       "type": "error",
       "focus": "bugs",
+      "error": "Anthropic API → 400",
+      "applied": false
+    },
+    {
+      "id": "mem_1776333419231",
+      "timestamp": "2026-04-16T09:56:59.231Z",
+      "type": "error",
+      "focus": "frontend",
       "error": "Anthropic API → 400",
       "applied": false
     }
