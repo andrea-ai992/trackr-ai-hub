@@ -20,12 +20,9 @@
   "functions": {
     "api/andy.js":          { "maxDuration": 60 },
     "api/brain.js":         { "maxDuration": 60 },
-    "api/agent-forge.js":   { "maxDuration": 60 },
     "api/reports.js":       { "maxDuration": 60 },
     "api/discord.js":       { "maxDuration": 60 },
-    "api/discord-cron.js":  { "maxDuration": 60 },
     "api/self-improve.js":  { "maxDuration": 60 },
-    "api/trigger-agent.js": { "maxDuration": 60 },
     "api/morning.js":       { "maxDuration": 60 },
     "api/trading-expert.js":{ "maxDuration": 60 },
     "api/business-plan.js": { "maxDuration": 60 },
