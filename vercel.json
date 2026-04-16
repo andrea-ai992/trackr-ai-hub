@@ -10,7 +10,7 @@
     { "path": "/api/self-improve?focus=frontend",    "schedule": "0 15 * * 3"  },
     { "path": "/api/morning",                        "schedule": "0 9 * * *"   },
     { "path": "/api/self-improve?focus=autonomous",  "schedule": "0 3 * * *"   },
-    { "path": "/api/status-check?post=true",         "schedule": "0 */6 * * *" }
+    { "path": "/api/status-check?post=true",          "schedule": "0 7 * * *"   }
   ],
   "functions": {
     "api/andy.js":          { "maxDuration": 60 },
