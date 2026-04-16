@@ -15,15 +15,14 @@ const DISCORD_CH = {
 }
 
 // ─── Endpoints to monitor ────────────────────────────────────────────────────
+// All checks run in parallel with tight timeouts to fit within the 10s default
 const WATCH_ENDPOINTS = [
   { name: 'AnDy API',     path: '/api/andy',         method: 'POST',
     body: { messages: [{ role: 'user', content: 'ping' }], portfolio: [], crypto: [], sneakers: [], alerts: [], watchlist: [] },
-    expectStream: true, timeout: 15000, critical: true },
-  { name: 'Memory API',   path: '/api/memory',        method: 'GET',  timeout: 5000,  critical: true },
-  { name: 'Reports API',  path: '/api/reports',       method: 'GET',  timeout: 8000,  critical: false },
-  { name: 'Agents Log',   path: '/api/agents-log',    method: 'GET',  timeout: 5000,  critical: false },
-  { name: 'Brain API',    path: '/api/brain',         method: 'GET',  timeout: 5000,  critical: false },
-  { name: 'Discord Cron', path: '/api/discord-cron',  method: 'GET',  timeout: 10000, critical: false },
+    expectStream: true, timeout: 8000, critical: true },
+  { name: 'Memory API',   path: '/api/memory',        method: 'GET',  timeout: 4000,  critical: true },
+  { name: 'Reports API',  path: '/api/reports',       method: 'GET',  timeout: 4000,  critical: false },
+  { name: 'Brain API',    path: '/api/brain',         method: 'GET',  timeout: 4000,  critical: false },
 ]
 
 // ─── Incident state (in-memory, resets on cold start) ──────────────────────
@@ -85,41 +84,27 @@ async function checkEndpoint(ep) {
   return result
 }
 
-// ─── Scan recent memory for error spikes ────────────────────────────────────
-async function checkErrorSpike() {
+// ─── Scan recent memory for error spikes (fast version) ──────────────────────
+async function checkErrorSpike(memoryEntries) {
   try {
-    const r = await fetch(`${APP_URL}/api/memory?limit=50&type=error`, {
-      signal: AbortSignal.timeout(5000),
-    })
-    if (!r.ok) return null
-    const entries = await r.json()
-    if (!Array.isArray(entries)) return null
-
-    // Count errors in last 15 minutes
+    if (!Array.isArray(memoryEntries)) return null
     const cutoff = Date.now() - 15 * 60 * 1000
-    const recent = entries.filter(e => new Date(e.createdAt || e.timestamp || 0).getTime() > cutoff)
-    return recent.length >= 5 ? { count: recent.length, sample: recent.slice(0, 2) } : null
-  } catch {
-    return null
-  }
+    const recent = memoryEntries.filter(e =>
+      e.type === 'error' && new Date(e.createdAt || e.timestamp || 0).getTime() > cutoff
+    )
+    return recent.length >= 5 ? { count: recent.length } : null
+  } catch { return null }
 }
 
-// ─── Check if self-improve is stuck ─────────────────────────────────────────
-async function checkSelfImproveStuck() {
+// ─── Check if self-improve is stuck (uses cached memory result) ──────────────
+function checkSelfImproveStuck(memoryEntries) {
   try {
-    const r = await fetch(`${APP_URL}/api/memory?limit=5&type=self_improve`, {
-      signal: AbortSignal.timeout(5000),
-    })
-    if (!r.ok) return false
-    const entries = await r.json()
-    if (!Array.isArray(entries) || entries.length === 0) return false
-
-    const lastRun = new Date(entries[0]?.createdAt || 0)
-    const hoursSince = (Date.now() - lastRun.getTime()) / 3600000
-    return hoursSince > 4  // Flag if no self-improve in 4+ hours
-  } catch {
-    return false
-  }
+    if (!Array.isArray(memoryEntries)) return false
+    const last = memoryEntries.find(e => e.type === 'self_improve')
+    if (!last) return false
+    const hoursSince = (Date.now() - new Date(last.createdAt || 0).getTime()) / 3600000
+    return hoursSince > 4
+  } catch { return false }
 }
 
 // ─── Auto-trigger self-improve if issues found ────────────────────────────────
@@ -140,37 +125,37 @@ export default async function handler(req, res) {
   const failures = []
   const criticalFailures = []
 
-  // 1. Check all endpoints in parallel
-  const checks = await Promise.allSettled(WATCH_ENDPOINTS.map(checkEndpoint))
+  // 1. All checks in parallel — must complete within ~8s total
+  const [checksResult, memResult] = await Promise.allSettled([
+    Promise.allSettled(WATCH_ENDPOINTS.map(checkEndpoint)),
+    fetch(`${APP_URL}/api/memory?limit=20`, { signal: AbortSignal.timeout(3000) }).then(r => r.json()).catch(() => []),
+  ])
+
+  const checks = checksResult.status === 'fulfilled' ? checksResult.value : []
+  const memoryEntries = memResult.status === 'fulfilled' ? memResult.value?.entries || memResult.value || [] : []
+
   for (let i = 0; i < checks.length; i++) {
     const ep = WATCH_ENDPOINTS[i]
-    const r = checks[i].status === 'fulfilled' ? checks[i].value : { name: ep.name, ok: false, error: 'check crashed' }
+    const r = checks[i]?.status === 'fulfilled' ? checks[i].value : { name: ep.name, ok: false, error: 'check crashed' }
     results.push(r)
 
     if (!r.ok) {
       failures.push(r)
       if (ep.critical) criticalFailures.push(r)
-
-      // Track consecutive failures
       if (!incidentTracker[r.name]) incidentTracker[r.name] = { failCount: 0, alerted: false }
       incidentTracker[r.name].failCount++
       incidentTracker[r.name].lastError = r.error
     } else {
-      // Reset on recovery
       if (incidentTracker[r.name]?.alerted) {
-        // Notify recovery
-        await postDiscord(DISCORD_CH.pulse,
-          `✅ **Récupération**: ${r.name} est de nouveau opérationnel (${r.latency}ms)`)
+        await postDiscord(DISCORD_CH.pulse, `✅ **Récupération**: ${r.name} de nouveau OK (${r.latency}ms)`)
       }
       incidentTracker[r.name] = { failCount: 0, alerted: false }
     }
   }
 
-  // 2. Check for error spike
-  const spike = await checkErrorSpike()
-
-  // 3. Check if self-improve is stuck
-  const stuck = await checkSelfImproveStuck()
+  // 2. Error spike + stuck check using cached memory data (no extra fetch)
+  const spike = checkErrorSpike(memoryEntries)
+  const stuck = checkSelfImproveStuck(memoryEntries)
 
   // 4. Build status summary
   const status = {

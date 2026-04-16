@@ -8,9 +8,12 @@ export default async function handler(req, res) {
 
   if (!query) return res.status(400).json({ error: 'Missing q parameter' })
 
-  // Try multiple sources in order
-  const price = await fetchChrono24Price(query, brand)
-    || await fetchWatchChartsPrice(query, brand)
+  // Try both sources in parallel, take first successful result
+  const [c24, wc] = await Promise.allSettled([
+    fetchChrono24Price(query, brand),
+    fetchWatchChartsPrice(query, brand),
+  ])
+  const price = (c24.status === 'fulfilled' && c24.value) || (wc.status === 'fulfilled' && wc.value)
 
   if (!price) return res.status(200).json({ price: null, source: null, currency: 'EUR' })
 

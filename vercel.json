@@ -13,9 +13,9 @@
     { "path": "/api/self-improve?focus=trading",      "schedule": "0 16 * * *" },
     { "path": "/api/self-improve?focus=features",     "schedule": "0 0 * * 1"  },
     { "path": "/api/self-improve?focus=autonomous",   "schedule": "0 3 * * *"  },
-    { "path": "/api/self-improve?focus=realestate",  "schedule": "0 11 * * *" },
-    { "path": "/api/self-improve?focus=business",    "schedule": "0 13 * * *" },
-    { "path": "/api/self-improve?focus=full",        "schedule": "0 2 * * 0"  }
+    { "path": "/api/self-improve?focus=realestate",   "schedule": "0 11 * * *" },
+    { "path": "/api/self-improve?focus=business",     "schedule": "0 13 * * *" },
+    { "path": "/api/self-improve?focus=full",         "schedule": "0 2 * * 0"  }
   ],
   "functions": {
     "api/andy.js":          { "maxDuration": 60 },
@@ -26,13 +26,9 @@
     "api/discord-cron.js":  { "maxDuration": 60 },
     "api/self-improve.js":  { "maxDuration": 60 },
     "api/trigger-agent.js": { "maxDuration": 60 },
-    "api/memory.js":        { "maxDuration": 30 },
     "api/morning.js":       { "maxDuration": 60 },
     "api/trading-expert.js":{ "maxDuration": 60 },
-    "api/deploy-notify.js": { "maxDuration": 10 },
-    "api/monitor.js":       { "maxDuration": 30 },
-    "api/watch-price.js":   { "maxDuration": 15 },
-    "api/real-estate.js":   { "maxDuration": 30 },
-    "api/business-plan.js": { "maxDuration": 60 }
+    "api/business-plan.js": { "maxDuration": 60 },
+    "api/real-estate.js":   { "maxDuration": 30 }
   }
 }
