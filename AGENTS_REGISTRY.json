@@ -1,0 +1,19 @@
+{
+  "agents": [
+    {
+      "key": "trading_expert",
+      "name": "TradingExpert",
+      "emoji": "📊",
+      "role": "Analyse crypto/action niveau Goldman Sachs",
+      "schedule": "on-demand",
+      "category": "markets",
+      "channelHint": "crypto",
+      "description": "Agent d'analyse financière expert multi-timeframe (technique, fondamentale, on-chain, sentiment). Répond à /analyse <symbol> dans #trading-desk avec un rapport structuré incluant thesis haussière/baissière, zones d'entrée/sortie, stop-loss, targets et conviction score. Mémorise les stratégies gagnantes dans ANDY_MEMORY.json.",
+      "filePath": "api/agents/trading_expert.js",
+      "cronSchedule": null,
+      "gap": "Agent TradingExpert autonome capable d'analyser n'importe quelle crypto ou action avec le niveau d'un expert des meilleures sociétés de trading mondiales (Goldman Sachs, Jane Street, Citadel). Il doit : 1) effectuer une analyse technique multi-timeframe complète (RSI, MACD, Bollinger, Fibonacci, EMA/SMA, volumes, momentum, patterns chandelier), 2) une analyse fondamentale et on-chain pour les cryptos, 3) un sentiment de marché, 4) produire un rapport structuré avec thesis haussière/baissière, zones d'entrée/sortie, stop-loss, targets, conviction score. Il doit apprendre en autonomie : tester différentes combinaisons de techniques, mémoriser celles qui fonctionnent le mieux, les affiner avec le temps et les automatiser. Doit pouvoir être interpellé directement via Discord dans le canal #trading-desk.",
+      "created": "2026-04-16T02:11:28.950Z"
+    }
+  ],
+  "updated": "2026-04-16T02:11:28.950Z"
+}
