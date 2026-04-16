@@ -1,14 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776344523869",
-      "timestamp": "2026-04-16T13:02:03.869Z",
-      "type": "error",
-      "focus": "bugs",
-      "error": "Anthropic API → 400",
-      "applied": false
-    },
-    {
       "id": "mem_1776344819233",
       "timestamp": "2026-04-16T13:06:59.233Z",
       "type": "pattern_scan",
@@ -3439,6 +3431,35 @@
       "errors": 0,
       "appHealthy": true,
       "duration": 24
+    },
+    {
+      "id": "mem_1776356228717",
+      "timestamp": "2026-04-16T16:17:08.717Z",
+      "type": "pattern_scan",
+      "focus": "trading",
+      "findings": [
+        {
+          "id": "sse_json_parse",
+          "file": "api/discord.js",
+          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
+          "severity": "critical"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/trading-expert.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/andy.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        }
+      ],
+      "count": 3,
+      "applied": false,
+      "note": "Patterns detected before Claude analysis — guiding fix priority"
     }
   ]
 }
