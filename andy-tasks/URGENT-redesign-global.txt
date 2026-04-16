@@ -1,0 +1,24 @@
+PRIORITÉ MAXIMALE — Redesign complet de l'app Trackr pour qu'elle soit visuellement impressionnante d'ici 18h.
+
+Objectif : chaque page doit ressembler à une vraie app professionnelle dédiée, pas un projet amateur.
+
+1. src/index.css — Refaire entièrement le design system :
+   - Fond : #080808 pur, cards : #0f0f0f, borders : #1a1a1a
+   - Couleur principale : #00ff88 (neon vert)
+   - Font : 'Inter' pour le texte, 'JetBrains Mono' pour les chiffres/données
+   - Ajouter Google Fonts import
+   - Page transitions : fade 180ms entre routes
+   - Cards avec hover : translateY(-2px) + border-color rgba(0,255,136,0.3)
+   - Scrollbar custom neon vert
+   - Skeleton loaders : gradient #111 → #1a1a1a animé
+   - Toutes les animations : cubic-bezier(0.32, 0.72, 0, 1)
+
+2. src/App.jsx ou App.tsx — Wrapper les routes avec Suspense + lazy loading sur chaque page
+
+3. src/components/BottomNav.jsx (ou équivalent) — Nav pill glassmorphism :
+   - Background rgba(8,8,8,0.92) + backdropFilter blur(28px)
+   - Icône active : #00ff88 + glow drop-shadow
+   - Sliding pill animé sous l'icône active
+   - Labels 9px uppercase letterspacing
+
+Push tous les fichiers modifiés sur GitHub immédiatement.

@@ -1,0 +1,13 @@
+PRIORITÉ MAXIMALE — Page Sports comme ESPN/OneFootball.
+
+Redesign complet de src/pages/Sports.jsx (ou SportsTab) :
+- Header avec image stadium blur en background + overlay gradient noir
+- Sections : PSG / Équipe de France / MMA-UFC
+- PSG : card avec couleurs bleu/rouge, prochain match en gros, derniers résultats
+- MMA/UFC : fighter cards avec photo placeholder, nom, rang, division, record (W-L-D)
+  Fighters à inclure : Islam Makhachev, Jon Jones, Alex Pereira, Ilia Topuria, Sean O'Malley
+- Score cards animés : fond #0f0f0f, équipes left/right, score center en vert neon, status badge
+- Skeleton loaders pendant le chargement
+- Design mobile-first, padding 16px, gap 12px entre cards
+- Tout en fond noir #080808, cards #0f0f0f, accents #00ff88
+Push sur GitHub.

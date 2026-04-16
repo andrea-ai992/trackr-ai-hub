@@ -1,0 +1,12 @@
+PRIORITÉ MAXIMALE — Page Hub/Dashboard comme une vraie app finance premium.
+
+Redesign src/pages/Hub.jsx ou Dashboard :
+- Header avec greeting "Bonjour Andrea" + heure + date
+- Section KPIs en haut : 4 cards glassmorphism avec valeur portfolio total, P&L jour, meilleure perf, pire perf
+- Chaque KPI : fond rgba(0,255,136,0.05), border rgba(0,255,136,0.1), valeur en #00ff88
+- Section "Marchés" : 6 mini-cards prix (BTC, ETH, NVDA, SPY, GOLD, EUR/USD) avec variation
+- Section "Dernières alertes" : liste des 3 dernières alertes discord/prix
+- Section "Tâches IA en cours" : badge vert pulsant + "Andy travaille sur X tâches"
+- Tout smooth, pas de layout shift, skeleton pendant load
+- Mobile-first, max-width 480px centré
+Push GitHub.

@@ -1,0 +1,1 @@
+Ajouter une page `src/pages/Sports.jsx` avec route `/sports` dans react-router-dom, intégrant un tableau des 5 prochains matchs PSG (date, adversaire, compétition, stade) fetchés depuis football-data.org `/teams/524/matches?status=SCHEDULED&limit=5`, avec skeleton loader mobile-first

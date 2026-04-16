@@ -1,0 +1,1 @@
+Ajouter des KPIs dynamiques sur le dashboard principal : solde total du portfolio, variation 24h en % et en valeur absolue, meilleure et pire performance du jour. Utiliser recharts pour un mini sparkline de 7 jours sur chaque KPI card. Fichiers concernés : src/pages/Dashboard.jsx et src/components/KpiCard.jsx (à créer).

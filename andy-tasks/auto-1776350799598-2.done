@@ -1,0 +1,1 @@
+Créer src/pages/Markets.jsx avec une liste de 20 actions tech (AAPL, TSLA, NVDA, MSFT...) fetchées depuis Yahoo Finance proxy /api/stocks.js, affichant prix, variation jour, volume, et un mini sparkline 7j via recharts LineChart

@@ -1,0 +1,1 @@
+Créer src/components/sports/PSGLiveScore.jsx — composant mobile-first affichant score en direct, statut du match (live/upcoming/finished), minute de jeu et buteurs via API football-data.org, avec polling toutes les 60s et badge "LIVE" animé en rouge

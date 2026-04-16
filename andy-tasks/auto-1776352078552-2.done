@@ -1,0 +1,1 @@
+Ajouter du code-splitting avec React.lazy + Suspense sur toutes les routes dans App.jsx pour réduire le bundle initial et accélérer le premier chargement

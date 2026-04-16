@@ -1,0 +1,1 @@
+Lis src/components/BottomNav.jsx avec /git read puis modifie-le avec /git write. Change le fond en #080808, bordure top 1px solid #1a1a1a, icône active en #00ff88 avec text-shadow 0 0 8px rgba(0,255,136,0.4), icônes inactives en #333333. Garde exactement la même structure de navigation et les mêmes routes. Push le fichier complet.

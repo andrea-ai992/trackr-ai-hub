@@ -1,0 +1,1 @@
+Ajouter un service worker via vite-plugin-pwa dans vite.config.js avec mise en cache des assets statiques et des appels API /api/ pour permettre un chargement offline-first et supprimer les requêtes réseau redondantes

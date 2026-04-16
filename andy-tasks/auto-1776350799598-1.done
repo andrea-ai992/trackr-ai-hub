@@ -1,0 +1,1 @@
+Ajouter un composant MarketTicker dans src/components/MarketTicker.jsx qui affiche en temps réel les prix BTC, ETH, S&P500 et Gold via l'API CoinGecko (gratuite, no key) avec variation 24h colorée en vert/rouge, intégré en haut du Dashboard

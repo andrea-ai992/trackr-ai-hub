@@ -1,0 +1,1 @@
+Créer un système d'alertes prix via /api/alerts.js : l'utilisateur définit un seuil (ex: BTC > 70000), un cron vérifie toutes les heures via CoinGecko API et envoie une notification Discord + stocke l'alerte déclenchée dans Supabase table 'alerts'. UI dans src/pages/Alerts.jsx avec formulaire de création et historique.

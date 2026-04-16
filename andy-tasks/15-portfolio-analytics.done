@@ -1,0 +1,1 @@
+Ajouter une page d'analytiques avancées du portfolio : calcul du Sharpe ratio, drawdown maximum, corrélation entre actifs, et répartition sectorielle. Utiliser recharts pour les visualisations. Créer /src/pages/PortfolioAnalytics.jsx avec les composants SharpeCard, DrawdownChart, AllocationPie et CorrelationMatrix. Brancher sur les données existantes du portfolio-sync.

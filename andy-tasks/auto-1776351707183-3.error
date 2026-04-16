@@ -1,0 +1,1 @@
+Ajouter dans src/components/Dashboard.jsx un widget "Prochain UFC" compact qui affiche le nom et la date du prochain événement majeur UFC en fetchant /api/sports-mma, avec skeleton loader pendant le chargement et fallback texte si API indisponible

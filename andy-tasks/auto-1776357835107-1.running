@@ -1,0 +1,1 @@
+Créer le composant `src/components/sports/PSGLiveScore.jsx` qui fetch l'API football-data.org (endpoint `/matches?competitions=FL1&status=LIVE`) toutes les 60s, affiche score live PSG + temps de jeu + buteurs, avec fallback gracieux si hors match

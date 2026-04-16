@@ -1,0 +1,1 @@
+Implémenter le code-splitting avec React.lazy() et Suspense sur les routes principales de l'app (dashboard, tracker, analytics) pour réduire le bundle initial — modifier src/App.jsx ou le fichier de routing principal

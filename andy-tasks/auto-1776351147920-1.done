@@ -1,0 +1,1 @@
+Ajouter React.lazy() et Suspense sur toutes les routes dans src/App.jsx pour activer le code-splitting et réduire le bundle initial chargé au démarrage

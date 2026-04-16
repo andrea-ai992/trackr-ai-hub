@@ -1,0 +1,1 @@
+Implémenter un graphique d'évolution du portfolio sur 30 jours dans src/components/PortfolioChart.jsx. Utiliser recharts AreaChart avec dégradé. Récupérer les données historiques depuis /api/portfolio-history.js qui lit la table Supabase 'portfolio_snapshots' (snapshot quotidien à minuit via cron). Afficher en overlay le benchmark BTC sur la même période.

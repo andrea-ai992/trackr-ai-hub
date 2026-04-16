@@ -1,0 +1,1 @@
+Ajouter une route /sports dans src/App.jsx et créer la page src/pages/SportsPage.jsx qui intègre PSGWidget, affiche les stats de l'équipe et les paris en cours liés au PSG stockés dans Supabase table "sports_bets" avec colonnes id, match, mise, cote, statut, created_at

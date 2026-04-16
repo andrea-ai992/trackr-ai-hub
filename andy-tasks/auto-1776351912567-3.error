@@ -1,0 +1,1 @@
+Ajouter dans src/App.jsx la route /markets pointant vers MarketsPage et ajouter un bouton Markets dans la bottom navigation mobile existante avec l'icône TrendingUp de lucide-react

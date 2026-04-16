@@ -1,0 +1,1 @@
+Implémenter dans `src/lib/supabaseClient.js` la gestion sécurisée des sessions — configurer `autoRefreshToken: true` + `persistSession: true`, ajouter un listener `onAuthStateChange` qui détecte `TOKEN_REFRESHED` et `SIGNED_OUT`, forcer logout et redirect `/login` si refresh token expiré ou révoqué, stocker session uniquement en `sessionStorage` (jamais localStorage)

@@ -1,0 +1,1 @@
+Créer une page /logs dans l'app React qui affiche l'historique des cycles self-improve : timestamp, tâche exécutée, fichiers modifiés, statut succès/erreur. Lire depuis une table Supabase 'self_improve_logs' alimentée par /api/self-improve à chaque cycle. Affichage en tableau avec filtres par date et statut.

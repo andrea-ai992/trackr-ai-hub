@@ -1,0 +1,1 @@
+Créer src/pages/SportsPage.jsx — page dédiée Sports avec section PSG en premier (prochain match, derniers résultats des 5 derniers matchs, classement Ligue 1 position actuelle), intégrée dans react-router-dom 7 avec route /sports et lien dans la navbar mobile

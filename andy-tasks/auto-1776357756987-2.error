@@ -1,0 +1,1 @@
+Ajouter un service worker via vite-plugin-pwa ou workbox pour mettre en cache les assets statiques et les réponses API fréquentes, réduisant les temps de chargement sur mobile et corrigeant les erreurs fetch failed (auto-1776352236291-2 et auto-1776352236291-3) en mode offline/réseau instable

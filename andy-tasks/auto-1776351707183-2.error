@@ -1,0 +1,1 @@
+Créer src/pages/SportsPage.jsx — page mobile-first affichant les prochains événements UFC/MMA avec cards stylisées (date mise en avant, badge LIVE si dans les 24h, combats principaux listés), route /sports ajoutée dans App.jsx et lien dans la nav bottom bar

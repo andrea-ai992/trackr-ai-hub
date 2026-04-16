@@ -1,0 +1,1 @@
+Améliorer le bot Discord (bot/index.js) pour envoyer des alertes automatiques quand un actif dépasse un seuil configuré par l'utilisateur. Commande /setalert <ticker> <prix> <above|below>. Stocker les alertes dans Supabase table 'alerts'. Vérification toutes les 5min via setInterval.

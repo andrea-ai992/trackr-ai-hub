@@ -1,0 +1,1 @@
+Créer src/pages/Markets.jsx avec une page mobile-first affichant les cryptos en cards (logo, nom, prix USD, variation 24h en vert/rouge), un mini sparkline recharts sur 7 jours, et un bouton refresh — intégrer la route /markets dans App.jsx et le nav bottom

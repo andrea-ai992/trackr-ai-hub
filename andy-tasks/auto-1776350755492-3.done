@@ -1,0 +1,1 @@
+Ajouter dans src/pages/Markets.jsx une section "Fear & Greed Index" qui fetch https://api.alternative.me/fng/ et affiche un gauge visuel circulaire SVG simple avec la valeur et le label (Extreme Fear / Fear / Neutral / Greed / Extreme Greed) en couleur correspondante

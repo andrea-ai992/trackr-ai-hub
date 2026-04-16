@@ -1,0 +1,1 @@
+Créer src/pages/MarketsPage.jsx — page mobile-first avec grille de cards crypto (prix en temps réel via polling toutes les 30s sur api/crypto-prices), graphique sparkline recharts sur 7 jours, indicateur rouge/vert pour variation 24h

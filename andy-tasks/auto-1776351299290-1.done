@@ -1,0 +1,1 @@
+Créer le composant src/components/sports/PSGWidget.jsx qui affiche les prochains matchs du PSG (date, adversaire, compétition) en fetchant l'API football-data.org avec la clé stockée dans VITE_FOOTBALL_API_KEY, style mobile-first avec les couleurs PSG (bleu #004170, rouge #DA291C)

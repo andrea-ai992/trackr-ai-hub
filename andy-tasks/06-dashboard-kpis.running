@@ -1,0 +1,1 @@
+Ajouter des KPIs dynamiques sur le dashboard principal : solde total du portefeuille, variation 24h en % et en valeur absolue, meilleure et pire performance du jour. Utiliser recharts pour un mini sparkline de 7 jours sur chaque actif. Données à fetcher depuis /api/portfolio avec cache 5min.

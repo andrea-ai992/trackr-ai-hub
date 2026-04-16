@@ -1,0 +1,24 @@
+PRIORITÉ MAXIMALE — Page News ultra-rapide comme Apple News.
+
+Redesign src/pages/News.jsx :
+1. Cache localStorage agressif : TTL 5min, clé "news_v2_cache"
+   - Au chargement : afficher le cache IMMÉDIATEMENT si < 5min, puis refresh en background
+   - Zéro délai d'affichage perçu
+
+2. Skeleton loaders : afficher 6 skeleton cards AVANT le fetch
+   - Skeleton : fond #111, border-radius 12px, hauteur 120px, shimmer animé
+
+3. Design cards style Flipboard/Apple News :
+   - Image cover à gauche (80x80px, border-radius 8px, object-fit cover)
+   - Titre bold 14px, couleur #e0e0e0, 2 lignes max
+   - Source + temps relatif (il y a 2h) en #444 10px
+   - Fond #0f0f0f, hover fond #141414 + border rgba(0,255,136,0.15)
+
+4. Filtres catégories horizontal scroll en haut :
+   - Tous / Crypto / Finance / Tech / Sport / IA
+   - Pill active : fond #00ff88 couleur #080808
+   - Pill inactive : fond #111 couleur #444
+
+5. Lazy loading images avec IntersectionObserver
+
+Push GitHub immédiatement.

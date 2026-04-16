@@ -1,0 +1,1 @@
+Créer un middleware CSRF dans api/_csrf.js générant et validant un token (crypto.randomUUID stocké en cookie httpOnly) puis l'importer dans toutes les routes serverless existantes sous /api/ pour bloquer les requêtes cross-site non autorisées

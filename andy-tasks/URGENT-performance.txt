@@ -1,0 +1,16 @@
+PRIORITÉ MAXIMALE — Performance et fluidité de l'app.
+
+1. vite.config.js/ts — Ajouter :
+   - build.rollupOptions.output.manualChunks : vendor/react, charts/recharts, router
+   - build.target: 'esnext'
+   - build.minify: 'esbuild'
+
+2. src/App.jsx/tsx — React.lazy() + Suspense sur TOUTES les routes avec fallback skeleton
+
+3. Ajouter src/components/PageSkeleton.jsx :
+   - Skeleton fullscreen pendant le chargement de page
+   - Fond #080808, barres animées #111 → #1a1a1a
+
+4. Tous les fetch dans les pages — ajouter AbortController + timeout 10s + cache localStorage 5min
+
+Push tout sur GitHub immédiatement.

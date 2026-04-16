@@ -1,0 +1,1 @@
+Ajouter une page Sports.jsx dans src/pages/ avec route /sports dans App.jsx, intégrant PSGMatchCard plus un tableau des 5 derniers résultats du PSG (score, adversaire, compétition) fetchés depuis /competitions/FL1/matches?status=FINISHED, avec gestion loading skeleton et état erreur

@@ -1,0 +1,1 @@
+Créer api/crypto-prices.js — endpoint serverless qui fetch les prix BTC/ETH/SOL/BNB via CoinGecko API (gratuite, sans clé) et retourne JSON avec price, change_24h, market_cap, volume_24h pour chaque coin

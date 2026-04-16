@@ -1,0 +1,1 @@
+Ajouter route /sports dans src/App.jsx et entrée dans la nav mobile bottom bar avec icône Trophy de lucide-react, lier à SportsPage.jsx, s'assurer que la page est accessible depuis le dashboard principal

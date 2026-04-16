@@ -1,0 +1,1 @@
+Créer api/auth/refresh.js — serverless function Node.js ES modules qui vérifie l'expiration du token Supabase côté serveur, force un refresh via supabase.auth.refreshSession() si moins de 10 minutes restantes, blackliste les refresh tokens révoqués dans une table supabase refresh_token_log, et retourne 401 avec clear cookie si token invalide

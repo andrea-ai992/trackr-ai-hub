@@ -1,0 +1,1 @@
+Créer l'API serverless api/psg-stats.js qui récupère les stats live du PSG (classement Ligue 1, derniers résultats, buteurs) depuis football-data.org et retourne un JSON structuré avec cache 5 minutes via headers Cache-Control

@@ -1,0 +1,1 @@
+Créer /api/psg-stats.js en serverless function Node.js ES module qui proxy les appels football-data.org (clé API en variable d'env FOOTBALL_DATA_API_KEY), expose GET /api/psg-stats?type=next|results|standings et cache la réponse 5 minutes via headers Cache-Control pour éviter les rate limits de l'API gratuite

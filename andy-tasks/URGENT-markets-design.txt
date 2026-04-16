@@ -1,0 +1,11 @@
+PRIORITÉ MAXIMALE — Page Markets/Crypto comme Bloomberg Terminal.
+
+Redesign src/pages/CryptoMarkets.jsx et Markets :
+- Header avec ticker tape animé (prix défilants) en haut
+- Grid de cards prix : BTC, ETH, SOL, BNB, XRP, AVAX, DOGE, MATIC
+- Chaque card : logo coin (emoji ou text), prix en gros, variation 24h en rouge/vert avec flèche, mini sparkline recharts
+- Variation positive : #00ff88, négative : #ef4444
+- Tableau portefeuille : colonne actif/prix/24h/7j/valeur/P&L
+- Section stocks : WM, NVDA, CRWD, COST, NET avec même format
+- Tout fond #080808, cards #0f0f0f, chiffres JetBrains Mono
+Push GitHub.

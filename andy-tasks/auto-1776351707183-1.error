@@ -1,0 +1,1 @@
+Créer /api/sports-mma.js — endpoint serverless qui fetch les événements UFC à venir via l'API sportsdata.io ou thesportsdb.com, retourne JSON avec nom événement, date, lieu, combats principaux, et cache le résultat 1h dans Supabase table "sports_cache"

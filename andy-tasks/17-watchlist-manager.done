@@ -1,0 +1,1 @@
+Implémenter un gestionnaire de watchlists multiples : possibilité de créer plusieurs listes nommées (ex: 'Crypto DeFi', 'Blue Chips', 'Candidates achat'), drag-and-drop pour réordonner les actifs, import/export CSV, partage de watchlist via lien unique. Table Supabase 'watchlists' et 'watchlist_items'. Composants /src/pages/Watchlists.jsx et /src/components/WatchlistCard.jsx.

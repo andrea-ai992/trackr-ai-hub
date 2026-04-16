@@ -1,0 +1,1 @@
+Créer un composant PSGMatchCard.jsx dans src/components/sports/ qui affiche le prochain match du PSG (adversaire, date, heure, compétition, lieu) en fetchant l'API football-data.org endpoint /competitions/FL1/matches?status=SCHEDULED&limit=5 avec filtre sur team id 524, design mobile-first avec couleurs PSG bleu/rouge/blanc

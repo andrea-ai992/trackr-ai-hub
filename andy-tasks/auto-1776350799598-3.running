@@ -1,0 +1,1 @@
+Implémenter /api/stocks.js en serverless Node.js ES module qui proxifie Yahoo Finance (yahoo-finance2 npm) pour retourner prix + historique 7j de n'importe quel ticker, avec cache in-memory 5 minutes pour éviter le rate limiting

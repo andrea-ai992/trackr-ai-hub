@@ -1,0 +1,1 @@
+Implémenter React.memo et useMemo sur les composants de MarketsPage.jsx pour éviter les re-renders inutiles lors des mises à jour de prix en temps réel

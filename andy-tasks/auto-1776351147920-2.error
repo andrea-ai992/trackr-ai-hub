@@ -1,0 +1,1 @@
+Auditer les imports lucide-react dans tous les composants et remplacer les imports groupés (import { X, Y, Z } from 'lucide-react') par des imports individuels (import X from 'lucide-react/dist/esm/icons/x') pour éliminer le tree-shaking défaillant
