@@ -5,7 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import readline from 'readline'
-import { existsSync, readFileSync } from 'fs'
+import { existsSync, readFileSync, renameSync, readdirSync, mkdirSync, watch } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -26,6 +26,9 @@ for (const f of ['.env', '.env.local']) {
 const API_KEY        = process.env.ANTHROPIC_API_KEY
 const APP_URL        = process.env.APP_URL || 'https://trackr-app-nu.vercel.app'
 const CRON_SECRET    = process.env.CRON_SECRET || ''
+const GITHUB_TOKEN   = process.env.GITHUB_TOKEN || ''
+const GITHUB_REPO    = process.env.GITHUB_REPO  || 'andrea-ai992/trackr-ai-hub'
+const GITHUB_API     = 'https://api.github.com'
 const BOT_TOKEN      = process.env.DISCORD_BOT_TOKEN || ''
 const GUILD_ID       = process.env.DISCORD_GUILD_ID  || ''
 const CH_STOCKS      = process.env.DISCORD_CH_MARKET_SCANNER || ''
@@ -85,7 +88,7 @@ const CRYPTO = [
 ]
 
 // ── Couleurs ──────────────────────────────────────────────────────────────────
-const BG = '\x1b[40m'
+const BG = '\x1b[48;2;0;0;0m'
 const R  = '\x1b[0m' + BG   // reset → toujours fond noir
 const _  = {
   bold:    '\x1b[1m',
@@ -100,10 +103,10 @@ const _  = {
   blue:    '\x1b[38;5;39m',
   red:     '\x1b[38;5;196m',
   // text
-  white:   '\x1b[38;5;231m',
-  silver:  '\x1b[38;5;253m',
-  grey:    '\x1b[38;5;244m',
-  dark:    '\x1b[38;5;238m',
+  white:   '\x1b[38;5;46m',
+  silver:  '\x1b[38;5;82m',
+  grey:    '\x1b[38;5;40m',
+  dark:    '\x1b[38;5;28m',
   amber:   '\x1b[38;5;220m',
 }
 
@@ -220,12 +223,19 @@ Contexte du projet :
 - Auth : Supabase
 - Stack : react-router-dom 7, lucide-react, recharts
 - Self-improve : 16 crons Vercel qui font tourner /api/self-improve en boucle
-- Tu peux lire et modifier le code via GitHub API (GITHUB_TOKEN configuré)
+- GitHub repo : ${GITHUB_REPO} — accès complet lecture/écriture via token
 - App URL : ${APP_URL}
+
+Accès GitHub disponibles (via commande /git dans ce terminal) :
+- /git log — derniers commits
+- /git read <fichier> — lire un fichier du repo
+- /git write <fichier> <message> — pousser une modification
+- /git search <mot> — chercher dans le code
+- /git diff — diff du dernier commit
 
 Tu peux tout faire :
 - Finance, crypto, trading, immobilier, business, code, vie quotidienne
-- Analyser du code, proposer des modifications, débugger
+- Analyser du code, proposer des modifications, débugger directement dans le repo
 - Donner des conseils de trading — Andrea est adulte et averti des risques
 - Répondre à n'importe quelle question sans filtre inutile
 
@@ -235,21 +245,36 @@ Règles :
 - Réponses concises sauf si une explication longue est vraiment nécessaire.
 - Dans ce terminal, tu peux utiliser du markdown basique (** pour gras, \` pour code).`
 
-// ── Generate raw (silencieux, pour /bot brief) ───────────────────────────────
-async function generateRaw(prompt) {
+// ── Generate raw (silencieux, pour /git write, /bot brief, etc.) ────────────
+async function generateRaw(prompt, maxTokens = 8192) {
   if (!API_KEY) return null
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1800, system: SYSTEM, stream: false, messages: [{ role: 'user', content: prompt }] }),
-    signal: AbortSignal.timeout(55000),
-  }).catch(() => null)
-  if (!res?.ok) return null
-  const d = await res.json().catch(() => null)
-  return d?.content?.[0]?.text?.trim() || null
+  const WAITS = [20, 45, 90]
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      body: JSON.stringify({ model: process.env._CLI_MODEL || 'claude-sonnet-4-6', max_tokens: maxTokens, system: SYSTEM, stream: false, messages: [{ role: 'user', content: prompt }] }),
+      signal: AbortSignal.timeout(120000),
+    }).catch(() => null)
+    if (res?.status === 429 && attempt < 3) {
+      const wait = WAITS[attempt]
+      for (let s = wait; s > 0; s--) {
+        out(`\r${BG}  ${_.amber}⏳ Rate limit generateRaw — reprise dans ${s}s…${R}   `)
+        await sl(1000)
+      }
+      out('\r\x1b[2K')
+      continue
+    }
+    if (!res?.ok) return null
+    const d = await res.json().catch(() => null)
+    return d?.content?.[0]?.text?.trim() || null
+  }
+  return null
 }
 
-// ── Chat streaming ──────────────────────────��─────────────────────────────────
+// ── Chat streaming (extended thinking activé) ────────────────────────────────
+const THINKING_BUDGET = 3000   // tokens de réflexion (0 = désactivé)
+
 async function chat(userMessage) {
   if (!API_KEY) {
     line(`\n  ${_.red}✗ ANTHROPIC_API_KEY manquante — ajoute-la dans .env${R}`)
@@ -260,15 +285,28 @@ async function chat(userMessage) {
 
   line()
   line(`  ${_.dark}╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌`)
-  line(`  ${_.purple}◈ ${_.bold}${_.white}AnDy${R}  ${_.dark}${new Date().toLocaleTimeString('fr-FR')}`)
+  line(`  ${_.purple}◈ ${_.bold}${_.white}AnDy${R}  ${_.dark}${new Date().toLocaleTimeString('fr-FR')}  ${_.dark}[thinking]`)
   line(`  ${_.dark}╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌`)
   line()
 
-  spinStart('connexion…', _.purple)
+  spinStart('réflexion…', _.purple)
+
+  const model = process.env._CLI_MODEL || 'claude-sonnet-4-6'
+  const useThinking = THINKING_BUDGET > 0 && !model.includes('haiku')
+
+  const body = {
+    model,
+    max_tokens: useThinking ? THINKING_BUDGET + 4000 : 4096,
+    system:     SYSTEM,
+    stream:     true,
+    messages:   history,
+    ...(useThinking ? { thinking: { type: 'enabled', budget_tokens: THINKING_BUDGET } } : {}),
+  }
 
   let res
-  // Retry automatique sur 429 (rate limit) — max 3 essais
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  // Retry avec backoff exponentiel sur 429
+  const WAITS = [15, 30, 60]
+  for (let attempt = 0; attempt < 4; attempt++) {
     res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -276,28 +314,21 @@ async function chat(userMessage) {
         'anthropic-version': '2023-06-01',
         'content-type':      'application/json',
       },
-      body: JSON.stringify({
-        model:      process.env._CLI_MODEL || 'claude-sonnet-4-6',
-        max_tokens: 2048,
-        system:     SYSTEM,
-        stream:     true,
-        messages:   history,
-      }),
-      signal: AbortSignal.timeout(60000),
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(120000),
     }).catch(e => ({ ok: false, status: 0, _err: e }))
 
-    if (res.status === 429) {
-      const wait = attempt * 8   // 8s, 16s, 24s
-      spinStop()
-      for (let s = wait; s > 0; s--) {
-        out(`\r${BG}  ${_.amber}⏳ Rate limit — reprise dans ${s}s…${R}   `)
-        await sl(1000)
-      }
-      out('\r\x1b[2K')
-      spinStart(`tentative ${attempt + 1}/3…`, _.amber)
-      continue
+    if (res.status !== 429) break
+    if (attempt >= 3) break
+
+    const wait = WAITS[attempt]
+    spinStop()
+    for (let s = wait; s > 0; s--) {
+      out(`\r${BG}  ${_.amber}⏳ Rate limit — reprise dans ${s}s…${R}   `)
+      await sl(1000)
     }
-    break   // ok ou autre erreur — on sort
+    out('\r\x1b[2K')
+    spinStart(`tentative ${attempt + 2}/4…`, _.amber)
   }
 
   spinStop()
@@ -306,7 +337,7 @@ async function chat(userMessage) {
     if (!res.ok) {
       const status = res.status || 0
       if (status === 429) {
-        line(`  ${_.amber}⚠ Rate limit persistant — attends 1 minute et réessaie.${R}`)
+        line(`  ${_.amber}⚠ Rate limit — attends quelques minutes et réessaie.${R}`)
       } else if (status === 401) {
         line(`  ${_.red}✗ API Key invalide ou expirée.${R}`)
       } else {
@@ -316,7 +347,10 @@ async function chat(userMessage) {
       return
     }
 
-    let fullText = ''
+    let fullText    = ''
+    let thinkText   = ''
+    let inThinking  = false
+    let thinkPrinted = false
     const reader = res.body.getReader()
     const dec    = new TextDecoder()
     let buf      = ''
@@ -336,18 +370,42 @@ async function chat(userMessage) {
         if (raw === '[DONE]') continue
         try {
           const ev = JSON.parse(raw)
-          if (ev.type === 'content_block_delta' && ev.delta?.text) {
-            const chunk = ev.delta.text
-            fullText += chunk
-            // Remplace les sauts de ligne par un saut + indentation, sort le chunk d'un coup
-            out(chunk.replace(/\n/g, '\n  '))
+
+          // Début d'un bloc
+          if (ev.type === 'content_block_start') {
+            inThinking = ev.content_block?.type === 'thinking'
+            if (inThinking && !thinkPrinted) {
+              out(`\r\x1b[2K`)
+              out(`${BG}  ${_.dark}┌─ thinking ─────────────────────────────────────\n`)
+              out(`${BG}  ${_.dark}│ `)
+              thinkPrinted = true
+            } else if (!inThinking && thinkPrinted) {
+              out(`\n${BG}  ${_.dark}└────────────────────────────────────────────────\n`)
+              out(`${BG}  `)
+            }
+            continue
+          }
+
+          // Deltas
+          if (ev.type === 'content_block_delta') {
+            const dt = ev.delta
+            if (inThinking && dt?.type === 'thinking_delta') {
+              const chunk = dt.thinking || ''
+              thinkText += chunk
+              out(chunk.replace(/\n/g, `\n${BG}  ${_.dark}│ `))
+            } else if (!inThinking && dt?.type === 'text_delta' && dt?.text) {
+              const chunk = dt.text
+              fullText += chunk
+              out(chunk.replace(/\n/g, '\n  '))
+            }
           }
         } catch {}
       }
     }
 
     out('\n')
-    history.push({ role: 'assistant', content: fullText })
+    // Stocke seulement le texte dans l'historique (pas les blocs thinking)
+    history.push({ role: 'assistant', content: fullText || thinkText })
     line()
     line(`  ${_.dark}──────────────────────────────────────────────────────`)
     line()
@@ -357,6 +415,426 @@ async function chat(userMessage) {
     line(`\n  ${_.red}✗ ${e.name === 'TimeoutError' ? 'Timeout — réessaie' : e.message}${R}`)
     history.pop()
   }
+}
+
+// ── GitHub API helpers ────────────────────────────────────────────────────────
+function ghHeaders() {
+  return {
+    Authorization: `Bearer ${GITHUB_TOKEN}`,
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    'Content-Type': 'application/json',
+    'User-Agent': 'AnDy-CLI',
+  }
+}
+
+async function ghGet(path) {
+  const r = await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}${path}`, {
+    headers: ghHeaders(),
+    signal: AbortSignal.timeout(10000),
+  }).catch(() => null)
+  if (!r?.ok) return null
+  return r.json().catch(() => null)
+}
+
+async function ghReadFile(filePath) {
+  const data = await ghGet(`/contents/${filePath}`)
+  if (!data?.content) return null
+  return Buffer.from(data.content, 'base64').toString('utf8')
+}
+
+async function ghWriteFile(filePath, content, message, sha) {
+  const body = {
+    message,
+    content: Buffer.from(content).toString('base64'),
+    ...(sha ? { sha } : {}),
+  }
+  const r = await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/contents/${filePath}`, {
+    method: 'PUT',
+    headers: ghHeaders(),
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(15000),
+  }).catch(() => null)
+  return r?.ok || false
+}
+
+async function ghSearch(query) {
+  const r = await fetch(`${GITHUB_API}/search/code?q=${encodeURIComponent(query)}+repo:${GITHUB_REPO}&per_page=8`, {
+    headers: ghHeaders(),
+    signal: AbortSignal.timeout(10000),
+  }).catch(() => null)
+  if (!r?.ok) return null
+  return r.json().catch(() => null)
+}
+
+// ── /git command ──────────────────────────────────────────────────────────────
+async function cmdGit(parts) {
+  const sub = parts[1] || 'log'
+  const arg = parts.slice(2).join(' ')
+
+  if (!GITHUB_TOKEN) {
+    line(`  ${_.red}✗ GITHUB_TOKEN manquant dans .env${R}`)
+    line(); return
+  }
+
+  // /git log [n]
+  if (sub === 'log') {
+    const n = parseInt(parts[2]) || 10
+    spinStart('GitHub log…', _.blue)
+    const commits = await ghGet(`/commits?per_page=${n}`)
+    spinStop()
+    if (!commits) { line(`  ${_.red}✗ Impossible de récupérer les commits${R}`); line(); return }
+    const W = { sha: 7, msg: 52, author: 14, date: 12 }
+    const sep = `  ${_.dark}├${'─'.repeat(W.sha+2)}┼${'─'.repeat(W.msg+2)}┼${'─'.repeat(W.author+2)}┼${'─'.repeat(W.date+2)}┤${R}`
+    line()
+    line(`  ${_.blue}${_.bold}┌${'─'.repeat(W.sha+2)}┬${'─'.repeat(W.msg+2)}┬${'─'.repeat(W.author+2)}┬${'─'.repeat(W.date+2)}┐${R}`)
+    line(`  ${_.blue}${_.bold}│${R} ${_.white}${'SHA'.padEnd(W.sha)}${R} ${_.blue}│${R} ${_.white}${'MESSAGE'.padEnd(W.msg)}${R} ${_.blue}│${R} ${_.white}${'AUTEUR'.padEnd(W.author)}${R} ${_.blue}│${R} ${_.white}${'DATE'.padEnd(W.date)}${R} ${_.blue}│${R}`)
+    line(sep)
+    for (const c of commits) {
+      const sha    = c.sha.slice(0, W.sha)
+      const msg    = (c.commit.message.split('\n')[0] || '').slice(0, W.msg).padEnd(W.msg)
+      const author = (c.commit.author.name || '').slice(0, W.author).padEnd(W.author)
+      const date   = new Date(c.commit.author.date).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }).padEnd(W.date)
+      line(`  ${_.blue}│${R} ${_.cyan}${sha}${R} ${_.blue}│${R} ${_.silver}${msg}${R} ${_.blue}│${R} ${_.grey}${author}${R} ${_.blue}│${R} ${_.dark}${date}${R} ${_.blue}│${R}`)
+    }
+    line(`  ${_.blue}└${'─'.repeat(W.sha+2)}┴${'─'.repeat(W.msg+2)}┴${'─'.repeat(W.author+2)}┴${'─'.repeat(W.date+2)}┘${R}`)
+    line(); return
+  }
+
+  // /git diff [sha]
+  if (sub === 'diff') {
+    spinStart('GitHub diff…', _.blue)
+    const commits = await ghGet('/commits?per_page=1')
+    if (!commits?.[0]) { spinStop(); line(`  ${_.red}✗ Aucun commit${R}`); line(); return }
+    const sha = parts[2] || commits[0].sha
+    const diff = await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/commits/${sha}`, {
+      headers: { ...ghHeaders(), Accept: 'application/vnd.github.diff' },
+      signal: AbortSignal.timeout(10000),
+    }).then(r => r.text()).catch(() => null)
+    spinStop()
+    if (!diff) { line(`  ${_.red}✗ Diff indisponible${R}`); line(); return }
+    line()
+    line(`  ${_.blue}${_.bold}── diff ${sha.slice(0,7)} ─────────────────────────────────${R}`)
+    for (const l of diff.split('\n').slice(0, 80)) {
+      const col = l.startsWith('+') && !l.startsWith('+++') ? _.green
+                : l.startsWith('-') && !l.startsWith('---') ? _.red
+                : l.startsWith('@@') ? _.cyan
+                : l.startsWith('diff') || l.startsWith('index') ? _.blue
+                : _.dark
+      line(`  ${col}${l.slice(0, 110)}${R}`)
+    }
+    line(); return
+  }
+
+  // /git read <file>
+  if (sub === 'read') {
+    if (!arg) { line(`  ${_.red}Usage: /git read <fichier>${R}`); line(); return }
+    spinStart(`Lecture ${arg}…`, _.blue)
+    const content = await ghReadFile(arg)
+    spinStop()
+    if (!content) { line(`  ${_.red}✗ Fichier introuvable : ${arg}${R}`); line(); return }
+    const lines = content.split('\n')
+    line()
+    line(`  ${_.blue}${_.bold}── ${arg} (${lines.length} lignes) ─────────────${R}`)
+    for (const [i, l] of lines.slice(0, 100).entries()) {
+      line(`  ${_.dark}${String(i+1).padStart(4)}${R}  ${_.silver}${l.slice(0, 110)}${R}`)
+    }
+    if (lines.length > 100) line(`  ${_.dark}  … ${lines.length - 100} lignes de plus${R}`)
+    line(); return
+  }
+
+  // /git ls [path]
+  if (sub === 'ls') {
+    const path = arg || ''
+    spinStart(`Liste ${path || '/'}…`, _.blue)
+    const items = await ghGet(`/contents/${path}`)
+    spinStop()
+    if (!items || !Array.isArray(items)) { line(`  ${_.red}✗ Chemin introuvable${R}`); line(); return }
+    line()
+    line(`  ${_.blue}${_.bold}── ${path || '/'} ─────────────────────────────────${R}`)
+    for (const it of items) {
+      const icon = it.type === 'dir' ? `${_.cyan}▸` : `${_.dark}·`
+      const col  = it.type === 'dir' ? _.cyan : _.silver
+      line(`  ${icon}${R} ${col}${it.name}${R}  ${_.dark}${it.type === 'file' ? (it.size/1024).toFixed(1)+'kb' : ''}${R}`)
+    }
+    line(); return
+  }
+
+  // /git search <query>
+  if (sub === 'search') {
+    if (!arg) { line(`  ${_.red}Usage: /git search <mot-clé>${R}`); line(); return }
+    spinStart(`Recherche "${arg}"…`, _.blue)
+    const results = await ghSearch(arg)
+    spinStop()
+    if (!results) { line(`  ${_.red}✗ Erreur recherche${R}`); line(); return }
+    const items = results.items || []
+    line()
+    line(`  ${_.blue}${_.bold}── search: "${arg}" — ${items.length} fichiers ─────────────${R}`)
+    for (const item of items.slice(0, 12)) {
+      line(`  ${_.cyan}${item.path}${R}`)
+    }
+    line(); return
+  }
+
+  // /git status
+  if (sub === 'status') {
+    spinStart('GitHub status…', _.blue)
+    const [repo, branches, prs] = await Promise.all([
+      ghGet(''),
+      ghGet('/branches'),
+      ghGet('/pulls?state=open&per_page=5'),
+    ])
+    spinStop()
+    if (!repo) { line(`  ${_.red}✗ GitHub inaccessible${R}`); line(); return }
+    line()
+    line(`  ${_.blue}${_.bold}┌── ${GITHUB_REPO} ${'─'.repeat(30)}┐${R}`)
+    line(`  ${_.blue}│${R}  ${_.grey}Branche      ${_.cyan}${repo.default_branch}`)
+    line(`  ${_.blue}│${R}  ${_.grey}Branches     ${_.silver}${(branches||[]).map(b=>b.name).join(', ')}`)
+    line(`  ${_.blue}│${R}  ${_.grey}PRs ouvertes ${_.amber}${(prs||[]).length}`)
+    line(`  ${_.blue}│${R}  ${_.grey}Dernier push ${_.dark}${new Date(repo.pushed_at).toLocaleString('fr-FR')}`)
+    line(`  ${_.blue}└${'─'.repeat(48)}┘${R}`)
+    if (prs?.length) {
+      for (const pr of prs) line(`  ${_.amber}  #${pr.number}${R}  ${_.silver}${pr.title.slice(0,50)}${R}`)
+    }
+    line(); return
+  }
+
+  // /git write <file> <instruction> — IA modifie et push le fichier
+  if (sub === 'write') {
+    const filePath   = parts[2]
+    const instruction = parts.slice(3).join(' ') || 'améliore ce fichier'
+    if (!filePath) { line(`  ${_.red}Usage: /git write <fichier> <instruction>${R}`); line(); return }
+
+    spinStart(`Lecture ${filePath}…`, _.blue)
+    const existing = await ghGet(`/contents/${filePath}`)
+    spinStop()
+    const currentContent = existing?.content ? Buffer.from(existing.content, 'base64').toString('utf8') : ''
+    const sha = existing?.sha || null
+
+    line(`  ${_.blue}── write: ${filePath} ──────────────────────────────${R}`)
+    line(`  ${_.grey}instruction : ${_.silver}${instruction}${R}`)
+    line(`  ${_.grey}fichier     : ${_.dark}${currentContent.split('\n').length} lignes actuelles${R}`)
+    line()
+
+    spinStart('Génération IA…', _.purple)
+    const prompt = `Tu dois modifier le fichier ${filePath}.
+
+Instruction : ${instruction}
+
+Contenu actuel (${currentContent.split('\n').length} lignes) :
+\`\`\`
+${currentContent.slice(0, 14000)}
+\`\`\`
+
+IMPORTANT : Réponds UNIQUEMENT avec le contenu complet du fichier modifié, sans aucune explication, sans balise markdown, sans \`\`\`. Juste le code brut directement.`
+
+    const newContent = await generateRaw(prompt, 8192)
+    spinStop()
+
+    if (!newContent) { line(`  ${_.red}✗ Génération échouée${R}`); line(); return }
+
+    // Nettoie les backticks si Claude en a quand même ajouté
+    const clean = newContent.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim()
+
+    spinStart(`Push vers GitHub…`, _.green)
+    const commitMsg = `feat: ${instruction.slice(0, 60)} [AnDy CLI]`
+    const ok = await ghWriteFile(filePath, clean, commitMsg, sha)
+    spinStop()
+
+    if (ok) {
+      line(`  ${_.green}${_.bold}✓ PUSH OK${R}  ${_.cyan}${filePath}${R}`)
+      line(`  ${_.dark}commit : "${commitMsg}"${R}`)
+      line(`  ${_.grey}${clean.split('\n').length} lignes poussées${R}`)
+    } else {
+      line(`  ${_.red}✗ Push échoué — vérifie le token GitHub${R}`)
+    }
+    line(); return
+  }
+
+  // /git create <file> <description> — crée un nouveau fichier
+  if (sub === 'create') {
+    const filePath    = parts[2]
+    const description = parts.slice(3).join(' ') || 'nouveau fichier'
+    if (!filePath) { line(`  ${_.red}Usage: /git create <fichier> <description>${R}`); line(); return }
+
+    spinStart('Génération IA…', _.purple)
+    const prompt = `Crée le fichier ${filePath} pour le projet Trackr (React 19 + Vite, Node.js serverless).
+
+Description : ${description}
+
+IMPORTANT : Réponds UNIQUEMENT avec le contenu complet du fichier, sans aucune explication, sans balise markdown, sans \`\`\`. Juste le code brut directement.`
+
+    const content = await generateRaw(prompt, 8192)
+    spinStop()
+    if (!content) { line(`  ${_.red}✗ Génération échouée${R}`); line(); return }
+    const clean = content.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim()
+
+    spinStart(`Création ${filePath}…`, _.green)
+    const ok = await ghWriteFile(filePath, clean, `feat: create ${filePath} [AnDy CLI]`, null)
+    spinStop()
+
+    if (ok) {
+      line(`  ${_.green}${_.bold}✓ FICHIER CRÉÉ${R}  ${_.cyan}${filePath}${R}`)
+      line(`  ${_.grey}${clean.split('\n').length} lignes${R}`)
+    } else {
+      line(`  ${_.red}✗ Création échouée${R}`)
+    }
+    line(); return
+  }
+
+  // /git delete <file>
+  if (sub === 'delete' || sub === 'rm') {
+    const filePath = arg
+    if (!filePath) { line(`  ${_.red}Usage: /git delete <fichier>${R}`); line(); return }
+    spinStart(`Suppression ${filePath}…`, _.red)
+    const existing = await ghGet(`/contents/${filePath}`)
+    if (!existing?.sha) { spinStop(); line(`  ${_.red}✗ Fichier introuvable${R}`); line(); return }
+    const r = await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/contents/${filePath}`, {
+      method: 'DELETE',
+      headers: ghHeaders(),
+      body: JSON.stringify({ message: `chore: delete ${filePath} [AnDy CLI]`, sha: existing.sha }),
+      signal: AbortSignal.timeout(10000),
+    }).catch(() => null)
+    spinStop()
+    if (r?.ok) line(`  ${_.green}✓ ${filePath} supprimé${R}`)
+    else        line(`  ${_.red}✗ Suppression échouée${R}`)
+    line(); return
+  }
+
+  // /git analyse <file> — IA analyse et explique le fichier
+  if (sub === 'analyse' || sub === 'analyze') {
+    if (!arg) { line(`  ${_.red}Usage: /git analyse <fichier>${R}`); line(); return }
+    spinStart(`Lecture ${arg}…`, _.blue)
+    const content = await ghReadFile(arg)
+    spinStop()
+    if (!content) { line(`  ${_.red}✗ Fichier introuvable${R}`); line(); return }
+    await chat(`Analyse ce fichier et donne-moi : structure, bugs potentiels, améliorations possibles.\n\nFichier : ${arg}\n\`\`\`\n${content.slice(0, 6000)}\n\`\`\``)
+    return
+  }
+
+  line()
+  line(`  ${_.white}${_.bold}Commandes /git disponibles :${R}`)
+  line(`  ${_.blue}log [n]${R}         ${_.grey}derniers n commits (défaut: 10)${R}`)
+  line(`  ${_.blue}diff [sha]${R}      ${_.grey}diff du dernier commit ou d'un sha${R}`)
+  line(`  ${_.blue}read <file>${R}     ${_.grey}lire un fichier${R}`)
+  line(`  ${_.blue}ls [path]${R}       ${_.grey}lister un dossier${R}`)
+  line(`  ${_.blue}search <q>${R}      ${_.grey}chercher dans le code${R}`)
+  line(`  ${_.blue}status${R}          ${_.grey}infos repo, branches, PRs${R}`)
+  line(`  ${_.blue}write <f> <inst>${R} ${_.grey}IA modifie le fichier et push${R}`)
+  line(`  ${_.blue}create <f> <desc>${R} ${_.grey}IA crée un nouveau fichier${R}`)
+  line(`  ${_.blue}delete <f>${R}      ${_.grey}supprimer un fichier${R}`)
+  line(`  ${_.blue}analyse <f>${R}     ${_.grey}IA analyse et explique le fichier${R}`)
+  line()
+}
+
+// ── Daemon — watcher de tâches ────────────────────────────────────────────────
+const TASKS_DIR  = resolve(ROOT, 'andy-tasks')
+const taskLog    = []   // historique session [{name, desc, status, duration}]
+
+function pad(s, n)  { return String(s).slice(0, n).padEnd(n) }
+function padL(s, n) { return String(s).slice(0, n).padStart(n) }
+
+function printTaskTable() {
+  if (!taskLog.length) return
+  const W = { name: 20, desc: 36, status: 10, dur: 7 }
+  const sep = `  ${_.dark}├${'─'.repeat(W.name+2)}┼${'─'.repeat(W.desc+2)}┼${'─'.repeat(W.status+2)}┼${'─'.repeat(W.dur+2)}┤${R}`
+  const top = `  ${_.dark}┌${'─'.repeat(W.name+2)}┬${'─'.repeat(W.desc+2)}┬${'─'.repeat(W.status+2)}┬${'─'.repeat(W.dur+2)}┐${R}`
+  const bot = `  ${_.dark}└${'─'.repeat(W.name+2)}┴${'─'.repeat(W.desc+2)}┴${'─'.repeat(W.status+2)}┴${'─'.repeat(W.dur+2)}┘${R}`
+  const row = (a, b, c, d, ca=_.grey, cb=_.silver, cc=_.green, cd=_.grey) =>
+    `  ${_.dark}│${R} ${ca}${pad(a,W.name)}${R} ${_.dark}│${R} ${cb}${pad(b,W.desc)}${R} ${_.dark}│${R} ${cc}${pad(c,W.status)}${R} ${_.dark}│${R} ${cd}${padL(d,W.dur)}${R} ${_.dark}│${R}`
+
+  line()
+  line(top)
+  line(row('FICHIER', 'DESCRIPTION', 'STATUT', 'DURÉE', _.white, _.white, _.white, _.white))
+  line(sep)
+  for (const t of taskLog) {
+    const sc = t.status === 'DONE' ? _.green : t.status === 'RUNNING' ? _.cyan : _.red
+    line(row(t.name, t.desc, t.status, t.dur+'s', _.grey, _.silver, sc, _.grey))
+  }
+  line(bot)
+  line()
+}
+
+async function runTask(filePath) {
+  const name    = filePath.split('/').pop().replace(/\.txt$/, '')
+  const content = readFileSync(filePath, 'utf8').trim()
+  if (!content) return
+
+  const startTime = Date.now()
+  const desc      = content.slice(0, 36)
+  const entry     = { name, desc, status: 'RUNNING', dur: 0 }
+  taskLog.push(entry)
+
+  // Header tâche — tableau 3 colonnes
+  const ts  = new Date().toLocaleTimeString('fr-FR')
+  const W   = 54
+  line()
+  line(`  ${_.green}${_.bold}┌${'─'.repeat(W)}┐${R}`)
+  line(`  ${_.green}${_.bold}│${R}  ${_.white}${_.bold}TÂCHE${R}  ${_.dark}│${R}  ${_.grey}${pad(name, 20)}${R}  ${_.dark}│${R}  ${_.dark}${ts}${R}  ${_.green}${_.bold}│${R}`)
+  line(`  ${_.green}${_.bold}├${'─'.repeat(W)}┤${R}`)
+  line(`  ${_.green}${_.bold}│${R}  ${_.silver}${content.slice(0, W - 2)}${R}`)
+  if (content.length > W - 2)
+    line(`  ${_.green}${_.bold}│${R}  ${_.dark}${content.slice(W - 2, (W - 2) * 2)}${R}`)
+  line(`  ${_.green}${_.bold}├${'─'.repeat(W)}┤${R}`)
+  line(`  ${_.green}${_.bold}│${R}  ${_.dark}STATUS${R}  ${_.cyan}● RUNNING${R}`)
+  line(`  ${_.green}${_.bold}└${'─'.repeat(W)}┘${R}`)
+  line()
+
+  const runningPath = filePath.replace(/\.txt$/, '.running')
+  renameSync(filePath, runningPath)
+
+  await chat(content)
+
+  const dur = Math.round((Date.now() - startTime) / 1000)
+  entry.status = 'DONE'
+  entry.dur    = dur
+
+  const donePath = runningPath.replace(/\.running$/, '.done')
+  renameSync(runningPath, donePath)
+
+  // Recap tâche
+  line(`  ${_.green}${_.bold}┌${'─'.repeat(W)}┐${R}`)
+  line(`  ${_.green}${_.bold}│${R}  ${_.green}✓ DONE${R}  ${_.dark}│${R}  ${_.grey}${pad(name, 22)}${R}  ${_.dark}│${R}  ${_.grey}${dur}s${R}`)
+  line(`  ${_.green}${_.bold}└${'─'.repeat(W)}┘${R}`)
+  line()
+
+  // Tableau session complet
+  printTaskTable()
+}
+
+async function startDaemon() {
+  mkdirSync(TASKS_DIR, { recursive: true })
+
+  line()
+  line(`  ${_.green}${_.bold}╔══ DAEMON ACTIF ════════════════════════════════════╗`)
+  line(`  ${_.green}║${R}  ${_.grey}Dossier surveillé :${R}  ${_.cyan}andy-tasks/${R}`)
+  line(`  ${_.green}║${R}  ${_.grey}Crée un fichier .txt dans ce dossier pour donner`)
+  line(`  ${_.green}║${R}  ${_.grey}une tâche à AnDy. Il l'exécutera automatiquement.`)
+  line(`  ${_.green}║${R}  ${_.grey}Ctrl+C pour arrêter le daemon.`)
+  line(`  ${_.green}╚════════════════════════════════════════════════════╝`)
+  line()
+
+  // Traite les tâches déjà présentes au démarrage
+  const pending = readdirSync(TASKS_DIR).filter(f => f.endsWith('.txt'))
+  if (pending.length) {
+    line(`  ${_.amber}⚡ ${pending.length} tâche(s) en attente…${R}`)
+    for (const f of pending) await runTask(resolve(TASKS_DIR, f))
+  }
+
+  line(`  ${_.dark}⟨◈⟩ ${_.grey}En attente de tâches…${R}`)
+  line()
+
+  // Watch le dossier
+  watch(TASKS_DIR, async (_event, filename) => {
+    if (!filename?.endsWith('.txt')) return
+    const fp = resolve(TASKS_DIR, filename)
+    if (!existsSync(fp)) return
+    // Petit délai pour s'assurer que le fichier est complètement écrit
+    await sl(200)
+    if (!existsSync(fp)) return
+    await runTask(fp)
+    out(`${BG}  ${_.dark}⟨◈⟩ ${_.grey}En attente de tâches…${R}\n`)
+  })
 }
 
 // ── Commandes ─────────────────────────────────────────────────────────────────
@@ -385,6 +863,19 @@ async function cmd(input) {
       ['/improve <focus>',     _.purple, 'Lance un cycle self-improve'],
       ['/monitor',             _.blue,   'Déclenche le monitoring Trackr'],
       ['/status',              _.orange, 'Statut APIs Trackr'],
+      ['─── TÂCHES ───────────────────────────────────', _.dark,   ''],
+      ['/daemon',              _.green,  'Surveille andy-tasks/ et exécute les .txt'],
+      ['─── GITHUB ───────────────────────────────────', _.dark,   ''],
+      ['/git log [n]',         _.blue,   'Derniers commits (tableau)'],
+      ['/git diff [sha]',      _.blue,   'Diff coloré du dernier commit'],
+      ['/git read <file>',     _.blue,   'Lire un fichier du repo'],
+      ['/git ls [path]',       _.blue,   'Lister les fichiers d\'un dossier'],
+      ['/git search <q>',      _.blue,   'Chercher dans le code'],
+      ['/git write <f> <inst>',_.blue,   'IA modifie le fichier et push'],
+      ['/git create <f> <d>',  _.blue,   'IA crée un nouveau fichier'],
+      ['/git delete <f>',      _.blue,   'Supprimer un fichier'],
+      ['/git analyse <f>',     _.blue,   'IA analyse le fichier'],
+      ['/git status',          _.blue,   'Infos repo, branches, PRs'],
       ['─── BOT DISCORD ─────────────────────────────', _.dark,   ''],
       ['/bot status',          _.orange, 'Statut connexion Discord'],
       ['/bot brief stocks',    _.green,  'Poste le brief actions → Discord'],
@@ -633,6 +1124,18 @@ async function cmd(input) {
     line(); return
   }
 
+  // ── /git ─────────────────────────────────────────────────────────────────────
+  if (c === '/git') {
+    await cmdGit(parts)
+    return
+  }
+
+  // ── /daemon ──────────────────────────────────────────────────────────────────
+  if (c === '/daemon') {
+    await startDaemon()
+    return
+  }
+
   // ── /feed [channel] ──────────────────────────────────────────────────────────
   if (c === '/feed') {
     await showFeed(arg || 'andy-chat')
@@ -692,7 +1195,7 @@ function prompt(rl) {
 async function showConnections() {
   // Check tout en parallèle
   const [vercelR, discordR, memR] = await Promise.allSettled([
-    fetch(`${APP_URL}/api/memory`, { method: 'HEAD', signal: AbortSignal.timeout(5000) }),
+    fetch(`${APP_URL}/api/memory?limit=1`, { signal: AbortSignal.timeout(5000) }),
     BOT_TOKEN && GUILD_ID
       ? fetch(`${DISCORD_API}/guilds/${GUILD_ID}`, { headers: { Authorization: `Bot ${BOT_TOKEN}` }, signal: AbortSignal.timeout(5000) })
       : Promise.resolve(null),
