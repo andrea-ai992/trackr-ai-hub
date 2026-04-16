@@ -22,19 +22,27 @@ const READABLE_FILES = [
   'api/discord.js',
   'api/discord-cron.js',
   'api/trigger-agent.js',
-  'api/agents-log.js',
+  'api/trading-expert.js',
   // IA autonome (l'IA peut se corriger elle-même — sauf memory.js et self-improve.js)
   'api/brain.js',
   'api/reports.js',
   'api/morning.js',
   'api/agent-forge.js',
-  // Frontend
+  // Frontend — pages
   'src/pages/Andy.jsx',
   'src/pages/Agents.jsx',
   'src/pages/BrainStatus.jsx',
   'src/pages/Dashboard.jsx',
   'src/pages/Markets.jsx',
+  'src/pages/Sports.jsx',
+  'src/pages/News.jsx',
+  'src/pages/Portfolio.jsx',
+  'src/pages/More.jsx',
+  // Frontend — components + CSS
+  'src/components/BottomNav.jsx',
+  'src/components/Skeleton.jsx',
   'src/App.jsx',
+  'src/index.css',
 ]
 
 // ─── GitHub helpers ───────────────────────────────────────────────────────────
@@ -107,12 +115,20 @@ async function postDiscord(title, description, fields = [], color = 0x8b5cf6) {
 // ─── Pick files to analyze based on focus ────────────────────────────────────
 function pickFiles(focus) {
   const maps = {
-    security:    ['api/_security.js', 'api/andy.js', 'api/discord.js', 'api/trigger-agent.js', 'api/brain.js'],
-    performance: ['api/andy.js', 'api/brain.js', 'api/reports.js', 'src/pages/Andy.jsx', 'src/pages/Markets.jsx'],
-    features:    ['src/pages/Dashboard.jsx', 'src/pages/Agents.jsx', 'src/pages/BrainStatus.jsx', 'src/App.jsx'],
-    bugs:        ['api/andy.js', 'api/brain.js', 'api/morning.js', 'api/discord-cron.js', 'src/pages/Andy.jsx'],
-    frontend:    ['src/pages/Andy.jsx', 'src/pages/Agents.jsx', 'src/pages/BrainStatus.jsx', 'src/App.jsx'],
+    // 🔐 Sécurité — priorité maximale — OWASP Top 10 + injections + tokens
+    security:    ['api/_security.js', 'api/andy.js', 'api/discord.js', 'api/trading-expert.js', 'api/brain.js', 'api/reports.js'],
+    // ⚡ Performance — caching, appels parallèles, re-renders React
+    performance: ['api/andy.js', 'api/brain.js', 'api/trading-expert.js', 'src/pages/Andy.jsx', 'src/pages/Markets.jsx', 'src/pages/Dashboard.jsx'],
+    // ✨ Fonctionnalités — nouvelles features utiles
+    features:    ['src/pages/Dashboard.jsx', 'src/pages/Sports.jsx', 'src/pages/Markets.jsx', 'src/pages/Andy.jsx', 'src/App.jsx'],
+    // 🐛 Bugs — edge cases, erreurs silencieuses, race conditions
+    bugs:        ['api/andy.js', 'api/brain.js', 'api/morning.js', 'api/trading-expert.js', 'src/pages/Andy.jsx', 'src/pages/Dashboard.jsx'],
+    // 🎨 Frontend/Design — animations, responsive, UX, accessibilité
+    frontend:    ['src/index.css', 'src/App.jsx', 'src/pages/Dashboard.jsx', 'src/pages/Sports.jsx', 'src/components/BottomNav.jsx', 'src/pages/Markets.jsx'],
+    // 🤖 Système autonome — Brain, Agent Forge, Morning, Reports
     autonomous:  ['api/brain.js', 'api/agent-forge.js', 'api/reports.js', 'api/morning.js'],
+    // 📊 Trading — améliorer TradingExpert, indicateurs, apprentissage
+    trading:     ['api/trading-expert.js', 'api/andy.js', 'api/discord.js'],
   }
   return maps[focus] || maps.bugs
 }
@@ -124,12 +140,13 @@ async function analyzeWithClaude(files, focus, memoryContext) {
     .join('\n\n')
 
   const focusInstructions = {
-    security:    'Cherche des failles de sécurité : injections, CORS mal configuré, données exposées, rate limiting insuffisant, tokens en clair, manque de validation.',
-    performance: 'Cherche des problèmes de performance : appels API non mis en cache, re-renders inutiles, boucles inefficaces, payloads trop lourds, requêtes en série au lieu de parallèle.',
-    features:    'Identifie la fonctionnalité la plus utile à ajouter qui améliorerait vraiment l\'expérience utilisateur.',
-    bugs:        'Cherche des bugs réels : edge cases non gérés, erreurs silencieuses, race conditions, états incohérents, parsing fragile.',
-    frontend:    'Cherche des problèmes UI/UX : accessibility, responsive, animations, lisibilité, cohérence visuelle.',
-    autonomous:  'Analyse le système autonome lui-même : le Brain, l\'Agent Forge, les rapports, le briefing matinal. Cherche des bugs dans la logique d\'orchestration, des erreurs de gestion dans les appels API internes, des problèmes dans la communication inter-agents, ou des améliorations à l\'intelligence du Brain.',
+    security:    '🔐 PRIORITÉ MAXIMALE — Cherche des failles de sécurité : injections (SQL, commande, prompt), CORS mal configuré, données sensibles exposées dans les logs ou réponses API, rate limiting insuffisant, tokens/clés API en clair dans le code, manque de validation des inputs, SSRF potentiels, path traversal, XSS. Corrige la faille la plus critique en premier. C\'est la priorité absolue du système.',
+    performance: '⚡ Cherche des problèmes de performance : appels API séquentiels à paralléliser avec Promise.all, re-renders React inutiles, états non mémoïsés, payloads trop lourds, absence de debounce sur les inputs, requests sans timeout, fuites mémoire, animations bloquantes sur le thread principal.',
+    features:    '✨ Identifie et ajoute la fonctionnalité la plus utile qui améliorerait l\'expérience utilisateur de façon visible. Pense mobile-first : swipe gestures, quick actions, shortcuts. Priorise ce qui peut être vu immédiatement à l\'ouverture de l\'app.',
+    bugs:        '🐛 Cherche des bugs réels : edge cases non gérés (null/undefined, tableaux vides), erreurs silencieuses avalées par catch vide, race conditions, états incohérents après navigation, parsing fragile de JSON externe, gestion d\'erreur manquante sur les fetch critiques.',
+    frontend:    '🎨 Améliore le design mobile : transitions spring physics, stagger animations sur les listes, micro-interactions au toucher, meilleure hiérarchie visuelle, contrastes accessibles, espacement cohérent, composants plus expressifs. Chaque ouverture de l\'app doit avoir l\'air plus belle. Utilise les classes CSS existantes : stagger-item, press-scale, pill, section-label.',
+    autonomous:  '🤖 Analyse le système autonome : Brain, Agent Forge, Morning Briefing, Reports. Cherche des bugs dans la logique d\'orchestration, erreurs dans les appels API internes, problèmes de communication inter-agents, améliore l\'intelligence du Brain pour qu\'il prenne de meilleures décisions sur quels agents activer.',
+    trading:     '📊 Améliore le TradingExpert : ajoute ou améliore des indicateurs techniques, affine le prompt Claude pour des analyses plus précises, améliore la détection de patterns haute conviction, optimise la gestion d\'erreur pour les APIs marché (CoinGecko, Yahoo Finance), améliore la vitesse de la Phase 1 Discord.',
   }
 
   const prompt = `Tu es AnDy, l'IA auto-apprenante de l'app Trackr. Tu analyses le code source et proposes UNE amélioration concrète et sûre.

@@ -1,16 +1,17 @@
 {
   "crons": [
-    { "path": "/api/brain",                          "schedule": "0 0 * * *"   },
-    { "path": "/api/reports?type=daily&post=true",   "schedule": "0 8 * * *"   },
-    { "path": "/api/reports?type=weekly&post=true",  "schedule": "0 9 * * 0"   },
-    { "path": "/api/self-improve?focus=bugs",        "schedule": "0 6 * * *"   },
-    { "path": "/api/self-improve?focus=security",    "schedule": "0 12 * * *"  },
-    { "path": "/api/self-improve?focus=performance", "schedule": "0 18 * * *"  },
-    { "path": "/api/self-improve?focus=features",    "schedule": "0 0 * * 1"   },
-    { "path": "/api/self-improve?focus=frontend",    "schedule": "0 15 * * 3"  },
-    { "path": "/api/morning",                        "schedule": "0 9 * * *"   },
-    { "path": "/api/self-improve?focus=autonomous",  "schedule": "0 3 * * *"   },
-    { "path": "/api/reports?type=status&post=true",    "schedule": "0 7 * * *"   }
+    { "path": "/api/brain",                           "schedule": "0 0 * * *"  },
+    { "path": "/api/morning",                         "schedule": "0 9 * * *"  },
+    { "path": "/api/reports?type=daily&post=true",    "schedule": "0 8 * * *"  },
+    { "path": "/api/reports?type=weekly&post=true",   "schedule": "0 9 * * 0"  },
+    { "path": "/api/reports?type=status&post=true",   "schedule": "0 7 * * *"  },
+    { "path": "/api/self-improve?focus=security",     "schedule": "0 4 * * *"  },
+    { "path": "/api/self-improve?focus=bugs",         "schedule": "0 6 * * *"  },
+    { "path": "/api/self-improve?focus=performance",  "schedule": "0 10 * * *" },
+    { "path": "/api/self-improve?focus=frontend",     "schedule": "0 14 * * *" },
+    { "path": "/api/self-improve?focus=trading",      "schedule": "0 16 * * *" },
+    { "path": "/api/self-improve?focus=features",     "schedule": "0 0 * * 1"  },
+    { "path": "/api/self-improve?focus=autonomous",   "schedule": "0 3 * * *"  }
   ],
   "functions": {
     "api/andy.js":          { "maxDuration": 60 },

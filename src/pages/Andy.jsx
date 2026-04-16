@@ -4,7 +4,160 @@ import { useApp } from '../context/AppContext'
 import {
   ArrowLeft, Bot, Mic, MicOff, Send, Volume2, VolumeX,
   Trash2, Copy, Check, Cpu, ChevronDown, ChevronUp, Zap, Maximize2, Minimize2,
+  Activity, GitCommit, TrendingUp, Shield,
 } from 'lucide-react'
+
+// ─── Activity Feed — ce que l'IA a fait ──────────────────────────────────────
+function ActivityFeed() {
+  const [commits, setCommits]       = useState([])
+  const [agentLog, setAgentLog]     = useState([])
+  const [memory, setMemory]         = useState([])
+  const [loading, setLoading]       = useState(true)
+
+  useEffect(() => {
+    Promise.allSettled([
+      // GitHub commits récents
+      fetch('https://api.github.com/repos/andrea-ai992/trackr-ai-hub/commits?per_page=8')
+        .then(r => r.json()),
+      // Activité agents Discord
+      fetch('/api/memory?type=agents-log')
+        .then(r => r.json()),
+      // Mémoire apprentissage
+      fetch('/api/memory?limit=20')
+        .then(r => r.json()),
+    ]).then(([c, a, m]) => {
+      if (c.status === 'fulfilled' && Array.isArray(c.value)) setCommits(c.value)
+      if (a.status === 'fulfilled' && Array.isArray(a.value?.log)) setAgentLog(a.value.log.slice(0, 10))
+      if (m.status === 'fulfilled' && Array.isArray(m.value?.entries)) setMemory(m.value.entries.slice(0, 10))
+      setLoading(false)
+    })
+  }, [])
+
+  function timeAgo(d) {
+    if (!d) return ''
+    const m = Math.floor((Date.now() - new Date(d)) / 60000)
+    if (m < 1) return 'maintenant'
+    if (m < 60) return `${m}m`
+    if (m < 1440) return `${Math.floor(m / 60)}h`
+    return `${Math.floor(m / 1440)}j`
+  }
+
+  const aiCommits = commits.filter(c => c.commit?.message?.includes('[AnDy'))
+
+  if (loading) return (
+    <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {[...Array(5)].map((_, i) => (
+        <div key={i} style={{ height: 64, borderRadius: 14 }} className="skeleton" />
+      ))}
+    </div>
+  )
+
+  return (
+    <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', overscrollBehavior: 'contain' }}>
+
+      {/* ── Commits IA ── */}
+      <div style={{ marginBottom: 22 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+          <GitCommit size={12} color="#00daf3" />
+          <span className="section-label">Améliorations IA récentes</span>
+          {aiCommits.length > 0 && (
+            <span className="pill pill-cyan" style={{ fontSize: 9, padding: '1px 6px', marginLeft: 'auto' }}>
+              {aiCommits.length} commits
+            </span>
+          )}
+        </div>
+        {aiCommits.length === 0 ? (
+          <div style={{ fontSize: 12, color: '#4b6070', padding: '12px 0' }}>Aucun commit IA récent</div>
+        ) : aiCommits.map((c, i) => (
+          <div key={i} className="stagger-item" style={{
+            padding: '11px 14px', marginBottom: 8, borderRadius: 14,
+            background: 'rgba(0,218,243,0.04)', border: '1px solid rgba(0,218,243,0.1)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+              <p style={{ fontSize: 12, color: '#bac9cc', lineHeight: 1.4, flex: 1, margin: 0 }}>
+                {c.commit.message.replace('[AnDy Auto-Improve] ', '').replace('[AnDy] ', '').slice(0, 90)}
+              </p>
+              <span style={{ fontSize: 10, color: '#4b6070', flexShrink: 0 }}>{timeAgo(c.commit.author?.date)}</span>
+            </div>
+            {c.commit.message.includes('focus=security') && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 5 }}>
+                <Shield size={9} color="#ef4444" />
+                <span style={{ fontSize: 9, color: '#ef4444', fontWeight: 700 }}>SÉCURITÉ</span>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* ── Agent Discord Activity ── */}
+      {agentLog.length > 0 && (
+        <div style={{ marginBottom: 22 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <Activity size={12} color="#ecb2ff" />
+            <span className="section-label">Activité agents Discord</span>
+          </div>
+          {agentLog.map((entry, i) => (
+            <div key={i} className="stagger-item" style={{
+              padding: '10px 14px', marginBottom: 7, borderRadius: 14,
+              background: 'rgba(19,28,43,0.5)', border: '1px solid rgba(132,147,150,0.1)',
+              display: 'flex', gap: 10, alignItems: 'flex-start',
+            }}>
+              <span style={{ fontSize: 16, flexShrink: 0 }}>{entry.emoji || '🤖'}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: entry.color || '#bac9cc' }}>{entry.agent}</span>
+                  <span style={{ fontSize: 10, color: '#374151', marginLeft: 'auto' }}>{timeAgo(entry.timestamp)}</span>
+                </div>
+                <p style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.35, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {entry.summary}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Apprentissage Trading ── */}
+      {memory.filter(e => e.type === 'trading_result' || e.type === 'trading_learning').length > 0 && (
+        <div style={{ marginBottom: 22 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <TrendingUp size={12} color="#10b981" />
+            <span className="section-label">Apprentissage trading</span>
+          </div>
+          {memory.filter(e => e.type === 'trading_result' || e.type === 'trading_learning').map((entry, i) => (
+            <div key={i} className="stagger-item" style={{
+              padding: '10px 14px', marginBottom: 7, borderRadius: 14,
+              background: entry.type === 'trading_result'
+                ? `rgba(${entry.verdictCorrect ? '16,185,129' : '239,68,68'},0.06)`
+                : 'rgba(19,28,43,0.5)',
+              border: `1px solid rgba(${entry.type === 'trading_result' && entry.verdictCorrect ? '16,185,129' : entry.type === 'trading_result' ? '239,68,68' : '132,147,150'},0.12)`,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: 'white' }}>{entry.symbol}</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: entry.verdict?.includes('ACHAT') ? '#10b981' : entry.verdict?.includes('VENTE') ? '#ef4444' : '#fcd34d' }}>{entry.verdict}</span>
+                {entry.verdictCorrect !== undefined && (
+                  <span style={{ fontSize: 10 }}>{entry.verdictCorrect ? '✅' : '❌'}</span>
+                )}
+                <span style={{ fontSize: 10, color: '#374151', marginLeft: 'auto' }}>{entry.technique}</span>
+              </div>
+              <p style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.3, margin: 0 }}>
+                {entry.result?.slice(0, 100)}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {agentLog.length === 0 && aiCommits.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '40px 20px', color: '#4b6070' }}>
+          <Activity size={32} style={{ opacity: 0.3, marginBottom: 12 }} />
+          <div style={{ fontSize: 13 }}>Aucune activité IA récente</div>
+          <div style={{ fontSize: 11, marginTop: 6, opacity: 0.6 }}>Les améliorations apparaîtront ici automatiquement</div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ─── Storage ──────────────────────────────────────────────────────────────────
 const HISTORY_KEY = 'trackr_andy_v2'
@@ -878,11 +1031,20 @@ export default function Andy() {
         </div>
 
         <div style={{ display: 'flex', gap: 4 }}>
+          {/* Galaxy / Chat toggle */}
           <button
-            onClick={() => setView(v => v === 'galaxy' ? 'chat' : 'galaxy')}
-            style={{ background: view === 'chat' ? 'rgba(0,218,243,0.12)' : 'rgba(255,255,255,0.05)', border: `1px solid ${view === 'chat' ? 'rgba(0,218,243,0.3)' : 'rgba(132,147,150,0.12)'}`, borderRadius: 10, padding: '6px 12px', cursor: 'pointer', color: view === 'chat' ? '#00daf3' : '#bac9cc', fontSize: 11, fontWeight: 700, fontFamily: "'Space Grotesk', system-ui", letterSpacing: '0.06em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 5 }}
+            onClick={() => setView(v => v === 'galaxy' ? 'chat' : (v === 'chat' ? 'galaxy' : 'chat'))}
+            style={{ background: view === 'chat' ? 'rgba(0,218,243,0.12)' : 'rgba(255,255,255,0.05)', border: `1px solid ${view === 'chat' ? 'rgba(0,218,243,0.3)' : 'rgba(132,147,150,0.12)'}`, borderRadius: 10, padding: '6px 10px', cursor: 'pointer', color: view === 'chat' ? '#00daf3' : '#bac9cc', fontSize: 11, fontWeight: 700, fontFamily: "'Space Grotesk', system-ui", letterSpacing: '0.06em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 5 }}
           >
-            {view === 'galaxy' ? <><Maximize2 size={11} /> Chat</> : <><Minimize2 size={11} /> Galaxie</>}
+            {view === 'galaxy' ? <><Maximize2 size={11} /> Chat</> : view === 'activity' ? <><Minimize2 size={11} /> Chat</> : <><Minimize2 size={11} /> Hub</>}
+          </button>
+          {/* Activity feed */}
+          <button
+            onClick={() => setView(v => v === 'activity' ? 'galaxy' : 'activity')}
+            style={{ background: view === 'activity' ? 'rgba(236,178,255,0.14)' : 'rgba(255,255,255,0.04)', border: `1px solid ${view === 'activity' ? 'rgba(236,178,255,0.3)' : 'rgba(132,147,150,0.1)'}`, borderRadius: 10, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: view === 'activity' ? '#ecb2ff' : '#4b6070' }}
+            title="Activité IA"
+          >
+            <Activity size={14} />
           </button>
           <button onClick={() => setAutoSpeak(v => !v)} style={{ background: autoSpeak ? 'rgba(0,218,243,0.12)' : 'rgba(255,255,255,0.04)', border: autoSpeak ? '1px solid rgba(0,218,243,0.25)' : '1px solid rgba(132,147,150,0.1)', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: autoSpeak ? '#00daf3' : '#4b6070' }}>
             {autoSpeak ? <Volume2 size={14} /> : <VolumeX size={14} />}
@@ -890,7 +1052,7 @@ export default function Andy() {
           <button onClick={() => sendMessage('Scanne mon portfolio et donne-moi les signaux importants.')} style={{ background: 'rgba(236,178,255,0.08)', border: '1px solid rgba(236,178,255,0.18)', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ecb2ff' }}>
             <Zap size={14} />
           </button>
-          {messages.length > 0 && (
+          {messages.length > 0 && view !== 'activity' && (
             <button onClick={clearAll} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(132,147,150,0.1)', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4b6070' }}>
               <Trash2 size={14} />
             </button>
@@ -1013,6 +1175,17 @@ export default function Andy() {
               textareaRef={textareaRef}
             />
           </div>
+        </div>
+      )}
+
+      {/* ── Activity View ───────────────────────────────────────────────────── */}
+      {view === 'activity' && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ padding: '12px 16px 8px', borderBottom: '1px solid rgba(132,147,150,0.08)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px #10b981' }} className="live-ping" />
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: "'Space Grotesk', system-ui" }}>IA Active — Ce qu'elle a fait</span>
+          </div>
+          <ActivityFeed />
         </div>
       )}
 
