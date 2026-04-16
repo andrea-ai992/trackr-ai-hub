@@ -1,20 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776342121165",
-      "timestamp": "2026-04-16T12:22:01.165Z",
-      "type": "brain_cycle",
-      "hour": 12,
-      "successRate": 0,
-      "agentsRan": 0,
-      "improved": false,
-      "improvedFile": null,
-      "focus": null,
-      "errors": 0,
-      "appHealthy": true,
-      "duration": 3
-    },
-    {
       "id": "mem_1776342122602",
       "timestamp": "2026-04-16T12:22:02.602Z",
       "type": "pattern_scan",
@@ -3243,6 +3229,19 @@
       "severity": "medium",
       "commit": "fix: guard against SSE/non-JSON responses in trading-expert fetchStockData",
       "learned": "The Yahoo Finance SSE content-type bug (already fixed in discord.js and morning.js) was not yet applied to trading-expert.js's fetchStockData(), leaving it vulnerable to the same crash when Yahoo returns text/event-stream instead of JSON.",
+      "applied": true,
+      "fromAdminTask": null
+    },
+    {
+      "id": "mem_1776351452430",
+      "timestamp": "2026-04-16T14:57:32.430Z",
+      "type": "improvement",
+      "focus": "bugs",
+      "file": "api/andy.js",
+      "problem": "fetch() calls in api/andy.js have no AbortSignal.timeout() — can hang indefinitely on Yahoo Finance and CoinGecko requests",
+      "severity": "high",
+      "commit": "fix: add AbortSignal.timeout() to all fetch calls in api/andy.js to prevent indefinite hangs",
+      "learned": "All external fetch() calls in Vercel serverless functions must have explicit timeouts since the platform's execution limit is hard and a stalled TCP connection will silently exhaust it.",
       "applied": true,
       "fromAdminTask": null
     }
