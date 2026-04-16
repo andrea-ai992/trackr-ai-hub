@@ -1,14 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776313334564",
-      "timestamp": "2026-04-16T04:22:14.564Z",
-      "type": "error",
-      "focus": "bugs",
-      "error": "old_code not found in api/discord.js — skipping to avoid corruption",
-      "applied": false
-    },
-    {
       "id": "mem_1776313351692",
       "timestamp": "2026-04-16T04:22:31.692Z",
       "type": "improvement",
@@ -4315,6 +4307,14 @@
       "count": 5,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776326222934",
+      "timestamp": "2026-04-16T07:57:02.934Z",
+      "type": "error",
+      "focus": "bugs",
+      "error": "Anthropic API → 400",
+      "applied": false
     }
   ]
 }
