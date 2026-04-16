@@ -236,52 +236,33 @@ async function handleAdmin(text, userId) {
   return null
 }
 
-// ─── Call AnDy (SSE stream) ───────────────────────────────────────────────────
-async function callAnDy(message, channelName = '', mode = 'default', customSystemNote = null) {
-  const systemNotes = {
-    default: `Tu es AnDy, l'IA personnelle d'Andrea sur Discord (channel: #${channelName || 'discord'}). Tu réponds à TOUT — vie quotidienne, questions random, vérifications en live, finance, tech, immobilier, business ou n'importe quoi d'autre. Sois direct, utile et concis. Réponds en français sauf si on te parle en anglais.`,
-    think:   `Tu es AnDy en MODE THINKING. Raisonne étape par étape de façon exhaustive. Montre ton raisonnement complet avant de conclure.`,
-    web:     `Tu es AnDy en MODE RECHERCHE. L'utilisateur veut des infos récentes. Utilise tes connaissances les plus récentes, précise clairement si l'info pourrait être dépassée.`,
-  }
-
+// ─── Call fast /api/chat (Claude Haiku JSON — 2-4s) ──────────────────────────
+async function callChat(message, channelName = '', mode = 'default', systemNote = null) {
   try {
-    const res = await fetch(`${APP_URL}/api/andy`, {
+    const res = await fetch(`${APP_URL}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages: [{ role: 'user', content: message }],
-        portfolio: [], crypto: [], sneakers: [], alerts: [], watchlist: [],
-        systemNote: customSystemNote || systemNotes[mode] || systemNotes.default,
-      }),
-      signal: AbortSignal.timeout(mode === 'think' ? 90000 : 55000),
+      body: JSON.stringify({ message, channelName, mode, systemNote }),
+      signal: AbortSignal.timeout(mode === 'think' ? 58000 : 12000),
     })
-
     if (!res.ok) {
-      console.error(`callAnDy HTTP ${res.status} for: ${message.slice(0, 50)}`)
-      return `❌ Erreur AnDy (${res.status})`
+      console.error(`callChat HTTP ${res.status}`)
+      return `❌ Erreur (${res.status}) — réessaie.`
     }
-
-    const reader = res.body.getReader()
-    const decoder = new TextDecoder()
-    let buf = '', fullText = ''
-
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      buf += decoder.decode(value, { stream: true })
-      const lines = buf.split('\n'); buf = lines.pop()
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue
-        try { const ev = JSON.parse(line.slice(6)); if (ev.type === 'token') fullText += ev.text } catch {}
-      }
-    }
-
-    return fullText.replace(/\[CHART:[^\]]+\]/g, '').trim().slice(0, 1990) || null
+    const d = await res.json()
+    return d.reply?.trim() || null
   } catch (e) {
-    if (e.name === 'TimeoutError') return '⏱️ Timeout — AnDy prend trop de temps. Réessaie.'
-    console.error('callAnDy:', e.message)
+    if (e.name === 'TimeoutError' || e.name === 'AbortError')
+      return '⏱️ Timeout — essaie `!think` pour les questions complexes.'
+    console.error('callChat:', e.message)
     return null
   }
+}
+
+// ─── Legacy AnDy SSE fallback (think mode only) ───────────────────────────────
+async function callAnDy(message, channelName = '', mode = 'default', customSystemNote = null) {
+  // Use fast /api/chat for everything now
+  return callChat(message, channelName, mode, customSystemNote)
 }
 
 // ─── Call trading expert ──────────────────────────────────────────────────────
@@ -298,7 +279,7 @@ async function callTrading(message) {
       return (d.response || d.message || '').slice(0, 1990) || null
     }
   } catch {}
-  return callAnDy(message, 'trading')
+  return callChat(message, 'trading')
 }
 
 // ─── Discord helpers ──────────────────────────────────────────────────────────
@@ -323,6 +304,16 @@ async function sendReply(channelId, messageId, text) {
   }
 }
 
+// ─── Edit a message ───────────────────────────────────────────────────────────
+async function editMessage(channelId, messageId, content) {
+  try {
+    await discordFetch(`/channels/${channelId}/messages/${messageId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ content: content.slice(0, 1990) }),
+    })
+  } catch (e) { console.error('editMessage:', e.message) }
+}
+
 // ─── Process a message ───────────────────────────────────────────────────────
 const processed = new Set()
 
@@ -335,10 +326,14 @@ async function processMessage(msg, channelName) {
   const content = msg.content?.trim() || ''
   if (content.length < 2) return
 
+  // Extract user info early — this was the critical missing piece
+  const userId   = msg.author?.id || ''
+  const username = msg.author?.username || 'user'
+
   if (SKIP_CHANNELS.has(channelName.toLowerCase())) return
 
   const route = routeChannel(channelName)
-  if (route.adminOnly && !isAdmin(msg.author?.id)) {
+  if (route.adminOnly && !isAdmin(userId)) {
     await sendReply(msg.channel_id, msg.id, '🔐 Canal réservé à l\'administrateur.')
     return
   }
@@ -371,35 +366,54 @@ async function processMessage(msg, channelName) {
 
   // "Je veux développer X" → auto-create task + AnDy explains next steps
   if (intent === 'develop' && isAdmin(userId)) {
-    await sendTyping(msg.channel_id)
     const taskDesc = await createTaskFromText(cleanContent, username)
-    const typingInterval = setInterval(() => sendTyping(msg.channel_id), 8000)
+    // Post immediate placeholder
+    let placeholder
     try {
-      const systemNote = `Tu es AnDy, l'IA de développement d'Andrea. Une tâche vient d'être créée automatiquement depuis Discord.
+      placeholder = await discordPost(`/channels/${msg.channel_id}/messages`, {
+        content: `✅ **Tâche créée**: ${taskDesc}\n> 🧠 AnDy prépare les prochaines étapes...`,
+        message_reference: { message_id: msg.id, channel_id: msg.channel_id },
+        allowed_mentions: { replied_user: true },
+      })
+    } catch {}
+
+    const systemNote = `Tu es AnDy, l'IA de développement d'Andrea. Une tâche vient d'être créée.
 Réponds en 2 parties COURTES:
-1. ✅ Confirme que tu as compris la demande (1 phrase)
-2. 📋 Donne 2-3 prochaines étapes concrètes pour réaliser ça (bullets)
-Max 200 mots total.`
+1. ✅ Confirme la demande (1 phrase)
+2. 📋 2-3 prochaines étapes concrètes (bullets)
+Max 150 mots.`
 
-      const andyReply = await callAnDy(cleanContent, channelName, 'default', systemNote)
-      const fullReply = [
-        `✅ **Tâche créée**: ${taskDesc}`,
-        `> Prise en compte au prochain cycle IA (toutes les heures).`,
-        '',
-        andyReply || '',
-      ].filter(Boolean).join('\n')
+    const andyReply = await callChat(cleanContent, channelName, 'default', systemNote)
+    const fullReply = [
+      `✅ **Tâche créée**: ${taskDesc}`,
+      `> Prise en compte au prochain cycle IA.`,
+      '',
+      andyReply || '',
+    ].filter(Boolean).join('\n')
 
+    if (placeholder?.id) {
+      await editMessage(msg.channel_id, placeholder.id, fullReply)
+    } else {
       await sendReply(msg.channel_id, msg.id, fullReply.slice(0, 1990))
-      console.log(`✅ [develop] Task created + replied`)
-    } finally {
-      clearInterval(typingInterval)
     }
+    console.log(`✅ [develop] Task created + replied`)
     return
   }
 
-  // ── 4. Regular message → route to right agent ─────────────────────────────
-  await sendTyping(msg.channel_id)
-  const typingInterval = setInterval(() => sendTyping(msg.channel_id), 8000)
+  // ── 4. Regular message → immediate placeholder + fast reply ──────────────
+  const thinking = mode === 'think' ? '🧠 **Thinking...**'
+                 : mode === 'web'   ? '🌐 **Searching...**'
+                 : '...'
+
+  // Post immediate placeholder so user sees something within <1s
+  let placeholder
+  try {
+    placeholder = await discordPost(`/channels/${msg.channel_id}/messages`, {
+      content: thinking,
+      message_reference: { message_id: msg.id, channel_id: msg.channel_id },
+      allowed_mentions: { replied_user: true },
+    })
+  } catch (e) { console.error('placeholder:', e.message) }
 
   try {
     let reply = null
@@ -407,21 +421,25 @@ Max 200 mots total.`
     if (route.agent === 'trading' && mode === 'default') {
       reply = await callTrading(cleanContent)
     } else {
-      reply = await callAnDy(cleanContent, channelName, mode)
+      reply = await callChat(cleanContent, channelName, mode)
     }
 
     if (mode === 'think' && reply) reply = `🧠 **Thinking Mode**\n\n${reply}`
-    if (mode === 'web'   && reply) reply = `🌐 **Web Search Mode**\n\n${reply}`
+    if (mode === 'web'   && reply) reply = `🌐 **Web Mode**\n\n${reply}`
 
-    if (reply) {
-      await sendReply(msg.channel_id, msg.id, reply)
-      console.log(`✅ Replied (${mode}/${intent})`)
+    const finalReply = reply || `❌ Pas de réponse. Réessaie ou tape \`!help\`.`
+
+    if (placeholder?.id) {
+      await editMessage(msg.channel_id, placeholder.id, finalReply)
     } else {
-      await sendReply(msg.channel_id, msg.id,
-        `❌ Pas de réponse. Réessaie.\n> Tape \`!guide\` pour voir les channels ou \`!help\` pour les commandes.`)
+      await sendReply(msg.channel_id, msg.id, finalReply)
     }
-  } finally {
-    clearInterval(typingInterval)
+    console.log(`✅ Replied (${mode}/${intent}) to ${username}`)
+  } catch (e) {
+    console.error('processMessage reply:', e.message)
+    if (placeholder?.id) {
+      await editMessage(msg.channel_id, placeholder.id, `❌ Erreur: ${e.message.slice(0, 100)}`)
+    }
   }
 }
 
