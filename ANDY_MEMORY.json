@@ -1,14 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776374749351",
-      "timestamp": "2026-04-16T21:25:49.351Z",
-      "type": "error",
-      "focus": "security",
-      "error": "Anthropic API → 400",
-      "applied": false
-    },
-    {
       "id": "mem_1776374750109",
       "timestamp": "2026-04-16T21:25:50.109Z",
       "type": "brain_cycle",
@@ -2836,6 +2828,20 @@
       "learned": "Quand on détecte un content-type inattendu (SSE/stream), il faut explicitement annuler le body avec r.body?.cancel() pour éviter que la connexion reste ouverte et consomme des ressources dans la serverless function.",
       "applied": true,
       "fromAdminTask": null
+    },
+    {
+      "id": "mem_1776379577597",
+      "timestamp": "2026-04-16T22:46:17.597Z",
+      "type": "brain_cycle",
+      "hour": 22,
+      "successRate": 0,
+      "agentsRan": 4,
+      "improved": false,
+      "improvedFile": null,
+      "focus": "bugs",
+      "errors": 0,
+      "appHealthy": true,
+      "duration": 26
     }
   ]
 }
