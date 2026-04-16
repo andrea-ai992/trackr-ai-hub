@@ -75,11 +75,19 @@ async function runServerTool(name, input) {
     try {
       const sym = encodeURIComponent(input.symbol)
       const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(7000) })
+      if (!r.ok) return { error: `HTTP ${r.status}` }
+      const ct = r.headers.get('content-type') || ''
+      if (!ct.includes('application/json') && !ct.includes('text/json') && !ct.includes('text/plain')) {
+        await r.body?.cancel().catch(() => {})
+        return { error: `Unexpected content-type: ${ct}` }
+      }
       const d = await r.json()
       const meta = d?.chart?.result?.[0]?.meta
       if (!meta?.regularMarketPrice) return { error: 'Symbol not found' }
-      const chg = meta.regularMarketPrice - meta.previousClose
-      const pct = (chg / meta.previousClose * 100).toFixed(2)
+      const prev = meta.previousClose || meta.chartPreviousClose
+      if (!prev) return { error: 'No previous close available' }
+      const chg = meta.regularMarketPrice - prev
+      const pct = (chg / prev * 100).toFixed(2)
       return { symbol: input.symbol, name: meta.shortName || input.symbol, price: meta.regularMarketPrice, change: chg.toFixed(2), changePct: pct, currency: meta.currency || 'USD', marketState: meta.marketState }
     } catch (e) { return { error: e.message } }
   }
