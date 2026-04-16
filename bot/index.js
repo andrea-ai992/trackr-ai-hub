@@ -6,10 +6,21 @@
 import http from 'http'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
-import dotenv from 'dotenv'
+import { readFileSync } from 'fs'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
-dotenv.config({ path: `${__dir}/.env` })
+
+// Parse .env manually — avoids dotenvx quote/encoding issues
+try {
+  const raw = readFileSync(`${__dir}/.env`, 'utf8')
+  for (const line of raw.split('\n')) {
+    const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/)
+    if (m) {
+      // Always override from .env — ensures stale PM2 cache doesn't win
+      process.env[m[1]] = m[2].replace(/^["']|["']$/g, '').replace(/[\r\n\\]+$/, '').trim()
+    }
+  }
+} catch {}
 
 const BOT_TOKEN     = process.env.DISCORD_BOT_TOKEN
 const GUILD_ID      = process.env.DISCORD_GUILD_ID
@@ -26,6 +37,7 @@ if (!BOT_TOKEN || !GUILD_ID) {
 if (!ANTHROPIC_KEY) {
   console.error('❌ Missing ANTHROPIC_API_KEY — add it to bot/.env'); process.exit(1)
 }
+console.log(`🔑 Claude key: ${ANTHROPIC_KEY.slice(0,14)}...${ANTHROPIC_KEY.slice(-4)} (${ANTHROPIC_KEY.length} chars)`)
 
 // Extract creation timestamp from Discord snowflake (ignore pre-start messages)
 function snowflakeMs(id) { return Number(BigInt(id) >> 22n) + 1420070400000 }
@@ -156,7 +168,9 @@ async function callClaude(message, { channelName = '', mode = 'default', systemN
 
     if (!res.ok) {
       const err = await res.text()
-      console.error(`Claude ${res.status}:`, err.slice(0, 100))
+      // Debug: log exact key bytes being sent
+      const keyBytes = Buffer.from(ANTHROPIC_KEY).toString('hex').slice(0, 20)
+      console.error(`Claude ${res.status} | key-hex-start: ${keyBytes} | key-len: ${ANTHROPIC_KEY.length}`)
       return `❌ Erreur Claude (${res.status})`
     }
 
