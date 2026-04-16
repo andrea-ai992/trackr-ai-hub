@@ -89,6 +89,14 @@
       "conviction": 68,
       "result": "BTC à ce niveau de prix (~$74,645) respecte avec discipline les niveaux Fibonacci et EMAs comme supports/résistances dynamiques — comportement typique d'un actif avec forte participation algorithmique. La confluence EMA9/Fib23.6% autour de $74,387-$74,599 crée une zone d'entrée haute probabilité en swing. L'ATR de $913 impose une gestion de position avec stops larges (minimum 1.5-2x ATR) pour éviter le bruit — BTC punira systématiquement les stops trop serrés sous ces conditions de volatilité. À retenir : le MACD à +724 sur BTC est un signal de momentum fort mais retardé — privilégier le RSI et les EMAs pour le timing d'entrée précis.",
       "score": 72
+    },
+    {
+      "id": "mem_1776310904926",
+      "timestamp": "2026-04-16T03:41:44.926Z",
+      "type": "error",
+      "focus": "autonomous",
+      "error": "Bad control character in string literal in JSON at position 1142 (line 7 column 471)",
+      "applied": false
     }
   ]
 }
