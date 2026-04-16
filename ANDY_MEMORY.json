@@ -1,18 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776306081181",
-      "timestamp": "2026-04-16T02:21:21.181Z",
-      "type": "trading_learning",
-      "symbol": "BTC",
-      "assetType": "crypto",
-      "technique": "EMA_Triple_Alignment_Bullish",
-      "verdict": "ACHAT",
-      "conviction": 68,
-      "result": "BTC à ce niveau de prix (~$74,645) respecte avec discipline les niveaux Fibonacci et EMAs comme supports/résistances dynamiques — comportement typique d'un actif avec forte participation algorithmique. La confluence EMA9/Fib23.6% autour de $74,387-$74,599 crée une zone d'entrée haute probabilité en swing. L'ATR de $913 impose une gestion de position avec stops larges (minimum 1.5-2x ATR) pour éviter le bruit — BTC punira systématiquement les stops trop serrés sous ces conditions de volatilité. À retenir : le MACD à +724 sur BTC est un signal de momentum fort mais retardé — privilégier le RSI et les EMAs pour le timing d'entrée précis.",
-      "score": 72
-    },
-    {
       "id": "mem_1776310904926",
       "timestamp": "2026-04-16T03:41:44.926Z",
       "type": "error",
@@ -4313,6 +4301,47 @@
       "errors": 0,
       "appHealthy": true,
       "duration": 2
+    },
+    {
+      "id": "mem_1776325921982",
+      "timestamp": "2026-04-16T07:52:01.982Z",
+      "type": "pattern_scan",
+      "focus": "bugs",
+      "findings": [
+        {
+          "id": "sse_json_parse",
+          "file": "api/discord.js",
+          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
+          "severity": "critical"
+        },
+        {
+          "id": "vercel_url_empty",
+          "file": "api/brain.js",
+          "description": "Using VERCEL_URL which is empty in production — use APP_URL instead",
+          "severity": "high"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/andy.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/brain.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/trading-expert.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        }
+      ],
+      "count": 5,
+      "applied": false,
+      "note": "Patterns detected before Claude analysis — guiding fix priority"
     }
   ]
 }
