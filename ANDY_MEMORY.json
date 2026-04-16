@@ -1,15 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776314726162",
-      "timestamp": "2026-04-16T04:45:26.162Z",
-      "type": "admin_task",
-      "status": "pending",
-      "source": "discord-.jpg5714",
-      "description": "Ok écoute modifie ça comme tu veux mais quand j’envoie juste un text je veux une réponse simple et construite stp parce que tu pete un cable",
-      "createdAt": "2026-04-16T04:45:25.987Z"
-    },
-    {
       "id": "mem_1776314728613",
       "timestamp": "2026-04-16T04:45:28.613Z",
       "type": "admin_task",
@@ -4263,6 +4254,14 @@
       "count": 5,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776327420531",
+      "timestamp": "2026-04-16T08:17:00.531Z",
+      "type": "error",
+      "focus": "security",
+      "error": "Anthropic API → 400",
+      "applied": false
     }
   ]
 }
