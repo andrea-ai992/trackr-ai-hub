@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Home, Trophy, TrendingUp, Newspaper, Grid2X2 } from 'lucide-react'
 
 const TABS = [
@@ -13,12 +13,16 @@ const TABS = [
 export { TABS }
 
 export default function BottomNav() {
-  const location = useLocation()
-  const navigate = useNavigate()
+  const location  = useLocation()
+  const navigate  = useNavigate()
   const [newsBadge, setNewsBadge] = useState(0)
+  const [pillStyle, setPillStyle] = useState({})
+  const tabRefs   = useRef([])
+  const navRef    = useRef(null)
 
   if (location.pathname.startsWith('/widget')) return null
 
+  // News badge events
   useEffect(() => {
     const handler = e => {
       if (e.detail?.increment) setNewsBadge(prev => prev + (e.detail.count ?? 1))
@@ -30,6 +34,24 @@ export default function BottomNav() {
 
   useEffect(() => {
     if (location.pathname.startsWith('/news')) setNewsBadge(0)
+  }, [location.pathname])
+
+  // Animate the sliding pill to the active tab
+  useEffect(() => {
+    const activeIdx = TABS.findIndex(tab =>
+      tab.matches.some(pattern => new RegExp(pattern).test(location.pathname))
+    )
+    if (activeIdx === -1) return
+    const el = tabRefs.current[activeIdx]
+    const nav = navRef.current
+    if (!el || !nav) return
+
+    const navRect = nav.getBoundingClientRect()
+    const elRect  = el.getBoundingClientRect()
+    setPillStyle({
+      left:  elRect.left - navRect.left,
+      width: elRect.width,
+    })
   }, [location.pathname])
 
   function isActive(tab) {
@@ -55,30 +77,54 @@ export default function BottomNav() {
       paddingRight: 20,
       pointerEvents: 'none',
     }}>
-      <nav style={{
-        pointerEvents: 'auto',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 4,
-        width: '100%',
-        maxWidth: 380,
-        background: 'rgba(18,26,43,0.7)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
-        border: '1px solid rgba(132,147,150,0.15)',
-        borderRadius: 999,
-        padding: '5px 8px',
-        boxShadow: '0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,218,243,0.04) inset',
-      }}>
-        {TABS.map(tab => {
+      <nav
+        ref={navRef}
+        style={{
+          pointerEvents: 'auto',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          width: '100%',
+          maxWidth: 380,
+          background: 'rgba(11,19,35,0.82)',
+          backdropFilter: 'blur(28px)',
+          WebkitBackdropFilter: 'blur(28px)',
+          border: '1px solid rgba(132,147,150,0.14)',
+          borderRadius: 999,
+          padding: '5px 6px',
+          boxShadow: '0 8px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,218,243,0.04) inset',
+          position: 'relative',
+        }}
+      >
+        {/* Animated sliding pill background */}
+        {pillStyle.width > 0 && (
+          <div
+            aria-hidden
+            style={{
+              position: 'absolute',
+              top: 5,
+              bottom: 5,
+              left: pillStyle.left,
+              width: pillStyle.width,
+              background: 'linear-gradient(135deg, rgba(0,218,243,0.16) 0%, rgba(209,188,255,0.16) 100%)',
+              border: '1px solid rgba(0,218,243,0.22)',
+              borderRadius: 999,
+              boxShadow: '0 0 16px rgba(0,218,243,0.12)',
+              transition: 'left 320ms cubic-bezier(0.32,0.72,0,1), width 320ms cubic-bezier(0.32,0.72,0,1)',
+              pointerEvents: 'none',
+            }}
+          />
+        )}
+
+        {TABS.map((tab, i) => {
           const active = isActive(tab)
-          const Icon = tab.icon
-          const isNews = tab.to === '/news'
-          const badge = isNews ? newsBadge : 0
+          const Icon   = tab.icon
+          const badge  = tab.to === '/news' ? newsBadge : 0
 
           return (
             <button
               key={tab.to}
+              ref={el => { tabRefs.current[i] = el }}
               onClick={() => handleTab(tab)}
               style={{
                 flex: 1,
@@ -88,30 +134,29 @@ export default function BottomNav() {
                 justifyContent: 'center',
                 gap: 3,
                 minHeight: 54,
-                padding: active ? '8px 6px' : '8px 4px',
+                padding: '8px 4px',
                 position: 'relative',
-                background: active
-                  ? 'linear-gradient(135deg, rgba(0,218,243,0.18) 0%, rgba(209,188,255,0.18) 100%)'
-                  : 'transparent',
-                border: active
-                  ? '1px solid rgba(0,218,243,0.25)'
-                  : '1px solid transparent',
+                background: 'transparent',
+                border: 'none',
                 borderRadius: 999,
                 cursor: 'pointer',
                 WebkitTapHighlightColor: 'transparent',
-                transition: 'all 250ms cubic-bezier(0.22,1,0.36,1)',
-                boxShadow: active ? '0 0 16px rgba(0,218,243,0.12)' : 'none',
+                zIndex: 1,
               }}
             >
               {/* Icon + badge */}
               <div style={{ position: 'relative', display: 'inline-flex' }}>
                 <Icon
                   size={22}
-                  strokeWidth={active ? 2.2 : 1.5}
+                  strokeWidth={active ? 2.2 : 1.6}
                   style={{
                     color: active ? '#00daf3' : '#4b6070',
-                    transition: 'color 200ms ease, filter 200ms ease',
-                    filter: active ? 'drop-shadow(0 0 6px rgba(0,218,243,0.7))' : 'none',
+                    transition: 'color 250ms cubic-bezier(0.32,0.72,0,1), filter 250ms ease',
+                    filter: active ? 'drop-shadow(0 0 5px rgba(0,218,243,0.75))' : 'none',
+                    transform: active ? 'scale(1.08)' : 'scale(1)',
+                    transitionProperty: 'color, filter, transform',
+                    transitionDuration: '250ms',
+                    transitionTimingFunction: 'cubic-bezier(0.32,0.72,0,1)',
                   }}
                 />
                 {badge > 0 && (
@@ -129,16 +174,18 @@ export default function BottomNav() {
                     padding: '0 3px',
                     boxShadow: '0 0 6px rgba(239,68,68,0.6)',
                     border: '1.5px solid #0b1323',
+                    animation: 'itemFadeUp 300ms cubic-bezier(0.32,0.72,0,1) both',
                   }}>
                     {badge > 99 ? '99+' : badge}
                   </span>
                 )}
               </div>
+
               <span style={{
                 fontSize: 9,
                 fontWeight: active ? 700 : 500,
                 color: active ? '#c3f5ff' : '#4b6070',
-                transition: 'color 200ms ease',
+                transition: 'color 250ms ease, font-weight 250ms ease',
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
                 fontFamily: "'Space Grotesk', system-ui, sans-serif",

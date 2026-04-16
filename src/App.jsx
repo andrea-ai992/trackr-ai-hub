@@ -51,34 +51,42 @@ function getTabIndex(path) {
   return -1
 }
 
-const DETAIL_PREFIXES = ['/stocks/', '/crypto/', '/translator', '/settings', '/sneakers', '/portfolio', '/category/', '/flights', '/andy', '/agents']
+const DETAIL_PREFIXES = ['/stocks/', '/crypto/', '/translator', '/settings', '/sneakers', '/portfolio', '/category/', '/flights', '/andy', '/agents', '/brain', '/admin']
 
 // Module-level so it persists across PageTransition renders without remounting
 let _prevPath = '/'
+let _prevTabIdx = 0
 
 function PageTransition({ children }) {
   const location = useLocation()
 
-  // Compute animation class synchronously during render
-  let animClass = 'page-enter-right'
+  let animClass = 'page-enter-fade'
+
   if (location.pathname !== _prevPath) {
-    const isDetail = DETAIL_PREFIXES.some(p => location.pathname.startsWith(p))
-    if (isDetail) {
+    const isDetail     = DETAIL_PREFIXES.some(p => location.pathname.startsWith(p))
+    const wasDetail    = DETAIL_PREFIXES.some(p => _prevPath.startsWith(p))
+    const currTabIdx   = getTabIndex(location.pathname)
+    const prevTabIdx   = getTabIndex(_prevPath)
+
+    if (isDetail && !wasDetail) {
+      // Drilling into a detail page — slide up
       animClass = 'page-enter-up'
+    } else if (!isDetail && wasDetail) {
+      // Returning to a tab — fade scale in
+      animClass = 'page-enter-fade'
+    } else if (currTabIdx !== -1 && prevTabIdx !== -1 && currTabIdx !== prevTabIdx) {
+      // Switching between main tabs — slide directionally
+      animClass = currTabIdx > prevTabIdx ? 'page-enter-right' : 'page-enter-left'
     } else {
-      const prevIdx = getTabIndex(_prevPath)
-      const nextIdx = getTabIndex(location.pathname)
-      if (prevIdx === -1 || nextIdx === -1 || prevIdx === nextIdx) {
-        animClass = 'page-enter-right'
-      } else {
-        animClass = nextIdx > prevIdx ? 'page-enter-right' : 'page-enter-left'
-      }
+      animClass = 'page-enter-fade'
     }
-    _prevPath = location.pathname
+
+    _prevPath    = location.pathname
+    _prevTabIdx  = currTabIdx
   }
 
   return (
-    <div key={location.key} className={animClass} style={{ willChange: 'transform' }}>
+    <div key={location.key} className={animClass} style={{ willChange: 'transform, opacity' }}>
       {children}
     </div>
   )

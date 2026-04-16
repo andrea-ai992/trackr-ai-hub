@@ -81,14 +81,45 @@ h1, h2, h3, h4, .font-headline {
 @keyframes slideIn    { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes auroraShift { 0%,100% { transform: scale(1) translate(0,0); } 50% { transform: scale(1.08) translate(4%,4%); } }
 
-/* ─── Page transitions ───────────────────────────────────────────────────── */
-.page-enter-right { animation: slideInFromRight 320ms cubic-bezier(0.22,1,0.36,1) both; }
-.page-enter-left  { animation: slideInFromLeft  320ms cubic-bezier(0.22,1,0.36,1) both; }
-.page-enter-up    { animation: slideUp          320ms cubic-bezier(0.22,1,0.36,1) both; }
+/* ─── Page transitions — iOS spring physics ──────────────────────────────── */
+/* Spring easing: cubic-bezier(0.32,0.72,0,1) matches iOS UIKit spring      */
+@keyframes slideInFromRight2 { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes slideInFromLeft2  { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes slideUpFull       { from { transform: translateY(72px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes fadeScale         { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
 
-/* ─── Touch feedback ─────────────────────────────────────────────────────── */
-.press-scale { transition: transform 150ms cubic-bezier(0.34,1.56,0.64,1), opacity 120ms ease, box-shadow 200ms ease; }
-.press-scale:active { transform: scale(0.95); opacity: 0.85; }
+.page-enter-right { animation: slideInFromRight2 380ms cubic-bezier(0.32,0.72,0,1) both; }
+.page-enter-left  { animation: slideInFromLeft2  380ms cubic-bezier(0.32,0.72,0,1) both; }
+.page-enter-up    { animation: slideUpFull       360ms cubic-bezier(0.32,0.72,0,1) both; }
+.page-enter-fade  { animation: fadeScale         280ms cubic-bezier(0.32,0.72,0,1) both; }
+
+/* ─── Staggered list animations ──────────────────────────────────────────── */
+@keyframes itemFadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.stagger-item { animation: itemFadeUp 380ms cubic-bezier(0.32,0.72,0,1) both; }
+.stagger-item:nth-child(1)  { animation-delay: 40ms; }
+.stagger-item:nth-child(2)  { animation-delay: 80ms; }
+.stagger-item:nth-child(3)  { animation-delay: 120ms; }
+.stagger-item:nth-child(4)  { animation-delay: 160ms; }
+.stagger-item:nth-child(5)  { animation-delay: 200ms; }
+.stagger-item:nth-child(6)  { animation-delay: 230ms; }
+.stagger-item:nth-child(7)  { animation-delay: 260ms; }
+.stagger-item:nth-child(8)  { animation-delay: 285ms; }
+.stagger-item:nth-child(n+9){ animation-delay: 300ms; }
+
+/* ─── Touch feedback — spring bounce ─────────────────────────────────────── */
+* { -webkit-tap-highlight-color: transparent; }
+.press-scale {
+  transition: transform 180ms cubic-bezier(0.34,1.56,0.64,1), opacity 140ms ease, box-shadow 220ms ease;
+  cursor: pointer;
+}
+.press-scale:active { transform: scale(0.94); opacity: 0.82; }
+
+/* Larger tap target variant */
+.press-scale-sm:active { transform: scale(0.96); opacity: 0.88; }
+.press-scale-sm { transition: transform 150ms cubic-bezier(0.34,1.56,0.64,1); }
 
 /* ─── Glass panels (Stitch style) ────────────────────────────────────────── */
 .glass-card {
@@ -150,10 +181,18 @@ h1, h2, h3, h4, .font-headline {
 .card-hover       { transition: transform 0.18s ease, box-shadow 0.18s ease; }
 .card-hover:hover { transform: translateY(-2px); }
 
+/* ─── Smooth momentum scrolling ─────────────────────────────────────────── */
+html { scroll-behavior: smooth; }
+body { -webkit-overflow-scrolling: touch; }
+main, [data-scroll], .scroll-smooth {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
 /* ─── Scrollbar ──────────────────────────────────────────────────────────── */
-::-webkit-scrollbar         { width: 4px; height: 4px; }
+::-webkit-scrollbar         { width: 3px; height: 3px; }
 ::-webkit-scrollbar-track   { background: transparent; }
-::-webkit-scrollbar-thumb   { background: rgba(132,147,150,0.2); border-radius: 10px; }
+::-webkit-scrollbar-thumb   { background: rgba(132,147,150,0.15); border-radius: 10px; }
 .no-scrollbar               { scrollbar-width: none; -ms-overflow-style: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 
@@ -194,3 +233,93 @@ h1, h2, h3, h4, .font-headline {
 .leaflet-container { background: #0b1323 !important; }
 .leaflet-tile { filter: invert(0.85) hue-rotate(180deg) brightness(0.9); }
 .leaflet-control-zoom a { background: #131c2b !important; color: #bac9cc !important; border-color: rgba(132,147,150,0.15) !important; }
+
+/* ─── Mobile-first card system ───────────────────────────────────────────── */
+.card {
+  background: rgba(19,28,43,0.6);
+  border: 1px solid rgba(132,147,150,0.12);
+  border-radius: 20px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: transform 200ms cubic-bezier(0.32,0.72,0,1),
+              border-color 200ms ease,
+              box-shadow 200ms ease;
+}
+.card:active {
+  transform: scale(0.97);
+  border-color: rgba(0,218,243,0.2);
+}
+.card-glow:hover {
+  box-shadow: 0 0 24px rgba(0,218,243,0.08), 0 8px 32px rgba(0,0,0,0.4);
+  border-color: rgba(0,218,243,0.18);
+}
+
+/* ─── Section headers ────────────────────────────────────────────────────── */
+.section-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #4b6070;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+
+/* ─── Number transition ──────────────────────────────────────────────────── */
+.num-transition {
+  transition: color 300ms ease, opacity 200ms ease;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Horizontal scroll row ──────────────────────────────────────────────── */
+.scroll-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+.scroll-row::-webkit-scrollbar { display: none; }
+.scroll-row > * { scroll-snap-align: start; flex-shrink: 0; }
+
+/* ─── Pill badge ─────────────────────────────────────────────────────────── */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+.pill-up   { background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.22); }
+.pill-down { background: rgba(239,68,68,0.12);  color: #ef4444; border: 1px solid rgba(239,68,68,0.22); }
+.pill-cyan { background: rgba(0,218,243,0.10);  color: #00daf3; border: 1px solid rgba(0,218,243,0.2); }
+
+/* ─── Modal / sheet bottom drawer ───────────────────────────────────────── */
+@keyframes sheetUp {
+  from { transform: translateY(100%); opacity: 0.8; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.sheet {
+  border-radius: 24px 24px 0 0;
+  animation: sheetUp 320ms cubic-bezier(0.32,0.72,0,1) both;
+}
+
+/* ─── Focus ring (accessibility) ─────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid rgba(0,218,243,0.6);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ─── Reduced motion ─────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
