@@ -25,7 +25,33 @@ for (const f of ['.env', '.env.local']) {
 
 const API_KEY     = process.env.ANTHROPIC_API_KEY
 const APP_URL     = process.env.APP_URL || 'https://trackr-app-nu.vercel.app'
+const BOT_URL     = process.env.BOT_URL || 'http://localhost:3099'
 const CRON_SECRET = process.env.CRON_SECRET || ''
+
+// ── Portfolios (identiques au bot) ────────────────────────────────────────────
+const STOCKS = [
+  { ticker: 'WM',   name: 'Waste Management'  },
+  { ticker: 'CRWD', name: 'CrowdStrike'        },
+  { ticker: 'NVDA', name: 'Nvidia'             },
+  { ticker: 'WMT',  name: 'Walmart'            },
+  { ticker: 'NET',  name: 'Cloudflare'         },
+  { ticker: 'ASML', name: 'ASML Holding'       },
+  { ticker: 'COST', name: 'Costco'             },
+  { ticker: 'MT',   name: 'ArcelorMittal'      },
+  { ticker: 'PM',   name: 'Philip Morris'      },
+  { ticker: 'DE',   name: 'John Deere'         },
+  { ticker: 'VSAT', name: 'Viasat'             },
+  { ticker: 'BABA', name: 'Alibaba'            },
+  { ticker: 'TEM',  name: 'Tempus AI'          },
+]
+const CRYPTO = [
+  { ticker: 'BTC',  name: 'Bitcoin'   },
+  { ticker: 'ETH',  name: 'Ethereum'  },
+  { ticker: 'SOL',  name: 'Solana'    },
+  { ticker: 'BNB',  name: 'BNB'       },
+  { ticker: 'AVAX', name: 'Avalanche' },
+  { ticker: 'LINK', name: 'Chainlink' },
+]
 
 // ── Couleurs ──────────────────────────────────────────────────────────────────
 const BG = '\x1b[40m'
@@ -296,21 +322,34 @@ async function cmd(input) {
 
   if (c === '/help') {
     line()
-    line(`  ${_.purple}${_.bold}╔══ COMMANDES ══════════════════════════════════╗`)
+    line(`  ${_.purple}${_.bold}╔══ COMMANDES ══════════════════════════════════════╗`)
     const cmds = [
-      ['/help',            _.cyan,   'Cette aide'],
-      ['/clear',           _.blue,   'Efface le terminal'],
-      ['/reset',           _.amber,  'Remet la conversation à zéro'],
-      ['/history',         _.grey,   'Affiche l\'historique'],
-      ['/task <desc>',     _.green,  'Assigne une tâche au self-improve'],
-      ['/improve <focus>', _.purple, 'Lance un cycle self-improve'],
-      ['/status',          _.orange, 'Statut du système Trackr'],
-      ['/model <name>',    _.grey,   'haiku · sonnet (défaut) · opus'],
-      ['/exit',            _.red,    'Quitter'],
+      ['─── GÉNÉRAL ─────────────────────────────────', _.dark,   ''],
+      ['/help',                _.cyan,   'Cette aide'],
+      ['/clear',               _.blue,   'Efface le terminal'],
+      ['/reset',               _.amber,  'Remet la conversation à zéro'],
+      ['/history',             _.grey,   'Affiche l\'historique'],
+      ['/model <name>',        _.grey,   'haiku · sonnet (défaut) · opus'],
+      ['/exit',                _.red,    'Quitter'],
+      ['─── TRADING ─────────────────────────────────', _.dark,   ''],
+      ['/brief stocks',        _.green,  'Analyse actions (WM, NVDA, CRWD…)'],
+      ['/brief crypto',        _.cyan,   'Analyse crypto (BTC, ETH, SOL…)'],
+      ['/brief all',           _.yellow, 'Les deux en une fois'],
+      ['─── SYSTÈME ─────────────────────────────────', _.dark,   ''],
+      ['/task <desc>',         _.green,  'Assigne une tâche au self-improve'],
+      ['/improve <focus>',     _.purple, 'Lance un cycle self-improve'],
+      ['/monitor',             _.blue,   'Déclenche le monitoring Trackr'],
+      ['/status',              _.orange, 'Statut APIs Trackr'],
+      ['─── BOT DISCORD ─────────────────────────────', _.dark,   ''],
+      ['/bot status',          _.orange, 'Statut du bot Discord'],
+      ['/bot brief stocks',    _.green,  'Poste le brief actions → Discord'],
+      ['/bot brief crypto',    _.cyan,   'Poste le brief crypto → Discord'],
     ]
-    for (const [name, col, desc] of cmds)
-      line(`  ${_.purple}║${R}  ${col}${_.bold}${name.padEnd(20)}${R}${_.grey}${desc}${R}`)
-    line(`  ${_.purple}╚════════════════════════════════════════════════╝`)
+    for (const [name, col, desc] of cmds) {
+      if (name.startsWith('─')) { line(`  ${_.purple}║${R}  ${col}${name}${R}`); continue }
+      line(`  ${_.purple}║${R}  ${col}${_.bold}${name.padEnd(22)}${R}${_.grey}${desc}${R}`)
+    }
+    line(`  ${_.purple}╚══════════════════════════════════════════════════╝`)
     line()
     return
   }
@@ -433,6 +472,107 @@ async function cmd(input) {
     line(`  ${_.green}✓ Modèle → ${_.bold}${arg}${R}  ${_.dark}(${map[arg]})${R}`)
     line()
     return
+  }
+
+  // ── /brief [stocks|crypto|all] ──────────────────────────────────────────────
+  if (c === '/brief') {
+    const type = arg || 'all'
+    if (!['stocks','crypto','all'].includes(type)) {
+      line(`  ${_.red}Usage: /brief stocks · /brief crypto · /brief all${R}`)
+      line(); return
+    }
+
+    const today = new Date().toLocaleDateString('fr-FR', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+      timeZone: 'America/New_York',
+    })
+
+    if (type === 'stocks' || type === 'all') {
+      const tickers = STOCKS.map(p => `${p.ticker} (${p.name})`).join(', ')
+      const prompt = `Analyse pré-marché ACTIONS — ${today}\nPortfolio: ${tickers}\n\n1. MACRO DU JOUR — Fed, dollar, VIX, futures\n2. SETUP PAR ACTION — tendance + S/R clé + signal (achat/vente/attente)\n3. TOP 3 OPPORTUNITÉS — entry/stop/target\n4. RISQUES — earnings, macro, news\n\nCourt et direct. Note ta date de coupure si tu ne peux pas confirmer les prix.`
+      line()
+      line(`  ${_.green}${_.bold}╔══ TRADING ACTIONS — ${today.toUpperCase().slice(0,22)} ══`)
+      line(`  ${_.green}╚${'═'.repeat(52)}`)
+      line()
+      await chat(prompt)
+    }
+
+    if (type === 'crypto' || type === 'all') {
+      const tickers = CRYPTO.map(p => `${p.ticker} (${p.name})`).join(', ')
+      const prompt = `Analyse crypto — ${today}\nCryptos: ${tickers}\n\n1. DOMINANCE & MACRO CRYPTO — BTC dominance, Fear & Greed, tendance globale\n2. SETUP PAR COIN — tendance + S/R clé + signal (long/short/attente)\n3. TOP 3 TRADES — entry/stop/target\n4. RISQUES — news, régulation, on-chain\n\nCourt et direct. Note ta date de coupure si tu ne peux pas confirmer les prix.`
+      line()
+      line(`  ${_.cyan}${_.bold}╔══ TRADING CRYPTO — ${today.toUpperCase().slice(0,22)} ══`)
+      line(`  ${_.cyan}╚${'═'.repeat(52)}`)
+      line()
+      await chat(prompt)
+    }
+    return
+  }
+
+  // ── /bot [status|brief stocks|brief crypto] ──────────────────────────────────
+  if (c === '/bot') {
+    const sub = parts.slice(1).join(' ')
+
+    if (!sub || sub === 'status') {
+      spinStart('Ping bot Discord…', _.orange)
+      try {
+        const r = await fetch(`${BOT_URL}/`, { signal: AbortSignal.timeout(4000) })
+        spinStop()
+        if (r.ok) {
+          const d = await r.json().catch(() => ({}))
+          line()
+          line(`  ${_.orange}${_.bold}╔══ DISCORD BOT ════════════════════════════╗`)
+          line(`  ${_.orange}║${R}  ${_.green}● ONLINE${R}  ${_.grey}uptime ${d.uptime || '?'}s`)
+          line(`  ${_.orange}║${R}  ${_.grey}Channels actifs   ${_.cyan}${d.channels?.active ?? '?'}${R}`)
+          line(`  ${_.orange}║${R}  ${_.grey}Channels morts    ${_.red}${d.channels?.dead ?? '?'}${R}`)
+          if (d.stocks?.length) line(`  ${_.orange}║${R}  ${_.grey}Actions  ${_.silver}${d.stocks.join(', ')}${R}`)
+          if (d.crypto?.length) line(`  ${_.orange}║${R}  ${_.grey}Crypto   ${_.silver}${d.crypto.join(', ')}${R}`)
+          line(`  ${_.orange}╚════════════════════════════════════════════╝`)
+        } else {
+          line(`  ${_.red}✗ Bot inaccessible (${r.status})${R}`)
+        }
+      } catch { spinStop(); line(`  ${_.amber}⚠ Bot hors ligne ou BOT_URL non configuré${R}  ${_.grey}(${BOT_URL})`) }
+      line(); return
+    }
+
+    if (sub === 'brief stocks' || sub === 'brief crypto') {
+      const endpoint = sub === 'brief stocks' ? '/brief/stocks' : '/brief/crypto'
+      const label = sub === 'brief stocks' ? 'actions' : 'crypto'
+      spinStart(`Envoi brief ${label} → Discord…`, _.green)
+      try {
+        const r = await fetch(`${BOT_URL}${endpoint}`, { signal: AbortSignal.timeout(6000) })
+        spinStop()
+        line(`  ${r.ok ? _.green+'✓' : _.red+'✗'} Brief ${label} ${r.ok ? 'envoyé → Discord' : `erreur ${r.status}`}${R}`)
+      } catch { spinStop(); line(`  ${_.amber}⚠ Bot inaccessible (${BOT_URL})${R}`) }
+      line(); return
+    }
+
+    line(`  ${_.grey}Usage: /bot status · /bot brief stocks · /bot brief crypto${R}`)
+    line(); return
+  }
+
+  // ── /monitor ─────────────────────────────────────────────────────────────────
+  if (c === '/monitor') {
+    spinStart('Lancement monitor…', _.blue)
+    try {
+      const r = await fetch(`${APP_URL}/api/monitor?force=true`, {
+        headers: CRON_SECRET ? { 'x-cron-secret': CRON_SECRET } : {},
+        signal: AbortSignal.timeout(15000),
+      })
+      spinStop()
+      const d = await r.json().catch(() => ({}))
+      if (r.ok) {
+        line(`  ${_.green}✓ Monitor lancé${R}  ${_.grey}${d.message || ''}${R}`)
+        if (d.issues?.length) {
+          line(`  ${_.amber}⚠ Issues détectées : ${d.issues.length}${R}`)
+          for (const issue of d.issues.slice(0, 5))
+            line(`  ${_.dark}  · ${_.silver}${String(issue).slice(0, 70)}${R}`)
+        }
+      } else {
+        line(`  ${_.red}✗ Erreur ${r.status}${R}`)
+      }
+    } catch (e) { spinStop(); line(`  ${_.red}✗ ${e.message}${R}`) }
+    line(); return
   }
 
   if (c === '/exit' || c === '/quit') {
