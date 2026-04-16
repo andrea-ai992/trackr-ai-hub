@@ -493,6 +493,138 @@ http.createServer((req, res) => {
   }))
 }).listen(PORT, () => console.log(`🌐 Health: http://localhost:${PORT}`))
 
+// ─── Andrea's portfolio ───────────────────────────────────────────────────────
+const PORTFOLIO = [
+  { ticker: 'WM',   name: 'Waste Management',  sector: 'Industrials/Defensive' },
+  { ticker: 'CRWD', name: 'CrowdStrike',        sector: 'Cybersecurity' },
+  { ticker: 'NVDA', name: 'Nvidia',             sector: 'AI/Semiconductors' },
+  { ticker: 'WMT',  name: 'Walmart',            sector: 'Consumer Defensive' },
+  { ticker: 'NET',  name: 'Cloudflare',         sector: 'Network Security' },
+  { ticker: 'ASML', name: 'ASML Holding',       sector: 'Semiconductor Equipment' },
+  { ticker: 'COST', name: 'Costco',             sector: 'Consumer Defensive' },
+  { ticker: 'MT',   name: 'ArcelorMittal',      sector: 'Steel/Materials' },
+  { ticker: 'PM',   name: 'Philip Morris',      sector: 'Tobacco/Dividend' },
+  { ticker: 'DE',   name: 'John Deere',         sector: 'Agriculture/Industrials' },
+  { ticker: 'VSAT', name: 'Viasat',             sector: 'Satellite/Telecom' },
+  { ticker: 'BABA', name: 'Alibaba',            sector: 'Chinese Tech/E-commerce' },
+  { ticker: 'TEM',  name: 'Tempus AI',          sector: 'AI Healthcare' },
+]
+
+// ─── Daily market brief ───────────────────────────────────────────────────────
+const MARKET_CH_IDS = {
+  scanner:    process.env.DISCORD_CH_MARKET_SCANNER || '',
+  oracle:     process.env.DISCORD_CH_ORACLE         || '',
+  trading:    process.env.DISCORD_CH_TRADING_DESK   || '',
+}
+
+async function postToChannel(channelId, content) {
+  if (!channelId) return
+  try {
+    await discordPost(`/channels/${channelId}/messages`, {
+      content: content.slice(0, 1990),
+    })
+  } catch (e) { console.error('postToChannel:', e.message) }
+}
+
+async function generateMarketBrief(isScheduled = false) {
+  const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/New_York' })
+  const tickers = PORTFOLIO.map(p => `${p.ticker} (${p.name})`).join(', ')
+
+  const prompt = `Analyse pré-marché pour Andrea — ${today}
+
+Son portfolio: ${tickers}
+
+Fais une analyse COMPLÈTE style expert hedge fund:
+
+1. **MACRO DU JOUR** — contexte global (taux, Fed, dollar, VIX, futures)
+2. **SETUP TECHNIQUE PAR ACTION** — pour chaque ticker:
+   - Tendance (haussière/baissière/neutre)
+   - Niveaux clés S/R à surveiller
+   - Point d'entrée optimal si opportunité
+   - Signal du jour (achat/vente/attente)
+3. **TOP 3 CALLS DU JOUR** — les 3 meilleures opportunités avec entry/stop/target
+4. **RISQUES À SURVEILLER** — news, earnings, macro
+
+Format Discord: utilise **gras**, emojis et sections claires. Max 1800 chars.
+Note ta date de coupure si tu ne peux pas confirmer les prix actuels.`
+
+  console.log('📊 Generating market brief...')
+  const analysis = await callClaude(prompt, {
+    channelName: 'market-scanner',
+    mode: 'think',
+    systemNote: SYSTEM.trading(),
+  })
+
+  if (!analysis) { console.error('Market brief generation failed'); return }
+
+  const header = `📊 **BRIEF PRÉ-MARCHÉ — ${today.toUpperCase()}**\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n`
+  const full = (header + analysis).slice(0, 1990)
+
+  // Post to market channels
+  const channelId = process.env.DISCORD_CH_MARKET_SCANNER
+  if (channelId) {
+    await postToChannel(channelId, full)
+    console.log('✅ Market brief posted to #market-scanner')
+  } else {
+    // Fallback: find market-scanner in monitored channels
+    for (const [id, ch] of monitoredChannels) {
+      if (ch.name === 'market-scanner' || ch.name === 'oracle-predictions') {
+        await postToChannel(id, full)
+        console.log(`✅ Market brief posted to #${ch.name}`)
+        break
+      }
+    }
+  }
+
+  // Also notify via Vercel morning endpoint for app push notification
+  fetch(`${APP_URL}/api/morning?type=market&brief=${encodeURIComponent(analysis.slice(0,500))}`, {
+    signal: AbortSignal.timeout(5000)
+  }).catch(() => {})
+
+  return full
+}
+
+// Schedule daily market brief — 8:30am ET (14:30 UTC / 16:30 Paris)
+function scheduleDailyBrief() {
+  const now = new Date()
+  const et = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }))
+  const target = new Date(et)
+  target.setHours(8, 30, 0, 0)
+  if (et >= target) target.setDate(target.getDate() + 1)
+  // Skip weekends
+  while (target.getDay() === 0 || target.getDay() === 6) target.setDate(target.getDate() + 1)
+
+  const msUntil = target - et
+  console.log(`📅 Next market brief in ${Math.round(msUntil/3600000)}h (8:30am ET)`)
+  setTimeout(async () => {
+    await generateMarketBrief(true)
+    scheduleDailyBrief()  // reschedule for next day
+  }, msUntil)
+}
+
+// ─── HTTP health check ────────────────────────────────────────────────────────
+http.createServer(async (req, res) => {
+  const url = new URL(req.url, 'http://localhost')
+
+  // Manual trigger: GET /brief
+  if (url.pathname === '/brief') {
+    res.writeHead(200, { 'Content-Type': 'text/plain' })
+    res.end('Generating brief...')
+    generateMarketBrief(false).catch(console.error)
+    return
+  }
+
+  res.writeHead(200, { 'Content-Type': 'application/json' })
+  res.end(JSON.stringify({
+    status: 'online', version: '4.0',
+    channels: { active: monitoredChannels.size, dead: deadChannels.size },
+    admins: [...ADMIN_IDS],
+    uptime: Math.floor(process.uptime()),
+    portfolio: PORTFOLIO.map(p => p.ticker),
+    ts: new Date().toISOString(),
+  }))
+}).listen(PORT, () => console.log(`🌐 Health: http://localhost:${PORT}`))
+
 // ─── Startup ──────────────────────────────────────────────────────────────────
 console.log(`🧠 AnDy Bot v4.0 — Claude direct streaming`)
 console.log(`🌐 Vercel: ${APP_URL}`)
@@ -500,16 +632,19 @@ console.log(`🌐 Vercel: ${APP_URL}`)
 await discoverChannels()
 await initLastSeen()
 
-// Poll every 3s (faster than before)
+// Poll every 3s
 setInterval(pollAll, 3000)
 
-// Re-discover channels every 15 min (picks up new ones)
+// Re-discover channels every 15 min
 setInterval(discoverChannels, 15 * 60 * 1000)
 
-// Monitor every 5 min via Vercel
+// Monitor every 5 min
 setInterval(() => {
   fetch(`${APP_URL}/api/monitor?silent=true`, { signal: AbortSignal.timeout(12000) }).catch(() => {})
 }, 5 * 60 * 1000)
+
+// Schedule daily pre-market brief (8:30am ET, weekdays)
+scheduleDailyBrief()
 
 process.on('SIGTERM', () => process.exit(0))
 process.on('SIGINT',  () => process.exit(0))

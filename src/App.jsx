@@ -27,7 +27,9 @@ import Andy from './pages/Andy'
 import Agents from './pages/Agents'
 import BrainStatus from './pages/BrainStatus'
 import Login from './pages/Login'
+import ChartAnalysis from './pages/ChartAnalysis'
 import Admin from './pages/Admin'
+import Patterns from './pages/Patterns'
 import { useAlerts } from './hooks/useAlerts'
 import { useNewsAlerts } from './hooks/useNewsAlerts'
 import { Search } from 'lucide-react'
@@ -50,12 +52,12 @@ function getTabIndex(path) {
     path.startsWith('/settings') || path.startsWith('/sneakers') || path.startsWith('/watches') ||
     path.startsWith('/real-estate') || path.startsWith('/business') ||
     path.startsWith('/portfolio') || path.startsWith('/category') ||
-    path.startsWith('/flights')
+    path.startsWith('/flights') || path.startsWith('/patterns')
   ) return 4
   return -1
 }
 
-const DETAIL_PREFIXES = ['/stocks/', '/crypto/', '/translator', '/settings', '/sneakers', '/watches', '/real-estate', '/business', '/portfolio', '/category/', '/flights', '/andy', '/agents', '/brain', '/admin']
+const DETAIL_PREFIXES = ['/stocks/', '/crypto/', '/translator', '/settings', '/sneakers', '/watches', '/real-estate', '/business', '/portfolio', '/category/', '/flights', '/andy', '/agents', '/brain', '/admin', '/patterns']
 
 // Module-level so it persists across PageTransition renders without remounting
 let _prevPath = '/'
@@ -195,7 +197,9 @@ function AppInner() {
               <Route path="/sports" element={<ProtectedRoute><Sports /></ProtectedRoute>} />
               <Route path="/widget" element={<ProtectedRoute><Widget /></ProtectedRoute>} />
               <Route path="/andy" element={<ProtectedRoute><Andy /></ProtectedRoute>} />
+              <Route path="/charts" element={<ProtectedRoute><ChartAnalysis /></ProtectedRoute>} />
               <Route path="/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
+              <Route path="/patterns" element={<ProtectedRoute><Patterns /></ProtectedRoute>} />
               <Route path="/brain" element={<ProtectedRoute><BrainStatus /></ProtectedRoute>} />
 
               {/* Admin only */}

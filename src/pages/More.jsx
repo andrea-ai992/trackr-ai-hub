@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Plane, Languages, Footprints, FolderOpen, Settings2, Plus, X,
   TrendingUp, Bitcoin, ChevronRight, Sparkles, Lock, LayoutDashboard, Bot, Radio, Brain, Shield, Watch,
-  Home, Briefcase
+  Home, Briefcase, BarChart2, LineChart
 } from 'lucide-react'
 
 // All available modules
@@ -158,12 +158,36 @@ const ALL_MODULES = [
     id: 'admin',
     to: '/admin',
     icon: Shield,
-    label: 'Admin Dev',
-    desc: 'Tâches IA · Agents · Statut système',
+    label: 'Admin',
+    desc: 'Panneau d\'administration',
     color: '#ef4444',
     glow: 'rgba(239,68,68,0.2)',
     badge: 'Admin',
     badgeColor: '#ef4444',
+    builtIn: true,
+  },
+  {
+    id: 'patterns',
+    to: '/patterns',
+    icon: LineChart,
+    label: 'Patterns Academy',
+    desc: 'Maîtrisez les 16 figures chartistes clés',
+    color: '#00daf3',
+    glow: 'rgba(0,218,243,0.2)',
+    badge: 'Pro',
+    badgeColor: '#00daf3',
+    builtIn: true,
+  },
+  {
+    id: 'charts',
+    to: '/charts',
+    icon: BarChart2,
+    label: 'Chart Analysis',
+    desc: 'Charts TradingView + analyse IA · setup du jour',
+    color: '#f59e0b',
+    glow: 'rgba(245,158,11,0.2)',
+    badge: 'Trader',
+    badgeColor: '#f59e0b',
     builtIn: true,
   },
 ]
