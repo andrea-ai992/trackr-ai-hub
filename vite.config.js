@@ -45,7 +45,7 @@ export default defineConfig(({ mode }) => ({
             urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'api-cache-v4',
+              cacheName: 'api-cache-v5',
               networkTimeoutSeconds: 10,
               expiration: {
                 maxEntries: 100,
@@ -58,7 +58,7 @@ export default defineConfig(({ mode }) => ({
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|avif|ico)$/i,
             handler: 'StaleWhileRevalidate',
             options: {
-              cacheName: 'images-cache-v4',
+              cacheName: 'images-cache-v5',
               expiration: {
                 maxEntries: 60,
                 maxAgeSeconds: 60 * 60 * 24 * 30,
@@ -70,7 +70,7 @@ export default defineConfig(({ mode }) => ({
             urlPattern: /\.(?:woff2)$/i,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'fonts-cache-v4',
+              cacheName: 'fonts-cache-v5',
               expiration: {
                 maxEntries: 20,
                 maxAgeSeconds: 60 * 60 * 24 * 365,
@@ -82,7 +82,7 @@ export default defineConfig(({ mode }) => ({
             urlPattern: /\.(?:js|css)$/i,
             handler: 'StaleWhileRevalidate',
             options: {
-              cacheName: 'static-assets-v4',
+              cacheName: 'static-assets-v5',
               expiration: {
                 maxEntries: 100,
                 maxAgeSeconds: 60 * 60 * 24 * 7,
@@ -94,7 +94,7 @@ export default defineConfig(({ mode }) => ({
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'StaleWhileRevalidate',
             options: {
-              cacheName: 'google-fonts-stylesheets-v4',
+              cacheName: 'google-fonts-stylesheets-v5',
               expiration: {
                 maxEntries: 10,
                 maxAgeSeconds: 60 * 60 * 24 * 365,
@@ -105,7 +105,7 @@ export default defineConfig(({ mode }) => ({
             urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'google-fonts-webfonts-v4',
+              cacheName: 'google-fonts-webfonts-v5',
               expiration: {
                 maxEntries: 30,
                 maxAgeSeconds: 60 * 60 * 24 * 365,
@@ -176,15 +176,83 @@ export default defineConfig(({ mode }) => ({
 
   build: {
     target: ['esnext', 'chrome90', 'firefox88', 'safari14'],
-    minify: 'esbuild',
-    cssMinify: 'esbuild',
+    minify: 'terser',
+    cssMinify: 'lightningcss',
     sourcemap: false,
     reportCompressedSize: true,
-    chunkSizeWarningLimit: 400,
+    chunkSizeWarningLimit: 350,
     assetsInlineLimit: 2048,
     cssCodeSplit: true,
     modulePreload: {
       polyfill: true,
+    },
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        pure_funcs: [
+          'console.log',
+          'console.info',
+          'console.debug',
+          'console.warn',
+          'console.trace',
+        ],
+        passes: 3,
+        unsafe: true,
+        unsafe_arrows: true,
+        unsafe_comps: true,
+        unsafe_Function: true,
+        unsafe_math: true,
+        unsafe_methods: true,
+        unsafe_proto: true,
+        unsafe_regexp: true,
+        unsafe_undefined: true,
+        toplevel: true,
+        dead_code: true,
+        collapse_vars: true,
+        reduce_vars: true,
+        hoist_funs: true,
+        hoist_vars: false,
+        join_vars: true,
+        loops: true,
+        negate_iife: true,
+        sequences: true,
+        side_effects: true,
+        switches: true,
+        typeofs: true,
+        keep_fargs: false,
+        keep_infinity: true,
+        booleans: true,
+        comparisons: true,
+        conditionals: true,
+        evaluate: true,
+        if_return: true,
+        inline: 3,
+        merge_vars: true,
+        unused: true,
+        global_defs: {
+          'process.env.NODE_ENV': '"production"',
+        },
+      },
+      mangle: {
+        toplevel: true,
+        safari10: false,
+        keep_classnames: false,
+        keep_fnames: false,
+        properties: {
+          regex: /^_private_/,
+        },
+      },
+      format: {
+        comments: false,
+        ascii_only: true,
+        ecma: 2020,
+        wrap_iife: true,
+        semicolons: false,
+      },
+      ecma: 2020,
+      toplevel: true,
+      nameCache: {},
     },
     rollupOptions: {
       treeshake: {
@@ -192,9 +260,11 @@ export default defineConfig(({ mode }) => ({
         propertyReadSideEffects: false,
         unknownGlobalSideEffects: false,
         tryCatchDeoptimization: false,
+        correctVarValueBeforeDeclaration: false,
+        preset: 'recommended',
       },
       output: {
-        experimentalMinChunkSize: 8000,
+        experimentalMinChunkSize: 10000,
         compact: true,
         generatedCode: {
           preset: 'es2015',
@@ -244,6 +314,38 @@ export default defineConfig(({ mode }) => ({
             if (id.includes('web-vitals')) return 'vendor-vitals'
             return 'vendor-misc'
           }
+          if (id.includes('src/pages/')) {
+            const match = id.match(/src\/pages\/([^/]+)/)
+            if (match) {
+              const pageName = match[1]
+                .replace(/\.(jsx|tsx|js|ts)$/, '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]/g, '-')
+              return `page-${pageName}`
+            }
+          }
+          if (id.includes('src/components/')) {
+            if (
+              id.includes('components/ui/') ||
+              id.includes('components/common/') ||
+              id.includes('components/shared/')
+            ) return 'common-ui'
+            if (
+              id.includes('components/chart') ||
+              id.includes('components/graph') ||
+              id.includes('components/widget')
+            ) return 'common-charts'
+          }
+          if (
+            id.includes('src/utils/') ||
+            id.includes('src/lib/') ||
+            id.includes('src/helpers/')
+          ) return 'common-utils'
+          if (
+            id.includes('src/hooks/') ||
+            id.includes('src/store/') ||
+            id.includes('src/context/')
+          ) return 'common-core'
         },
         chunkFileNames: 'assets/js/[name]-[hash].js',
         entryFileNames: 'assets/js/[name]-[hash].js',
@@ -257,15 +359,6 @@ export default defineConfig(({ mode }) => ({
           return 'assets/[name]-[hash][extname]'
         },
       },
-    },
-    esbuild: {
-      legalComments: 'none',
-      drop: ['console', 'debugger'],
-      target: 'esnext',
-      treeShaking: true,
-      minifyIdentifiers: true,
-      minifySyntax: true,
-      minifyWhitespace: true,
     },
   },
 
@@ -320,187 +413,120 @@ export default defineConfig(({ mode }) => ({
       '@pages': '/src/pages',
       '@hooks': '/src/hooks',
       '@utils': '/src/utils',
+      '@lib': '/src/lib',
       '@store': '/src/store',
+      '@context': '/src/context',
       '@assets': '/src/assets',
-      '@server': '/src/server',
-      '@services': '/src/services',
+      '@types': '/src/types',
     },
   },
 
-  esbuild: {
-    legalComments: 'none',
-    treeShaking: true,
+  css: {
+    transformer: 'lightningcss',
+    lightningcss: {
+      targets: {
+        chrome: 90,
+        firefox: 88,
+        safari: 14,
+      },
+      drafts: {
+        nesting: true,
+        customMedia: true,
+      },
+      nonStandard: {
+        deepSelectorCombinator: true,
+      },
+      errorRecovery: true,
+    },
+    devSourcemap: false,
   },
 }))
 
 ---
 
-FICHIER 2: src/services/analyticsService.js
+FICHIER 2: src/utils/performanceMetrics.ts
 
-import { onCLS, onFCP, onFID, onINP, onLCP, onTTFB } from 'web-vitals'
+import type {
+  CLSMetric,
+  FCPMetric,
+  FIDMetric,
+  INPMetric,
+  LCPMetric,
+  TTFBMetric,
+  Metric,
+} from 'web-vitals'
 
-const IS_PROD = import.meta.env.PROD
-const ANALYTICS_ENDPOINT = import.meta.env.VITE_ANALYTICS_ENDPOINT ?? null
-const SAMPLE_RATE = Number(import.meta.env.VITE_ANALYTICS_SAMPLE_RATE ?? 1.0)
+export type MetricName = 'CLS' | 'FCP' | 'FID' | 'INP' | 'LCP' | 'TTFB'
 
-const THRESHOLDS = {
-  LCP: { good: 2500, needsImprovement: 4000 },
-  FID: { good: 100, needsImprovement: 300 },
-  INP: { good: 200, needsImprovement: 500 },
-  CLS: { good: 0.1, needsImprovement: 0.25 },
-  FCP: { good: 1800, needsImprovement: 3000 },
-  TTFB: { good: 800, needsImprovement: 1800 },
+export type MetricRating = 'good' | 'needs-improvement' | 'poor'
+
+export interface PerformanceEntry {
+  name: MetricName
+  value: number
+  rating: MetricRating
+  delta: number
+  id: string
+  navigationType: string
+  timestamp: number
+  url: string
+  userAgent: string
+  connectionType: string
+  deviceMemory: number | null
+  hardwareConcurrency: number
 }
 
-function getRating(name, value) {
-  const t = THRESHOLDS[name]
-  if (!t) return 'unknown'
-  if (value <= t.good) return 'good'
-  if (value <= t.needsImprovement) return 'needs-improvement'
-  return 'poor'
+export interface PerformanceHistory {
+  entries: PerformanceEntry[]
+  sessionId: string
+  createdAt: number
+  updatedAt: number
+  version: string
 }
 
-function shouldSample() {
-  return Math.random() < SAMPLE_RATE
+export interface PerformanceSummary {
+  averages: Record<MetricName, number | null>
+  ratings: Record<MetricName, MetricRating | null>
+  sampleCounts: Record<MetricName, number>
+  lastUpdated: number
+  sessionId: string
+  overallScore: number
+  grade: 'A' | 'B' | 'C' | 'D' | 'F'
 }
 
-function buildPayload(metric) {
-  const rating = getRating(metric.name, metric.value)
-  return {
-    name: metric.name,
-    value: Math.round(metric.name === 'CLS' ? metric.value * 1000 : metric.value),
-    rating,
-    delta: Math.round(metric.delta),
-    id: metric.id,
-    navigationType: metric.navigationType ?? 'unknown',
-    url: location.href,
-    userAgent: navigator.userAgent,
-    connection: navigator?.connection?.effectiveType ?? 'unknown',
-    deviceMemory: navigator?.deviceMemory ?? 'unknown',
-    hardwareConcurrency: navigator?.hardwareConcurrency ?? 'unknown',
-    timestamp: Date.now(),
-    environment: IS_PROD ? 'production' : 'development',
-  }
+const STORAGE_KEY = 'trackr_perf_metrics_v3'
+const SESSION_KEY = 'trackr_perf_session_v3'
+const MAX_ENTRIES = 200
+const HISTORY_TTL_MS = 7 * 24 * 60 * 60 * 1000
+const VERSION = '3.0.0'
+
+const THRESHOLDS: Record<MetricName, { good: number; poor: number }> = {
+  CLS: { good: 0.1, poor: 0.25 },
+  FCP: { good: 1800, poor: 3000 },
+  FID: { good: 100, poor: 300 },
+  INP: { good: 200, poor: 500 },
+  LCP: { good: 2500, poor: 4000 },
+  TTFB: { good: 800, poor: 1800 },
 }
 
-async function sendToEndpoint(payload) {
-  if (!ANALYTICS_ENDPOINT) return
+const METRIC_WEIGHTS: Record<MetricName, number> = {
+  LCP: 25,
+  FID: 25,
+  CLS: 25,
+  INP: 15,
+  FCP: 5,
+  TTFB: 5,
+}
+
+function generateSessionId(): string {
+  const timestamp = Date.now().toString(36)
+  const random = Math.random().toString(36).slice(2, 9)
+  return `trackr_${timestamp}_${random}`
+}
+
+function getOrCreateSessionId(): string {
   try {
-    if (navigator.sendBeacon) {
-      const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' })
-      navigator.sendBeacon(ANALYTICS_ENDPOINT, blob)
-    } else {
-      await fetch(ANALYTICS_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        keepalive: true,
-      })
-    }
-  } catch {
-    // silent fail — analytics must never break the app
-  }
-}
-
-function logToConsole(payload) {
-  if (IS_PROD) return
-  const emoji =
-    payload.rating === 'good' ? '✅' :
-    payload.rating === 'needs-improvement' ? '⚠️' : '❌'
-  const unit = payload.name === 'CLS' ? '' : 'ms'
-  const displayValue =
-    payload.name === 'CLS'
-      ? (payload.value / 1000).toFixed(4)
-      : payload.value
-  console.groupCollapsed(
-    `%c[Web Vitals] ${emoji} ${payload.name}: ${displayValue}${unit} (${payload.rating})`,
-    `color: ${payload.rating === 'good' ? '#22c55e' : payload.rating === 'needs-improvement' ? '#f59e0b' : '#ef4444'}; font-weight: bold;`
-  )
-  console.table({
-    value: `${displayValue}${unit}`,
-    rating: payload.rating,
-    delta: `${payload.delta}${unit}`,
-    navigationType: payload.navigationType,
-    connection: payload.connection,
-    url: payload.url,
-  })
-  console.groupEnd()
-}
-
-function handleMetric(metric) {
-  if (!shouldSample()) return
-  const payload = buildPayload(metric)
-  logToConsole(payload)
-  sendToEndpoint(payload)
-}
-
-let initialized = false
-
-export function initWebVitals() {
-  if (initialized) return
-  initialized = true
-  try {
-    onLCP(handleMetric, { reportAllChanges: false })
-    onFID(handleMetric)
-    onCLS(handleMetric, { reportAllChanges: false })
-    onINP(handleMetric, { reportAllChanges: false })
-    onFCP(handleMetric)
-    onTTFB(handleMetric)
-  } catch {
-    // web-vitals not supported in this environment
-  }
-}
-
-export function measureCustomMetric(name, value, attributes = {}) {
-  if (!shouldSample()) return
-  const payload = {
-    name,
-    value: Math.round(value),
-    rating: 'custom',
-    delta: 0,
-    id: `custom-${name}-${Date.now()}`,
-    navigationType: 'custom',
-    url: location.href,
-    userAgent: navigator.userAgent,
-    timestamp: Date.now(),
-    environment: IS_PROD ? 'production' : 'development',
-    ...attributes,
-  }
-  logToConsole(payload)
-  sendToEndpoint(payload)
-}
-
-export function measureRouteChange(from, to, duration) {
-  measureCustomMetric('route-change', duration, {
-    from,
-    to,
-    rating: duration < 200 ? 'good' : duration < 500 ? 'needs-improvement' : 'poor',
-  })
-}
-
----
-
-FICHIER 3: src/App.jsx
-
-import {
-  createBrowserRouter,
-  RouterProvider,
-  Outlet,
-  NavLink,
-  useLocation,
-  ScrollRestoration,
-} from 'react-router-dom'
-import {
-  Suspense,
-  lazy,
-  useEffect,
-  useRef,
-  startTransition,
-  useCallback,
-} from 'react'
-import { initWebVitals, measureRouteChange } from '@services/analyticsService'
-
-// ─── Eager-loaded: shell visible instantly ────────────────────────────────────
-import ErrorBoundary from '@components/ErrorBoundary'
-import BottomNav from '@components/BottomNav'
-import TopBar from '@components/
+    const existing = sessionStorage.getItem(SESSION_KEY)
+    if (existing) return existing
+    const newId = generateSessionId()
+    sessionStorage.setItem(SESSION_KEY, newId)
+    return newId
