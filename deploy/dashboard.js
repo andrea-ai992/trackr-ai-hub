@@ -341,8 +341,7 @@ async function loadCommits() {
   const el = document.getElementById('commits-list')
   el.innerHTML = '<div class="empty">Chargement…</div>'
   try {
-    const token = 'GITHUB_TOKEN_REMOVED'
-    const r = await fetch('https://api.github.com/repos/andrea-ai992/trackr-ai-hub/commits?per_page=15',{headers:{Authorization:'Bearer '+token}})
+    const r = await fetch('/api/commits')
     const commits = await r.json()
     el.innerHTML = commits.map(c => {
       const msg   = c.commit.message.split('\\n')[0]
@@ -1018,6 +1017,18 @@ Tu peux aussi recevoir des commandes de tâche — si le message commence par /t
       } catch (e) { return json({ error: e.message }) }
     })
     return
+  }
+
+  // API — GitHub commits proxy (token reste côté serveur)
+  if (url.pathname === '/api/commits') {
+    const GITHUB_TOKEN = process.env.GITHUB_TOKEN || ''
+    const headers = { 'User-Agent': 'trackr-dashboard' }
+    if (GITHUB_TOKEN) headers['Authorization'] = `Bearer ${GITHUB_TOKEN}`
+    try {
+      const r = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/commits?per_page=15`, { headers, signal: AbortSignal.timeout(10000) })
+      const data = await r.json()
+      return json(Array.isArray(data) ? data : [])
+    } catch (e) { return json([]) }
   }
 
   // Chat page
