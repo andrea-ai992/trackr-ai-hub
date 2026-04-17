@@ -1,14 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776387991012",
-      "timestamp": "2026-04-17T01:06:31.012Z",
-      "type": "error",
-      "focus": "bugs",
-      "error": "Bad control character in string literal in JSON at position 3340 (line 7 column 712)",
-      "applied": false
-    },
-    {
       "id": "mem_1776388149828",
       "timestamp": "2026-04-17T01:09:09.828Z",
       "type": "pattern_scan",
@@ -3260,6 +3252,14 @@
       "count": 4,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776393548813",
+      "timestamp": "2026-04-17T02:39:08.813Z",
+      "type": "error",
+      "focus": "bugs",
+      "error": "Anthropic API → 400",
+      "applied": false
     }
   ]
 }
