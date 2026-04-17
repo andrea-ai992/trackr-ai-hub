@@ -1,41 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776380049808",
-      "timestamp": "2026-04-16T22:54:09.808Z",
-      "type": "pattern_scan",
-      "focus": "bugs",
-      "findings": [
-        {
-          "id": "sse_json_parse",
-          "file": "api/discord.js",
-          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
-          "severity": "critical"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/andy.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/brain.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/trading-expert.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        }
-      ],
-      "count": 4,
-      "applied": false,
-      "note": "Patterns detected before Claude analysis — guiding fix priority"
-    },
-    {
       "id": "mem_1776380059414",
       "timestamp": "2026-04-16T22:54:19.414Z",
       "type": "pattern_scan",
@@ -4126,6 +4091,19 @@
       "count": 4,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776387078289",
+      "timestamp": "2026-04-17T00:51:18.289Z",
+      "type": "improvement",
+      "focus": "bugs",
+      "file": "api/morning.js",
+      "problem": "api/morning.js fetchMarkets() calls .json() directly without checking response status or content-type, risking parse errors on non-JSON responses",
+      "severity": "high",
+      "commit": "fix: add content-type check and error logging to fetchMarkets() in api/morning.js",
+      "learned": "Empty catch blocks are consistently used across this codebase, hiding errors silently — every fetch helper needs both content-type validation and at minimum a console.warn in the catch clause.",
+      "applied": true,
+      "fromAdminTask": null
     }
   ]
 }
