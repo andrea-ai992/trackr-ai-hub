@@ -95,7 +95,15 @@ async function runServerTool(name, input) {
   if (name === 'fetch_crypto_price') {
     try {
       const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${input.coinId}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true`, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(7000) })
-      const d = await r.json()
+      if (!r.ok) { await r.body?.cancel().catch(() => {}); return { error: `HTTP ${r.status}` } }
+      const ct = r.headers.get('content-type') || ''
+      if (!ct.includes('application/json') && !ct.includes('text/json') && !ct.includes('text/plain')) {
+        console.warn(`fetch_crypto_price: unexpected content-type "${ct}", skipping .json()`)
+        await r.body?.cancel().catch(() => {})
+        return { error: `Unexpected content-type: ${ct}` }
+      }
+      const d = await r.json().catch(e => { console.warn('fetch_crypto_price JSON parse error:', e.message); return null })
+      if (!d) return { error: 'JSON parse failed' }
       const coin = d[input.coinId]
       if (!coin) return { error: 'Not found' }
       return { coinId: input.coinId, price: coin.usd, change24h: coin.usd_24h_change?.toFixed(2), marketCap: coin.usd_market_cap }
