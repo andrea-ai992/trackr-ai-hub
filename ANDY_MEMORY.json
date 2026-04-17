@@ -1,19 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776386962836",
-      "timestamp": "2026-04-17T00:49:22.836Z",
-      "type": "improvement",
-      "focus": "bugs",
-      "file": "api/trading-expert.js",
-      "problem": "fetch() calls in api/trading-expert.js on CoinGecko endpoints call .json() directly without checking content-type or response status",
-      "severity": "high",
-      "commit": "fix: guard CoinGecko .json() calls in trading-expert with content-type and status checks",
-      "learned": "CoinGecko fetch calls were unguarded in trading-expert.js while the same pattern was already fixed in discord.js — the fix needs to be applied consistently across all files that consume CoinGecko responses.",
-      "applied": true,
-      "fromAdminTask": null
-    },
-    {
       "id": "mem_1776386970118",
       "timestamp": "2026-04-17T00:49:30.118Z",
       "type": "brain_cycle",
@@ -3406,6 +3393,20 @@
       "focus": "security",
       "error": "Anthropic API → 400",
       "applied": false
+    },
+    {
+      "id": "mem_1776392754124",
+      "timestamp": "2026-04-17T02:25:54.124Z",
+      "type": "brain_cycle",
+      "hour": 2,
+      "successRate": 0,
+      "agentsRan": 0,
+      "improved": false,
+      "improvedFile": null,
+      "focus": null,
+      "errors": 0,
+      "appHealthy": true,
+      "duration": 2
     }
   ]
 }
