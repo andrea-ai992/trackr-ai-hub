@@ -1,19 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776379771766",
-      "timestamp": "2026-04-16T22:49:31.766Z",
-      "type": "improvement",
-      "focus": "bugs",
-      "file": "api/morning.js",
-      "problem": "fetch() call in api/morning.js without AbortSignal.timeout() on discordPost and generateAIBriefing Anthropic call can hang indefinitely",
-      "severity": "medium",
-      "commit": "fix: add AbortSignal.timeout and error handling to discordPost in morning.js",
-      "learned": "Helper functions that wrap fetch() are easy to overlook for timeout coverage since the pattern is applied at call sites but forgotten in shared utilities.",
-      "applied": true,
-      "fromAdminTask": null
-    },
-    {
       "id": "mem_1776379772498",
       "timestamp": "2026-04-16T22:49:32.498Z",
       "type": "brain_cycle",
@@ -4072,6 +4059,20 @@
       "count": 4,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776386777338",
+      "timestamp": "2026-04-17T00:46:17.338Z",
+      "type": "brain_cycle",
+      "hour": 0,
+      "successRate": 3,
+      "agentsRan": 4,
+      "improved": false,
+      "improvedFile": null,
+      "focus": "bugs",
+      "errors": 0,
+      "appHealthy": true,
+      "duration": 25
     }
   ]
 }
