@@ -1,41 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776379749849",
-      "timestamp": "2026-04-16T22:49:09.849Z",
-      "type": "pattern_scan",
-      "focus": "bugs",
-      "findings": [
-        {
-          "id": "sse_json_parse",
-          "file": "api/discord.js",
-          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
-          "severity": "critical"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/andy.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/brain.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/trading-expert.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        }
-      ],
-      "count": 4,
-      "applied": false,
-      "note": "Patterns detected before Claude analysis — guiding fix priority"
-    },
-    {
       "id": "mem_1776379761205",
       "timestamp": "2026-04-16T22:49:21.205Z",
       "type": "improvement",
@@ -4071,6 +4036,20 @@
       "learned": "CoinGecko (like Yahoo Finance) can return non-JSON on rate limits or errors, so every external fetch must validate content-type before calling .json().",
       "applied": true,
       "fromAdminTask": null
+    },
+    {
+      "id": "mem_1776386669750",
+      "timestamp": "2026-04-17T00:44:29.750Z",
+      "type": "brain_cycle",
+      "hour": 0,
+      "successRate": 0,
+      "agentsRan": 4,
+      "improved": false,
+      "improvedFile": null,
+      "focus": "bugs",
+      "errors": 0,
+      "appHealthy": true,
+      "duration": 24
     }
   ]
 }
