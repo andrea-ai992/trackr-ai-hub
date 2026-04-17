@@ -1,19 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776379570325",
-      "timestamp": "2026-04-16T22:46:10.325Z",
-      "type": "improvement",
-      "focus": "bugs",
-      "file": "api/discord.js",
-      "problem": "api/discord.js appelle .json() sur une réponse Yahoo Finance qui peut être text/event-stream (SSE), causant une erreur silencieuse ou un crash",
-      "severity": "critical",
-      "commit": "fix: cancel SSE response body in discord.js to prevent resource leak on unexpected content-type",
-      "learned": "Quand on détecte un content-type inattendu (SSE/stream), il faut explicitement annuler le body avec r.body?.cancel() pour éviter que la connexion reste ouverte et consomme des ressources dans la serverless function.",
-      "applied": true,
-      "fromAdminTask": null
-    },
-    {
       "id": "mem_1776379577597",
       "timestamp": "2026-04-16T22:46:17.597Z",
       "type": "brain_cycle",
@@ -4019,6 +4006,41 @@
     {
       "id": "mem_1776386649836",
       "timestamp": "2026-04-17T00:44:09.836Z",
+      "type": "pattern_scan",
+      "focus": "bugs",
+      "findings": [
+        {
+          "id": "sse_json_parse",
+          "file": "api/discord.js",
+          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
+          "severity": "critical"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/andy.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/brain.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/trading-expert.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        }
+      ],
+      "count": 4,
+      "applied": false,
+      "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776386654994",
+      "timestamp": "2026-04-17T00:44:14.994Z",
       "type": "pattern_scan",
       "focus": "bugs",
       "findings": [
