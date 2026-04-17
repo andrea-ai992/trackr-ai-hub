@@ -1,4 +1,3 @@
-```tsx
 // src/components/PSGMatchCard.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
@@ -566,4 +565,3 @@ export default function Sports() {
       </div>
     </div>
   );
-}

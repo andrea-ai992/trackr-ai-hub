@@ -1,4 +1,3 @@
-```js
 // src/features/sports/sportsApi.js — INCHANGÉ, correct
 import axios from 'axios';
 
@@ -72,9 +71,7 @@ export function normalizeFixture(fixture) {
     isPSGHome: fixture.teams?.home?.id === PSG_TEAM_ID,
   };
 }
-```
 
-```js
 // src/features/sports/sportsService.js
 import { supabase } from '../../lib/supabaseClient';
 import {
@@ -157,9 +154,7 @@ export async function getMatchById(fixtureId) {
   if (error) return null;
   return data;
 }
-```
 
-```js
 // src/features/sports/notificationService.js
 const SW_PATH = '/sw.js';
 
@@ -230,9 +225,7 @@ export async function sendScoreChangeNotification({
     }
   }
 }
-```
 
-```js
 // src/features/sports/useSportsLive.js
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getLiveMatches, getRecentMatches, saveMatchToHistory } from './sportsService';
@@ -367,9 +360,7 @@ export function useSportsLive() {
     refresh,
   };
 }
-```
 
-```jsx
 // src/features/sports/SportsTab.jsx
 import React, { useEffect, useRef } from 'react';
 import { useSportsLive } from './useSportsLive';
@@ -581,9 +572,7 @@ export default function SportsTab() {
     </section>
   );
 }
-```
 
-```css
 /* src/features/sports/SportsTab.css */
 
 /* ── Tab container ── */
@@ -879,9 +868,7 @@ export default function SportsTab() {
 .sports-tab__retry:hover {
   opacity: 0.85;
 }
-```
 
-```js
 // public/sw.js  — COMPLET
 const CACHE_NAME = 'trackr-v2';
 const STATIC_ASSETS

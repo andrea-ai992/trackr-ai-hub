@@ -1,4 +1,3 @@
-src/components/OptimizedImage.jsx
 
 import { useState, useEffect, useRef, useCallback, memo } from 'react';
 

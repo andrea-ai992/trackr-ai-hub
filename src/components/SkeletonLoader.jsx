@@ -1,4 +1,3 @@
-src/components/SkeletonLoader.jsx
 
 import React from 'react';
 import '../styles/animations.css';

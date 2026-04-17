@@ -1,4 +1,3 @@
-```tsx
 // src/components/ui/PageLoader.tsx
 import React, { useEffect, useRef } from "react";
 
@@ -153,9 +152,7 @@ const PageLoader: React.FC = () => {
 };
 
 export default PageLoader;
-```
 
-```tsx
 // src/App.tsx
 import React, {
   Suspense,
@@ -325,9 +322,7 @@ const App: React.FC = () => (
 );
 
 export default App;
-```
 
-```ts
 // vite.config.ts
 import { defineConfig, splitVendorChunkPlugin } from "vite";
 import react from "@vitejs/plugin-react";

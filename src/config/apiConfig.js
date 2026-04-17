@@ -1,4 +1,3 @@
-```javascript
 /**
  * @module apiConfig
  * @description Centralized secure secrets management for Trackr AI Hub.

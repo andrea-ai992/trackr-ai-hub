@@ -1,4 +1,3 @@
-```jsx
 // src/components/FightCard.jsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
@@ -316,4 +315,3 @@ const FightCard = ({ fight, className = "", showEvent = false, compact = false }
   );
 };
 
-export default FightCard;

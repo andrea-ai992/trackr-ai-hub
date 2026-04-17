@@ -1,4 +1,3 @@
-```jsx
 import { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
 import {
@@ -447,4 +446,3 @@ import SportsPage from "./pages/SportsPage";
 2. `SportsPage` — composant principal entièrement absent → créé avec fetch Supabase, stats calculées (ROI, gains, pertes, en cours), états `loading`/`error`/`bets`, delete fonctionnel
 3. `handleDelete` — wrappé dans try/catch (fetch sans catch corrigé)
 4. `statutConfig[bet.statut] || ...` → `??` pour éviter falsy bug
-5. Route `/sports` documentée

@@ -1,4 +1,3 @@
-```tsx
 // src/components/PSGMatchCard.tsx
 import React, { useEffect, useRef, useState, useCallback } from "react";
 
@@ -480,4 +479,3 @@ const styles: Record<string, React.CSSProperties> = {
   },
 };
 
-export default PSGMatchCard;

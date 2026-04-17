@@ -1,4 +1,3 @@
-src/components/ErrorBoundary.jsx
 
 import { Component } from 'react';
 

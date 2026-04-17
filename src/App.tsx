@@ -1,4 +1,3 @@
-```tsx
 // src/components/PSGMatchCard.tsx
 import React, { useEffect, useState, useCallback, useRef } from "react";
 

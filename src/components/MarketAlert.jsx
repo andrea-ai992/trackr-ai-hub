@@ -1,4 +1,3 @@
-src/components/MarketAlert.jsx
 
 import React, {
   useState,

@@ -1,4 +1,3 @@
-```jsx
 // FILE: src/components/CryptoMarkets.jsx
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
@@ -624,4 +623,3 @@ export default function App() {
 // package.json — vérifier que recharts est présent, sinon:
 // npm install recharts
 // Entrée attendue dans dependencies:
-// "recharts": "^2.12.7"

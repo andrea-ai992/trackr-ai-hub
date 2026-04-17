@@ -1,4 +1,3 @@
-```js
 // src/features/sports/useLiveScore.js
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getSupabaseClient } from '@/lib/supabaseClient';
@@ -272,7 +271,6 @@ export function useLiveScore() {
     refresh,
   };
 }
-```
 
 **Corrections résumées :**
 - `getSupabaseClient()` singleton importé depuis `@/lib/supabaseClient` (doit exister dans le projet)

@@ -1,4 +1,3 @@
-```jsx
 // src/features/sports/LiveScore.jsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
@@ -589,9 +588,7 @@ export default function LiveScore({ onLiveStatusChange }) {
     </div>
   );
 }
-```
 
-```js
 // public/sw.js
 self.addEventListener('install', (event) => {
   self.skipWaiting();

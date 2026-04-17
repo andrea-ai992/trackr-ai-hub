@@ -1,4 +1,3 @@
-```typescript
 // src/lib/supabaseAuth.ts
 import { createClient, Session, AuthChangeEvent, User } from '@supabase/supabase-js'
 
@@ -214,9 +213,7 @@ export async function getSession(): Promise<Session | null> {
 
 // Exported only for unit testing — do not use in application code
 export { clearRefreshTimer as __testOnly_clearRefreshTimer }
-```
 
-```typescript
 // src/lib/supabaseAuth.test.ts
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 

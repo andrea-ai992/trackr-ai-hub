@@ -1,4 +1,3 @@
-```typescript
 // api/csrf.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
@@ -61,9 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Failed to generate CSRF token' });
   }
 }
-```
 
-```typescript
 // api/middleware/validateCsrf.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
@@ -181,9 +178,7 @@ export function withCsrf(
     return handler(req, res);
   };
 }
-```
 
-```typescript
 // src/hooks/useCsrf.ts
 import { useCallback, useEffect, useRef, useState } from 'react';
 

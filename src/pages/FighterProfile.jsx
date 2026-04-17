@@ -1,4 +1,3 @@
-```jsx
 // src/pages/FighterProfile.jsx
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
@@ -560,4 +559,3 @@ export default function FighterProfile() {
 //
 // Dans MMADashboard, lien vers un profil :
 // import { Link } from "react-router-dom";
-// <Link to="/mma/fighter/islam-makhachev">Islam Makhachev</Link>
