@@ -1,41 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776379864894",
-      "timestamp": "2026-04-16T22:51:04.894Z",
-      "type": "pattern_scan",
-      "focus": "bugs",
-      "findings": [
-        {
-          "id": "sse_json_parse",
-          "file": "api/discord.js",
-          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
-          "severity": "critical"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/andy.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/brain.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/trading-expert.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        }
-      ],
-      "count": 4,
-      "applied": false,
-      "note": "Patterns detected before Claude analysis — guiding fix priority"
-    },
-    {
       "id": "mem_1776379865881",
       "timestamp": "2026-04-16T22:51:05.881Z",
       "type": "error",
@@ -4094,6 +4059,19 @@
       "count": 4,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776386962836",
+      "timestamp": "2026-04-17T00:49:22.836Z",
+      "type": "improvement",
+      "focus": "bugs",
+      "file": "api/trading-expert.js",
+      "problem": "fetch() calls in api/trading-expert.js on CoinGecko endpoints call .json() directly without checking content-type or response status",
+      "severity": "high",
+      "commit": "fix: guard CoinGecko .json() calls in trading-expert with content-type and status checks",
+      "learned": "CoinGecko fetch calls were unguarded in trading-expert.js while the same pattern was already fixed in discord.js — the fix needs to be applied consistently across all files that consume CoinGecko responses.",
+      "applied": true,
+      "fromAdminTask": null
     }
   ]
 }
