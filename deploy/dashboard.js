@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import http from 'http'
 import { exec } from 'child_process'
-import { readdirSync, readFileSync, writeFileSync } from 'fs'
+import { readdirSync, readFileSync, writeFileSync, existsSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { randomBytes } from 'crypto'
@@ -14,25 +14,43 @@ const TASKS  = resolve(ROOT, 'andy-tasks')
 const LOG_D  = '/root/logs/andy-daemon.log'
 const LOG_B  = '/root/logs/discord-bot.log'
 
+// Charge .env si ANTHROPIC_API_KEY pas encore définie
+if (!process.env.ANTHROPIC_API_KEY) {
+  for (const f of ['.env', '.env.local']) {
+    const fp = resolve(ROOT, f)
+    if (existsSync(fp)) {
+      readFileSync(fp, 'utf8').split('\n').forEach(l => {
+        const m = l.match(/^([^#=\s][^=]*)=(.*)$/)
+        if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '')
+      })
+    }
+  }
+}
+
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || ''
+const GITHUB_REPO   = process.env.GITHUB_REPO || 'andrea-ai992/trackr-ai-hub'
+const APP_URL       = process.env.APP_URL || 'https://trackr-app-nu.vercel.app'
+
 const run = cmd => new Promise(r => exec(cmd, (_e, o) => r(o?.trim() || '')))
 
-// ── Sessions ──────────────────────────────────────────────────────────────────
-const sessions = new Map()
+// ── Sessions + historique chat ────────────────────────────────────────────────
+const sessions = new Map()  // token → { ts, history: [] }
 function newSession() {
   const token = randomBytes(32).toString('hex')
-  sessions.set(token, Date.now())
+  sessions.set(token, { ts: Date.now(), history: [] })
   return token
 }
-function validSession(req) {
+function getSession(req) {
   const cookie = req.headers.cookie || ''
   const m = cookie.match(/session=([a-f0-9]{64})/)
-  if (!m) return false
-  const ts = sessions.get(m[1])
-  if (!ts) return false
-  if (Date.now() - ts > 8 * 60 * 60 * 1000) { sessions.delete(m[1]); return false }
-  sessions.set(m[1], Date.now()) // refresh
-  return true
+  if (!m) return null
+  const s = sessions.get(m[1])
+  if (!s) return null
+  if (Date.now() - s.ts > 8 * 60 * 60 * 1000) { sessions.delete(m[1]); return null }
+  s.ts = Date.now()
+  return { token: m[1], session: s }
 }
+function validSession(req) { return !!getSession(req) }
 
 // ── HTML ──────────────────────────────────────────────────────────────────────
 const LOGIN_HTML = `<!DOCTYPE html>
@@ -77,6 +95,203 @@ input:focus{border-color:rgba(0,255,136,.4);box-shadow:0 0 0 3px rgba(0,255,136,
   </form>
   <div class="info">Session 8h · Connexion chiffrée</div>
 </div>
+</body>
+</html>`
+
+const CHAT_HTML = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AnDy">
+<meta name="theme-color" content="#080808">
+<title>AnDy — IA</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--bg:#080808;--bg2:#0f0f0f;--border:#1a1a1a;--green:#00ff88;--text:#e0e0e0;--dim:#555;--red:#ef4444}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,'SF Pro Text',sans-serif;font-size:15px;overflow:hidden}
+.app{display:flex;flex-direction:column;height:100%;height:100dvh;max-width:700px;margin:0 auto}
+/* Header */
+.hdr{background:rgba(8,8,8,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:env(safe-area-inset-top,12px) 16px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:sticky;top:0;z-index:10}
+.hdr-left{display:flex;align-items:center;gap:10px}
+.pulse{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:p 2s infinite;flex-shrink:0}
+@keyframes p{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.hdr-title{font-weight:700;font-size:16px;letter-spacing:.05em;color:var(--green)}
+.hdr-sub{font-size:11px;color:var(--dim);margin-top:1px}
+.hdr-btns{display:flex;gap:8px}
+.hdr-btn{background:transparent;border:1px solid var(--border);color:var(--dim);font-size:11px;padding:5px 10px;border-radius:8px;cursor:pointer;font-family:inherit}
+.hdr-btn:active{background:var(--border)}
+/* Messages */
+.msgs{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 12px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth}
+.msg{display:flex;flex-direction:column;max-width:82%}
+.msg.user{align-self:flex-end;align-items:flex-end}
+.msg.andy{align-self:flex-start;align-items:flex-start}
+.bubble{padding:11px 14px;border-radius:18px;line-height:1.5;word-break:break-word;font-size:14px;white-space:pre-wrap}
+.msg.user .bubble{background:var(--green);color:#080808;border-bottom-right-radius:4px;font-weight:500}
+.msg.andy .bubble{background:var(--bg2);border:1px solid var(--border);color:var(--text);border-bottom-left-radius:4px}
+.msg-time{font-size:10px;color:var(--dim);margin-top:3px;padding:0 4px}
+/* Typing indicator */
+.typing{display:flex;align-items:center;gap:4px;padding:12px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:18px;border-bottom-left-radius:4px;width:fit-content}
+.dot-t{width:6px;height:6px;border-radius:50%;background:var(--dim);animation:dt .8s infinite}
+.dot-t:nth-child(2){animation-delay:.15s}
+.dot-t:nth-child(3){animation-delay:.3s}
+@keyframes dt{0%,60%,100%{transform:scale(1);opacity:.4}30%{transform:scale(1.3);opacity:1}}
+/* Input bar */
+.bar{background:rgba(8,8,8,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);padding:10px 12px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;align-items:flex-end;flex-shrink:0}
+textarea{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:10px 14px;color:var(--text);font-size:15px;font-family:inherit;resize:none;outline:none;max-height:120px;min-height:42px;line-height:1.4;transition:.2s;overflow-y:auto;-webkit-overflow-scrolling:touch}
+textarea:focus{border-color:rgba(0,255,136,.4)}
+textarea::placeholder{color:var(--dim)}
+.send{width:42px;height:42px;border-radius:50%;background:var(--green);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.15s;color:#080808}
+.send:active{transform:scale(.9);background:#00cc66}
+.send svg{width:18px;height:18px}
+/* Quick actions */
+.quick{display:flex;gap:6px;padding:8px 12px 0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-shrink:0}
+.quick::-webkit-scrollbar{display:none}
+.chip{background:var(--bg2);border:1px solid var(--border);color:var(--dim);font-size:11px;padding:5px 12px;border-radius:20px;white-space:nowrap;cursor:pointer;flex-shrink:0;font-family:inherit;transition:.15s}
+.chip:active{background:var(--border);color:var(--text)}
+/* Welcome */
+.welcome{text-align:center;padding:32px 20px;color:var(--dim)}
+.welcome-icon{font-size:40px;margin-bottom:12px}
+.welcome-title{color:var(--green);font-size:18px;font-weight:700;margin-bottom:6px}
+.welcome-sub{font-size:13px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="hdr">
+    <div class="hdr-left">
+      <div class="pulse"></div>
+      <div>
+        <div class="hdr-title">AnDy</div>
+        <div class="hdr-sub">Intelligence Artificielle · Trackr</div>
+      </div>
+    </div>
+    <div class="hdr-btns">
+      <button class="hdr-btn" onclick="goTasks()">📋 Tâches</button>
+      <button class="hdr-btn" onclick="resetChat()">↺</button>
+      <a href="/" class="hdr-btn" style="text-decoration:none">⚙️</a>
+    </div>
+  </div>
+
+  <div class="quick" id="quick">
+    <button class="chip" onclick="send('Quel est l\\'état du serveur et des tâches en cours ?')">📊 Statut</button>
+    <button class="chip" onclick="send('Qu\\'est-ce qu\\'AnDy a fait ces dernières heures ?')">🕐 Activité récente</button>
+    <button class="chip" onclick="send('Donne-moi un résumé des améliorations déployées aujourd\\'hui')">✅ Updates du jour</button>
+    <button class="chip" onclick="send('Quelles sont les prochaines tâches en queue ?')">⏳ Queue</button>
+    <button class="chip" onclick="send('Analyse l\\'app Trackr et propose les 3 améliorations les plus urgentes')">🎯 Priorités</button>
+    <button class="chip" onclick="taskMode()">➕ Donner une tâche</button>
+  </div>
+
+  <div class="msgs" id="msgs">
+    <div class="welcome">
+      <div class="welcome-icon">⟨◈⟩</div>
+      <div class="welcome-title">AnDy est là</div>
+      <div class="welcome-sub">Pose une question, donne une tâche, commande le serveur.<br>Fonctionne depuis ton téléphone ou ton Mac.</div>
+    </div>
+  </div>
+
+  <div class="bar">
+    <textarea id="inp" placeholder="Message…" rows="1" onkeydown="onKey(event)" oninput="resize(this)"></textarea>
+    <button class="send" onclick="sendInput()" aria-label="Envoyer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    </button>
+  </div>
+</div>
+
+<script>
+const msgs = document.getElementById('msgs')
+const inp  = document.getElementById('inp')
+let loading = false
+
+function ts() {
+  return new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+}
+
+function addMsg(role, text) {
+  // Supprime le welcome si présent
+  const w = msgs.querySelector('.welcome')
+  if (w) w.remove()
+
+  const div = document.createElement('div')
+  div.className = 'msg ' + role
+  div.innerHTML = \`<div class="bubble">\${text.replace(/</g,'&lt;').replace(/\\n/g,'\\n')}</div><div class="msg-time">\${ts()}</div>\`
+  msgs.appendChild(div)
+  msgs.scrollTop = msgs.scrollHeight
+  return div
+}
+
+function showTyping() {
+  const div = document.createElement('div')
+  div.className = 'msg andy'
+  div.id = 'typing'
+  div.innerHTML = '<div class="typing"><div class="dot-t"></div><div class="dot-t"></div><div class="dot-t"></div></div>'
+  msgs.appendChild(div)
+  msgs.scrollTop = msgs.scrollHeight
+}
+
+function hideTyping() {
+  document.getElementById('typing')?.remove()
+}
+
+async function send(text) {
+  if (!text?.trim() || loading) return
+  loading = true
+  addMsg('user', text)
+  inp.value = ''; resize(inp)
+  showTyping()
+
+  try {
+    const r = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text }),
+    })
+    const d = await r.json()
+    hideTyping()
+    if (d.error) addMsg('andy', '⚠️ ' + d.error)
+    else addMsg('andy', d.reply || '…')
+  } catch(e) {
+    hideTyping()
+    addMsg('andy', '⚠️ Erreur réseau — vérifie ta connexion')
+  }
+  loading = false
+}
+
+function sendInput() {
+  const v = inp.value.trim()
+  if (v) send(v)
+}
+
+function onKey(e) {
+  // Desktop : Enter envoie, Shift+Enter = newline
+  if (e.key === 'Enter' && !e.shiftKey && window.innerWidth > 600) {
+    e.preventDefault()
+    sendInput()
+  }
+}
+
+function resize(el) {
+  el.style.height = 'auto'
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px'
+}
+
+function taskMode() {
+  inp.value = '/task '
+  inp.focus()
+  resize(inp)
+}
+
+function goTasks() {
+  send('Montre-moi les tâches en cours, en queue et les dernières terminées avec leur statut pipeline.')
+}
+
+async function resetChat() {
+  await fetch('/api/chat', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ reset: true }) })
+  msgs.innerHTML = '<div class="welcome"><div class="welcome-icon">⟨◈⟩</div><div class="welcome-title">Conversation effacée</div><div class="welcome-sub">Prêt pour une nouvelle session.</div></div>'
+}
+</script>
 </body>
 </html>`
 
@@ -397,9 +612,62 @@ http.createServer(async (req, res) => {
     return
   }
 
+  // API — Chat (proxy Anthropic, histoire par session)
+  if (url.pathname === '/api/chat' && req.method === 'POST') {
+    if (!ANTHROPIC_KEY) return json({ error: 'ANTHROPIC_API_KEY manquante sur le serveur' })
+    const sess = getSession(req)
+    let body = ''
+    req.on('data', c => body += c)
+    req.on('end', async () => {
+      try {
+        const { message, reset } = JSON.parse(body || '{}')
+        const history = sess?.session?.history || []
+        if (reset) { if (sess) sess.session.history = []; return json({ ok: true }) }
+        if (!message?.trim()) return json({ error: 'message vide' })
+
+        history.push({ role: 'user', content: message.trim() })
+
+        const SYSTEM = `Tu es AnDy, l'IA personnelle d'Andrea Matlega.
+App Trackr : React 19 + Vite, mobile-first, déployée sur Vercel. Repo: ${GITHUB_REPO}. App: ${APP_URL}.
+Réponds en français. Direct, concis, sans intro inutile.
+Tu peux aussi recevoir des commandes de tâche — si le message commence par /task, crée une tâche dans andy-tasks/.`
+
+        const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+          body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1024, system: SYSTEM, stream: false, messages: history.slice(-20) }),
+          signal: AbortSignal.timeout(60000),
+        }).catch(e => ({ ok: false, _err: e.message }))
+
+        if (!apiRes.ok) {
+          const errBody = await apiRes.json?.().catch(() => ({}))
+          return json({ error: errBody?.error?.message || `API ${apiRes.status}` })
+        }
+
+        const d = await apiRes.json().catch(() => null)
+        const reply = d?.content?.[0]?.text?.trim() || ''
+        history.push({ role: 'assistant', content: reply })
+        if (sess) sess.session.history = history.slice(-40)
+
+        // /task dans le chat → injecte directement dans andy-tasks/
+        if (message.trim().toLowerCase().startsWith('/task ')) {
+          const desc = message.trim().slice(6).trim()
+          if (desc) writeFileSync(resolve(TASKS, `chat-${Date.now()}.txt`), desc, 'utf8')
+        }
+
+        return json({ reply, historyLen: history.length })
+      } catch (e) { return json({ error: e.message }) }
+    })
+    return
+  }
+
+  // Chat page (mobile-first, ajout écran d'accueil iOS)
+  if (url.pathname === '/chat') return html(200, CHAT_HTML)
+
   // Dashboard
   html(200, DASH_HTML)
 }).listen(PORT, () => {
   console.log(`Dashboard: http://62.238.12.221:${PORT}`)
+  console.log(`Chat:      http://62.238.12.221:${PORT}/chat`)
   console.log(`Password: ${PASS}`)
 })
