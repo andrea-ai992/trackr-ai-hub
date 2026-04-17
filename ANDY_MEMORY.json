@@ -1,14 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776379865881",
-      "timestamp": "2026-04-16T22:51:05.881Z",
-      "type": "error",
-      "focus": "bugs",
-      "error": "old_code not found in api/andy.js — skipping to avoid corruption",
-      "applied": false
-    },
-    {
       "id": "mem_1776379880703",
       "timestamp": "2026-04-16T22:51:20.703Z",
       "type": "error",
@@ -4072,6 +4064,20 @@
       "learned": "CoinGecko fetch calls were unguarded in trading-expert.js while the same pattern was already fixed in discord.js — the fix needs to be applied consistently across all files that consume CoinGecko responses.",
       "applied": true,
       "fromAdminTask": null
+    },
+    {
+      "id": "mem_1776386970118",
+      "timestamp": "2026-04-17T00:49:30.118Z",
+      "type": "brain_cycle",
+      "hour": 0,
+      "successRate": 3,
+      "agentsRan": 4,
+      "improved": false,
+      "improvedFile": null,
+      "focus": "bugs",
+      "errors": 0,
+      "appHealthy": true,
+      "duration": 25
     }
   ]
 }
