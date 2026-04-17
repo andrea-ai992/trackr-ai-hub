@@ -1,20 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776380371379",
-      "timestamp": "2026-04-16T22:59:31.379Z",
-      "type": "brain_cycle",
-      "hour": 22,
-      "successRate": 13,
-      "agentsRan": 3,
-      "improved": false,
-      "improvedFile": null,
-      "focus": "bugs",
-      "errors": 0,
-      "appHealthy": true,
-      "duration": 26
-    },
-    {
       "id": "mem_1776380456192",
       "timestamp": "2026-04-16T23:00:56.192Z",
       "type": "pattern_scan",
@@ -4132,6 +4118,19 @@
       "count": 4,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776387570154",
+      "timestamp": "2026-04-17T00:59:30.154Z",
+      "type": "improvement",
+      "focus": "bugs",
+      "file": "api/brain.js",
+      "problem": "fetch() call in api/brain.js to Anthropic API (askBrain) has AbortSignal.timeout(30000) but the .json() call after checking r.ok has no error handling — if Claude returns a non-JSON body (e.g. rate limit HTML page), it will throw an unhandled error crashing the Brain orchestrator",
+      "severity": "high",
+      "commit": "fix: guard askBrain() against non-JSON Anthropic responses crashing Brain orchestrator",
+      "learned": "Critical orchestration functions like askBrain() must defensively check content-type and catch .json() parse errors, because upstream API errors (rate limits, maintenance pages) often return HTML/text bodies that will throw SyntaxError and silently kill the entire Brain cycle.",
+      "applied": true,
+      "fromAdminTask": null
     }
   ]
 }
