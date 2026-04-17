@@ -1331,74 +1331,93 @@ async function cmd(input) {
       const { files, status, source } = await fetchData()
       const rows = []
       const push = s => rows.push(s ?? '')
-      const ts = new Date().toLocaleTimeString('fr-FR')
-      const W  = 56
+      const ts  = new Date().toLocaleTimeString('fr-FR')
+      const W   = 58
+      const bar = `  ${_.dark}${'─'.repeat(W)}${R}`
+
+      // Couleur source
       const srcCol = source === 'server' ? _.green : source === 'local' ? _.amber : _.red
       const srcLbl = source === 'server' ? '● SERVER' : source === 'local' ? '◎ LOCAL' : '✗ OFFLINE'
 
-      push(`  ${_.dark}${ts}${R}  ${srcCol}${srcLbl}${R}  ${_.dark}DONE${R} ${_.green}${files.done.length}${R}  ${_.dark}QUEUE${R} ${_.cyan}${files.queue.length}${R}  ${_.dark}RUN${R} ${_.amber}${files.running.length}${R}  ${_.dark}ERR${R} ${_.red}${files.error.length}${R}`)
-      push(`  ${_.dark}${'─'.repeat(W)}${R}`)
+      // Calcul stats nuit (depuis minuit)
+      const midnight = new Date(); midnight.setHours(0,0,0,0)
+      const doneTonight = status.filter(t => t.status === 'DONE' && t.startedAt && new Date(t.startedAt) > midnight)
+      const totalSec    = doneTonight.reduce((s, t) => s + (t.dur || 0), 0)
+      const cost        = (doneTonight.length * 0.10).toFixed(2)
 
-      // Running (max 2)
+      // ── Header ──
+      push(`  ${_.green}⟨◈⟩ AnDy Brain${R}  ${_.dark}│${R}  ${srcCol}${srcLbl}${R}  ${_.dark}│${R}  ${_.dark}${ts}${R}`)
+      push(bar)
+
+      // ── Stats strip ──
+      push([
+        `  `,
+        `${_.green}✓ ${files.done.length} done${R}`,
+        `  ${_.dark}│${R}  `,
+        files.running.length ? `${_.amber}⟳ ${files.running.length} run${R}` : `${_.dark}◌ idle${R}`,
+        `  ${_.dark}│${R}  `,
+        `${_.cyan}⏳ ${files.queue.length} queue${R}`,
+        `  ${_.dark}│${R}  `,
+        files.error.length ? `${_.red}✗ ${files.error.length} err${R}` : `${_.dark}no err${R}`,
+      ].join(''))
+      push(`  ${_.dark}nuit: ${_.green}${doneTonight.length} tâches${R}${_.dark}  temps: ${_.silver}${Math.round(totalSec/60)}min${R}${_.dark}  coût: ${_.amber}~$${cost}${R}`)
+      push(bar)
+
+      // ── Running ──
       if (files.running.length) {
-        for (const name of files.running.slice(0, 2)) {
+        push(`  ${_.amber}⟳ EN COURS${R}`)
+        for (const name of files.running.slice(0, 3)) {
           const e = status.find(t => t.name === name)
-          push(`  ${_.amber}⟳ ${_.bold}RUNNING${R}  ${_.silver}${name.slice(0, 34)}${R}`)
+          const elapsed = e?.startedAt ? `${Math.round((Date.now() - new Date(e.startedAt)) / 1000)}s` : ''
+          push(`  ${_.amber}  ►${R} ${_.silver}${(e?.desc || name).slice(0, 50)}${R}  ${_.dark}${elapsed}${R}`)
           push(`    ${pipeline(e?.stage || 'planning')}`)
-          push(e?.desc ? `    ${_.dark}${e.desc.slice(0, 52)}${R}` : '')
+          if (e?.files?.length) push(`    ${_.dark}fichiers: ${e.files.map(f => f.split('/').pop()).join(', ').slice(0, 50)}${R}`)
         }
       } else {
-        push(`  ${_.dark}⟨◈⟩ Idle — aucune tâche en cours${R}`)
-        push('')
+        push(`  ${_.dark}  ◌ idle — en attente de tâches${R}`)
       }
+      push(bar)
 
-      push(`  ${_.dark}${'─'.repeat(W)}${R}`)
-
-      // Queue (next 4)
-      push(`  ${_.cyan}QUEUE (${files.queue.length})${R}`)
+      // ── Queue (next 5) ──
+      push(`  ${_.cyan}FILE D'ATTENTE (${files.queue.length})${R}`)
       if (files.queue.length) {
-        for (const name of files.queue.slice(0, 4))
-          push(`  ${_.dark}· ${_.grey}${name.slice(0, 52)}${R}`)
-        if (files.queue.length > 4) push(`  ${_.dark}  … +${files.queue.length - 4} de plus${R}`)
+        for (const name of files.queue.slice(0, 5)) {
+          const label = name.replace(/\.txt$/, '').replace(/^(NUIT|auto|manual|chat)-\d*-?/, '')
+          push(`  ${_.dark}  ·  ${_.grey}${label.slice(0, 54)}${R}`)
+        }
+        if (files.queue.length > 5) push(`  ${_.dark}      … +${files.queue.length - 5} autres${R}`)
       } else {
-        push(`  ${_.dark}  vide${R}`)
+        push(`  ${_.dark}      vide${R}`)
       }
+      push(bar)
 
-      push(`  ${_.dark}${'─'.repeat(W)}${R}`)
-
-      // Done (last 5)
-      const doneFromStatus = status.filter(t => t.status === 'DONE').slice(-5).reverse()
-      const doneList = doneFromStatus.length
-        ? doneFromStatus.map(t => ({ name: t.name, dur: t.dur ? `${t.dur}s` : '—', live: !!t.stages?.live }))
-        : files.done.slice(-5).reverse().map(n => ({ name: n, dur: '—', live: true }))
-
-      push(`  ${_.green}DONE (${files.done.length})${R}`)
+      // ── Done récents (last 6) ──
+      const doneList = status.filter(t => t.status === 'DONE').slice(-6).reverse()
+      push(`  ${_.green}TERMINÉES (${files.done.length} total · ${doneTonight.length} cette nuit)${R}`)
       if (doneList.length) {
         for (const t of doneList) {
-          const liveCol = t.live ? _.green : _.amber
-          const liveTag = t.live ? 'LIVE' : 'DONE'
-          push(`  ${_.dark}✓ ${_.silver}${t.name.slice(0, 32).padEnd(32)}${R} ${_.dark}${t.dur.padStart(5)}${R}  ${liveCol}${liveTag}${R}`)
+          const dur  = t.dur ? `${t.dur}s` : '—'
+          const desc = (t.desc || t.name || '').slice(0, 44)
+          const fls  = (t.files || []).map(f => f.split('/').pop()).join(' ').slice(0, 20)
+          push(`  ${_.green}  ✓${R}  ${_.silver}${desc.padEnd(44)}${R}  ${_.dark}${dur.padStart(4)}${R}  ${_.dark}${fls}${R}`)
         }
       } else {
-        push(`  ${_.dark}  aucune${R}`)
+        push(`  ${_.dark}      aucune${R}`)
       }
 
-      // Errors (max 3)
-      push(`  ${_.dark}${'─'.repeat(W)}${R}`)
-      const errFromStatus = status.filter(t => t.status === 'ERROR').slice(-3).reverse()
-      const errList = errFromStatus.length
-        ? errFromStatus.map(t => ({ name: t.name, msg: (t.error || '').slice(0, 26) }))
-        : files.error.slice(-3).reverse().map(n => ({ name: n, msg: '' }))
-
-      push(`  ${_.red}ERRORS (${files.error.length})${R}`)
-      if (errList.length) {
+      // ── Errors ──
+      const errList = status.filter(t => t.status === 'ERROR').slice(-3).reverse()
+      if (errList.length || files.error.length) {
+        push(bar)
+        push(`  ${_.red}ERREURS (${files.error.length})${R}`)
         for (const t of errList)
-          push(`  ${_.red}✗ ${_.dark}${t.name.slice(0, 30).padEnd(30)}${R}  ${_.red}${t.msg}${R}`)
-      } else {
-        push(`  ${_.dark}  aucune${R}`)
+          push(`  ${_.red}  ✗${R}  ${_.dark}${(t.name || '').slice(0, 36).padEnd(36)}${R}  ${_.red}${(t.error || '').slice(0, 22)}${R}`)
       }
 
-      // Render — erase exactly as many lines as we drew last time
+      push(bar)
+      push(`  ${_.dark}/s refresh  /task <desc> injecter  /q queue  Ctrl+C quitter${R}`)
+
+      // Render in-place
       if (!firstDraw) process.stdout.write(`\x1b[${prevRows}A\x1b[0J`)
       else firstDraw = false
       for (const l of rows) process.stdout.write(BG + l + '\x1b[K\n')

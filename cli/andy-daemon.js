@@ -649,31 +649,69 @@ async function selfUpdate() {
   } catch {}
 }
 
-// ── Main loop ─────────────────────────────────────────────────────────────────
+// ── Parallel workers ──────────────────────────────────────────────────────────
 // Coût estimé par tâche : ~$0.08-0.12 (Haiku plan+review, Sonnet code)
 // $20 de crédits ≈ 160-250 tâches
-const PAUSE_BETWEEN_TASKS = 20   // secondes entre chaque tâche (évite burst)
-const PAUSE_BETWEEN_CYCLES = 120 // secondes entre cycles d'auto-gen
+// Avec 3 workers parallèles → 3x plus vite, même coût total
 
-async function main() {
+const WORKER_COUNT     = 3    // agents parallèles (adapte si rate-limit)
+const PAUSE_AFTER_TASK = 5    // secondes après chaque tâche par worker
+const PAUSE_IDLE       = 30   // secondes si pas de tâche dispo
+
+// Mutex en mémoire — évite que 2 workers prennent le même fichier
+const claimedTasks = new Set()
+
+// Tente de réclamer un fichier .txt de la queue (atomique via rename)
+function claimNextTask() {
+  const queue = readdirSync(TASKS_DIR)
+    .filter(f => f.endsWith('.txt') && !claimedTasks.has(f))
+    .sort()  // priorité alphabétique (NUIT- avant auto-)
+  for (const f of queue) {
+    if (claimedTasks.has(f)) continue
+    claimedTasks.add(f)
+    return resolve(TASKS_DIR, f)
+  }
+  return null
+}
+
+// Un worker individuel — tourne indéfiniment
+async function worker(id) {
+  // Décalage de démarrage pour éviter le burst API
+  await sl(id * 4000)
+  log(`Worker #${id} démarré`)
+
+  while (true) {
+    const fp = claimNextTask()
+    if (fp) {
+      const fname = fp.split('/').pop()
+      try {
+        if (existsSync(fp)) await runTask(fp)
+      } catch (e) {
+        log(`Worker #${id} erreur inattendue: ${e.message}`)
+      } finally {
+        claimedTasks.delete(fname)
+      }
+      await sl(PAUSE_AFTER_TASK * 1000)
+    } else {
+      // Pas de tâche dispo — ce worker attend
+      await sl(PAUSE_IDLE * 1000)
+    }
+  }
+}
+
+// Superviseur — tourne en fond, génère des tâches + maintenance
+async function supervisor() {
   mkdirSync(TASKS_DIR, { recursive: true })
-  log('=== AnDy Daemon démarré ===')
-  log(`Repo: ${GITHUB_REPO} | App: ${APP_URL}`)
-  log(`Modèles: code=${MODEL_SMART} plan/review/gen=${MODEL_FAST}`)
 
-  // Nettoyage des .error et .running du démarrage précédent
+  // Nettoyage des .running/.error du démarrage précédent
   const stale = readdirSync(TASKS_DIR).filter(f => f.endsWith('.running') || f.endsWith('.error'))
   if (stale.length) {
-    const archiveDir = resolve(TASKS_DIR, '_archive')
-    mkdirSync(archiveDir, { recursive: true })
+    const arch = resolve(TASKS_DIR, '_archive')
+    mkdirSync(arch, { recursive: true })
     for (const f of stale) {
-      try {
-        const src = resolve(TASKS_DIR, f)
-        const dst = resolve(archiveDir, f)
-        renameSync(src, dst)
-      } catch {}
+      try { renameSync(resolve(TASKS_DIR, f), resolve(arch, f)) } catch {}
     }
-    log(`Archivé ${stale.length} fichier(s) stale → andy-tasks/_archive/`)
+    log(`Archivé ${stale.length} fichier(s) stale`)
   }
 
   scheduleDiscordRecap()
@@ -681,45 +719,45 @@ async function main() {
   while (true) {
     await waitForOnline()
     await flushSyncQueue()
-
-    const queue = readdirSync(TASKS_DIR).filter(f => f.endsWith('.txt')).sort()
-
-    // Self-update depuis GitHub toutes les heures
     await selfUpdate()
 
-    // Flush notif si ça fait 30min sans envoyer (même si < 5 tâches)
+    // Flush notif Discord si 30min sans envoi
     if (Date.now() - lastNotifTime > NOTIF_EVERY_MS) await flushDiscordNotif(true)
 
     // Export AI data toutes les EXPORT_EVERY_N tâches
     const doneSoFar = taskLog.filter(t => t.status === 'DONE').length
     if (doneSoFar > 0 && doneSoFar % EXPORT_EVERY_N === 0 && doneSoFar !== lastExportCount) {
       lastExportCount = doneSoFar
-      await exportAIData()
+      exportAIData()  // fire-and-forget, pas await
     }
 
-    if (queue.length) {
-      log(`${queue.length} tâche(s) en queue`)
-      for (const f of queue) {
-        const fp = resolve(TASKS_DIR, f)
-        if (existsSync(fp)) {
-          await runTask(fp)
-          await sl(PAUSE_BETWEEN_TASKS * 1000)
-        }
-      }
-    } else {
+    // Génère de nouvelles tâches si la queue est faible
+    const queueLen = readdirSync(TASKS_DIR).filter(f => f.endsWith('.txt')).length
+    if (queueLen < WORKER_COUNT * 2) {
       await generateNextTasks()
-      const after = readdirSync(TASKS_DIR).filter(f => f.endsWith('.txt'))
-      if (!after.length) {
-        log(`Pas de tâches — pause ${PAUSE_BETWEEN_CYCLES}s`)
-        await sl(PAUSE_BETWEEN_CYCLES * 1000)
-      } else {
-        // Petite pause avant de traiter le nouveau cycle
-        await sl(10000)
-      }
     }
 
-    await sl(500)
+    await sl(15000)  // check toutes les 15s
   }
+}
+
+async function main() {
+  log('=== AnDy Daemon démarré ===')
+  log(`Repo: ${GITHUB_REPO} | App: ${APP_URL}`)
+  log(`Modèles: code=${MODEL_SMART} fast=${MODEL_FAST}`)
+  log(`Workers parallèles: ${WORKER_COUNT}`)
+
+  mkdirSync(TASKS_DIR, { recursive: true })
+
+  // Lance tous les workers + superviseur en parallèle
+  const promises = [
+    supervisor(),
+    ...Array.from({ length: WORKER_COUNT }, (_, i) => worker(i + 1)),
+  ]
+
+  await Promise.allSettled(promises)
+  log('FATAL: tous les workers se sont arrêtés')
+  process.exit(1)
 }
 
 main().catch(err => {
