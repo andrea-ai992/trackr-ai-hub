@@ -313,6 +313,7 @@ async function chat(userMessage) {
         'x-api-key':         API_KEY,
         'anthropic-version': '2023-06-01',
         'content-type':      'application/json',
+        ...(useThinking ? { 'anthropic-beta': 'interleaved-thinking-2025-05-14' } : {}),
       },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(120000),
