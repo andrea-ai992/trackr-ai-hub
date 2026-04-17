@@ -1,19 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776387078289",
-      "timestamp": "2026-04-17T00:51:18.289Z",
-      "type": "improvement",
-      "focus": "bugs",
-      "file": "api/morning.js",
-      "problem": "api/morning.js fetchMarkets() calls .json() directly without checking response status or content-type, risking parse errors on non-JSON responses",
-      "severity": "high",
-      "commit": "fix: add content-type check and error logging to fetchMarkets() in api/morning.js",
-      "learned": "Empty catch blocks are consistently used across this codebase, hiding errors silently — every fetch helper needs both content-type validation and at minimum a console.warn in the catch clause.",
-      "applied": true,
-      "fromAdminTask": null
-    },
-    {
       "id": "mem_1776387079205",
       "timestamp": "2026-04-17T00:51:19.205Z",
       "type": "brain_cycle",
@@ -3401,6 +3388,14 @@
       "count": 4,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776392946922",
+      "timestamp": "2026-04-17T02:29:06.922Z",
+      "type": "error",
+      "focus": "security",
+      "error": "Anthropic API → 400",
+      "applied": false
     }
   ]
 }
