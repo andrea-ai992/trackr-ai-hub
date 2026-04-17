@@ -1,19 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776380067404",
-      "timestamp": "2026-04-16T22:54:27.404Z",
-      "type": "improvement",
-      "focus": "bugs",
-      "file": "api/andy.js",
-      "problem": "fetch() calls in api/andy.js without AbortSignal.timeout() on the Anthropic API call (missing in runServerTool's internal calls) — but more critically, the Andy.jsx frontend fetches GitHub API and internal /api/memory without any timeout or error handling on .json() parsing",
-      "severity": "medium",
-      "commit": "fix: guard fetch_price tool against SSE response and missing previousClose in api/andy.js",
-      "learned": "The fetch_price tool in api/andy.js was calling .json() on Yahoo Finance without checking content-type (SSE risk) and was dividing by meta.previousClose which can be undefined/null causing NaN in change/pct calculations.",
-      "applied": true,
-      "fromAdminTask": null
-    },
-    {
       "id": "mem_1776380070447",
       "timestamp": "2026-04-16T22:54:30.447Z",
       "type": "no_change",
@@ -4083,6 +4070,41 @@
       "errors": 0,
       "appHealthy": true,
       "duration": 27
+    },
+    {
+      "id": "mem_1776387249867",
+      "timestamp": "2026-04-17T00:54:09.867Z",
+      "type": "pattern_scan",
+      "focus": "bugs",
+      "findings": [
+        {
+          "id": "sse_json_parse",
+          "file": "api/discord.js",
+          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
+          "severity": "critical"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/andy.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/brain.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/trading-expert.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        }
+      ],
+      "count": 4,
+      "applied": false,
+      "note": "Patterns detected before Claude analysis — guiding fix priority"
     }
   ]
 }
