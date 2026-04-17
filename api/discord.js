@@ -31,9 +31,19 @@ async function getQuickSignal(symbol, type) {
   let price = null, change24h = null, rsi = null
   if (type === 'crypto') {
     const id = CRYPTO_ID_MAP[symbol] || symbol.toLowerCase()
+    async function safeJson(r) {
+      if (!r.ok) { await r.body?.cancel().catch(() => {}); return null }
+      const ct = r.headers.get('content-type') || ''
+      if (!ct.includes('application/json') && !ct.includes('text/json') && !ct.includes('text/plain')) {
+        console.warn(`CoinGecko unexpected content-type "${ct}", skipping .json()`)
+        await r.body?.cancel().catch(() => {})
+        return null
+      }
+      return r.json().catch(e => { console.warn('CoinGecko JSON parse error:', e.message); return null })
+    }
     const [priceRes, ohlcRes] = await Promise.allSettled([
-      fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd&include_24hr_change=true`, { signal: AbortSignal.timeout(4000) }).then(r => r.json()),
-      fetch(`https://api.coingecko.com/api/v3/coins/${id}/ohlc?vs_currency=usd&days=14`, { signal: AbortSignal.timeout(4000) }).then(r => r.json()),
+      fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd&include_24hr_change=true`, { signal: AbortSignal.timeout(4000) }).then(safeJson),
+      fetch(`https://api.coingecko.com/api/v3/coins/${id}/ohlc?vs_currency=usd&days=14`, { signal: AbortSignal.timeout(4000) }).then(safeJson),
     ])
     if (priceRes.status === 'fulfilled') { const d = priceRes.value?.[id]; price = d?.usd; change24h = d?.usd_24h_change }
     if (ohlcRes.status === 'fulfilled' && Array.isArray(ohlcRes.value)) rsi = quickRSI(ohlcRes.value.map(c => c[4]))
