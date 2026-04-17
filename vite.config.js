@@ -45,7 +45,7 @@ export default defineConfig(({ mode }) => ({
             urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'api-cache-v3',
+              cacheName: 'api-cache-v4',
               networkTimeoutSeconds: 10,
               expiration: {
                 maxEntries: 100,
@@ -58,7 +58,7 @@ export default defineConfig(({ mode }) => ({
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|avif|ico)$/i,
             handler: 'StaleWhileRevalidate',
             options: {
-              cacheName: 'images-cache-v3',
+              cacheName: 'images-cache-v4',
               expiration: {
                 maxEntries: 60,
                 maxAgeSeconds: 60 * 60 * 24 * 30,
@@ -70,7 +70,7 @@ export default defineConfig(({ mode }) => ({
             urlPattern: /\.(?:woff2)$/i,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'fonts-cache-v3',
+              cacheName: 'fonts-cache-v4',
               expiration: {
                 maxEntries: 20,
                 maxAgeSeconds: 60 * 60 * 24 * 365,
@@ -82,7 +82,7 @@ export default defineConfig(({ mode }) => ({
             urlPattern: /\.(?:js|css)$/i,
             handler: 'StaleWhileRevalidate',
             options: {
-              cacheName: 'static-assets-v3',
+              cacheName: 'static-assets-v4',
               expiration: {
                 maxEntries: 100,
                 maxAgeSeconds: 60 * 60 * 24 * 7,
@@ -94,7 +94,7 @@ export default defineConfig(({ mode }) => ({
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'StaleWhileRevalidate',
             options: {
-              cacheName: 'google-fonts-stylesheets-v3',
+              cacheName: 'google-fonts-stylesheets-v4',
               expiration: {
                 maxEntries: 10,
                 maxAgeSeconds: 60 * 60 * 24 * 365,
@@ -105,7 +105,7 @@ export default defineConfig(({ mode }) => ({
             urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'google-fonts-webfonts-v3',
+              cacheName: 'google-fonts-webfonts-v4',
               expiration: {
                 maxEntries: 30,
                 maxAgeSeconds: 60 * 60 * 24 * 365,
@@ -206,15 +206,41 @@ export default defineConfig(({ mode }) => ({
         manualChunks(id) {
           if (id.includes('node_modules')) {
             if (id.includes('react-dom')) return 'vendor-react-dom'
-            if (id.includes('react/') || id.includes('react-is') || id.includes('scheduler')) return 'vendor-react'
+            if (
+              id.includes('react/') ||
+              id.includes('react-is') ||
+              id.includes('scheduler')
+            ) return 'vendor-react'
             if (id.includes('react-router')) return 'vendor-router'
-            if (id.includes('recharts') || id.includes('d3-') || id.includes('victory')) return 'vendor-charts'
+            if (
+              id.includes('recharts') ||
+              id.includes('d3-') ||
+              id.includes('victory')
+            ) return 'vendor-charts'
             if (id.includes('framer-motion')) return 'vendor-motion'
-            if (id.includes('@radix-ui') || id.includes('lucide-react')) return 'vendor-ui'
-            if (id.includes('firebase') || id.includes('@firebase')) return 'vendor-firebase'
-            if (id.includes('openai') || id.includes('anthropic') || id.includes('cohere')) return 'vendor-ai'
-            if (id.includes('date-fns') || id.includes('dayjs') || id.includes('luxon')) return 'vendor-date'
-            if (id.includes('zustand') || id.includes('jotai') || id.includes('redux')) return 'vendor-state'
+            if (
+              id.includes('@radix-ui') ||
+              id.includes('lucide-react')
+            ) return 'vendor-ui'
+            if (
+              id.includes('firebase') ||
+              id.includes('@firebase')
+            ) return 'vendor-firebase'
+            if (
+              id.includes('openai') ||
+              id.includes('anthropic') ||
+              id.includes('cohere')
+            ) return 'vendor-ai'
+            if (
+              id.includes('date-fns') ||
+              id.includes('dayjs') ||
+              id.includes('luxon')
+            ) return 'vendor-date'
+            if (
+              id.includes('zustand') ||
+              id.includes('jotai') ||
+              id.includes('redux')
+            ) return 'vendor-state'
             if (id.includes('web-vitals')) return 'vendor-vitals'
             return 'vendor-misc'
           }
@@ -222,9 +248,12 @@ export default defineConfig(({ mode }) => ({
         chunkFileNames: 'assets/js/[name]-[hash].js',
         entryFileNames: 'assets/js/[name]-[hash].js',
         assetFileNames: ({ name }) => {
-          if (/\.(png|jpe?g|svg|gif|tiff|bmp|ico|webp|avif)$/i.test(name ?? '')) return 'assets/images/[name]-[hash][extname]'
-          if (/\.(woff2)$/i.test(name ?? '')) return 'assets/fonts/[name]-[hash][extname]'
-          if (/\.css$/i.test(name ?? '')) return 'assets/css/[name]-[hash][extname]'
+          if (/\.(png|jpe?g|svg|gif|tiff|bmp|ico|webp|avif)$/i.test(name ?? ''))
+            return 'assets/images/[name]-[hash][extname]'
+          if (/\.(woff2)$/i.test(name ?? ''))
+            return 'assets/fonts/[name]-[hash][extname]'
+          if (/\.css$/i.test(name ?? ''))
+            return 'assets/css/[name]-[hash][extname]'
           return 'assets/[name]-[hash][extname]'
         },
       },
@@ -311,160 +340,167 @@ FICHIER 2: src/services/analyticsService.js
 import { onCLS, onFCP, onFID, onINP, onLCP, onTTFB } from 'web-vitals'
 
 const IS_PROD = import.meta.env.PROD
-const IS_DEV = import.meta.env.DEV
+const ANALYTICS_ENDPOINT = import.meta.env.VITE_ANALYTICS_ENDPOINT ?? null
+const SAMPLE_RATE = Number(import.meta.env.VITE_ANALYTICS_SAMPLE_RATE ?? 1.0)
 
 const THRESHOLDS = {
-  LCP: { good: 1200, needsImprovement: 2500 },
+  LCP: { good: 2500, needsImprovement: 4000 },
   FID: { good: 100, needsImprovement: 300 },
-  CLS: { good: 0.05, needsImprovement: 0.1 },
+  INP: { good: 200, needsImprovement: 500 },
+  CLS: { good: 0.1, needsImprovement: 0.25 },
   FCP: { good: 1800, needsImprovement: 3000 },
   TTFB: { good: 800, needsImprovement: 1800 },
-  INP: { good: 200, needsImprovement: 500 },
 }
 
-const SESSION_ID = (() => {
-  try {
-    const stored = sessionStorage.getItem('trackr_session_id')
-    if (stored) return stored
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
-    sessionStorage.setItem('trackr_session_id', id)
-    return id
-  } catch {
-    return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
-  }
-})()
-
-const getNetworkInfo = () => {
-  try {
-    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection
-    if (!conn) return { effectiveType: 'unknown', rtt: null, downlink: null, saveData: false }
-    return {
-      effectiveType: conn.effectiveType || 'unknown',
-      rtt: conn.rtt ?? null,
-      downlink: conn.downlink ?? null,
-      saveData: conn.saveData || false,
-    }
-  } catch {
-    return { effectiveType: 'unknown', rtt: null, downlink: null, saveData: false }
-  }
-}
-
-const getDeviceInfo = () => {
-  try {
-    return {
-      devicePixelRatio: window.devicePixelRatio || 1,
-      screenWidth: window.screen?.width || 0,
-      screenHeight: window.screen?.height || 0,
-      viewportWidth: window.innerWidth || 0,
-      viewportHeight: window.innerHeight || 0,
-      memoryGB: navigator.deviceMemory || null,
-      hardwareConcurrency: navigator.hardwareConcurrency || null,
-      isMobile: /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent),
-      touchSupport: navigator.maxTouchPoints > 0,
-    }
-  } catch {
-    return {}
-  }
-}
-
-const getRating = (metricName, value) => {
-  const threshold = THRESHOLDS[metricName]
-  if (!threshold) return 'unknown'
-  if (value <= threshold.good) return 'good'
-  if (value <= threshold.needsImprovement) return 'needs-improvement'
+function getRating(name, value) {
+  const t = THRESHOLDS[name]
+  if (!t) return 'unknown'
+  if (value <= t.good) return 'good'
+  if (value <= t.needsImprovement) return 'needs-improvement'
   return 'poor'
 }
 
-const metricsBuffer = []
-let flushScheduled = false
+function shouldSample() {
+  return Math.random() < SAMPLE_RATE
+}
 
-const scheduleFlush = () => {
-  if (flushScheduled) return
-  flushScheduled = true
-  if ('scheduler' in window && 'postTask' in window.scheduler) {
-    window.scheduler.postTask(flushMetrics, { priority: 'background' })
-  } else if ('requestIdleCallback' in window) {
-    window.requestIdleCallback(flushMetrics, { timeout: 5000 })
-  } else {
-    setTimeout(flushMetrics, 2000)
+function buildPayload(metric) {
+  const rating = getRating(metric.name, metric.value)
+  return {
+    name: metric.name,
+    value: Math.round(metric.name === 'CLS' ? metric.value * 1000 : metric.value),
+    rating,
+    delta: Math.round(metric.delta),
+    id: metric.id,
+    navigationType: metric.navigationType ?? 'unknown',
+    url: location.href,
+    userAgent: navigator.userAgent,
+    connection: navigator?.connection?.effectiveType ?? 'unknown',
+    deviceMemory: navigator?.deviceMemory ?? 'unknown',
+    hardwareConcurrency: navigator?.hardwareConcurrency ?? 'unknown',
+    timestamp: Date.now(),
+    environment: IS_PROD ? 'production' : 'development',
   }
 }
 
-const flushMetrics = async () => {
-  flushScheduled = false
-  if (metricsBuffer.length === 0) return
-
-  const batch = metricsBuffer.splice(0, metricsBuffer.length)
-
-  if (IS_DEV) {
-    batch.forEach((m) => {
-      const rating = getRating(m.name, m.value)
-      const emoji = rating === 'good' ? '✅' : rating === 'needs-improvement' ? '⚠️' : '❌'
-      console.group(`[Trackr Analytics] ${emoji} ${m.name}`)
-      console.log('Value:', m.name === 'CLS' ? m.value.toFixed(4) : `${Math.round(m.value)}ms`)
-      console.log('Rating:', rating)
-      console.log('Full payload:', m)
-      console.groupEnd()
-    })
-  }
-
-  if (!IS_PROD) return
-
+async function sendToEndpoint(payload) {
+  if (!ANALYTICS_ENDPOINT) return
   try {
-    await sendToVercelAnalytics(batch)
-  } catch (err) {
-    if (IS_DEV) console.warn('[Trackr Analytics] Vercel send failed:', err)
-    try {
-      await sendViaBeacon(batch)
-    } catch (beaconErr) {
-      if (IS_DEV) console.warn('[Trackr Analytics] Beacon fallback failed:', beaconErr)
-    }
-  }
-}
-
-const sendToVercelAnalytics = async (batch) => {
-  if (typeof window.__va === 'function') {
-    batch.forEach((metric) => {
-      window.__va('event', {
-        name: metric.name,
-        value: metric.value,
-        rating: metric.rating,
-        delta: metric.delta,
-        id: metric.id,
-        navigationType: metric.navigationType,
-        url: metric.url,
-        sessionId: metric.sessionId,
-        deviceInfo: metric.deviceInfo,
-        networkInfo: metric.networkInfo,
+    if (navigator.sendBeacon) {
+      const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' })
+      navigator.sendBeacon(ANALYTICS_ENDPOINT, blob)
+    } else {
+      await fetch(ANALYTICS_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        keepalive: true,
       })
-    })
-    return
+    }
+  } catch {
+    // silent fail — analytics must never break the app
   }
+}
 
-  if ('sendBeacon' in navigator) {
-    const payload = JSON.stringify({ metrics: batch, timestamp: Date.now() })
-    const blob = new Blob([payload], { type: 'application/json' })
-    navigator.sendBeacon('/_vercel/insights/vitals', blob)
-    return
-  }
-
-  const response = await fetch('/_vercel/insights/vitals', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ metrics: batch, timestamp: Date.now() }),
-    keepalive: true,
+function logToConsole(payload) {
+  if (IS_PROD) return
+  const emoji =
+    payload.rating === 'good' ? '✅' :
+    payload.rating === 'needs-improvement' ? '⚠️' : '❌'
+  const unit = payload.name === 'CLS' ? '' : 'ms'
+  const displayValue =
+    payload.name === 'CLS'
+      ? (payload.value / 1000).toFixed(4)
+      : payload.value
+  console.groupCollapsed(
+    `%c[Web Vitals] ${emoji} ${payload.name}: ${displayValue}${unit} (${payload.rating})`,
+    `color: ${payload.rating === 'good' ? '#22c55e' : payload.rating === 'needs-improvement' ? '#f59e0b' : '#ef4444'}; font-weight: bold;`
+  )
+  console.table({
+    value: `${displayValue}${unit}`,
+    rating: payload.rating,
+    delta: `${payload.delta}${unit}`,
+    navigationType: payload.navigationType,
+    connection: payload.connection,
+    url: payload.url,
   })
-
-  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  console.groupEnd()
 }
 
-const sendViaBeacon = async (batch) => {
-  const payload = JSON.stringify({ metrics: batch, source: 'beacon-fallback', timestamp: Date.now() })
-  const blob = new Blob([payload], { type: 'application/json' })
-  if ('sendBeacon' in navigator) {
-    navigator.sendBeacon('/api/vitals', blob)
+function handleMetric(metric) {
+  if (!shouldSample()) return
+  const payload = buildPayload(metric)
+  logToConsole(payload)
+  sendToEndpoint(payload)
+}
+
+let initialized = false
+
+export function initWebVitals() {
+  if (initialized) return
+  initialized = true
+  try {
+    onLCP(handleMetric, { reportAllChanges: false })
+    onFID(handleMetric)
+    onCLS(handleMetric, { reportAllChanges: false })
+    onINP(handleMetric, { reportAllChanges: false })
+    onFCP(handleMetric)
+    onTTFB(handleMetric)
+  } catch {
+    // web-vitals not supported in this environment
   }
 }
 
-const createMetricPayload = (metric) => {
-  const network = getNetworkInfo()
+export function measureCustomMetric(name, value, attributes = {}) {
+  if (!shouldSample()) return
+  const payload = {
+    name,
+    value: Math.round(value),
+    rating: 'custom',
+    delta: 0,
+    id: `custom-${name}-${Date.now()}`,
+    navigationType: 'custom',
+    url: location.href,
+    userAgent: navigator.userAgent,
+    timestamp: Date.now(),
+    environment: IS_PROD ? 'production' : 'development',
+    ...attributes,
+  }
+  logToConsole(payload)
+  sendToEndpoint(payload)
+}
+
+export function measureRouteChange(from, to, duration) {
+  measureCustomMetric('route-change', duration, {
+    from,
+    to,
+    rating: duration < 200 ? 'good' : duration < 500 ? 'needs-improvement' : 'poor',
+  })
+}
+
+---
+
+FICHIER 3: src/App.jsx
+
+import {
+  createBrowserRouter,
+  RouterProvider,
+  Outlet,
+  NavLink,
+  useLocation,
+  ScrollRestoration,
+} from 'react-router-dom'
+import {
+  Suspense,
+  lazy,
+  useEffect,
+  useRef,
+  startTransition,
+  useCallback,
+} from 'react'
+import { initWebVitals, measureRouteChange } from '@services/analyticsService'
+
+// ─── Eager-loaded: shell visible instantly ────────────────────────────────────
+import ErrorBoundary from '@components/ErrorBoundary'
+import BottomNav from '@components/BottomNav'
+import TopBar from '@components/
