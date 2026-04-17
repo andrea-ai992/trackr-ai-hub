@@ -1,35 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776442628691",
-      "timestamp": "2026-04-17T16:17:08.691Z",
-      "type": "pattern_scan",
-      "focus": "trading",
-      "findings": [
-        {
-          "id": "sse_json_parse",
-          "file": "api/discord.js",
-          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
-          "severity": "critical"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/trading-expert.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/andy.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        }
-      ],
-      "count": 3,
-      "applied": false,
-      "note": "Patterns detected before Claude analysis — guiding fix priority"
-    },
-    {
       "id": "mem_1776442707625",
       "timestamp": "2026-04-17T16:18:27.625Z",
       "type": "pattern_scan",
@@ -3077,6 +3048,14 @@
       "count": 4,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776450808317",
+      "timestamp": "2026-04-17T18:33:28.317Z",
+      "type": "error",
+      "focus": "security",
+      "error": "Anthropic API → 400",
+      "applied": false
     }
   ]
 }
