@@ -1,20 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776380071128",
-      "timestamp": "2026-04-16T22:54:31.128Z",
-      "type": "brain_cycle",
-      "hour": 22,
-      "successRate": 8,
-      "agentsRan": 4,
-      "improved": false,
-      "improvedFile": null,
-      "focus": "bugs",
-      "errors": 0,
-      "appHealthy": true,
-      "duration": 26
-    },
-    {
       "id": "mem_1776380156231",
       "timestamp": "2026-04-16T22:55:56.231Z",
       "type": "pattern_scan",
@@ -4132,6 +4118,19 @@
       "count": 4,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776387273418",
+      "timestamp": "2026-04-17T00:54:33.418Z",
+      "type": "improvement",
+      "focus": "bugs",
+      "file": "api/andy.js",
+      "problem": "fetch_crypto_price in api/andy.js calls .json() directly without checking response status or content-type",
+      "severity": "high",
+      "commit": "fix: guard fetch_crypto_price in andy.js against non-JSON CoinGecko responses",
+      "learned": "The fetch_crypto_price tool in andy.js was the last remaining unguarded .json() call in the CoinGecko fetch pattern that has already been fixed everywhere else in the codebase.",
+      "applied": true,
+      "fromAdminTask": null
     }
   ]
 }
