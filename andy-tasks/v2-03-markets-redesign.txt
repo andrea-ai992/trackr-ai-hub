@@ -1,0 +1,1 @@
+Redesign src/pages/Markets.jsx : tabs Stocks / Crypto avec pill animé neon, liste stocks avec logo placeholder, prix live depuis /api/crypto-prices et Yahoo Finance (fetch direct), sparkline SVG 7j simplifié, badge rouge/vert % variation pulsant, search bar sticky filtre en temps réel, skeleton loader pendant fetch. CSS vars --green --red --bg2. Mobile-first.
