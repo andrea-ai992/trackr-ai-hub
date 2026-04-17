@@ -1,19 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776387273418",
-      "timestamp": "2026-04-17T00:54:33.418Z",
-      "type": "improvement",
-      "focus": "bugs",
-      "file": "api/andy.js",
-      "problem": "fetch_crypto_price in api/andy.js calls .json() directly without checking response status or content-type",
-      "severity": "high",
-      "commit": "fix: guard fetch_crypto_price in andy.js against non-JSON CoinGecko responses",
-      "learned": "The fetch_crypto_price tool in andy.js was the last remaining unguarded .json() call in the CoinGecko fetch pattern that has already been fixed everywhere else in the codebase.",
-      "applied": true,
-      "fromAdminTask": null
-    },
-    {
       "id": "mem_1776387274586",
       "timestamp": "2026-04-17T00:54:34.586Z",
       "type": "brain_cycle",
@@ -3369,6 +3356,41 @@
       "focus": "bugs",
       "error": "Anthropic API → 400",
       "applied": false
+    },
+    {
+      "id": "mem_1776393052484",
+      "timestamp": "2026-04-17T02:30:52.484Z",
+      "type": "pattern_scan",
+      "focus": "security",
+      "findings": [
+        {
+          "id": "sse_json_parse",
+          "file": "api/discord.js",
+          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
+          "severity": "critical"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/andy.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/trading-expert.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/brain.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        }
+      ],
+      "count": 4,
+      "applied": false,
+      "note": "Patterns detected before Claude analysis — guiding fix priority"
     }
   ]
 }
