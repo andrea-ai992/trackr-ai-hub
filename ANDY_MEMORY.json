@@ -1,41 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776381063278",
-      "timestamp": "2026-04-16T23:11:03.278Z",
-      "type": "pattern_scan",
-      "focus": "bugs",
-      "findings": [
-        {
-          "id": "sse_json_parse",
-          "file": "api/discord.js",
-          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
-          "severity": "critical"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/andy.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/brain.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/trading-expert.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        }
-      ],
-      "count": 4,
-      "applied": false,
-      "note": "Patterns detected before Claude analysis — guiding fix priority"
-    },
-    {
       "id": "mem_1776381080853",
       "timestamp": "2026-04-16T23:11:20.853Z",
       "type": "brain_cycle",
@@ -4104,6 +4069,14 @@
       "count": 4,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776388176231",
+      "timestamp": "2026-04-17T01:09:36.231Z",
+      "type": "error",
+      "focus": "bugs",
+      "error": "Bad control character in string literal in JSON at position 2152 (line 6 column 29)",
+      "applied": false
     }
   ]
 }
