@@ -78,9 +78,19 @@ async function fetchMarkets() {
       `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`,
       { signal: AbortSignal.timeout(8000) }
     )
-    if (!r.ok) return null
-    return r.json()
-  } catch { return null }
+    if (!r.ok) {
+      console.warn(`fetchMarkets: CoinGecko HTTP ${r.status}`)
+      await r.body?.cancel().catch(() => {})
+      return null
+    }
+    const ct = r.headers.get('content-type') || ''
+    if (!ct.includes('application/json') && !ct.includes('text/json') && !ct.includes('text/plain')) {
+      console.warn(`fetchMarkets: unexpected content-type "${ct}", skipping .json()`)
+      await r.body?.cancel().catch(() => {})
+      return null
+    }
+    return r.json().catch(e => { console.warn('fetchMarkets: JSON parse error:', e.message); return null })
+  } catch (e) { console.warn('fetchMarkets error:', e.message); return null }
 }
 
 // ─── Alpha Vantage (primary — reliable, real-time) ───────────────────────────
