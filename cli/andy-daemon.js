@@ -8,6 +8,7 @@
 import { existsSync, readFileSync, writeFileSync, renameSync, readdirSync, mkdirSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { execSync } from 'child_process'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
 const ROOT  = resolve(__dir, '..')
@@ -29,7 +30,6 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN || ''
 const GITHUB_REPO  = process.env.GITHUB_REPO  || 'andrea-ai992/trackr-ai-hub'
 const GITHUB_API   = 'https://api.github.com'
 const BOT_TOKEN    = process.env.DISCORD_BOT_TOKEN || ''
-const GUILD_ID     = process.env.DISCORD_GUILD_ID  || ''
 const CH_MORNING   = process.env.DISCORD_CH_MORNING || process.env.DISCORD_CH_BRAIN || ''
 const CH_UPDATES   = process.env.DISCORD_CH_UPDATES || CH_MORNING  // channel pour les notifs live
 const DISCORD_API  = 'https://discord.com/api/v10'
@@ -473,6 +473,123 @@ function scheduleDiscordRecap() {
   }, ms)
 }
 
+// ── AI Data Export — snapshot portable de toute l'IA ─────────────────────────
+const AI_DATA_DIR   = resolve(ROOT, 'ai-data')
+const MEMORY_FILE   = resolve(ROOT, 'ANDY_MEMORY.json')
+let   lastExportCount = 0
+const EXPORT_EVERY_N  = 10  // exporte toutes les 10 tâches terminées
+
+async function exportAIData() {
+  try {
+    mkdirSync(AI_DATA_DIR, { recursive: true })
+
+    const allStatus = readStatus()
+    const done   = allStatus.filter(t => t.status === 'DONE')
+    const errors = allStatus.filter(t => t.status === 'ERROR')
+    const files  = readdirSync(TASKS_DIR).filter(f => !f.startsWith('.'))
+
+    // Charge la mémoire Andy
+    let memory = {}
+    try { memory = JSON.parse(readFileSync(MEMORY_FILE, 'utf8')) } catch {}
+
+    // Stats agrégées
+    const stats = {
+      exportedAt:   new Date().toISOString(),
+      totalDone:    done.length + files.filter(f => f.endsWith('.done')).length,
+      totalErrors:  errors.length + files.filter(f => f.endsWith('.error')).length,
+      totalQueue:   files.filter(f => f.endsWith('.txt')).length,
+      autoGenCycles: autoGenCount,
+      uptime:       process.uptime(),
+      repo:         GITHUB_REPO,
+      app:          APP_URL,
+      model:        { code: MODEL_SMART, fast: MODEL_FAST },
+    }
+
+    // Domaines les plus travaillés
+    const domainCount = {}
+    for (const t of done) {
+      const d = (t.desc || '').split('/')[0].trim() || 'other'
+      domainCount[d] = (domainCount[d] || 0) + 1
+    }
+
+    // Fichiers les plus modifiés
+    const fileCount = {}
+    for (const t of done) {
+      for (const f of (t.files || [])) {
+        fileCount[f] = (fileCount[f] || 0) + 1
+      }
+    }
+    const topFiles = Object.entries(fileCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([f, n]) => ({ file: f, times: n }))
+
+    // Écrit tous les fichiers d'export
+    writeFileSync(resolve(AI_DATA_DIR, 'stats.json'),
+      JSON.stringify(stats, null, 2), 'utf8')
+    writeFileSync(resolve(AI_DATA_DIR, 'task-history.json'),
+      JSON.stringify(allStatus.slice(-500), null, 2), 'utf8')
+    writeFileSync(resolve(AI_DATA_DIR, 'memory.json'),
+      JSON.stringify(memory, null, 2), 'utf8')
+    writeFileSync(resolve(AI_DATA_DIR, 'domains.json'),
+      JSON.stringify({ domains: domainCount, topFiles }, null, 2), 'utf8')
+    writeFileSync(resolve(AI_DATA_DIR, 'README.md'), [
+      '# AnDy AI Data Export',
+      '',
+      `> Généré automatiquement — ${new Date().toLocaleString('fr-FR')}`,
+      '',
+      '## Contenu',
+      '| Fichier | Description |',
+      '|---------|-------------|',
+      '| `stats.json` | Stats globales (tâches, uptime, modèles) |',
+      '| `task-history.json` | Historique des 500 dernières tâches |',
+      '| `memory.json` | Mémoire complète d\'AnDy (ANDY_MEMORY.json) |',
+      '| `domains.json` | Domaines travaillés + fichiers les plus modifiés |',
+      '',
+      '## Migration vers un nouveau serveur',
+      '```bash',
+      '# 1. Clone le repo',
+      `git clone https://github.com/${GITHUB_REPO}`,
+      '# 2. Copie ton .env',
+      'scp root@ancien-serveur:/root/trackr/.env /root/trackr/.env',
+      '# 3. Lance',
+      'pm2 start ecosystem.config.cjs && pm2 save && pm2 startup',
+      '```',
+      '',
+      `## Stats actuelles`,
+      `- **Tâches terminées :** ${stats.totalDone}`,
+      `- **Cycles auto-gen :** ${autoGenCount}`,
+      `- **Repo :** ${GITHUB_REPO}`,
+      `- **App :** ${APP_URL}`,
+    ].join('\n'), 'utf8')
+
+    // Push vers GitHub
+    try {
+      execSync(`cd ${ROOT} && git add ai-data/ && git commit -m "[AnDy] export ai-data — ${stats.totalDone} tasks" && git pull origin main --no-rebase -X ours -q && git push origin main -q`, { stdio: 'pipe' })
+      log(`AI data exported & pushed — ${stats.totalDone} tasks total`)
+    } catch (e) {
+      log(`AI export local OK, push skipped: ${e.message?.slice(0, 60)}`)
+    }
+  } catch (err) {
+    log(`exportAIData error: ${err.message}`)
+  }
+}
+
+// ── Self-update — pull le nouveau code depuis GitHub ─────────────────────────
+let lastSelfUpdate = Date.now()
+const SELF_UPDATE_EVERY_MS = 60 * 60 * 1000  // toutes les heures
+
+async function selfUpdate() {
+  if (Date.now() - lastSelfUpdate < SELF_UPDATE_EVERY_MS) return
+  lastSelfUpdate = Date.now()
+  try {
+    const out = execSync(`cd ${ROOT} && git pull origin main --no-rebase -X ours -q 2>&1`, { stdio: 'pipe' }).toString().trim()
+    if (out && !out.includes('Already up to date')) {
+      log(`Self-update: ${out.slice(0, 100)}`)
+    }
+  } catch {}
+}
+
 // ── Main loop ─────────────────────────────────────────────────────────────────
 // Coût estimé par tâche : ~$0.08-0.12 (Haiku plan+review, Sonnet code)
 // $20 de crédits ≈ 160-250 tâches
@@ -508,8 +625,18 @@ async function main() {
 
     const queue = readdirSync(TASKS_DIR).filter(f => f.endsWith('.txt')).sort()
 
+    // Self-update depuis GitHub toutes les heures
+    await selfUpdate()
+
     // Flush notif si ça fait 30min sans envoyer (même si < 5 tâches)
     if (Date.now() - lastNotifTime > NOTIF_EVERY_MS) await flushDiscordNotif(true)
+
+    // Export AI data toutes les EXPORT_EVERY_N tâches
+    const doneSoFar = taskLog.filter(t => t.status === 'DONE').length
+    if (doneSoFar > 0 && doneSoFar % EXPORT_EVERY_N === 0 && doneSoFar !== lastExportCount) {
+      lastExportCount = doneSoFar
+      await exportAIData()
+    }
 
     if (queue.length) {
       log(`${queue.length} tâche(s) en queue`)
