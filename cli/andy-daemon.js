@@ -411,30 +411,68 @@ async function runTask(filePath) {
   }
 }
 
+// ── Smart dedup — évite de refaire ce qui a été fait récemment ───────────────
+function getRecentDomains(n = 15) {
+  // Retourne les domaines des N dernières tâches terminées
+  const done = taskLog.filter(t => t.status === 'DONE').slice(-n)
+  return done.map(t => (t.desc || t.name || '').split(/[—\-\/]/)[0].trim().toLowerCase())
+}
+
+function pickNextDomain() {
+  const recentDomains = getRecentDomains(15)
+  // Filtre les domaines récemment couverts pour tourner sur tout
+  const fresh = TASK_DOMAINS.filter(d => {
+    const key = d.split(/[—\-\/]/)[0].trim().toLowerCase()
+    return !recentDomains.some(r => r.includes(key.slice(0, 8)) || key.includes(r.slice(0, 8)))
+  })
+  const pool = fresh.length > 0 ? fresh : TASK_DOMAINS
+  // Round-robin sur le pool filtré
+  return pool[autoGenCount % pool.length]
+}
+
+// Charge la mémoire AnDy pour contexte génération
+function loadMemoryContext() {
+  try {
+    const mem = JSON.parse(readFileSync(MEMORY_FILE, 'utf8'))
+    const entries = (mem.entries || []).slice(-20)
+    const patterns = entries.filter(e => e.type === 'pattern_scan').flatMap(e => e.findings || []).slice(-8)
+    const errors   = entries.filter(e => e.type === 'error').slice(-5)
+    const lines = []
+    if (patterns.length) lines.push('Patterns/bugs connus: ' + patterns.map(p => `${p.file}: ${p.description}`).join(' | '))
+    if (errors.length)   lines.push('Erreurs récentes mémoire: ' + errors.map(e => e.error).join(' | '))
+    return lines.join('\n')
+  } catch { return '' }
+}
+
 async function generateNextTasks() {
   autoGenCount++
-  const domain    = TASK_DOMAINS[autoGenCount % TASK_DOMAINS.length]
+  const domain    = pickNextDomain()
   const secDomain = SECURITY_DOMAINS[autoGenCount % SECURITY_DOMAINS.length]
   const prefix    = String(Date.now())
   const totalDone = taskLog.filter(t => t.status === 'DONE').length
-  const recentDone = taskLog.filter(t => t.status === 'DONE').slice(-10).map(t => t.name)
+  const recentDone = taskLog.filter(t => t.status === 'DONE').slice(-8).map(t => (t.desc || t.name).slice(0, 50))
   const recentErrs = errorLog.slice(-4).map(e => e.name + ': ' + e.error.slice(0, 50))
+  const memCtx    = loadMemoryContext()
 
-  log(`AUTO-GEN #${autoGenCount} — feature: ${domain} | sécurité: ${secDomain}`)
+  log(`AUTO-GEN #${autoGenCount} — focus: ${domain.slice(0, 60)}`)
 
   const prompt = [
     'Projet Trackr — app React 19 + Vite mobile-first, repo: ' + GITHUB_REPO,
-    'OBJECTIF PRINCIPAL: rendre l app parfaitement fluide, rapide et visuellement impressionnante.',
-    'Chaque page doit ressembler à une vraie app dédiée pro (ESPN pour sports, Bloomberg pour markets, etc).',
-    'Tâches faites (' + totalDone + '): ' + (recentDone.join(', ') || 'aucune'),
-    recentErrs.length ? 'Erreurs récentes: ' + recentErrs.join(' | ') : '',
-    'Focus ce cycle: ' + domain,
-    'Focus sécurité: ' + secDomain,
+    'OBJECTIF: rendre l app parfaitement fluide, rapide et visuellement impressionnante.',
+    'Chaque page doit ressembler à une vraie app pro dédiée (ESPN pour sports, Bloomberg pour markets).',
+    'Design: dark #080808, accent neon #00ff88, Inter font, CSS vars --green --bg --t1.',
     '',
-    'Génère 3 tâches concrètes et ambitieuses — priorise TOUJOURS la qualité visuelle et la fluidité.',
-    'Chaque tâche doit avoir un impact visible immédiat sur l utilisateur.',
+    memCtx ? 'CONTEXTE MÉMOIRE:\n' + memCtx : '',
+    'Tâches récentes terminées (' + totalDone + ' total): ' + (recentDone.join(' | ') || 'aucune'),
+    recentErrs.length ? 'Erreurs récentes: ' + recentErrs.join(' | ') : '',
+    '',
+    'FOCUS CE CYCLE: ' + domain,
+    'FOCUS SÉCURITÉ: ' + secDomain,
+    '',
+    'Génère 3 tâches concrètes NON DUPLIQUÉES avec les tâches récentes — impact visuel immédiat.',
+    'Sois précis: indique le fichier cible et ce qui doit changer exactement.',
     'Format — exactement 3 lignes:',
-    'TASK: description complète et précise avec fichiers cibles',
+    'TASK: description complète et précise avec fichier(s) cible(s)',
     'Pas de markdown, pas de numérotation.',
   ].filter(Boolean).join('\n')
 
@@ -442,8 +480,7 @@ async function generateNextTasks() {
   while (attempts < 3) {
     attempts++
     try {
-      // Haiku pour la génération de tâches (très économique)
-      const raw   = await generateRaw(prompt, 600, MODEL_FAST)
+      const raw   = await generateRaw(prompt, 700, MODEL_FAST)
       const tasks = raw.split('\n').map(l => l.match(/^TASK:\s*(.+)/i)?.[1]?.trim()).filter(Boolean)
       if (!tasks.length) throw new Error('Aucune ligne TASK')
       tasks.slice(0, 3).forEach((desc, i) => {
@@ -461,6 +498,36 @@ async function generateNextTasks() {
   const fallback = 'Audit sécurité Trackr — focus: ' + secDomain + '. Identifie et corrige les failles.'
   writeFileSync(resolve(TASKS_DIR, `auto-${prefix}-sec.txt`), fallback, 'utf8')
   log('fallback task injected')
+}
+
+// ── Discord progress ping — toutes les 2h pendant la nuit ────────────────────
+let lastProgressPing = Date.now()
+const PROGRESS_PING_EVERY_MS = 2 * 60 * 60 * 1000  // 2h
+
+async function maybeProgressPing() {
+  if (!CH_UPDATES) return
+  if (Date.now() - lastProgressPing < PROGRESS_PING_EVERY_MS) return
+  lastProgressPing = Date.now()
+
+  const done   = taskLog.filter(t => t.status === 'DONE')
+  const errors = taskLog.filter(t => t.status === 'ERROR')
+  const queue  = readdirSync(TASKS_DIR).filter(f => f.endsWith('.txt')).length
+  const cost   = (done.length * 0.10).toFixed(2)
+  const totalSec = done.reduce((s, t) => s + (t.dur || 0), 0)
+  const recentFiles = [...new Set(
+    done.slice(-10).flatMap(t => (t.files || []).map(f => f.split('/').pop()))
+  )].slice(0, 6)
+
+  const msg = [
+    `🔄 **AnDy — update ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}**`,
+    `✅ ${done.length} tâches · ❌ ${errors.length} erreurs · ⏳ ${queue} en queue`,
+    `💸 ~$${cost} · ⏱ ${Math.round(totalSec/60)}min · 🔁 cycle #${autoGenCount}`,
+    recentFiles.length ? `📁 Fichiers récents: ${recentFiles.map(f => `\`${f}\``).join(' ')}` : '',
+    `📱 ${APP_URL}`,
+  ].filter(Boolean).join('\n')
+
+  const ok = await discordPost(CH_UPDATES, msg)
+  log(`Discord progress ping: ${ok ? 'envoyé' : 'échec'}`)
 }
 
 // ── Discord morning recap — 7h00 ─────────────────────────────────────────────
@@ -652,11 +719,11 @@ async function selfUpdate() {
 // ── Parallel workers ──────────────────────────────────────────────────────────
 // Coût estimé par tâche : ~$0.08-0.12 (Haiku plan+review, Sonnet code)
 // $20 de crédits ≈ 160-250 tâches
-// Avec 3 workers parallèles → 3x plus vite, même coût total
+// Avec 5 workers parallèles → 5x plus vite, même coût total
 
-const WORKER_COUNT     = 3    // agents parallèles (adapte si rate-limit)
-const PAUSE_AFTER_TASK = 5    // secondes après chaque tâche par worker
-const PAUSE_IDLE       = 30   // secondes si pas de tâche dispo
+const WORKER_COUNT     = 5    // agents parallèles (nuit: max throughput)
+const PAUSE_AFTER_TASK = 3    // secondes après chaque tâche par worker
+const PAUSE_IDLE       = 20   // secondes si pas de tâche dispo
 
 // Mutex en mémoire — évite que 2 workers prennent le même fichier
 const claimedTasks = new Set()
@@ -723,6 +790,8 @@ async function supervisor() {
 
     // Flush notif Discord si 30min sans envoi
     if (Date.now() - lastNotifTime > NOTIF_EVERY_MS) await flushDiscordNotif(true)
+    // Progress ping toutes les 2h
+    await maybeProgressPing()
 
     // Export AI data toutes les EXPORT_EVERY_N tâches
     const doneSoFar = taskLog.filter(t => t.status === 'DONE').length
