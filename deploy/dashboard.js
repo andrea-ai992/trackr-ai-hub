@@ -165,132 +165,188 @@ textarea::placeholder{color:var(--dim)}
       <div class="pulse"></div>
       <div>
         <div class="hdr-title">AnDy</div>
-        <div class="hdr-sub">Intelligence Artificielle · Trackr</div>
+        <div class="hdr-sub" id="hdr-sub">IA · Trackr</div>
       </div>
     </div>
     <div class="hdr-btns">
-      <button class="hdr-btn" onclick="goTasks()">📋 Tâches</button>
-      <button class="hdr-btn" onclick="resetChat()">↺</button>
+      <button class="hdr-btn" id="tab-chat" onclick="switchTab('chat')" style="color:var(--green);border-color:rgba(0,255,136,.3)">💬 Chat</button>
+      <button class="hdr-btn" id="tab-tasks" onclick="switchTab('tasks')">📋 Tâches</button>
       <a href="/" class="hdr-btn" style="text-decoration:none">⚙️</a>
     </div>
   </div>
 
-  <div class="quick" id="quick">
-    <button class="chip" onclick="send('Quel est l\\'état du serveur et des tâches en cours ?')">📊 Statut</button>
-    <button class="chip" onclick="send('Qu\\'est-ce qu\\'AnDy a fait ces dernières heures ?')">🕐 Activité récente</button>
-    <button class="chip" onclick="send('Donne-moi un résumé des améliorations déployées aujourd\\'hui')">✅ Updates du jour</button>
-    <button class="chip" onclick="send('Quelles sont les prochaines tâches en queue ?')">⏳ Queue</button>
-    <button class="chip" onclick="send('Analyse l\\'app Trackr et propose les 3 améliorations les plus urgentes')">🎯 Priorités</button>
-    <button class="chip" onclick="taskMode()">➕ Donner une tâche</button>
-  </div>
-
-  <div class="msgs" id="msgs">
-    <div class="welcome">
-      <div class="welcome-icon">⟨◈⟩</div>
-      <div class="welcome-title">AnDy est là</div>
-      <div class="welcome-sub">Pose une question, donne une tâche, commande le serveur.<br>Fonctionne depuis ton téléphone ou ton Mac.</div>
+  <!-- TAB: CHAT -->
+  <div id="view-chat" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <div class="quick">
+      <button class="chip" onclick="send('Statut du serveur et tâches en cours ?')">📊 Statut</button>
+      <button class="chip" onclick="send('Qu\\'a fait AnDy ces dernières heures ?')">🕐 Récent</button>
+      <button class="chip" onclick="send('Updates déployés aujourd\\'hui ?')">✅ Today</button>
+      <button class="chip" onclick="send('Queue et prochaines tâches ?')">⏳ Queue</button>
+      <button class="chip" onclick="send('Top 3 améliorations urgentes pour l\\'app ?')">🎯 Priorités</button>
+    </div>
+    <div class="msgs" id="msgs">
+      <div class="welcome">
+        <div class="welcome-icon">⟨◈⟩</div>
+        <div class="welcome-title">AnDy est là</div>
+        <div class="welcome-sub">Pose une question ou donne une tâche.<br>Accessible depuis n'importe où.</div>
+      </div>
+    </div>
+    <div class="bar">
+      <textarea id="inp" placeholder="Message ou /task description…" rows="1" onkeydown="onKey(event)" oninput="resize(this)"></textarea>
+      <button class="send" onclick="sendInput()" aria-label="Envoyer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
     </div>
   </div>
 
-  <div class="bar">
-    <textarea id="inp" placeholder="Message…" rows="1" onkeydown="onKey(event)" oninput="resize(this)"></textarea>
-    <button class="send" onclick="sendInput()" aria-label="Envoyer">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-    </button>
+  <!-- TAB: TÂCHES -->
+  <div id="view-tasks" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 12px">
+      <!-- Nouvelle tâche -->
+      <div style="background:var(--bg2);border:1px solid rgba(0,255,136,.25);border-radius:16px;padding:16px;margin-bottom:16px">
+        <div style="font-size:11px;color:var(--green);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">➕ Nouvelle tâche</div>
+        <textarea id="task-inp" placeholder="Décris la tâche à donner à AnDy…" rows="3" style="width:100%;background:#111;border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-size:14px;font-family:inherit;resize:none;outline:none;transition:.2s;-webkit-overflow-scrolling:touch" onfocus="this.style.borderColor='rgba(0,255,136,.4)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+        <button onclick="submitTask()" style="margin-top:10px;width:100%;padding:12px;background:var(--green);color:#080808;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Donner la tâche à AnDy →</button>
+      </div>
+      <!-- Statut live -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:16px">
+        <div style="font-size:11px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+          <span>📊 Statut live</span>
+          <button onclick="loadTasks()" style="background:transparent;border:none;color:var(--dim);font-size:12px;cursor:pointer">↺</button>
+        </div>
+        <div id="task-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">
+          <div style="text-align:center;padding:10px;background:#111;border-radius:10px"><div style="font-size:22px;font-weight:700;color:var(--green)" id="ts-done">—</div><div style="font-size:9px;color:var(--dim);margin-top:2px">DONE</div></div>
+          <div style="text-align:center;padding:10px;background:#111;border-radius:10px"><div style="font-size:22px;font-weight:700;color:#818cf8" id="ts-queue">—</div><div style="font-size:9px;color:var(--dim);margin-top:2px">QUEUE</div></div>
+          <div style="text-align:center;padding:10px;background:#111;border-radius:10px"><div style="font-size:22px;font-weight:700;color:#fbbf24" id="ts-run">—</div><div style="font-size:9px;color:var(--dim);margin-top:2px">RUN</div></div>
+          <div style="text-align:center;padding:10px;background:#111;border-radius:10px"><div style="font-size:22px;font-weight:700;color:var(--red)" id="ts-err">—</div><div style="font-size:9px;color:var(--dim);margin-top:2px">ERR</div></div>
+        </div>
+        <div id="task-running" style="font-size:12px;color:var(--dim)">Chargement…</div>
+      </div>
+      <!-- Liste queue -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px">
+        <div style="font-size:11px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">⏳ Queue</div>
+        <div id="task-queue-list" style="font-size:13px;color:var(--dim)">—</div>
+      </div>
+    </div>
   </div>
 </div>
 
 <script>
-const msgs = document.getElementById('msgs')
-const inp  = document.getElementById('inp')
-let loading = false
+const msgs   = document.getElementById('msgs')
+const inp    = document.getElementById('inp')
+let loading  = false
+let curTab   = 'chat'
+let taskPoll = null
 
-function ts() {
-  return new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+function ts() { return new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) }
+
+function switchTab(tab) {
+  curTab = tab
+  document.getElementById('view-chat').style.display  = tab==='chat'  ? 'flex' : 'none'
+  document.getElementById('view-tasks').style.display = tab==='tasks' ? 'flex' : 'none'
+  document.getElementById('tab-chat').style.cssText   = tab==='chat'  ? 'color:var(--green);border-color:rgba(0,255,136,.3)' : ''
+  document.getElementById('tab-tasks').style.cssText  = tab==='tasks' ? 'color:var(--green);border-color:rgba(0,255,136,.3)' : ''
+  if (tab==='tasks') loadTasks()
+}
+
+async function loadTasks() {
+  try {
+    const r = await fetch('/api/tasks')
+    const d = await r.json()
+    const f = d.files || {}
+    document.getElementById('ts-done').textContent  = (f.done||[]).length
+    document.getElementById('ts-queue').textContent = (f.queue||[]).length
+    document.getElementById('ts-run').textContent   = (f.running||[]).length
+    document.getElementById('ts-err').textContent   = (f.error||[]).length
+    document.getElementById('hdr-sub').textContent  = \`DONE \${(f.done||[]).length} · QUEUE \${(f.queue||[]).length}\`
+    const running = f.running||[]
+    const status  = d.status||[]
+    if (running.length) {
+      const e = status.find(t=>t.name===running[0])
+      const stages = ['planning','generating','testing','safe','live']
+      const cur = stages.indexOf(e?.stage)
+      const pipe = stages.map((s,i)=>i<cur?'<span style="color:var(--green)">'+s.toUpperCase()+'</span>':i===cur?'<span style="color:#fbbf24;font-weight:700">['+s.toUpperCase()+']</span>':'<span style="color:#222">'+s.toUpperCase()+'</span>').join('<span style="color:#333"> › </span>')
+      document.getElementById('task-running').innerHTML = \`<div style="color:#fbbf24;margin-bottom:6px">⟳ \${running[0].slice(0,40)}</div><div style="font-size:11px">\${pipe}</div>\`
+    } else {
+      document.getElementById('task-running').textContent = 'Idle — en attente de tâches…'
+    }
+    const q = f.queue||[]
+    document.getElementById('task-queue-list').innerHTML = q.length
+      ? q.slice(0,6).map(n=>\`<div style="padding:6px 0;border-bottom:1px solid var(--border);color:#666">\${n.slice(0,50)}</div>\`).join('')+(q.length>6?'<div style="color:#333;font-size:11px;padding-top:6px">+\${q.length-6} de plus…</div>':'')
+      : '<div style="color:#222">Queue vide</div>'
+  } catch(e) {
+    document.getElementById('task-running').textContent = 'Serveur inaccessible'
+  }
+}
+
+async function submitTask() {
+  const v = document.getElementById('task-inp').value.trim()
+  if (!v) return
+  try {
+    const r = await fetch('/api/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({desc:v})})
+    if (r.ok) {
+      document.getElementById('task-inp').value = ''
+      await loadTasks()
+      // Feedback visuel
+      const btn = document.querySelector('#view-tasks button[onclick="submitTask()"]')
+      const orig = btn.textContent
+      btn.textContent = '✅ Tâche envoyée !'
+      btn.style.background = '#00cc66'
+      setTimeout(()=>{ btn.textContent=orig; btn.style.background='var(--green)' }, 2000)
+    }
+  } catch(e) { alert('Erreur: '+e.message) }
 }
 
 function addMsg(role, text) {
-  // Supprime le welcome si présent
-  const w = msgs.querySelector('.welcome')
-  if (w) w.remove()
-
+  const w = msgs.querySelector('.welcome'); if(w) w.remove()
   const div = document.createElement('div')
   div.className = 'msg ' + role
-  div.innerHTML = \`<div class="bubble">\${text.replace(/</g,'&lt;').replace(/\\n/g,'\\n')}</div><div class="msg-time">\${ts()}</div>\`
-  msgs.appendChild(div)
-  msgs.scrollTop = msgs.scrollHeight
-  return div
+  const escaped = text.replace(/</g,'&lt;')
+  div.innerHTML = \`<div class="bubble">\${escaped}</div><div class="msg-time">\${ts()}</div>\`
+  msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight
 }
 
 function showTyping() {
   const div = document.createElement('div')
-  div.className = 'msg andy'
-  div.id = 'typing'
-  div.innerHTML = '<div class="typing"><div class="dot-t"></div><div class="dot-t"></div><div class="dot-t"></div></div>'
-  msgs.appendChild(div)
-  msgs.scrollTop = msgs.scrollHeight
+  div.className='msg andy'; div.id='typing'
+  div.innerHTML='<div class="typing"><div class="dot-t"></div><div class="dot-t"></div><div class="dot-t"></div></div>'
+  msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight
 }
-
-function hideTyping() {
-  document.getElementById('typing')?.remove()
-}
+function hideTyping() { document.getElementById('typing')?.remove() }
 
 async function send(text) {
   if (!text?.trim() || loading) return
+  // Si on est sur l'onglet tâches, switch vers chat
+  if (curTab !== 'chat') switchTab('chat')
   loading = true
   addMsg('user', text)
   inp.value = ''; resize(inp)
   showTyping()
-
   try {
-    const r = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text }),
-    })
+    const r = await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text})})
     const d = await r.json()
     hideTyping()
-    if (d.error) addMsg('andy', '⚠️ ' + d.error)
-    else addMsg('andy', d.reply || '…')
-  } catch(e) {
-    hideTyping()
-    addMsg('andy', '⚠️ Erreur réseau — vérifie ta connexion')
-  }
+    if (d.error) addMsg('andy','⚠️ '+d.error)
+    else addMsg('andy', d.reply||'…')
+  } catch(e) { hideTyping(); addMsg('andy','⚠️ Erreur réseau') }
   loading = false
 }
 
-function sendInput() {
-  const v = inp.value.trim()
-  if (v) send(v)
-}
+function sendInput() { const v=inp.value.trim(); if(v) send(v) }
 
 function onKey(e) {
-  // Desktop : Enter envoie, Shift+Enter = newline
-  if (e.key === 'Enter' && !e.shiftKey && window.innerWidth > 600) {
-    e.preventDefault()
-    sendInput()
-  }
+  if (e.key==='Enter' && !e.shiftKey && window.innerWidth>600) { e.preventDefault(); sendInput() }
 }
 
-function resize(el) {
-  el.style.height = 'auto'
-  el.style.height = Math.min(el.scrollHeight, 120) + 'px'
-}
-
-function taskMode() {
-  inp.value = '/task '
-  inp.focus()
-  resize(inp)
-}
-
-function goTasks() {
-  send('Montre-moi les tâches en cours, en queue et les dernières terminées avec leur statut pipeline.')
-}
+function resize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px' }
 
 async function resetChat() {
-  await fetch('/api/chat', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ reset: true }) })
-  msgs.innerHTML = '<div class="welcome"><div class="welcome-icon">⟨◈⟩</div><div class="welcome-title">Conversation effacée</div><div class="welcome-sub">Prêt pour une nouvelle session.</div></div>'
+  await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reset:true})})
+  msgs.innerHTML='<div class="welcome"><div class="welcome-icon">⟨◈⟩</div><div class="welcome-title">Conversation effacée</div><div class="welcome-sub">Prêt.</div></div>'
 }
+
+// Auto-refresh statut toutes les 30s si onglet tâches
+setInterval(()=>{ if(curTab==='tasks') loadTasks() }, 30000)
 </script>
 </body>
 </html>`

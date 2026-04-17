@@ -863,6 +863,8 @@ async function cmd(input) {
       ['/improve <focus>',     _.purple, 'Lance un cycle self-improve'],
       ['/monitor',             _.blue,   'Déclenche le monitoring Trackr'],
       ['/status',              _.orange, 'Statut APIs Trackr'],
+      ['─── COMMANDE RAPIDE ──────────────────────────', _.dark,   ''],
+      ['/live',                _.green,  '⚡ Tout-en-un : statut + chat + /task en direct'],
       ['─── TÂCHES ───────────────────────────────────', _.dark,   ''],
       ['/tasks',               _.cyan,   'Pipeline live : PLAN › CODE › TEST › SAFE › LIVE'],
       ['/watch',               _.green,  'Live : progression serveur, tâches, logs en temps réel'],
@@ -1133,6 +1135,142 @@ async function cmd(input) {
   }
 
   // ── /tasks — live task pipeline tracker ──────────────────────────────────────
+  // ── /live — mode tout-en-un : statut + chat + task ──────────────────────────
+  if (c === '/live') {
+    const DASH    = `http://62.238.12.221:4000`
+    const PASS_L  = process.env.DASHBOARD_PASS || 'trackr2024'
+    const authL   = { Authorization: `Bearer ${PASS_L}` }
+    const W       = 58
+
+    // Fetch statut serveur rapide
+    async function liveStatus() {
+      try {
+        const r = await fetch(`${DASH}/api/tasks`, { headers: authL, signal: AbortSignal.timeout(3000) }).catch(() => null)
+        if (r?.ok) return await r.json().catch(() => null)
+      } catch {}
+      return null
+    }
+
+    // Affiche barre de statut compacte (3 lignes, in-place)
+    let statusLines = 3
+    async function drawStatus(first = false) {
+      if (!first) process.stdout.write(`\x1b[${statusLines}A\x1b[0J`)
+      const d = await liveStatus()
+      const f = d?.files || { done: [], queue: [], running: [], error: [] }
+      const ts = new Date().toLocaleTimeString('fr-FR')
+      const srcOk = !!d
+      const runName = f.running?.[0] || null
+
+      out(`${BG}  ${_.dark}╔${'═'.repeat(W)}╗\x1b[K\n`)
+      out(`${BG}  ${_.dark}║${R}  ${srcOk ? _.green+'● SERVER' : _.red+'✗ OFFLINE'}${R}  ${_.dark}DONE${R} ${_.green}${(f.done||[]).length}${R}  ${_.dark}QUEUE${R} ${_.cyan}${(f.queue||[]).length}${R}  ${_.dark}RUN${R} ${_.amber}${(f.running||[]).length}${R}  ${_.dark}ERR${R} ${_.red}${(f.error||[]).length}${R}  ${_.dark}${ts}${R}${' '.repeat(4)}\x1b[K\n`)
+      if (runName) {
+        out(`${BG}  ${_.dark}║${R}  ${_.amber}⟳${R} ${_.silver}${runName.slice(0, 50)}${R}\x1b[K\n`)
+      } else {
+        out(`${BG}  ${_.dark}║${R}  ${_.dark}Idle…${R}\x1b[K\n`)
+      }
+      out(`${BG}  ${_.dark}╚${'═'.repeat(W)}╝\x1b[K\n`)
+      statusLines = 4
+    }
+
+    clr()
+    line(`  ${_.green}${_.bold}⚡ MODE LIVE — AnDy Command Center${R}`)
+    line()
+    line(`  ${_.grey}Tape un message pour parler à AnDy.${R}`)
+    line(`  ${_.cyan}/task <description>${R}  ${_.dark}→ injecte une tâche au daemon${R}`)
+    line(`  ${_.cyan}/s${R}                   ${_.dark}→ rafraîchit le statut${R}`)
+    line(`  ${_.cyan}/q${R}                   ${_.dark}→ voir la queue complète${R}`)
+    line(`  ${_.cyan}/exit${R}                ${_.dark}→ quitter le mode live${R}`)
+    line()
+
+    await drawStatus(true)
+    line()
+
+    // Auto-refresh statut en arrière-plan toutes les 15s
+    let liveActive = true
+    let refreshing = false
+    const refreshInterval = setInterval(async () => {
+      if (!liveActive || refreshing) return
+      refreshing = true
+      await drawStatus(false)
+      refreshing = false
+    }, 15000)
+
+    // Boucle de prompt live
+    const rl2 = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true })
+    rl2.on('SIGINT', () => { liveActive = false; clearInterval(refreshInterval); rl2.close() })
+
+    const askLive = () => {
+      if (!liveActive) return
+      rl2.question(`${BG}  ${_.green}▸${R}${BG} ${_.bold}${_.white}`, async raw => {
+        out(R)
+        const input = raw.trim()
+        if (!input) { askLive(); return }
+
+        // /exit
+        if (input === '/exit' || input === '/quit') {
+          liveActive = false; clearInterval(refreshInterval); rl2.close()
+          line(`\n  ${_.dark}⟨◈⟩ Mode live fermé.${R}`); line(); return
+        }
+
+        // /s — refresh statut
+        if (input === '/s') {
+          await drawStatus(false); line(); askLive(); return
+        }
+
+        // /q — queue complète
+        if (input === '/q') {
+          const d = await liveStatus()
+          const q = d?.files?.queue || []
+          line()
+          line(`  ${_.cyan}QUEUE (${q.length})${R}`)
+          q.slice(0, 10).forEach(n => line(`  ${_.dark}· ${_.grey}${n}${R}`))
+          if (q.length > 10) line(`  ${_.dark}  … +${q.length - 10}${R}`)
+          line(); askLive(); return
+        }
+
+        // /task — injecte dans andy-tasks/ LOCAL + serveur via dashboard
+        if (input.toLowerCase().startsWith('/task ')) {
+          const desc = input.slice(6).trim()
+          if (!desc) { line(`  ${_.red}Usage: /task <description>${R}`); askLive(); return }
+
+          // Push vers serveur via /api/task
+          spinStart('Injection tâche…', _.green)
+          try {
+            const r = await fetch(`${DASH}/api/task`, {
+              method: 'POST', headers: { ...authL, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ desc }), signal: AbortSignal.timeout(5000),
+            }).catch(() => null)
+            spinStop()
+            if (r?.ok) {
+              line(`  ${_.green}✓ Tâche injectée → daemon${R}`)
+              line(`  ${_.dark}  "${desc.slice(0, 60)}"${R}`)
+              await sl(800); await drawStatus(false)
+            } else {
+              // Fallback local
+              const { writeFileSync: wf, mkdirSync: md } = await import('fs')
+              md(TASKS_DIR, { recursive: true })
+              wf(resolve(TASKS_DIR, `manual-${Date.now()}.txt`), desc, 'utf8')
+              line(`  ${_.amber}⚡ Tâche créée en local (serveur inaccessible)${R}`)
+            }
+          } catch (e) { spinStop(); line(`  ${_.red}✗ ${e.message}${R}`) }
+          line(); askLive(); return
+        }
+
+        // Message normal → chat AnDy
+        line()
+        line(`  ${_.dark}╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌`)
+        line(`  ${_.purple}◈ ${_.bold}${_.white}AnDy${R}  ${_.dark}${new Date().toLocaleTimeString('fr-FR')}`)
+        line(`  ${_.dark}╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌`)
+        line()
+        await chat(input)
+        askLive()
+      })
+    }
+
+    askLive()
+    return
+  }
+
   if (c === '/tasks') {
     const DASH      = `http://62.238.12.221:4000`
     const PASS_T    = process.env.DASHBOARD_PASS || 'trackr2024'
