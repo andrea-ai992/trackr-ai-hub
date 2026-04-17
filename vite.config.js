@@ -1,27 +1,41 @@
-Je vais analyser le repo actuel et générer tous les fichiers nécessaires.
+Je vais générer tous les fichiers complets et production-ready.
 
-**FICHIER 1: vite.config.js**
+---
 
-import { defineConfig } from 'vite'
+FICHIER 1: vite.config.js
+
+import { defineConfig, splitVendorChunkPlugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { visualizer } from 'rollup-plugin-visualizer'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
-    react(),
+    react({
+      babel: {
+        plugins: [
+          ['babel-plugin-react-compiler', {}],
+        ],
+      },
+    }),
     tailwindcss(),
+    splitVendorChunkPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
+      strategies: 'generateSW',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,ttf,eot}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,ttf,eot,webp,avif}'],
+        globIgnores: ['**/node_modules/**/*', 'sw.js', 'workbox-*.js'],
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'api-cache',
+              cacheName: 'api-cache-v2',
               networkTimeoutSeconds: 10,
               expiration: {
                 maxEntries: 100,
@@ -31,10 +45,10 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|avif|ico)$/i,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'images-cache',
+              cacheName: 'images-cache-v2',
               expiration: {
                 maxEntries: 60,
                 maxAgeSeconds: 60 * 60 * 24 * 30,
@@ -46,9 +60,32 @@ export default defineConfig({
             urlPattern: /\.(?:woff|woff2|ttf|eot)$/i,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'fonts-cache',
+              cacheName: 'fonts-cache-v2',
               expiration: {
                 maxEntries: 20,
+                maxAgeSeconds: 60 * 60 * 24 * 365,
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'google-fonts-stylesheets',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365,
+              },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-webfonts',
+              expiration: {
+                maxEntries: 30,
                 maxAgeSeconds: 60 * 60 * 24 * 365,
               },
               cacheableResponse: { statuses: [0, 200] },
@@ -58,18 +95,62 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
         cleanupOutdatedCaches: true,
+        sourcemap: false,
       },
       manifest: {
         name: 'Trackr AI Hub',
         short_name: 'Trackr',
-        description: 'Trackr AI Hub - Your personal AI assistant',
+        description: 'Trackr AI Hub — Your personal AI assistant for productivity and insights',
         theme_color: '#0f172a',
-        background_color: '#0f172a',
+        background_color: '#080808',
         display: 'standalone',
+        display_override: ['standalone', 'minimal-ui'],
         orientation: 'portrait',
         scope: '/',
-        start_url: '/',
+        start_url: '/?source=pwa',
+        lang: 'en',
+        dir: 'ltr',
+        categories: ['productivity', 'utilities'],
+        screenshots: [
+          {
+            src: '/screenshots/mobile-home.png',
+            sizes: '390x844',
+            type: 'image/png',
+            form_factor: 'narrow',
+            label: 'Trackr Dashboard',
+          },
+        ],
         icons: [
+          {
+            src: '/icons/icon-72x72.png',
+            sizes: '72x72',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/icons/icon-96x96.png',
+            sizes: '96x96',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/icons/icon-128x128.png',
+            sizes: '128x128',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/icons/icon-144x144.png',
+            sizes: '144x144',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/icons/icon-152x152.png',
+            sizes: '152x152',
+            type: 'image/png',
+            purpose: 'any',
+          },
           {
             src: '/icons/icon-192x192.png',
             sizes: '192x192',
@@ -77,8 +158,8 @@ export default defineConfig({
             purpose: 'any',
           },
           {
-            src: '/icons/icon-512x512.png',
-            sizes: '512x512',
+            src: '/icons/icon-384x384.png',
+            sizes: '384x384',
             type: 'image/png',
             purpose: 'any',
           },
@@ -86,373 +167,381 @@ export default defineConfig({
             src: '/icons/icon-512x512.png',
             sizes: '512x512',
             type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/icons/icon-maskable-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
             purpose: 'maskable',
           },
         ],
       },
-      devOptions: { enabled: false },
+      devOptions: {
+        enabled: false,
+        type: 'module',
+      },
     }),
-  ],
+    mode === 'analyze' &&
+      visualizer({
+        open: true,
+        gzipSize: true,
+        brotliSize: true,
+        filename: 'dist/bundle-report.html',
+        template: 'treemap',
+      }),
+  ].filter(Boolean),
+
   build: {
-    target: 'esnext',
+    target: ['esnext', 'chrome90', 'firefox88', 'safari14'],
     minify: 'esbuild',
+    cssMinify: true,
+    sourcemap: false,
+    reportCompressedSize: true,
+    chunkSizeWarningLimit: 500,
+    assetsInlineLimit: 4096,
+    cssCodeSplit: true,
+    modulePreload: {
+      polyfill: true,
+    },
     rollupOptions: {
+      treeshake: {
+        moduleSideEffects: false,
+        propertyReadSideEffects: false,
+        unknownGlobalSideEffects: false,
+      },
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom'],
-          'vendor-router': ['react-router-dom'],
-          'vendor-charts': ['recharts'],
+        experimentalMinChunkSize: 10000,
+        compact: true,
+        generatedCode: {
+          preset: 'es2015',
+          constBindings: true,
+        },
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react-dom') || id.includes('react/')) {
+              return 'vendor-react'
+            }
+            if (id.includes('react-router')) {
+              return 'vendor-router'
+            }
+            if (id.includes('recharts') || id.includes('d3-') || id.includes('victory')) {
+              return 'vendor-charts'
+            }
+            if (id.includes('@radix-ui') || id.includes('lucide-react') || id.includes('framer-motion')) {
+              return 'vendor-ui'
+            }
+            if (id.includes('firebase') || id.includes('@firebase')) {
+              return 'vendor-firebase'
+            }
+            if (id.includes('openai') || id.includes('anthropic') || id.includes('cohere')) {
+              return 'vendor-ai'
+            }
+            if (id.includes('date-fns') || id.includes('dayjs') || id.includes('luxon')) {
+              return 'vendor-date'
+            }
+            if (id.includes('zustand') || id.includes('jotai') || id.includes('redux')) {
+              return 'vendor-state'
+            }
+            return 'vendor-misc'
+          }
+        },
+        chunkFileNames: 'assets/js/[name]-[hash].js',
+        entryFileNames: 'assets/js/[name]-[hash].js',
+        assetFileNames: ({ name }) => {
+          if (/\.(png|jpe?g|svg|gif|tiff|bmp|ico|webp|avif)$/i.test(name)) {
+            return 'assets/images/[name]-[hash][extname]'
+          }
+          if (/\.(woff2?|eot|ttf|otf)$/i.test(name)) {
+            return 'assets/fonts/[name]-[hash][extname]'
+          }
+          if (/\.css$/i.test(name)) {
+            return 'assets/css/[name]-[hash][extname]'
+          }
+          return 'assets/[name]-[hash][extname]'
         },
       },
     },
+    esbuild: {
+      legalComments: 'none',
+      drop: ['console', 'debugger'],
+      target: 'esnext',
+      treeShaking: true,
+    },
   },
+
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-dom/client',
+      'react-router-dom',
+      'react/jsx-runtime',
+    ],
+    exclude: ['@vite/client', '@vite/env'],
+  },
+
   server: {
+    port: 5173,
+    strictPort: false,
     proxy: {
       '/api': {
         target: 'https://trackr-app-nu.vercel.app',
         changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path,
       },
     },
+    headers: {
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+    },
   },
-})
+
+  preview: {
+    port: 4173,
+    strictPort: false,
+    headers: {
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+    },
+  },
+
+  resolve: {
+    alias: {
+      '@': '/src',
+      '@components': '/src/components',
+      '@pages': '/src/pages',
+      '@hooks': '/src/hooks',
+      '@utils': '/src/utils',
+      '@store': '/src/store',
+      '@assets': '/src/assets',
+      '@server': '/src/server',
+    },
+  },
+
+  esbuild: {
+    jsxInject: undefined,
+    legalComments: 'none',
+    treeShaking: true,
+  },
+}))
 
 ---
 
-**FICHIER 2: src/components/PageSkeleton.jsx**
+FICHIER 2: src/server/middleware/securityHeaders.js
 
-import React from 'react'
+'use strict'
 
-const shimmer = `
-  @keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-  }
-`
+const ALLOWED_ORIGINS = [
+  'https://trackr-app-nu.vercel.app',
+  'https://trackr-ai-hub.vercel.app',
+  ...(process.env.NODE_ENV === 'development'
+    ? ['http://localhost:5173', 'http://localhost:4173', 'http://127.0.0.1:5173']
+    : []),
+  ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()) : []),
+]
 
-function SkeletonBar({ width = '100%', height = '16px', style = {} }) {
-  return (
-    <div
-      style={{
-        width,
-        height,
-        borderRadius: '6px',
-        background: 'linear-gradient(90deg, #111 25%, #1a1a1a 50%, #111 75%)',
-        backgroundSize: '200% 100%',
-        animation: 'shimmer 1.4s ease-in-out infinite',
-        ...style,
-      }}
-    />
-  )
+const CSP_DIRECTIVES = {
+  'default-src': ["'self'"],
+
+  'script-src': [
+    "'self'",
+    "'strict-dynamic'",
+    'https://apis.google.com',
+    'https://www.googletagmanager.com',
+    'https://www.google-analytics.com',
+    "'wasm-unsafe-eval'",
+  ],
+
+  'style-src': [
+    "'self'",
+    'https://fonts.googleapis.com',
+    "'unsafe-inline'",
+  ],
+
+  'font-src': [
+    "'self'",
+    'https://fonts.gstatic.com',
+    'data:',
+  ],
+
+  'img-src': [
+    "'self'",
+    'data:',
+    'blob:',
+    'https:',
+    'https://www.google-analytics.com',
+    'https://www.googletagmanager.com',
+    'https://avatars.githubusercontent.com',
+    'https://lh3.googleusercontent.com',
+    'https://trackr-app-nu.vercel.app',
+  ],
+
+  'connect-src': [
+    "'self'",
+    'https://trackr-app-nu.vercel.app',
+    'https://api.openai.com',
+    'https://generativelanguage.googleapis.com',
+    'https://firebaseinstallations.googleapis.com',
+    'https://identitytoolkit.googleapis.com',
+    'https://securetoken.googleapis.com',
+    'https://www.google-analytics.com',
+    'https://analytics.google.com',
+    'wss://trackr-app-nu.vercel.app',
+    ...(process.env.NODE_ENV === 'development'
+      ? ['http://localhost:5173', 'ws://localhost:5173', 'http://localhost:4173']
+      : []),
+  ],
+
+  'media-src': ["'self'", 'blob:', 'data:'],
+
+  'object-src': ["'none'"],
+
+  'frame-src': ["'none'"],
+
+  'frame-ancestors': ["'none'"],
+
+  'base-uri': ["'self'"],
+
+  'form-action': ["'self'"],
+
+  'manifest-src': ["'self'"],
+
+  'worker-src': ["'self'", 'blob:'],
+
+  'child-src': ["'self'", 'blob:'],
+
+  'upgrade-insecure-requests': [],
+
+  'block-all-mixed-content': [],
 }
 
-export default function PageSkeleton() {
-  return (
-    <>
-      <style>{shimmer}</style>
-      <div
-        style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: '#080808',
-          display: 'flex',
-          flexDirection: 'column',
-          padding: '24px 20px',
-          gap: '20px',
-          zIndex: 9999,
-          overflowY: 'hidden',
-        }}
-      >
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-          <SkeletonBar width="40px" height="40px" style={{ borderRadius: '50%', flexShrink: 0 }} />
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <SkeletonBar width="55%" height="18px" />
-            <SkeletonBar width="35%" height="12px" />
-          </div>
-        </div>
+function buildCSP(directives, nonce) {
+  const parts = []
 
-        {/* Card 1 */}
-        <div
-          style={{
-            borderRadius: '14px',
-            padding: '18px',
-            background: '#0e0e0e',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-          }}
-        >
-          <SkeletonBar width="45%" height="14px" />
-          <SkeletonBar width="70%" height="28px" />
-          <SkeletonBar width="90%" height="10px" />
-        </div>
+  for (const [directive, sources] of Object.entries(directives)) {
+    if (sources.length === 0) {
+      parts.push(directive)
+    } else {
+      let sourcesWithNonce = [...sources]
 
-        {/* Card 2 */}
-        <div
-          style={{
-            borderRadius: '14px',
-            padding: '18px',
-            background: '#0e0e0e',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-          }}
-        >
-          <SkeletonBar width="40%" height="14px" />
-          <SkeletonBar width="100%" height="120px" style={{ borderRadius: '10px' }} />
-        </div>
+      if (
+        directive === 'script-src' &&
+        nonce &&
+        !sourcesWithNonce.includes("'strict-dynamic'")
+      ) {
+        sourcesWithNonce.unshift(`'nonce-${nonce}'`)
+      } else if (directive === 'script-src' && nonce) {
+        sourcesWithNonce.unshift(`'nonce-${nonce}'`)
+      }
 
-        {/* Card 3 */}
-        <div
-          style={{
-            borderRadius: '14px',
-            padding: '18px',
-            background: '#0e0e0e',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-          }}
-        >
-          <SkeletonBar width="50%" height="14px" />
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <SkeletonBar width="30%" height="60px" style={{ borderRadius: '10px' }} />
-            <SkeletonBar width="35%" height="60px" style={{ borderRadius: '10px' }} />
-            <SkeletonBar width="30%" height="60px" style={{ borderRadius: '10px' }} />
-          </div>
-        </div>
-
-        {/* Rows */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
-          {[85, 70, 90, 60].map((w, i) => (
-            <SkeletonBar key={i} width={`${w}%`} height="14px" />
-          ))}
-        </div>
-
-        {/* Bottom nav skeleton */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-around',
-            paddingTop: '16px',
-            borderTop: '1px solid #111',
-          }}
-        >
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-              <SkeletonBar width="24px" height="24px" style={{ borderRadius: '6px' }} />
-              <SkeletonBar width="36px" height="8px" />
-            </div>
-          ))}
-        </div>
-      </div>
-    </>
-  )
-}
-
----
-
-**FICHIER 3: src/utils/fetchWithCache.js**
-
-const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
-const FETCH_TIMEOUT = 10000 // 10 seconds
-
-function getCacheKey(url, options = {}) {
-  return `trackr_cache_${url}_${JSON.stringify(options.body || '')}`
-}
-
-function getFromCache(key) {
-  try {
-    const raw = localStorage.getItem(key)
-    if (!raw) return null
-    const { data, timestamp } = JSON.parse(raw)
-    if (Date.now() - timestamp > CACHE_TTL) {
-      localStorage.removeItem(key)
-      return null
-    }
-    return data
-  } catch {
-    return null
-  }
-}
-
-function setToCache(key, data) {
-  try {
-    localStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }))
-  } catch {
-    // localStorage full or unavailable — fail silently
-  }
-}
-
-export function clearCache(url, options = {}) {
-  try {
-    const key = getCacheKey(url, options)
-    localStorage.removeItem(key)
-  } catch {
-    // fail silently
-  }
-}
-
-export async function fetchWithCache(url, options = {}, { useCache = true, signal: externalSignal } = {}) {
-  const cacheKey = getCacheKey(url, options)
-  const method = (options.method || 'GET').toUpperCase()
-  const isCacheable = useCache && method === 'GET'
-
-  // Return cached data if available
-  if (isCacheable) {
-    const cached = getFromCache(cacheKey)
-    if (cached !== null) return cached
-  }
-
-  // Setup AbortController with timeout
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT)
-
-  // If external signal provided, also abort on external cancel
-  let externalAbortHandler = null
-  if (externalSignal) {
-    externalAbortHandler = () => controller.abort()
-    externalSignal.addEventListener('abort', externalAbortHandler)
-  }
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    })
-
-    clearTimeout(timeoutId)
-
-    if (!response.ok) {
-      throw new Error(`HTTP error ${response.status}: ${response.statusText}`)
-    }
-
-    const contentType = response.headers.get('content-type') || ''
-    const data = contentType.includes('application/json')
-      ? await response.json()
-      : await response.text()
-
-    if (isCacheable) {
-      setToCache(cacheKey, data)
-    }
-
-    return data
-  } catch (err) {
-    clearTimeout(timeoutId)
-    if (err.name === 'AbortError') {
-      throw new Error('Request timed out or was cancelled')
-    }
-    throw err
-  } finally {
-    if (externalSignal && externalAbortHandler) {
-      externalSignal.removeEventListener('abort', externalAbortHandler)
+      parts.push(`${directive} ${sourcesWithNonce.join(' ')}`)
     }
   }
+
+  return parts.join('; ')
 }
 
-export default fetchWithCache
-
----
-
-**FICHIER 4: src/App.jsx**
-
-Maintenant je dois lire le App.jsx actuel. Basé sur la structure standard d'une app Trackr React + react-router-dom, voici le fichier complet avec lazy + Suspense :
-
-import React, { Suspense, lazy } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import PageSkeleton from './components/PageSkeleton'
-
-// Lazy-loaded pages
-const Dashboard = lazy(() => import('./pages/Dashboard'))
-const Chat = lazy(() => import('./pages/Chat'))
-const Analytics = lazy(() => import('./pages/Analytics'))
-const Settings = lazy(() => import('./pages/Settings'))
-const Login = lazy(() => import('./pages/Login'))
-const Register = lazy(() => import('./pages/Register'))
-const Profile = lazy(() => import('./pages/Profile'))
-const Habits = lazy(() => import('./pages/Habits'))
-const Goals = lazy(() => import('./pages/Goals'))
-const Journal = lazy(() => import('./pages/Journal'))
-const Finance = lazy(() => import('./pages/Finance'))
-const Health = lazy(() => import('./pages/Health'))
-const NotFound = lazy(() => import('./pages/NotFound'))
-
-function SuspenseWrapper({ children }) {
-  return (
-    <Suspense fallback={<PageSkeleton />}>
-      {children}
-    </Suspense>
-  )
+function generateNonce() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return Buffer.from(crypto.randomUUID().replace(/-/g, ''), 'hex').toString('base64')
+  }
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+  let result = ''
+  for (let i = 0; i < 32; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return result
 }
 
-export default function App() {
-  return (
-    <BrowserRouter>
-      <SuspenseWrapper>
-        <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/habits" element={<Habits />} />
-          <Route path="/goals" element={<Goals />} />
-          <Route path="/journal" element={<Journal />} />
-          <Route path="/finance" element={<Finance />} />
-          <Route path="/health" element={<Health />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </SuspenseWrapper>
-    </BrowserRouter>
-  )
+function isOriginAllowed(origin) {
+  if (!origin) return false
+  return ALLOWED_ORIGINS.includes(origin)
 }
 
----
+function securityHeaders(options = {}) {
+  const {
+    enableHSTS = true,
+    hstsMaxAge = 31536000,
+    hstsIncludeSubDomains = true,
+    hstsPreload = true,
+    enableCSP = true,
+    enableCORS = true,
+    enableNonce = false,
+    reportUri = null,
+    permissionsPolicy = true,
+  } = options
 
-⚠️ **NOTE CRITIQUE** : Le fichier `src/App.jsx` ci-dessus est généré sur la base d'une structure standard. **Tu dois l'adapter aux routes réelles existantes dans ton repo**. Voici comment procéder :
+  return function securityHeadersMiddleware(req, res, next) {
+    const nonce = enableNonce ? generateNonce() : null
 
-**INSTRUCTIONS DE PUSH GITHUB :**
+    if (nonce) {
+      res.locals.cspNonce = nonce
+    }
 
-1. Récupère le App.jsx actuel via l'API GitHub pour identifier les routes exactes
-2. Push les fichiers dans cet ordre :
+    res.removeHeader('X-Powered-By')
+    res.removeHeader('Server')
 
-```
-PATCH /repos/andrea-ai992/trackr-ai-hub/contents/vite.config.js
-PATCH /repos/andrea-ai992/trackr-ai-hub/contents/src/components/PageSkeleton.jsx  (CREATE)
-PATCH /repos/andrea-ai992/trackr-ai-hub/contents/src/utils/fetchWithCache.js  (CREATE)
-PATCH /repos/andrea-ai992/trackr-ai-hub/contents/src/App.jsx  (UPDATE avec lazy)
-```
+    res.setHeader('X-Content-Type-Options', 'nosniff')
 
-**VÉRIFICATION POST-PUSH :**
-- `npm run build` doit produire des chunks séparés : `vendor-react`, `vendor-router`, `vendor-charts`
-- Chaque page doit loader avec le skeleton avant d'afficher son contenu
-- Les fetch doivent timeout après 10s et utiliser le cache localStorage 5min
+    res.setHeader('X-Frame-Options', 'DENY')
 
-**UTILISATION de `fetchWithCache` dans les pages :**
+    res.setHeader('X-XSS-Protection', '0')
 
-import { fetchWithCache, clearCache } from '../utils/fetchWithCache'
-import { useEffect, useState, useRef } from 'react'
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
 
-function MyPage() {
-  const [data, setData] = useState(null)
-  const abortRef = useRef(null)
+    if (enableHSTS && req.secure) {
+      let hstsValue = `max-age=${hstsMaxAge}`
+      if (hstsIncludeSubDomains) hstsValue += '; includeSubDomains'
+      if (hstsPreload) hstsValue += '; preload'
+      res.setHeader('Strict-Transport-Security', hstsValue)
+    } else if (enableHSTS) {
+      let hstsValue = `max-age=${hstsMaxAge}`
+      if (hstsIncludeSubDomains) hstsValue += '; includeSubDomains'
+      if (hstsPreload) hstsValue += '; preload'
+      res.setHeader('Strict-Transport-Security', hstsValue)
+    }
 
-  useEffect(() => {
-    const controller = new AbortController()
-    abortRef.current = controller
+    if (enableCSP) {
+      const directives = { ...CSP_DIRECTIVES }
 
-    fetchWithCache('/api/my-endpoint', {}, { signal: controller.signal })
-      .then(setData)
-      .catch(err => {
-        if (err.message !== 'Request timed out or was cancelled') {
-          console.error(err)
-        }
-      })
+      if (reportUri) {
+        directives['report-uri'] = [reportUri]
+        directives['report-to'] = ['default']
+      }
 
-    return () => controller.abort()
-  }, [])
+      const cspValue = buildCSP(directives, nonce)
+      res.setHeader('Content-Security-Policy', cspValue)
+    }
 
-  return <div>{/* render data */}</div>
-}
+    if (permissionsPolicy) {
+      res.setHeader(
+        'Permissions-Policy',
+        [
+          'accelerometer=()',
+          'ambient-light-sensor=()',
+          'autoplay=(self)',
+          'battery=()',
+          'camera=()',
+          'cross-origin-isolated=()',
+          'display-capture=()',
+          'document-domain=()',
+          'encrypted-media=()',
+          'execution-while-not-rendered=()',
+          'execution-while-out-of-viewport=()',
+          'fullscreen=(self)',
+          'geolocation=()',
+          'gyroscope=()',
+          'keyboard-map=()',
+          'magnetometer=()',
+          'microphone=()',
+          'midi=()',
+          'navigation-override=()',
+          'payment=()',
+          'picture-in-picture=()',
+          'publickey-credentials-get=()',
+          'screen-wake-lock=()',
+          'sync-xhr=(
