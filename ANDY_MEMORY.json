@@ -1,20 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776379577597",
-      "timestamp": "2026-04-16T22:46:17.597Z",
-      "type": "brain_cycle",
-      "hour": 22,
-      "successRate": 0,
-      "agentsRan": 4,
-      "improved": false,
-      "improvedFile": null,
-      "focus": "bugs",
-      "errors": 0,
-      "appHealthy": true,
-      "duration": 26
-    },
-    {
       "id": "mem_1776379749849",
       "timestamp": "2026-04-16T22:49:09.849Z",
       "type": "pattern_scan",
@@ -4072,6 +4058,19 @@
       "count": 4,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1776386662155",
+      "timestamp": "2026-04-17T00:44:22.155Z",
+      "type": "improvement",
+      "focus": "bugs",
+      "file": "api/discord.js",
+      "problem": "api/discord.js calls .json() on CoinGecko OHLC response without checking content-type, risking SSE/stream parse errors",
+      "severity": "critical",
+      "commit": "fix: guard CoinGecko OHLC fetch against SSE/non-JSON responses in discord.js getQuickSignal",
+      "learned": "CoinGecko (like Yahoo Finance) can return non-JSON on rate limits or errors, so every external fetch must validate content-type before calling .json().",
+      "applied": true,
+      "fromAdminTask": null
     }
   ]
 }
