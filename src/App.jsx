@@ -30,6 +30,8 @@ import Login from './pages/Login'
 import ChartAnalysis from './pages/ChartAnalysis'
 import Admin from './pages/Admin'
 import Patterns from './pages/Patterns'
+import CryptoTrader from './pages/CryptoTrader'
+import Signals from './pages/Signals'
 import { useAlerts } from './hooks/useAlerts'
 import { useNewsAlerts } from './hooks/useNewsAlerts'
 import { Search } from 'lucide-react'
@@ -195,6 +197,8 @@ function AppInner() {
               <Route path="/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
               <Route path="/patterns" element={<ProtectedRoute><Patterns /></ProtectedRoute>} />
               <Route path="/brain" element={<ProtectedRoute><BrainStatus /></ProtectedRoute>} />
+              <Route path="/crypto-trader" element={<ProtectedRoute><CryptoTrader /></ProtectedRoute>} />
+              <Route path="/signals" element={<ProtectedRoute><Signals /></ProtectedRoute>} />
 
               {/* Admin only */}
               <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
