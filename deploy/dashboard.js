@@ -98,6 +98,309 @@ input:focus{border-color:rgba(0,255,136,.4);box-shadow:0 0 0 3px rgba(0,255,136,
 </body>
 </html>`
 
+const VIBE_HTML = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AnDy Dev">
+<meta name="theme-color" content="#050505">
+<title>AnDy — Vibe Dev</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--bg:#050505;--bg2:#0a0a0a;--bg3:#0f0f0f;--border:#1c1c1c;--green:#00ff88;--cyan:#00d4ff;--purple:#a78bfa;--amber:#fbbf24;--red:#ef4444;--text:#e8e8e8;--dim:#444}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'SF Mono',ui-monospace,monospace;overflow:hidden}
+.app{display:flex;flex-direction:column;height:100dvh;max-width:480px;margin:0 auto}
+
+/* Header */
+.hdr{padding:env(safe-area-inset-top,14px) 16px 10px;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
+.hdr-l{display:flex;align-items:center;gap:10px}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.title{font-size:15px;font-weight:700;color:var(--green);letter-spacing:.08em}
+.subtitle{font-size:10px;color:var(--dim);margin-top:1px}
+.nav-btns{display:flex;gap:6px}
+.nb{background:transparent;border:1px solid var(--border);color:var(--dim);font-size:10px;padding:4px 9px;border-radius:7px;cursor:pointer;font-family:inherit;transition:.15s;letter-spacing:.05em}
+.nb.on{color:var(--green);border-color:rgba(0,255,136,.3);background:rgba(0,255,136,.05)}
+.nb:active{background:var(--border)}
+
+/* Tabs */
+.tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg)}
+.tab{flex:1;padding:10px;font-size:10px;letter-spacing:.08em;color:var(--dim);background:transparent;border:none;cursor:pointer;font-family:inherit;transition:.15s;border-bottom:2px solid transparent}
+.tab.on{color:var(--green);border-bottom-color:var(--green)}
+
+/* Scrollable content */
+.view{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none}
+.view.on{display:block}
+.pad{padding:12px}
+
+/* Live card */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;overflow:hidden}
+.card-title{font-size:9px;color:var(--dim);letter-spacing:.15em;text-transform:uppercase;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.refresh-btn{background:transparent;border:none;color:var(--dim);cursor:pointer;font-size:13px;padding:0}
+.refresh-btn:active{color:var(--green)}
+
+/* Stats row */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+.stat{background:var(--bg3);border-radius:10px;padding:10px 6px;text-align:center}
+.stat-n{font-size:20px;font-weight:700;line-height:1}
+.stat-l{font-size:8px;color:var(--dim);margin-top:3px;letter-spacing:.08em}
+
+/* Pipeline */
+.pipeline{display:flex;align-items:center;gap:4px;font-size:10px;flex-wrap:wrap;margin-top:6px}
+.stage{padding:3px 8px;border-radius:6px;background:var(--bg3);color:var(--dim);font-size:9px;letter-spacing:.05em}
+.stage.done{color:var(--green);background:rgba(0,255,136,.08)}
+.stage.cur{color:var(--amber);background:rgba(251,191,36,.1);font-weight:700}
+.arrow{color:var(--border);font-size:9px}
+
+/* Commit item */
+.commit{border-bottom:1px solid var(--border);padding:10px 0;display:flex;gap:10px;align-items:flex-start}
+.commit:last-child{border-bottom:none}
+.sha{font-size:9px;color:var(--cyan);font-family:monospace;flex-shrink:0;margin-top:2px;background:rgba(0,212,255,.07);padding:2px 6px;border-radius:4px}
+.commit-msg{font-size:12px;color:var(--text);line-height:1.4;flex:1}
+.commit-meta{font-size:9px;color:var(--dim);margin-top:3px}
+.file-tag{display:inline-block;background:rgba(167,139,250,.08);color:var(--purple);font-size:8px;padding:1px 5px;border-radius:4px;margin:2px 2px 0 0}
+
+/* Diff */
+.diff-line{font-size:10px;font-family:monospace;padding:1px 6px;line-height:1.6;white-space:pre-wrap;word-break:break-all}
+.diff-line.add{background:rgba(0,255,136,.06);color:#6ee7b7}
+.diff-line.del{background:rgba(239,68,68,.06);color:#fca5a5}
+.diff-line.hdr{color:var(--cyan);background:rgba(0,212,255,.05)}
+.diff-line.ctx{color:var(--dim)}
+
+/* Task form */
+.task-form{background:var(--bg2);border:1px solid rgba(0,255,136,.2);border-radius:14px;padding:14px}
+.task-form textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-size:13px;font-family:inherit;resize:none;outline:none;min-height:80px;transition:.2s;-webkit-overflow-scrolling:touch}
+.task-form textarea:focus{border-color:rgba(0,255,136,.4)}
+.task-form .send-btn{margin-top:8px;width:100%;padding:12px;background:var(--green);color:#050505;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s;letter-spacing:.04em}
+.task-form .send-btn:active{background:#00cc66;transform:scale(.98)}
+
+/* Quick tasks */
+.quick{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin-bottom:10px}
+.quick::-webkit-scrollbar{display:none}
+.chip{background:var(--bg3);border:1px solid var(--border);color:var(--dim);font-size:10px;padding:6px 12px;border-radius:20px;white-space:nowrap;cursor:pointer;flex-shrink:0;font-family:inherit}
+.chip:active{background:var(--border);color:var(--text)}
+
+/* Logs */
+.log-line{font-size:10px;font-family:monospace;padding:2px 0;line-height:1.6;border-bottom:1px solid rgba(255,255,255,.03);color:var(--dim)}
+.log-line.push{color:var(--green)}
+.log-line.err{color:var(--red)}
+.log-line.task{color:#818cf8}
+.log-line.rev{color:var(--cyan)}
+
+/* Bottom bar */
+.bottom-bar{padding:10px 12px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:8px}
+.bottom-bar input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:9px 14px;color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:.2s}
+.bottom-bar input:focus{border-color:rgba(0,255,136,.4)}
+.bottom-bar input::placeholder{color:var(--dim)}
+.send-btn-sm{width:38px;height:38px;border-radius:50%;background:var(--green);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#050505}
+.send-btn-sm:active{transform:scale(.9)}
+.empty{text-align:center;padding:40px 20px;color:var(--dim);font-size:12px}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="hdr">
+    <div class="hdr-l">
+      <div class="pulse"></div>
+      <div>
+        <div class="title">⟨◈⟩ AnDy Dev</div>
+        <div class="subtitle" id="hdr-sub">Chargement…</div>
+      </div>
+    </div>
+    <div class="nav-btns">
+      <a href="/chat" class="nb">💬</a>
+      <a href="/" class="nb">⚙️</a>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab on" onclick="tab('live')" id="t-live">⚡ LIVE</button>
+    <button class="tab" onclick="tab('commits')" id="t-commits">📦 COMMITS</button>
+    <button class="tab" onclick="tab('task')" id="t-task">➕ TÂCHE</button>
+    <button class="tab" onclick="tab('logs')" id="t-logs">📋 LOGS</button>
+  </div>
+
+  <!-- LIVE -->
+  <div class="view on pad" id="v-live">
+    <div class="card">
+      <div class="card-title">STATUT <button class="refresh-btn" onclick="loadLive()">↺</button></div>
+      <div class="stats">
+        <div class="stat"><div class="stat-n" id="v-done" style="color:var(--green)">—</div><div class="stat-l">DONE</div></div>
+        <div class="stat"><div class="stat-n" id="v-queue" style="color:#818cf8">—</div><div class="stat-l">QUEUE</div></div>
+        <div class="stat"><div class="stat-n" id="v-run" style="color:var(--amber)">—</div><div class="stat-l">RUN</div></div>
+        <div class="stat"><div class="stat-n" id="v-err" style="color:var(--red)">—</div><div class="stat-l">ERR</div></div>
+      </div>
+      <div id="v-current" style="font-size:12px;color:var(--dim)">—</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">EN COURS — PIPELINE</div>
+      <div id="v-pipeline"><div style="color:var(--dim);font-size:11px">Idle…</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">QUEUE (prochaines)</div>
+      <div id="v-queuelist" style="font-size:11px;color:var(--dim)">—</div>
+    </div>
+  </div>
+
+  <!-- COMMITS -->
+  <div class="view pad" id="v-commits">
+    <div class="card">
+      <div class="card-title">DERNIERS COMMITS <button class="refresh-btn" onclick="loadCommits()">↺</button></div>
+      <div id="commits-list"><div class="empty">Chargement…</div></div>
+    </div>
+  </div>
+
+  <!-- TASK -->
+  <div class="view pad" id="v-task">
+    <div class="quick" id="quick-chips">
+      <button class="chip" onclick="setTask('Redesign page Sports style ESPN dark stadium, scores animés')">🏟 Sports ESPN</button>
+      <button class="chip" onclick="setTask('Redesign page Markets style Bloomberg terminal, candlestick charts')">📈 Markets Bloomberg</button>
+      <button class="chip" onclick="setTask('Optimiser les performances — code splitting, LCP < 1.5s')">⚡ Performance</button>
+      <button class="chip" onclick="setTask('Redesign page News style Apple News, cards avec image cover')">📰 News Apple</button>
+      <button class="chip" onclick="setTask('Audit sécurité complet — XSS, CSRF, headers HTTP')">🔒 Sécurité</button>
+    </div>
+    <div class="task-form">
+      <div class="card-title" style="margin-bottom:8px">NOUVELLE TÂCHE POUR ANDY</div>
+      <textarea id="task-txt" placeholder="Décris ce que tu veux qu'AnDy développe ou améliore…"></textarea>
+      <button class="send-btn" onclick="submitTask()">Envoyer la tâche à AnDy →</button>
+    </div>
+  </div>
+
+  <!-- LOGS -->
+  <div class="view pad" id="v-logs">
+    <div class="card">
+      <div class="card-title">LOGS DAEMON <button class="refresh-btn" onclick="loadLogs()">↺</button></div>
+      <div id="logs-list"><div class="empty">Chargement…</div></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let curTab = 'live'
+const STAGES = ['planning','generating','testing','safe','live']
+
+function tab(name) {
+  curTab = name
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'))
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('on'))
+  document.getElementById('t-'+name).classList.add('on')
+  document.getElementById('v-'+name).classList.add('on')
+  if (name==='live') loadLive()
+  else if (name==='commits') loadCommits()
+  else if (name==='logs') loadLogs()
+}
+
+async function loadLive() {
+  try {
+    const r = await fetch('/api/tasks')
+    const d = await r.json()
+    const f = d.files||{}
+    const s = d.status||[]
+    const done=(f.done||[]).length, queue=(f.queue||[]).length, run=(f.running||[]).length, err=(f.error||[]).length
+
+    document.getElementById('v-done').textContent = done
+    document.getElementById('v-queue').textContent = queue
+    document.getElementById('v-run').textContent = run
+    document.getElementById('v-err').textContent = err
+    document.getElementById('hdr-sub').textContent = 'DONE '+done+' · QUEUE '+queue+' · '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})
+
+    // Pipeline
+    const running = f.running||[]
+    const pipeEl = document.getElementById('v-pipeline')
+    if (running.length) {
+      const e = s.find(t=>t.name===running[0])
+      const curIdx = STAGES.indexOf(e?.stage||'planning')
+      const pipe = STAGES.map((st,i) => {
+        const cls = i<curIdx?'done':i===curIdx?'cur':''
+        return \`<span class="stage \${cls}">\${st.toUpperCase()}</span>\`
+      }).join('<span class="arrow">›</span>')
+      pipeEl.innerHTML = \`<div style="color:var(--amber);font-size:11px;margin-bottom:6px">⟳ \${running[0].slice(0,44)}</div><div class="pipeline">\${pipe}</div>\`
+      if (e?.desc) pipeEl.innerHTML += \`<div style="font-size:10px;color:var(--dim);margin-top:6px">\${e.desc.slice(0,60)}</div>\`
+    } else {
+      pipeEl.innerHTML = '<div style="color:var(--dim);font-size:11px">⟨◈⟩ Idle — génération prochaine vague…</div>'
+    }
+
+    // Queue list
+    const q = f.queue||[]
+    document.getElementById('v-queuelist').innerHTML = q.length
+      ? q.slice(0,5).map(n=>\`<div style="padding:4px 0;border-bottom:1px solid var(--border);color:#555;font-size:10px">· \${n.slice(0,50)}</div>\`).join('')+(q.length>5?'<div style="color:#333;font-size:9px;padding-top:4px">+\${q.length-5} de plus</div>':'')
+      : '<div style="color:#222;font-size:10px">Queue vide</div>'
+  } catch(e) {
+    document.getElementById('hdr-sub').textContent = '⚠ Serveur inaccessible'
+  }
+}
+
+async function loadCommits() {
+  const el = document.getElementById('commits-list')
+  el.innerHTML = '<div class="empty">Chargement…</div>'
+  try {
+    const token = 'GITHUB_TOKEN_REMOVED'
+    const r = await fetch('https://api.github.com/repos/andrea-ai992/trackr-ai-hub/commits?per_page=15',{headers:{Authorization:'Bearer '+token}})
+    const commits = await r.json()
+    el.innerHTML = commits.map(c => {
+      const msg   = c.commit.message.split('\\n')[0]
+      const sha   = c.sha.slice(0,7)
+      const date  = new Date(c.commit.author.date).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
+      const isAndy = msg.includes('[AnDy]')
+      const color = isAndy ? 'var(--green)' : 'var(--text)'
+      return \`<div class="commit">
+        <div class="sha">\${sha}</div>
+        <div style="flex:1">
+          <div class="commit-msg" style="color:\${color}">\${msg.slice(0,70).replace(/</g,'&lt;')}</div>
+          <div class="commit-meta">\${date}</div>
+        </div>
+      </div>\`
+    }).join('')
+  } catch(e) { el.innerHTML = '<div class="empty">Erreur GitHub</div>' }
+}
+
+async function loadLogs() {
+  const el = document.getElementById('logs-list')
+  el.innerHTML = '<div class="empty">Chargement…</div>'
+  try {
+    const r = await fetch('/api/logs?which=daemon')
+    const d = await r.json()
+    const lines = (d.lines||[]).slice(-50).reverse()
+    el.innerHTML = lines.map(l => {
+      const cls = l.includes('pushed')||l.includes('DONE')?'push':l.includes('ERROR')?'err':l.includes('TASK')?'task':l.includes('review')||l.includes('pushed')?'rev':''
+      return \`<div class="log-line \${cls}">\${l.replace(/</g,'&lt;').slice(0,90)}</div>\`
+    }).join('')
+  } catch(e) { el.innerHTML = '<div class="empty">Logs inaccessibles</div>' }
+}
+
+function setTask(text) {
+  document.getElementById('task-txt').value = text
+  document.getElementById('task-txt').focus()
+}
+
+async function submitTask() {
+  const v = document.getElementById('task-txt').value.trim()
+  if (!v) return
+  const btn = document.querySelector('.task-form .send-btn')
+  btn.textContent = '…'
+  try {
+    await fetch('/api/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({desc:v})})
+    document.getElementById('task-txt').value = ''
+    btn.textContent = '✅ Tâche envoyée !'
+    btn.style.background = '#00cc66'
+    setTimeout(()=>{ btn.textContent='Envoyer la tâche à AnDy →'; btn.style.background='var(--green)'; tab('live') }, 1500)
+  } catch(e) { btn.textContent = '⚠ Erreur'; setTimeout(()=>{ btn.textContent='Envoyer la tâche à AnDy →' },2000) }
+}
+
+// Init
+loadLive()
+setInterval(()=>{ if(curTab==='live') loadLive() }, 10000)
+</script>
+</body>
+</html>`
+
 const CHAT_HTML = `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -717,8 +1020,11 @@ Tu peux aussi recevoir des commandes de tâche — si le message commence par /t
     return
   }
 
-  // Chat page (mobile-first, ajout écran d'accueil iOS)
+  // Chat page
   if (url.pathname === '/chat') return html(200, CHAT_HTML)
+
+  // Vibe page — dev experience sur mobile
+  if (url.pathname === '/vibe') return html(200, VIBE_HTML)
 
   // Dashboard
   html(200, DASH_HTML)
