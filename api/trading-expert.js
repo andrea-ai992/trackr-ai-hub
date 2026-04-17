@@ -23,9 +23,20 @@ async function fetchCryptoData(symbol) {
     .replace('link', 'chainlink').replace('uni', 'uniswap')
     .replace('ltc', 'litecoin').replace('atom', 'cosmos')
 
+  async function safeJson(r) {
+    if (!r.ok) { await r.body?.cancel().catch(() => {}); return null }
+    const ct = r.headers.get('content-type') || ''
+    if (!ct.includes('application/json') && !ct.includes('text/json') && !ct.includes('text/plain')) {
+      console.warn(`CoinGecko unexpected content-type "${ct}" for ${r.url}, skipping .json()`)
+      await r.body?.cancel().catch(() => {})
+      return null
+    }
+    return r.json().catch(e => { console.warn('CoinGecko JSON parse error:', e.message); return null })
+  }
+
   const [price, ohlc] = await Promise.allSettled([
-    fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true`, { signal: AbortSignal.timeout(8000) }).then(r => r.json()),
-    fetch(`https://api.coingecko.com/api/v3/coins/${id}/ohlc?vs_currency=usd&days=30`, { signal: AbortSignal.timeout(8000) }).then(r => r.json()),
+    fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true`, { signal: AbortSignal.timeout(8000) }).then(safeJson),
+    fetch(`https://api.coingecko.com/api/v3/coins/${id}/ohlc?vs_currency=usd&days=30`, { signal: AbortSignal.timeout(8000) }).then(safeJson),
   ])
 
   const priceData  = price.status === 'fulfilled' ? price.value?.[id] : null
