@@ -57,8 +57,16 @@ async function askBrain(systemPrompt, userPrompt) {
     }),
     signal: AbortSignal.timeout(30000),
   })
-  if (!r.ok) throw new Error(`Claude API → ${r.status}`)
-  const d = await r.json()
+  if (!r.ok) {
+    const errBody = await r.text().catch(() => '')
+    throw new Error(`Claude API → ${r.status}: ${errBody.slice(0, 200)}`)
+  }
+  const ct = r.headers.get('content-type') || ''
+  if (!ct.includes('application/json') && !ct.includes('text/json')) {
+    const body = await r.text().catch(() => '')
+    throw new Error(`Claude API unexpected content-type "${ct}": ${body.slice(0, 200)}`)
+  }
+  const d = await r.json().catch(e => { throw new Error(`Claude API JSON parse error: ${e.message}`) })
   return d.content?.[0]?.text || ''
 }
 
