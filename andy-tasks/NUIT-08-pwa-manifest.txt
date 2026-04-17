@@ -1,0 +1,1 @@
+Améliore le PWA Trackr — mets à jour public/manifest.json: name "Trackr", short_name "Trackr", theme_color "#080808", background_color "#080808", display "standalone", icons 192x192 et 512x512. Mets à jour index.html: meta theme-color #080808, apple-mobile-web-app-capable yes, apple-touch-icon. Crée public/sw.js basique: cache les assets critiques offline.

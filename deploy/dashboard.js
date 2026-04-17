@@ -877,8 +877,12 @@ function parseCookies(req) {
 
 http.createServer(async (req, res) => {
   const url  = new URL(req.url, 'http://localhost')
+  const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Authorization,Content-Type' }
   const html = (s, body, h={}) => { res.writeHead(s, {'Content-Type':'text/html',...h}); res.end(body) }
-  const json = (d) => { res.writeHead(200, {'Content-Type':'application/json'}); res.end(JSON.stringify(d)) }
+  const json = (d) => { res.writeHead(200, {'Content-Type':'application/json',...CORS}); res.end(JSON.stringify(d)) }
+
+  // CORS preflight
+  if (req.method === 'OPTIONS') { res.writeHead(204, CORS); return res.end() }
 
   // Logout
   if (url.pathname === '/logout') {

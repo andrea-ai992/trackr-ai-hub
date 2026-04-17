@@ -2,52 +2,56 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { fetchMultiplePrices } from '../hooks/useStockPrice'
-import { Plane, Languages, ExternalLink, ChevronRight, TrendingUp, Zap } from 'lucide-react'
+import { Plane, ChevronRight, TrendingUp, ArrowUpRight, ArrowDownRight, Bot } from 'lucide-react'
 
 function greeting() {
   const h = new Date().getHours()
-  if (h < 12) return 'Good morning'
-  if (h < 18) return 'Good afternoon'
-  return 'Good evening'
+  if (h < 6)  return 'Bonne nuit'
+  if (h < 12) return 'Bonjour'
+  if (h < 18) return 'Bon après-midi'
+  return 'Bonsoir'
 }
 
-function fmtUSD(n) {
+function fmt(n, decimals = 2) {
   if (n == null) return '—'
-  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: decimals, maximumFractionDigits: decimals })
 }
 
-function Sparkline({ data, color = '#6366f1', width = 80, height = 28 }) {
+function fmtPct(n) {
+  if (n == null) return '—'
+  return (n >= 0 ? '+' : '') + n.toFixed(2) + '%'
+}
+
+function Sparkline({ data, color = '#00ff88', width = 72, height = 28 }) {
   if (!data || data.length < 2) return <div style={{ width, height }} />
   const min = Math.min(...data), max = Math.max(...data), range = max - min || 1
-  const pts = data.map((v, i) => `${(i / (data.length - 1)) * width},${height - ((v - min) / range) * (height - 2) + 1}`).join(' ')
+  const pts = data.map((v, i) => `${(i / (data.length - 1)) * width},${height - ((v - min) / range) * (height - 4) + 2}`).join(' ')
   return (
     <svg width={width} height={height} style={{ overflow: 'visible', flexShrink: 0 }}>
-      <defs>
-        <linearGradient id="spark-grad" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor={color} stopOpacity={0.4} />
-          <stop offset="100%" stopColor={color} stopOpacity={1} />
-        </linearGradient>
-      </defs>
-      <polyline points={pts} fill="none" stroke={`url(#spark-grad)`} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.85" />
     </svg>
   )
 }
 
-function FearGreedGauge({ value }) {
-  const clamped = Math.max(0, Math.min(100, value))
-  const color = clamped < 25 ? '#ef4444' : clamped < 45 ? '#f97316' : clamped < 55 ? '#eab308' : clamped < 75 ? '#84cc16' : '#22c55e'
-  const r = 40, cx = 56, cy = 52
-  const angle = Math.PI - (clamped / 100) * Math.PI
-  const needle = { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) }
-  const sx = cx - r, ex = cx + r * Math.cos(angle), ey = cy + r * Math.sin(angle)
-  const largeArc = clamped > 50 ? 1 : 0
+function FGGauge({ value }) {
+  const v = Math.max(0, Math.min(100, value))
+  const color = v < 25 ? '#ff4d4d' : v < 45 ? '#fb923c' : v < 55 ? '#fbbf24' : v < 75 ? '#84cc16' : '#00ff88'
+  const label = v < 25 ? 'Extrême peur' : v < 45 ? 'Peur' : v < 55 ? 'Neutre' : v < 75 ? 'Avidité' : 'Extrême avidité'
+  const angle = Math.PI - (v / 100) * Math.PI
+  const r = 38, cx = 50, cy = 46
+  const nx = cx + r * Math.cos(angle), ny = cy + r * Math.sin(angle)
+  const ex = cx + r * Math.cos(angle), ey = cy + r * Math.sin(angle)
+  const largeArc = v > 50 ? 1 : 0
   return (
-    <svg width={112} height={60} viewBox="0 0 112 60">
-      <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="7" strokeLinecap="round" />
-      {clamped > 0 && <path d={`M ${sx} ${cy} A ${r} ${r} 0 ${largeArc} 1 ${ex} ${ey}`} fill="none" stroke={color} strokeWidth="7" strokeLinecap="round" style={{ filter: `drop-shadow(0 0 4px ${color})` }} />}
-      <circle cx={needle.x} cy={needle.y} r="5" fill={color} style={{ filter: `drop-shadow(0 0 4px ${color})` }} />
-      <text x={cx} y={cy + 6} textAnchor="middle" fill="white" fontSize="17" fontWeight="800" fontFamily="system-ui">{value}</text>
-    </svg>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+      <svg width={100} height={54} viewBox="0 0 100 54">
+        <path d={`M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${cx+r} ${cy}`} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6" strokeLinecap="round" />
+        {v > 0 && <path d={`M ${cx-r} ${cy} A ${r} ${r} 0 ${largeArc} 1 ${ex} ${ey}`} fill="none" stroke={color} strokeWidth="6" strokeLinecap="round" />}
+        <circle cx={nx} cy={ny} r="4" fill={color} />
+        <text x={cx} y={cy+4} textAnchor="middle" fill="white" fontSize="15" fontWeight="800" fontFamily="Inter,system-ui">{v}</text>
+      </svg>
+      <span style={{ fontSize: 10, fontWeight: 700, color, letterSpacing: '0.04em' }}>{label}</span>
+    </div>
   )
 }
 
@@ -56,10 +60,9 @@ export default function Dashboard() {
   const { stocks, sneakers } = useApp()
   const [livePrices, setLivePrices] = useState({})
   const [fearGreed, setFearGreed] = useState(null)
-  const [topMovers, setTopMovers] = useState([])
-  const [flightCount, setFlightCount] = useState(null)
+  const [crypto, setCrypto] = useState([])
   const [news, setNews] = useState([])
-  const userName = localStorage.getItem('nexus_name') || 'there'
+  const name = localStorage.getItem('nexus_name') || 'Andrea'
 
   useEffect(() => {
     const syms = [...new Set(stocks.filter(s => !s.salePrice).map(s => s.symbol).filter(Boolean))]
@@ -72,123 +75,106 @@ export default function Dashboard() {
   }, [])
 
   useEffect(() => {
-    fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,solana,binancecoin,cardano&order=market_cap_desc&sparkline=false&price_change_percentage=24h', { signal: AbortSignal.timeout(12000) })
-      .then(r => r.json()).then(d => setTopMovers(Array.isArray(d) ? d : [])).catch(() => {})
+    fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,solana,binancecoin&order=market_cap_desc&sparkline=false&price_change_percentage=24h', { signal: AbortSignal.timeout(12000) })
+      .then(r => r.json()).then(d => setCrypto(Array.isArray(d) ? d : [])).catch(() => {})
   }, [])
 
   useEffect(() => {
-    fetch('https://opensky-network.org/api/states/all', { signal: AbortSignal.timeout(15000) })
-      .then(r => r.json())
-      .then(d => setFlightCount((d.states || []).filter(s => !s[8] && s[5] != null && s[6] != null).length))
-      .catch(() => {})
-  }, [])
-
-  useEffect(() => {
-    fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://feeds.bbci.co.uk/news/business/rss.xml') + '&count=3', { signal: AbortSignal.timeout(10000) })
+    fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://feeds.bbci.co.uk/news/business/rss.xml') + '&count=4', { signal: AbortSignal.timeout(10000) })
       .then(r => r.json()).then(d => setNews(d.items || [])).catch(() => {})
   }, [])
 
-  const openStocks = stocks.filter(s => !s.salePrice)
-  const totalInvested = openStocks.reduce((s, i) => s + i.buyPrice * i.quantity, 0)
-  const totalCurrent = openStocks.reduce((s, i) => s + (livePrices[i.symbol] ?? i.buyPrice) * i.quantity, 0)
-  const totalPnL = totalCurrent - totalInvested
-  const totalPnLPct = totalInvested > 0 ? (totalPnL / totalInvested) * 100 : 0
-  const positions = openStocks.length + sneakers.filter(s => !s.salePrice).length
-  const sparkData = [0.98, 1.01, 0.99, 1.03, 1.01, 1.04, 1.0 + totalPnLPct / 200].map(m => totalCurrent * m)
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-  const fg = fearGreed ? parseInt(fearGreed.value) : null
-  const fgLabel = fg == null ? '' : fg < 25 ? 'Extreme Fear' : fg < 45 ? 'Fear' : fg < 55 ? 'Neutral' : fg < 75 ? 'Greed' : 'Extreme Greed'
-  const isUp = totalPnL >= 0
+  const open   = stocks.filter(s => !s.salePrice)
+  const inv    = open.reduce((s, i) => s + i.buyPrice * i.quantity, 0)
+  const cur    = open.reduce((s, i) => s + (livePrices[i.symbol] ?? i.buyPrice) * i.quantity, 0)
+  const pnl    = cur - inv
+  const pnlPct = inv > 0 ? (pnl / inv) * 100 : 0
+  const isUp   = pnl >= 0
+  const pos    = open.length + sneakers.filter(s => !s.salePrice).length
+  const today  = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  const fg     = fearGreed ? parseInt(fearGreed.value) : null
+  const sparkData = Array.from({ length: 8 }, (_, i) => cur * (0.97 + (i / 7) * 0.06 * (isUp ? 1 : -1) + Math.random() * 0.01))
 
-  // Coin colors
-  const coinColors = { bitcoin: '#f59e0b', ethereum: '#6366f1', solana: '#9945ff', binancecoin: '#f0b90b', cardano: '#0033ad' }
+  const coinColor = { bitcoin: '#f59e0b', ethereum: '#6366f1', solana: '#9945ff', binancecoin: '#f0b90b' }
 
   return (
-    <div style={{ maxWidth: 500, margin: '0 auto', padding: '0 16px 24px' }}>
+    <div className="page" style={{ paddingTop: 'max(60px, env(safe-area-inset-top, 0px))' }}>
 
-      {/* Header */}
-      <div className="stagger-item" style={{ paddingTop: 'max(56px, env(safe-area-inset-top, 0px))', paddingBottom: 20 }}>
-        <p style={{ fontSize: 12, color: '#4b6070', fontWeight: 600, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: "'Space Grotesk', system-ui" }}>{today}</p>
-        <h1 style={{ fontSize: 28, fontWeight: 800, color: 'white', letterSpacing: '-0.5px', lineHeight: 1.15 }}>
-          {greeting()}, <span style={{ background: 'linear-gradient(135deg,#818cf8,#c084fc)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{userName}</span>
+      {/* ── Header ── */}
+      <div className="stagger-item" style={{ marginBottom: 24 }}>
+        <p style={{ fontSize: 11, color: 'var(--t3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 4 }}>{today}</p>
+        <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--t1)', letterSpacing: '-0.3px' }}>
+          {greeting()}, <span style={{ color: 'var(--green)' }}>{name}</span>
         </h1>
       </div>
 
-      {/* ── Portfolio Hero Card ── */}
+      {/* ── Portfolio card ── */}
       <button onClick={() => navigate('/markets')} className="press-scale stagger-item" style={{
-        width: '100%', textAlign: 'left', marginBottom: 16,
-        background: 'linear-gradient(135deg, rgba(99,102,241,0.13) 0%, rgba(139,92,246,0.09) 100%)',
-        border: '1px solid rgba(99,102,241,0.22)',
-        borderRadius: 24,
-        padding: '22px 20px',
-        boxShadow: '0 0 40px rgba(99,102,241,0.1), 0 8px 32px rgba(0,0,0,0.4)',
-        position: 'relative',
-        overflow: 'hidden',
+        width: '100%', textAlign: 'left', marginBottom: 12,
+        background: 'var(--bg2)',
+        border: `1px solid ${isUp ? 'rgba(0,255,136,0.18)' : 'rgba(255,77,77,0.18)'}`,
+        borderRadius: 'var(--radius-xl)',
+        padding: '20px',
+        display: 'block',
       }}>
-        {/* Subtle grid pattern */}
-        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(99,102,241,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,0.05) 1px,transparent 1px)', backgroundSize: '28px 28px', borderRadius: 28 }} />
-
-        <div style={{ position: 'relative' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(99,102,241,0.25)', border: '1px solid rgba(99,102,241,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <TrendingUp size={14} color="#818cf8" />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--green-bg)', border: '1px solid var(--border-hi)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <TrendingUp size={15} color="var(--green)" />
             </div>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Portfolio</span>
-            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px #10b981', display: 'inline-block' }} className="live-ping" />
-              <span style={{ fontSize: 11, color: '#10b981', fontWeight: 600 }}>Live</span>
-            </div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Portfolio</span>
           </div>
-
-          <div style={{ fontSize: 42, fontWeight: 900, color: 'white', letterSpacing: '-1px', marginBottom: 6, fontVariantNumeric: 'tabular-nums' }}>
-            {fmtUSD(totalCurrent)}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span className="live-dot" />
+            <span style={{ fontSize: 10, color: 'var(--green)', fontWeight: 600 }}>Live</span>
           </div>
+        </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-            <span style={{ fontSize: 16, fontWeight: 700, color: isUp ? '#10b981' : '#ef4444', filter: isUp ? 'drop-shadow(0 0 4px rgba(16,185,129,0.5))' : 'drop-shadow(0 0 4px rgba(239,68,68,0.5))' }}>
-              {isUp ? '+' : ''}{fmtUSD(totalPnL)}
-            </span>
-            <span style={{ fontSize: 13, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: isUp ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)', color: isUp ? '#10b981' : '#ef4444', border: `1px solid ${isUp ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
-              {isUp ? '+' : ''}{totalPnLPct.toFixed(2)}%
+        <div className="num" style={{ fontSize: 38, fontWeight: 900, color: 'var(--t1)', letterSpacing: '-1px', marginBottom: 8, lineHeight: 1 }}>
+          {fmt(cur)}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {isUp ? <ArrowUpRight size={14} color="var(--green)" /> : <ArrowDownRight size={14} color="var(--red)" />}
+            <span className="num" style={{ fontSize: 14, fontWeight: 700, color: isUp ? 'var(--green)' : 'var(--red)' }}>
+              {fmt(Math.abs(pnl))}
             </span>
           </div>
+          <span className={`pill ${isUp ? 'pill-up' : 'pill-down'}`}>{fmtPct(pnlPct)}</span>
+        </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-            <span style={{ fontSize: 13, color: '#6b7280' }}>{positions} position{positions !== 1 ? 's' : ''}</span>
-            <Sparkline data={sparkData} color={isUp ? '#10b981' : '#ef4444'} width={80} height={26} />
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+          <span style={{ fontSize: 12, color: 'var(--t3)' }}>{pos} position{pos !== 1 ? 's' : ''}</span>
+          <Sparkline data={sparkData} color={isUp ? '#00ff88' : '#ff4d4d'} />
         </div>
       </button>
 
-      {/* ── Top Movers ── */}
-      {topMovers.length > 0 && (
-        <div className="stagger-item" style={{ marginBottom: 16 }}>
+      {/* ── Crypto movers ── */}
+      {crypto.length > 0 && (
+        <div className="stagger-item" style={{ marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingLeft: 2 }}>
-            <span className="section-label">Crypto Movers</span>
-            <button onClick={() => navigate('/markets?tab=crypto')} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: '#6366f1', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Space Grotesk', system-ui" }}>
+            <span className="section-label">Crypto</span>
+            <button onClick={() => navigate('/markets?tab=crypto')} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: 'var(--green)', fontWeight: 700 }}>
               Voir tout <ChevronRight size={13} />
             </button>
           </div>
           <div className="scroll-row">
-            {topMovers.map(coin => {
-              const pct = coin.price_change_percentage_24h
+            {crypto.map(c => {
+              const pct = c.price_change_percentage_24h
               const up  = pct >= 0
-              const cc  = coinColors[coin.id] || '#6366f1'
+              const cc  = coinColor[c.id] || 'var(--green)'
               return (
-                <button key={coin.id} onClick={() => navigate('/markets?tab=crypto')} className="press-scale"
-                  style={{ minWidth: 86, padding: '14px 11px', borderRadius: 20, textAlign: 'left',
-                    background: `rgba(${up ? '16,185,129' : '239,68,68'},0.07)`,
-                    border: `1px solid rgba(${up ? '16,185,129' : '239,68,68'},0.16)`,
-                    boxShadow: `0 4px 20px rgba(${up ? '16,185,129' : '239,68,68'},0.07)`,
-                  }}>
-                  <div style={{ width: 30, height: 30, borderRadius: 9, background: cc + '22', border: `1px solid ${cc}38`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 9, fontSize: 12, fontWeight: 900, color: cc }}>
-                    {coin.symbol[0].toUpperCase()}
+                <button key={c.id} onClick={() => navigate('/markets?tab=crypto')} className="press-scale"
+                  style={{ minWidth: 90, padding: '14px 12px', borderRadius: 'var(--radius)', textAlign: 'left', background: 'var(--bg2)', border: '1px solid var(--border)', flexShrink: 0 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, background: cc + '18', border: `1px solid ${cc}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10, fontSize: 13, fontWeight: 900, color: cc }}>
+                    {c.symbol?.[0]?.toUpperCase()}
                   </div>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: 'white', marginBottom: 1 }}>{coin.symbol.toUpperCase()}</div>
-                  <div style={{ fontSize: 10, color: '#6b7280', fontVariantNumeric: 'tabular-nums', marginBottom: 5 }}>
-                    ${coin.current_price >= 1 ? coin.current_price.toLocaleString('en-US', { maximumFractionDigits: 0 }) : coin.current_price.toFixed(3)}
+                  <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--t1)', marginBottom: 2 }}>{c.symbol?.toUpperCase()}</div>
+                  <div className="num" style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 6 }}>
+                    ${c.current_price >= 1 ? c.current_price.toLocaleString('en-US', { maximumFractionDigits: 0 }) : c.current_price?.toFixed(3)}
                   </div>
-                  <span className={`pill ${up ? 'pill-up' : 'pill-down'}`} style={{ fontSize: 10, padding: '2px 7px' }}>
+                  <span className={`pill ${up ? 'pill-up' : 'pill-down'}`} style={{ fontSize: 9 }}>
                     {up ? '+' : ''}{pct?.toFixed(2)}%
                   </span>
                 </button>
@@ -198,91 +184,74 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── Live Flights ── */}
-      <button onClick={() => navigate('/flights')} className="press-scale stagger-item" style={{
-        width: '100%', textAlign: 'left', marginBottom: 10,
-        background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.15)',
-        borderRadius: 22, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14,
-        boxShadow: '0 4px 24px rgba(6,182,212,0.07)',
-      }}>
-        <div style={{ width: 46, height: 46, borderRadius: 14, background: 'rgba(6,182,212,0.14)', border: '1px solid rgba(6,182,212,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Plane size={20} color="#22d3ee" />
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
-            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22d3ee', boxShadow: '0 0 5px #22d3ee', display: 'inline-block' }} className="live-ping" />
-            <span className="section-label" style={{ color: '#22d3ee' }}>Live Flights</span>
+      {/* ── 2-col quick actions ── */}
+      <div className="stagger-item" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+
+        {/* Flights */}
+        <button onClick={() => navigate('/flights')} className="press-scale" style={{
+          textAlign: 'left', padding: '16px', borderRadius: 'var(--radius-lg)',
+          background: 'var(--bg2)', border: '1px solid var(--border)',
+        }}>
+          <div style={{ width: 36, height: 36, borderRadius: 11, background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+            <Plane size={17} color="var(--blue)" />
           </div>
-          <div style={{ fontSize: 24, fontWeight: 900, color: 'white', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
-            {flightCount != null ? flightCount.toLocaleString() : '—'}
+          <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--t1)', marginBottom: 2 }}>Flights</p>
+          <p style={{ fontSize: 10, color: 'var(--t3)' }}>Radar live</p>
+        </button>
+
+        {/* AnDy */}
+        <button onClick={() => navigate('/andy')} className="press-scale" style={{
+          textAlign: 'left', padding: '16px', borderRadius: 'var(--radius-lg)',
+          background: 'var(--green-bg)', border: '1px solid var(--border-hi)',
+        }}>
+          <div style={{ width: 36, height: 36, borderRadius: 11, background: 'rgba(0,255,136,0.12)', border: '1px solid rgba(0,255,136,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+            <Bot size={17} color="var(--green)" />
           </div>
-          <div style={{ fontSize: 12, color: '#4b6070', marginTop: 1 }}>en vol dans le monde</div>
-        </div>
-        <ChevronRight size={18} color="#374151" />
-      </button>
+          <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--green)', marginBottom: 2 }}>AnDy AI</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span className="live-dot" style={{ width: 5, height: 5 }} />
+            <p style={{ fontSize: 10, color: 'var(--green)', opacity: 0.7 }}>En ligne</p>
+          </div>
+        </button>
+      </div>
+
+      {/* ── Fear & Greed ── */}
+      {fg != null && (
+        <button onClick={() => navigate('/markets?tab=crypto')} className="press-scale stagger-item" style={{
+          width: '100%', textAlign: 'center', marginBottom: 12,
+          background: 'var(--bg2)', border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-lg)', padding: '18px 20px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div style={{ textAlign: 'left' }}>
+            <p className="section-label" style={{ marginBottom: 6 }}>Fear & Greed Index</p>
+            <p style={{ fontSize: 11, color: 'var(--t3)' }}>Sentiment du marché crypto</p>
+          </div>
+          <FGGauge value={fg} />
+        </button>
+      )}
 
       {/* ── News ── */}
-      <div className="stagger-item" style={{ background: 'rgba(19,28,43,0.5)', border: '1px solid rgba(132,147,150,0.12)', borderRadius: 22, overflow: 'hidden', marginBottom: 10 }}>
-        <button onClick={() => navigate('/news')} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'none', border: 'none', borderBottom: '1px solid rgba(132,147,150,0.08)', cursor: 'pointer' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Zap size={12} color="#6366f1" />
+      {news.length > 0 && (
+        <div className="stagger-item" style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', marginBottom: 12 }}>
+          <button onClick={() => navigate('/news')} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
             <span className="section-label">Actualités</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: '#6366f1', fontWeight: 700, fontFamily: "'Space Grotesk', system-ui" }}>
-            Tout voir <ChevronRight size={13} />
-          </div>
-        </button>
-        {news.length === 0 ? (
-          <div style={{ padding: '18px', textAlign: 'center', color: '#374151', fontSize: 13 }}>Chargement…</div>
-        ) : news.map((item, i) => (
-          <a key={i} href={item.link} target="_blank" rel="noreferrer" className="press-scale-sm"
-            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 18px', borderBottom: i < news.length - 1 ? '1px solid rgba(132,147,150,0.07)' : 'none', textDecoration: 'none', transition: 'background 150ms ease' }}
-            onTouchStart={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-            onTouchEnd={e => e.currentTarget.style.background = 'transparent'}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, color: '#6366f1', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>BBC Business</p>
-              <p style={{ fontSize: 13, color: '#bac9cc', lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{item.title}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: 'var(--green)', fontWeight: 700 }}>
+              Tout voir <ChevronRight size={13} />
             </div>
-            <ExternalLink size={12} color="#374151" style={{ flexShrink: 0 }} />
-          </a>
-        ))}
-      </div>
-
-      {/* ── 2-col grid: Fear & Greed + Translate ── */}
-      <div className="stagger-item" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <button onClick={() => navigate('/markets?tab=crypto')} className="press-scale" style={{
-          textAlign: 'left', padding: '16px 14px', borderRadius: 22,
-          background: 'rgba(19,28,43,0.5)', border: '1px solid rgba(132,147,150,0.12)',
-          boxShadow: fg != null && fg > 60 ? '0 0 20px rgba(34,197,94,0.07)' : fg != null && fg < 40 ? '0 0 20px rgba(239,68,68,0.07)' : 'none',
-        }}>
-          <p className="section-label" style={{ marginBottom: 10 }}>Fear & Greed</p>
-          {fg != null ? (
-            <>
-              <FearGreedGauge value={fg} />
-              <p style={{ fontSize: 11, fontWeight: 700, marginTop: 6, color: fg < 25 ? '#ef4444' : fg < 45 ? '#f97316' : fg < 55 ? '#eab308' : fg < 75 ? '#84cc16' : '#22c55e' }}>{fgLabel}</p>
-            </>
-          ) : <div style={{ height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#374151', fontSize: 13 }}>…</div>}
-        </button>
-
-        <button onClick={() => navigate('/translator')} className="press-scale" style={{
-          textAlign: 'left', padding: '16px 14px', borderRadius: 22,
-          background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.16)',
-          display: 'flex', flexDirection: 'column',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 14 }}>
-            <div style={{ width: 26, height: 26, borderRadius: 9, background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Languages size={13} color="#818cf8" />
-            </div>
-            <span className="section-label">Traduire</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 18, marginBottom: 6 }}>
-            <span>🇺🇸</span>
-            <ChevronRight size={12} color="#374151" />
-            <span>🇫🇷</span>
-          </div>
-          <p style={{ fontSize: 12, color: '#4b6070' }}>Appuyer pour traduire</p>
-        </button>
-      </div>
+          </button>
+          {news.map((item, i) => (
+            <a key={i} href={item.link} target="_blank" rel="noreferrer" className="press-scale-sm"
+              style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '13px 16px', borderBottom: i < news.length - 1 ? '1px solid var(--border)' : 'none' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 9, fontWeight: 700, color: 'var(--t3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>BBC Business</p>
+                <p style={{ fontSize: 13, color: 'var(--t1)', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{item.title}</p>
+              </div>
+              <ArrowUpRight size={13} color="var(--t3)" style={{ flexShrink: 0, marginTop: 2 }} />
+            </a>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

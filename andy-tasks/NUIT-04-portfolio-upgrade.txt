@@ -1,0 +1,1 @@
+Améliore src/pages/Portfolio.jsx — ajoute un pie chart de répartition (stocks vs crypto vs sneakers vs cash) avec recharts, total P&L en haut en grand, section "Top performers" 3 meilleurs gains, section "Worst" 3 pires. Dark theme cohérent avec le reste de l'app.

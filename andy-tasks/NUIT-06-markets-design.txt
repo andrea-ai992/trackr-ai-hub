@@ -1,0 +1,1 @@
+Améliore src/pages/Stocks.jsx ou src/pages/Crypto.jsx — design Bloomberg: liste de prix avec sparklines 7j, variation 24h colorée (vert/rouge), badge sector, search sticky en haut. Chaque item cliquable, prix live qui flashent. Inter font, dark #080808, accents neon vert.

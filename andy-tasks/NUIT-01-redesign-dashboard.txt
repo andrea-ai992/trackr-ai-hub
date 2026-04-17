@@ -1,0 +1,1 @@
+Redesign complet src/pages/Dashboard.jsx — utilise les CSS vars (--green #00ff88, --bg2, --border, --t1, --t2, --t3). Portfolio hero card avec sparkline, crypto movers scroll horizontal, boutons AnDy et Flights, Fear&Greed gauge. Design system cohérent Inter font, border-radius 16-22px, press-scale interactions. Mobile-first max-width 520px.

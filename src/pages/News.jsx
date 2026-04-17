@@ -124,83 +124,37 @@ const isNew = ts => ts && (Date.now() / 1000 - ts) < 45 * 60        // < 45 min
 // ─── Card component ───────────────────────────────────────────────────────────
 function NewsCard({ item, breaking }) {
   const [pressed, setPressed] = useState(false)
-
   return (
-    <a
-      href={item.url}
-      target="_blank"
-      rel="noreferrer"
+    <a href={item.url} target="_blank" rel="noreferrer"
       style={{
-        display: 'block',
-        textDecoration: 'none',
-        padding: '14px 16px',
-        background: breaking
-          ? 'rgba(239,68,68,0.07)'
-          : pressed ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)',
-        border: breaking
-          ? '1px solid rgba(239,68,68,0.22)'
-          : '1px solid rgba(255,255,255,0.05)',
-        borderRadius: 18,
-        transition: 'background 120ms',
+        display: 'block', textDecoration: 'none',
+        padding: '13px 14px 13px 17px',
+        background: breaking ? 'rgba(255,77,77,0.06)' : pressed ? 'var(--bg3)' : 'var(--bg2)',
+        border: breaking ? '1px solid rgba(255,77,77,0.2)' : '1px solid var(--border)',
+        borderLeft: `3px solid ${item.sourceColor}`,
+        borderRadius: 'var(--radius)',
+        transition: 'background 100ms',
         WebkitTapHighlightColor: 'transparent',
-        position: 'relative',
-        overflow: 'hidden',
       }}
       onTouchStart={() => setPressed(true)}
       onTouchEnd={() => setPressed(false)}
     >
-      {/* Left accent bar */}
-      <div style={{
-        position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
-        background: item.sourceColor, borderRadius: '18px 0 0 18px',
-        opacity: 0.85,
-      }} />
-
-      <div style={{ paddingLeft: 8 }}>
-        {/* Source row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
-          {breaking && (
-            <span style={{
-              display: 'flex', alignItems: 'center', gap: 3,
-              fontSize: 9, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase',
-              color: '#ef4444', background: 'rgba(239,68,68,0.15)',
-              border: '1px solid rgba(239,68,68,0.3)',
-              padding: '2px 6px', borderRadius: 5,
-            }}>
-              <Zap size={8} fill="#ef4444" /> BREAKING
-            </span>
-          )}
-          {!breaking && isNew(item.time) && (
-            <span style={{
-              fontSize: 9, fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase',
-              color: '#10b981', background: 'rgba(16,185,129,0.12)',
-              border: '1px solid rgba(16,185,129,0.25)',
-              padding: '2px 6px', borderRadius: 5,
-            }}>NEW</span>
-          )}
-          <span style={{ fontSize: 11, fontWeight: 700, color: item.sourceColor }}>
-            {item.sourceEmoji} {item.source}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
+        {breaking && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 9, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--red)', background: 'rgba(255,77,77,0.12)', border: '1px solid rgba(255,77,77,0.25)', padding: '2px 6px', borderRadius: 5 }}>
+            <Zap size={8} fill="var(--red)" /> BREAKING
           </span>
-          <span style={{ fontSize: 10, color: '#374151' }}>·</span>
-          <span style={{ fontSize: 11, color: '#4b5563' }}>{ago(item.time)}</span>
-          <ExternalLink size={11} style={{ color: '#374151', marginLeft: 'auto' }} />
-        </div>
-
-        {/* Headline */}
-        <p style={{
-          fontSize: breaking ? 15 : 14,
-          lineHeight: 1.45,
-          color: breaking ? '#f9fafb' : '#d1d5db',
-          fontWeight: breaking ? 700 : 500,
-          margin: 0,
-          display: '-webkit-box',
-          WebkitLineClamp: 3,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-        }}>
-          {item.title}
-        </p>
+        )}
+        {!breaking && isNew(item.time) && (
+          <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--green)', background: 'var(--green-bg)', border: '1px solid rgba(0,255,136,0.22)', padding: '2px 6px', borderRadius: 5 }}>NEW</span>
+        )}
+        <span style={{ fontSize: 11, fontWeight: 700, color: item.sourceColor }}>{item.sourceEmoji} {item.source}</span>
+        <span style={{ fontSize: 10, color: 'var(--t3)' }}>· {ago(item.time)}</span>
+        <ExternalLink size={11} style={{ color: 'var(--t3)', marginLeft: 'auto' }} />
       </div>
+      <p style={{ fontSize: breaking ? 14 : 13, lineHeight: 1.45, color: breaking ? 'var(--t1)' : 'var(--t2)', fontWeight: breaking ? 700 : 500, margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+        {item.title}
+      </p>
     </a>
   )
 }
@@ -282,8 +236,6 @@ export default function News() {
 
   const breaking = filtered.filter(i => isBreaking(i.time))
   const rest = filtered.filter(i => !isBreaking(i.time))
-  const activeTab = TABS.find(t => t.id === tab)
-
   async function toggleNotifs() {
     if (!notifsOn) {
       const perm = await requestNotificationPermission()
@@ -317,94 +269,47 @@ export default function News() {
       <PullIndicator progress={ptr.progress} refreshing={ptr.refreshing} />
 
       {/* ── Sticky header ── */}
-      <div style={{
-        position: 'sticky', top: 0, zIndex: 50,
-        background: 'rgba(7,7,15,0.92)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-        paddingTop: 'max(52px, env(safe-area-inset-top, 0px))',
-      }}>
-        {/* Title row */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 50, background: 'var(--bg)', borderBottom: '1px solid var(--border)', paddingTop: 'max(52px, env(safe-area-inset-top, 0px))' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px 10px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Newspaper size={20} color="#6366f1" />
-            <span style={{ fontSize: 22, fontWeight: 800, color: 'white' }}>News</span>
-            {/* Live dot */}
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} className="live-ping" />
-              <span style={{ fontSize: 11, color: '#10b981', fontWeight: 600 }}>Live</span>
-            </span>
-          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Newspaper size={18} color="var(--green)" />
+            <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--t1)' }}>News</span>
+            <span className="live-dot" />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {updatedAt && !loading && (
-              <span style={{ fontSize: 10, color: '#374151' }}>
-                {updatedAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-              </span>
+              <span style={{ fontSize: 10, color: 'var(--t3)' }}>{updatedAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
             )}
-            <button onClick={toggleNotifs}
-              style={{ padding: '7px', borderRadius: 12, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
-                background: notifsOn ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.05)',
-                color: notifsOn ? '#818cf8' : '#4b5563',
-              }}>
-              {notifsOn ? <Bell size={16} /> : <BellOff size={16} />}
+            <button onClick={toggleNotifs} style={{ width: 34, height: 34, borderRadius: 10, border: '1px solid var(--border)', background: notifsOn ? 'var(--green-bg)' : 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: notifsOn ? 'var(--green)' : 'var(--t3)' }}>
+              {notifsOn ? <Bell size={15} /> : <BellOff size={15} />}
             </button>
-            <button onClick={() => setShowSearch(v => !v)}
-              style={{ padding: '7px', borderRadius: 12, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
-                background: showSearch ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.05)',
-                color: showSearch ? '#818cf8' : '#4b5563',
-              }}>
-              {showSearch ? <X size={16} /> : <Search size={16} />}
+            <button onClick={() => setShowSearch(v => !v)} style={{ width: 34, height: 34, borderRadius: 10, border: `1px solid ${showSearch ? 'var(--border-hi)' : 'var(--border)'}`, background: showSearch ? 'var(--green-bg)' : 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: showSearch ? 'var(--green)' : 'var(--t3)' }}>
+              {showSearch ? <X size={15} /> : <Search size={15} />}
             </button>
-            <button onClick={() => load()} disabled={loading}
-              style={{ padding: '7px', borderRadius: 12, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
-                background: 'rgba(255,255,255,0.05)', color: loading ? '#374151' : '#6b7280',
-              }}>
-              {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+            <button onClick={() => load()} disabled={loading} style={{ width: 34, height: 34, borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: loading ? 'var(--t3)' : 'var(--t2)' }}>
+              {loading ? <Loader2 size={15} className="spin" /> : <RefreshCw size={15} />}
             </button>
           </div>
         </div>
 
-        {/* Search bar */}
         {showSearch && (
           <div style={{ padding: '0 16px 10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 16, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <Search size={15} color="#6b7280" />
-              <input
-                ref={searchRef}
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Search headlines, sources…"
-                style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'white', fontSize: 15, fontFamily: 'inherit' }}
-              />
-              {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#6b7280' }}><X size={14} /></button>}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--bg2)', border: '1px solid var(--border-hi)' }}>
+              <Search size={14} color="var(--t3)" />
+              <input ref={searchRef} value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher…"
+                style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--t1)', fontSize: 14, fontFamily: 'inherit' }} />
+              {search && <button onClick={() => setSearch('')} style={{ color: 'var(--t3)', display: 'flex' }}><X size={13} /></button>}
             </div>
           </div>
         )}
 
-        {/* Category tabs */}
-        <div style={{ display: 'flex', overflowX: 'auto', gap: 6, padding: '0 16px 12px' }} className="no-scrollbar">
+        <div className="tab-bar" style={{ padding: '0 16px 10px' }}>
           {TABS.map(t => {
             const active = tab === t.id
             const Icon = t.icon
             return (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 5,
-                  padding: '8px 14px',
-                  borderRadius: 14,
-                  border: active ? `1px solid ${t.color}40` : '1px solid rgba(255,255,255,0.07)',
-                  background: active ? `${t.color}18` : 'rgba(255,255,255,0.03)',
-                  color: active ? t.color : '#6b7280',
-                  fontSize: 13, fontWeight: active ? 700 : 500,
-                  cursor: 'pointer', whiteSpace: 'nowrap',
-                  transition: 'all 180ms',
-                  boxShadow: active ? `0 0 12px ${t.color}20` : 'none',
-                }}
-              >
-                <Icon size={13} strokeWidth={active ? 2.5 : 1.8} />
+              <button key={t.id} onClick={() => setTab(t.id)} className="tab-btn" style={{ color: active ? t.color : 'var(--t3)', background: active ? t.color + '15' : 'transparent', borderColor: active ? t.color + '40' : 'var(--border)' }}>
+                <Icon size={12} strokeWidth={active ? 2.5 : 1.8} />
                 {t.label}
               </button>
             )

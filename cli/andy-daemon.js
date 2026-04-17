@@ -124,10 +124,20 @@ async function flushSyncQueue() {
 const MODEL_SMART = 'claude-sonnet-4-6'               // ~$3/M in · $15/M out
 const MODEL_FAST  = 'claude-haiku-4-5-20251001'        // ~$0.8/M in · $4/M out
 
-const SYSTEM = `Tu es AnDy, l'IA autonome du projet Trackr.
-App React 19 + Vite mobile-first, déployée sur Vercel. Repo GitHub: ${GITHUB_REPO}. App: ${APP_URL}.
-Tu travailles en mode serveur autonome — tu génères et pousses du code directement sur GitHub.
-Sois précis, complet, production-ready.`
+const SYSTEM = `Tu es AnDy, l'IA autonome d'Andrea Matlega.
+
+APPS ACTIVES:
+1. Trackr (app principale) — React 19 + Vite mobile-first, Vercel. Repo: ${GITHUB_REPO}. URL: ${APP_URL}
+   Pages: Dashboard, Sports (PSG/NFL/NBA), Markets (Stocks/Crypto), News (RSS multi-sources), More (modules), Andy (IA chat), Agents, Portfolio, Sneakers, Watches, FlightTracker
+2. Dashboard serveur — Node.js port 4000, /vibe (dev mobile), /chat (AnDy chat), /api/* (data)
+
+Tu travailles en mode autonome 24/7 — tu génères du code production-ready, tu le pousses sur GitHub.
+Règles:
+- Code complet et fonctionnel (pas de TODO, pas de placeholder)
+- Mobile-first, dark theme (#080808 fond, #00ff88 accent neon)
+- Design tokens CSS vars: --green, --bg, --bg2, --border, --t1, --t2, --t3
+- Préfère améliorer ce qui existe plutôt que créer de zéro
+- Si tu modifies un fichier, tu gardes toute la logique existante`
 
 async function generateRaw(prompt, maxTokens = 4096, model = MODEL_SMART) {
   if (!API_KEY) throw new Error('ANTHROPIC_API_KEY manquante')
@@ -315,26 +325,30 @@ function updateTaskStatus(name, updates) {
 
 // Priorités ordonnées : qualité + design > features > infra
 const TASK_DOMAINS = [
-  // P0 — Fluidité et qualité visuelle (répété 3x pour poids plus élevé)
-  'P0/performance — code splitting, lazy loading, bundle < 200kb, LCP < 1.5s',
-  'P0/animations — page transitions fade 200ms, hover scale, skeleton loaders neon vert',
-  'P0/polish — supprimer tous les layout shifts, hauteurs fixes sur cards, scroll smooth iOS',
-  // P1 — Design dédié par catégorie (look app native)
-  'P1/Sports — design stadium dark, scores live animés, stats visuelles comme ESPN',
-  'P1/MMA-UFC — design octagon noir/rouge, fighter cards avec photos, countdown fight',
-  'P1/Crypto — design Bloomberg terminal, charts recharts temps réel, prix live pulsants',
-  'P1/Markets — design Bloomberg/TradingView, candlestick charts, heatmap sectorielle',
-  'P1/News — design Flipboard/Apple News, cards avec image cover, catégories colorées',
-  'P1/Hub — dashboard glassmorphism, widgets modulaires drag-drop, KPIs animés',
-  // P2 — Features
-  'P2/notifications — push notifications PWA, badge icône, son discret',
-  'P2/search — barre de recherche globale avec résultats instantanés',
-  'P2/offline — PWA service worker, cache offline, indicateur connexion',
-  'P2/settings — thème perso, layout dense/normal, raccourcis clavier',
-  // P3 — Infra
-  'P3/API — rate limiting, cache Redis/KV, erreurs gracieuses',
-  'P3/sécurité — headers HTTP, CSP, HTTPS strict',
-  'P3/monitoring — Sentry errors, Web Vitals tracking',
+  // ── Trackr App — redesign mobile-first ─────────────────────────────────────
+  'Trackr/Dashboard — redesign complet: portfolio hero card neon vert, crypto movers horizontal scroll, news feed, Fear&Greed gauge, design tokens CSS vars --green --bg --t1',
+  'Trackr/Sports — scores live ESPN ESPN animés, team cards couleurs de club, scroll tabs horizontal, countdown prochains matchs PSG/NFL/NBA',
+  'Trackr/Markets — tab Stocks et Crypto propres, prix live pulsants couleur rouge/vert, sparklines, search bar sticky',
+  'Trackr/News — header sticky avec tabs catégories scroll, cards avec accent bar couleur source, badge NEW/BREAKING, search inline',
+  'Trackr/More — grille modules 2col dark, badges colorés, all-modules list avec chevron, settings tout en bas',
+  // ── Design system ───────────────────────────────────────────────────────────
+  'Trackr/CSS — design tokens propres dans index.css: --bg #080808 --green #00ff88 --t1 #f0f0f0 --border rgba(255,255,255,0.07), Inter font, press-scale, card, pill-up/down, scroll-row, tab-btn, page utility class',
+  'Trackr/BottomNav — pill animé neon, icônes 22px, labels uppercase 9px, safe area bottom, badge news rouge',
+  'Trackr/Animations — stagger fadeUp sur toutes les pages, page transitions slide 340ms, skeleton shimmer neon',
+  // ── Performance ─────────────────────────────────────────────────────────────
+  'Trackr/Performance — code splitting avec lazy/Suspense sur toutes les pages heavy (Sports, ChartAnalysis, FlightTracker), bundle target < 300kb',
+  'Trackr/PWA — service worker cache offline, manifest icons 192/512, add-to-homescreen prompt mobile',
+  // ── Crypto Trader ───────────────────────────────────────────────────────────
+  'CryptoTrader/Setup — crée src/pages/CryptoTrader.jsx: interface trading mobile, orderbook simplifié, position tracker, P&L live, dark bloomberg terminal style',
+  'CryptoTrader/Signals — crée src/pages/Signals.jsx: signaux IA de trading (RSI, MACD, volume), scoring bullish/bearish, alertes configurables',
+  'CryptoTrader/Portfolio — améliore src/pages/Portfolio.jsx: intègre crypto holdings, allocation pie chart, total P&L en USD et %, top gainer/loser',
+  // ── Dashboard serveur (/vibe) ───────────────────────────────────────────────
+  'Serveur/Vibe — améliore deploy/dashboard.js VIBE_HTML: onglet LIVE plus détaillé (pipeline par tâche, durée, status), stats uptime/coût estimé',
+  'Serveur/Logs — améliore onglet LOGS dans /vibe: filtre par niveau (info/error/warn), search, colors, auto-scroll to bottom',
+  // ── Features app ───────────────────────────────────────────────────────────
+  'Trackr/ChartAnalysis — améliore src/pages/ChartAnalysis.jsx: TradingView widget full width, bouton analyse IA avec prompt contextuel, résultats en card',
+  'Trackr/Patterns — améliore src/pages/Patterns.jsx: 16 patterns chartistes avec illustrations SVG, description, exemple, niveau de confiance',
+  'Trackr/Portfolio — améliore src/pages/Portfolio.jsx: ajout crypto positions, graphique allocation, stats avancées, export CSV',
 ]
 
 const SECURITY_DOMAINS = [
@@ -449,27 +463,72 @@ async function generateNextTasks() {
   log('fallback task injected')
 }
 
-// ── Discord morning recap ─────────────────────────────────────────────────────
+// ── Discord morning recap — 7h00 ─────────────────────────────────────────────
 function scheduleDiscordRecap() {
   const now = new Date(), target = new Date(now)
-  target.setHours(9, 0, 0, 0)
+  target.setHours(7, 0, 0, 0)
   if (target <= now) target.setDate(target.getDate() + 1)
   const ms = target - now
-  log(`Discord recap schedulé à ${target.toISOString()}`)
+  log(`Discord recap schedulé à ${target.toLocaleString('fr-FR')} (dans ${Math.round(ms/60000)}min)`)
+
   setTimeout(async () => {
-    const done   = taskLog.filter(t => t.status === 'DONE')
-    const errors = taskLog.filter(t => t.status === 'ERROR')
-    const msg = [
-      `🤖 **AnDy Server — Rapport** (${new Date().toLocaleDateString('fr-FR')})`,
-      `✅ **${done.length} tâches terminées**`,
-      ...done.slice(-10).map(t => `  • \`${t.name}\` *(${t.dur}s)*`),
-      errors.length ? `❌ **${errors.length} erreurs**` : '',
-      `🔄 Auto-générations: ${autoGenCount} | Repo: ${GITHUB_REPO}`,
-      `💡 *App: ${APP_URL}*`,
-    ].filter(Boolean).join('\n')
-    const ok = await discordPost(CH_MORNING, msg)
-    log(`Discord recap: ${ok ? 'envoyé' : 'échec'}`)
-    scheduleDiscordRecap() // re-schedule pour le lendemain
+    const done    = taskLog.filter(t => t.status === 'DONE')
+    const errors  = taskLog.filter(t => t.status === 'ERROR')
+    const queue   = readdirSync(TASKS_DIR).filter(f => f.endsWith('.txt'))
+
+    // Domaines travaillés cette nuit
+    const domains = {}
+    for (const t of done) {
+      const d = (t.desc || '').split('—')[0].trim().replace(/^[A-Z0-9]+\//, '') || 'autre'
+      domains[d] = (domains[d] || 0) + 1
+    }
+    const topDomains = Object.entries(domains).sort((a,b) => b[1]-a[1]).slice(0, 5)
+
+    // Fichiers les plus modifiés
+    const files = {}
+    for (const t of done) {
+      for (const f of (t.files || [])) {
+        const name = f.split('/').pop()
+        files[name] = (files[name] || 0) + 1
+      }
+    }
+    const topFiles = Object.entries(files).sort((a,b) => b[1]-a[1]).slice(0, 8)
+
+    // Durée totale de travail
+    const totalSec = done.reduce((s, t) => s + (t.dur || 0), 0)
+    const totalMin = Math.round(totalSec / 60)
+    const estimatedCost = (done.length * 0.10).toFixed(2)
+
+    const dateFR = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+
+    const lines = [
+      `# 🤖 AnDy — Rapport du matin`,
+      `**${dateFR} · 7h00**`,
+      ``,
+      `## 📊 Stats nuit`,
+      `✅ **${done.length} tâches terminées** · ⏱ ${totalMin}min de travail · 💸 ~$${estimatedCost}`,
+      errors.length ? `❌ **${errors.length} erreur${errors.length>1?'s':''}**` : ``,
+      queue.length  ? `⏳ ${queue.length} en attente` : ``,
+      `🔄 ${autoGenCount} cycles auto-génération`,
+      ``,
+      topDomains.length ? `## 🎯 Domaines travaillés\n${topDomains.map(([d,n]) => `• **${d}** — ${n} tâche${n>1?'s':''}`).join('\n')}` : '',
+      ``,
+      topFiles.length ? `## 📁 Fichiers modifiés\n${topFiles.map(([f,n]) => `\`${f}\` ×${n}`).join(' · ')}` : '',
+      ``,
+      `## 🏆 Dernières réussites`,
+      ...done.slice(-8).map(t => `✔ \`${(t.desc||t.name).slice(0,70)}\``),
+      errors.length ? `\n## ⚠️ Erreurs\n${errors.slice(-3).map(t => `✘ \`${t.name}\` — ${(t.error||'').slice(0,60)}`).join('\n')}` : '',
+      ``,
+      `## 🔗 Accès`,
+      `📱 App Trackr: ${APP_URL}`,
+      `🖥 Dashboard: http://62.238.12.221:4000/vibe`,
+      `💬 AnDy chat: http://62.238.12.221:4000/chat`,
+      `📦 Repo: https://github.com/${GITHUB_REPO}`,
+    ].filter(l => l !== undefined).join('\n')
+
+    const ok = await discordPost(CH_MORNING, lines.slice(0, 1990))
+    log(`Discord recap 7h: ${ok ? 'envoyé ✓' : 'échec ✗'}`)
+    scheduleDiscordRecap()
   }, ms)
 }
 

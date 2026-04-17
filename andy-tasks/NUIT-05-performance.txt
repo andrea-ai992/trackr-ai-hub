@@ -1,0 +1,1 @@
+Optimise les performances de src/App.jsx — ajoute React.lazy() et Suspense pour les pages lourdes: ChartAnalysis, FlightTracker, Sports, BrainStatus, Agents, Admin. Crée un composant PageLoader minimal (spinner neon vert centré) dans src/components/. Garde toutes les routes existantes.

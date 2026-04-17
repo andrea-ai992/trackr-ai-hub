@@ -1,0 +1,1 @@
+Redesign src/pages/Sports.jsx — onglets Sports en scroll horizontal (Tout/Ligue1/UCL/NFL/NBA/Tennis/MMA), cards matchs avec logos ESPN, scores animés couleur rouge/vert, countdown prochains matchs. Dark theme #080808, accents couleur de club (PSG bleu #004170, etc). Design natif comme ESPN mobile.
