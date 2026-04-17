@@ -31,6 +31,7 @@ const GITHUB_API   = 'https://api.github.com'
 const BOT_TOKEN    = process.env.DISCORD_BOT_TOKEN || ''
 const GUILD_ID     = process.env.DISCORD_GUILD_ID  || ''
 const CH_MORNING   = process.env.DISCORD_CH_MORNING || process.env.DISCORD_CH_BRAIN || ''
+const CH_UPDATES   = process.env.DISCORD_CH_UPDATES || CH_MORNING  // channel pour les notifs live
 const DISCORD_API  = 'https://discord.com/api/v10'
 
 // ── Logging (stdout structuré — visible dans Railway logs) ────────────────────
@@ -255,6 +256,38 @@ async function executeTask(taskContent, taskName = '') {
   }
 }
 
+// ── Discord notifications — live updates ──────────────────────────────────────
+const NOTIF_EVERY_N   = 5              // notif toutes les N tâches terminées
+const NOTIF_EVERY_MS  = 30 * 60 * 1000 // ou toutes les 30 minutes
+const notifBuffer     = []             // { name, files, dur }
+let   lastNotifTime   = Date.now()
+
+async function flushDiscordNotif(force = false) {
+  if (!notifBuffer.length) return
+  if (!force && notifBuffer.length < NOTIF_EVERY_N && Date.now() - lastNotifTime < NOTIF_EVERY_MS) return
+  if (!CH_UPDATES) { notifBuffer.length = 0; return }
+
+  const count  = notifBuffer.length
+  const since  = Math.round((Date.now() - lastNotifTime) / 60000)
+  const lines  = notifBuffer.map(t => {
+    const filesStr = (t.files || []).map(f => `\`${f.split('/').pop()}\``).join(', ') || `\`${t.name}\``
+    return `✅ ${filesStr}`
+  }).join('\n')
+
+  const msg = [
+    `🤖 **AnDy — ${count} tâche${count > 1 ? 's' : ''} terminée${count > 1 ? 's'  : ''}** _(${since}min)_`,
+    `━━━━━━━━━━━━━━━━━━━━`,
+    lines,
+    `━━━━━━━━━━━━━━━━━━━━`,
+    `🚀 Déployé sur Vercel · ${APP_URL}`,
+  ].join('\n')
+
+  const ok = await discordPost(CH_UPDATES, msg)
+  log(`Discord notif: ${ok ? 'envoyée' : 'échec'} (${count} tâches)`)
+  notifBuffer.length = 0
+  lastNotifTime = Date.now()
+}
+
 // ── Task runner ───────────────────────────────────────────────────────────────
 const TASKS_DIR   = resolve(ROOT, 'andy-tasks')
 const STATUS_FILE = resolve(ROOT, 'andy-tasks', '.task-status.json')
@@ -348,9 +381,12 @@ async function runTask(filePath) {
     await executeTask(content, name)
     const dur = Math.round((Date.now() - startTime) / 1000)
     entry.status = 'DONE'; entry.dur = dur
+    const taskStatus = readStatus().find(t => t.name === name)
     updateTaskStatus(name, { status: 'DONE', dur })
     renameSync(runningPath, runningPath.replace(/\.running$/, '.done'))
     log(`TASK DONE: ${name} (${dur}s)`)
+    notifBuffer.push({ name, files: taskStatus?.files || [], dur })
+    await flushDiscordNotif()
   } catch (err) {
     const dur = Math.round((Date.now() - startTime) / 1000)
     entry.status = 'ERROR'; entry.dur = dur
@@ -472,13 +508,15 @@ async function main() {
 
     const queue = readdirSync(TASKS_DIR).filter(f => f.endsWith('.txt')).sort()
 
+    // Flush notif si ça fait 30min sans envoyer (même si < 5 tâches)
+    if (Date.now() - lastNotifTime > NOTIF_EVERY_MS) await flushDiscordNotif(true)
+
     if (queue.length) {
       log(`${queue.length} tâche(s) en queue`)
       for (const f of queue) {
         const fp = resolve(TASKS_DIR, f)
         if (existsSync(fp)) {
           await runTask(fp)
-          // Pause entre tâches pour éviter de brûler les crédits trop vite
           await sl(PAUSE_BETWEEN_TASKS * 1000)
         }
       }
