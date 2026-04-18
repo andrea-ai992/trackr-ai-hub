@@ -1,6 +1,3 @@
-Voici le code corrigé pour `src/api/discord.js` avec une gestion optimisée des SSE (Server-Sent Events) utilisant `ReadableStream` et `TextDecoderStream` :
-
-```javascript
 // src/api/discord.js
 import { SUPABASE_URL, SUPABASE_KEY } from '../config';
 
@@ -34,37 +31,44 @@ export const getDiscordMessages = async (channelId, timeoutMs = 10000) => {
       .pipeThrough(new TextDecoderStream())
       .getReader();
 
-    let result = '';
+    let buffer = '';
     let isDone = false;
 
     while (!isDone) {
       const { done, value } = await reader.read();
       isDone = done;
       if (value) {
-        result += value;
-        // Traitement des chunks au fur et à mesure pour éviter les gros buffers
-        try {
-          const parsed = JSON.parse(result);
-          return parsed; // Retourne dès qu'un JSON valide est trouvé
-        } catch (e) {
-          // On continue à accumuler jusqu'à ce qu'on ait un JSON complet
+        buffer += value;
+        const lines = buffer.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data:')) {
+            const jsonData = line.substring(5).trim();
+            if (jsonData === '[DONE]') {
+              isDone = true;
+              break;
+            }
+            try {
+              const parsed = JSON.parse(jsonData);
+              if (parsed.choices?.[0]?.delta?.content) {
+                return parsed.choices[0].delta.content;
+              }
+            } catch (e) {
+              console.error('Error parsing SSE data:', e);
+            }
+          }
         }
+        buffer = lines[lines.length - 1];
       }
     }
 
-    try {
-      return JSON.parse(result);
-    } catch (parseError) {
-      console.error('Failed to parse Discord messages:', parseError);
-      return [];
-    }
+    return '';
   } catch (error) {
     if (error.name === 'AbortError') {
       console.error('Discord API request timed out');
     } else {
       console.error('Error fetching Discord messages:', error);
     }
-    return [];
+    return '';
   }
 };
 
