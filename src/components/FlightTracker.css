@@ -1,0 +1,171 @@
+Créer le fichier src/components/FlightTracker.css :
+
+```css
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --border: rgba(255, 255, 255, 0.07);
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg);
+  color: var(--t1);
+}
+
+.container {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 20px;
+  background-color: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--t1);
+  margin-bottom: 20px;
+}
+
+.subtitle {
+  font-size: 18px;
+  color: var(--t2);
+  margin-bottom: 20px;
+}
+
+.alert {
+  background-color: var(--bg);
+  color: var(--t1);
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.alert.green {
+  background-color: var(--green);
+  color: var(--t1);
+}
+
+.alert.red {
+  background-color: #ff0000;
+  color: var(--t1);
+}
+
+.flight-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.flight-info .flight-number {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--t1);
+}
+
+.flight-info .flight-status {
+  font-size: 18px;
+  color: var(--t2);
+}
+
+.flight-info .flight-status.red {
+  color: #ff0000;
+}
+
+.flight-info .flight-status.green {
+  color: var(--green);
+}
+```
+
+Modifier le fichier src/components/FlightTracker.js :
+
+```jsx
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { AiOutlineWarning } from 'lucide-react';
+
+const FlightTracker = () => {
+  const [flights, setFlights] = useState([]);
+  const [alert, setAlert] = useState(null);
+
+  useEffect(() => {
+    // Récupérer les données des vols
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/api/flight');
+        const data = await response.json();
+        setFlights(data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    // Vérifier si il y a des perturbations
+    const checkAlerts = async () => {
+      try {
+        const response = await fetch('/api/alert');
+        const data = await response.json();
+        setAlert(data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    checkAlerts();
+  }, []);
+
+  return (
+    <div className="container">
+      <h1 className="title">Tracker de vols</h1>
+      <p className="subtitle">Suivez les vols en temps réel</p>
+      {flights.map((flight) => (
+        <div key={flight.id} className="flight-info">
+          <span className="flight-number">{flight.number}</span>
+          <span className="flight-status">
+            {flight.status === 'en retard' ? (
+              <span className="red">{flight.status}</span>
+            ) : (
+              <span className="green">{flight.status}</span>
+            )}
+          </span>
+        </div>
+      ))}
+      {alert && (
+        <div className={`alert ${alert.type === 'green' ? 'green' : 'red'}`}>
+          <AiOutlineWarning size={20} />
+          <span>{alert.message}</span>
+        </div>
+      )}
+      <Link to="/vibe" className="btn">
+        Voir les vols en temps réel
+      </Link>
+    </div>
+  );
+};
+
+export default FlightTracker;
+```
+
+Modifier le fichier src/components/index.js pour importer le composant FlightTracker :
+
+```jsx
+import FlightTracker from './FlightTracker';
+
+export default [
+  {
+    path: '/flight-tracker',
+    component: FlightTracker,
+  },
+];
