@@ -177,6 +177,8 @@ export default function Dashboard() {
         </div>
       )}
 
+      <FGGauge value={fg} />
+
       <div className="stagger-item" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
         <button onClick={() => navigate('/markets')} className="press-scale" style={{
           textAlign: 'left', padding: '16px', borderRadius: 'var(--radius-lg)',
@@ -199,9 +201,24 @@ export default function Dashboard() {
           <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--green)', marginBottom: 2 }}>AnDy AI</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <span className="live-dot" style={{ width: 5, height: 5 }} />
-            <p style={{ fontSize: 10, color: 'var(--green)', opacity: 0.7 }}>En ligne</p>
+            <p style={{ fontSize: 10, color: 'var(--t3)' }}>Live</p>
           </div>
         </button>
+      </div>
+
+      <div className="stagger-item" style={{ marginBottom: 12 }}>
+        <div style={{ marginBottom: 10 }}>
+          <span className="section-label">Actualités</span>
+        </div>
+        {news.slice(0, 3).map(item => (
+          <div key={item.guid} style={{ marginBottom: 8, padding: '12px', background: 'var(--bg2)', borderRadius: 'var(--radius)', display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)' }}>{item.title}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+              <span style={{ fontSize: 10, color: 'var(--t3)' }}>{item.source}</span>
+              <span style={{ fontSize: 10, color: 'var(--t3)' }}>{new Date(item.pubDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )
