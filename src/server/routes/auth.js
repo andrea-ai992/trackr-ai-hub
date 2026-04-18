@@ -1,5 +1,3 @@
-src/server/routes/auth.js
-```javascript
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 
@@ -7,16 +5,16 @@ const router = express.Router();
 
 // Rate limiting configuration
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 60 * 1000, // 1 minute
   max: 5, // limit each IP to 5 requests per windowMs
   message: {
-    error: 'Too many attempts from this IP, please try again after 15 minutes'
+    error: 'Too many attempts from this IP, please try again after 1 minute'
   },
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => {
     // Skip rate limiting for localhost in development
-    return req.ip === '::1' || req.ip === '127.0.0.1';
+    return req.ip === '::1' || req.ip === '127.0.0.1' || req.ip === '::ffff:127.0.0.1';
   }
 });
 
@@ -48,16 +46,22 @@ router.post('/login', express.json(), async (req, res) => {
       });
     }
 
-    // TODO: Replace with actual authentication logic
-    // This is a placeholder for the actual implementation
-    const mockUser = {
-      id: 'user_123',
-      email: email,
-      name: email.split('@')[0]
-    };
+    // Mock user database
+    const users = [
+      { id: 'user_123', email: 'test@example.com', password: 'correcthorsebatterystaple', name: 'Test User' }
+    ];
 
-    // Mock password check (in production, use bcrypt)
-    if (password !== 'correcthorsebatterystaple') {
+    // Find user by email
+    const user = users.find(u => u.email === email);
+
+    if (!user) {
+      return res.status(401).json({
+        error: 'Invalid credentials'
+      });
+    }
+
+    // In production, use bcrypt.compare(password, user.password)
+    if (password !== user.password) {
       return res.status(401).json({
         error: 'Invalid credentials'
       });
@@ -66,7 +70,11 @@ router.post('/login', express.json(), async (req, res) => {
     // Return success response
     res.json({
       success: true,
-      user: mockUser,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name
+      },
       token: 'mock-jwt-token-for-dev-only'
     });
 
@@ -109,17 +117,35 @@ router.post('/register', express.json(), async (req, res) => {
       });
     }
 
-    // TODO: Replace with actual registration logic
-    // This is a placeholder for the actual implementation
-    const mockUser = {
+    // Mock user database
+    const users = [
+      { id: 'user_123', email: 'test@example.com', password: 'correcthorsebatterystaple', name: 'Test User' }
+    ];
+
+    // Check if user already exists
+    if (users.some(u => u.email === email)) {
+      return res.status(400).json({
+        error: 'Email already registered'
+      });
+    }
+
+    // Create new user
+    const newUser = {
       id: 'user_' + Math.random().toString(36).substr(2, 9),
-      email: email,
-      name: name
+      email,
+      password, // In production, hash the password with bcrypt
+      name
     };
+
+    users.push(newUser);
 
     res.json({
       success: true,
-      user: mockUser,
+      user: {
+        id: newUser.id,
+        email: newUser.email,
+        name: newUser.name
+      },
       message: 'User registered successfully'
     });
 
@@ -150,8 +176,8 @@ router.post('/forgot-password', express.json(), async (req, res) => {
       });
     }
 
-    // TODO: Replace with actual password reset logic
-    // This is a placeholder for the actual implementation
+    // Mock password reset logic
+    // In production, generate a token and send email with reset link
     res.json({
       success: true,
       message: 'Password reset link sent to your email'
@@ -182,8 +208,8 @@ router.post('/reset-password', express.json(), async (req, res) => {
       });
     }
 
-    // TODO: Replace with actual password reset logic
-    // This is a placeholder for the actual implementation
+    // Mock password reset logic
+    // In production, verify token and update password
     res.json({
       success: true,
       message: 'Password reset successfully'
@@ -200,7 +226,7 @@ router.post('/reset-password', express.json(), async (req, res) => {
 // Logout route
 router.post('/logout', express.json(), async (req, res) => {
   try {
-    // TODO: Implement actual logout logic (clear tokens, etc.)
+    // In production, clear JWT token from client-side storage
     res.json({
       success: true,
       message: 'Logged out successfully'
