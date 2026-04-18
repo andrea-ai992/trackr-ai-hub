@@ -1,0 +1,102 @@
+// src/pages/More.jsx
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Moon, Sun, Github } from 'lucide-react';
+
+const modules = [
+  { id: 'flighttracker', emoji: '✈️', badge: 'LIVE', title: 'FlightTracker', desc: 'Suivi en temps réel des vols commerciaux mondiaux avec alertes météo et retards.' },
+  { id: 'cryptotrader', emoji: '📈', badge: 'NEW', title: 'CryptoTrader', desc: 'Bot de trading automatique pour cryptomonnaies avec analyse technique intégrée.' },
+  { id: 'signalsia', emoji: '⚡', badge: 'NEW', title: 'Signals IA', desc: 'Signaux de trading générés par IA pour actions, crypto et forex.' },
+  { id: 'portfolio', emoji: '💼', badge: '', title: 'Portfolio', desc: 'Gestion complète de votre portefeuille d\'investissement avec performance en temps réel.' },
+  { id: 'patterns', emoji: '📊', badge: '', title: 'Patterns', desc: 'Détection automatique de patterns chartistes pour actions et crypto.' },
+  { id: 'translator', emoji: '🌐', badge: '', title: 'Translator', desc: 'Traduction instantanée entre 50+ langues avec historique et favoris.' },
+  { id: 'realestate', emoji: '🏠', badge: 'PRO', title: 'RealEstate', desc: 'Analyse de marché immobilier et alertes sur nouvelles annonces premium.' },
+  { id: 'sneakers', emoji: '👟', badge: '', title: 'Sneakers', desc: 'Suivi des drops et prix du marché secondaire pour sneakers rares.' },
+  { id: 'watches', emoji: '⌚', badge: 'PRO', title: 'Watches', desc: 'Analyse du marché des montres de luxe et alertes sur modèles rares.' },
+  { id: 'businessplan', emoji: '📋', badge: '', title: 'BusinessPlan', desc: 'Générateur de business plans professionnels avec modèles et export PDF.' }
+];
+
+export default function More() {
+  const [darkMode, setDarkMode] = useState(true);
+
+  return (
+    <div className="page">
+      <nav className="nav">
+        <Link to="/" className="nav-link">Dashboard</Link>
+        <Link to="/sports" className="nav-link">Sports</Link>
+        <Link to="/markets" className="nav-link">Markets</Link>
+        <Link to="/news" className="nav-link">News</Link>
+        <Link to="/more" className="nav-link active">More</Link>
+      </nav>
+
+      <main className="main">
+        <h1 className="page-title">Modules Premium</h1>
+
+        <div className="modules-grid">
+          {modules.map((module) => (
+            <ModuleCard key={module.id} {...module} />
+          ))}
+
+          <div className="module-card add-module">
+            <div className="add-module-content">+</div>
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <div className="setting-item">
+            <span>Dark Mode</span>
+            <button
+              className="toggle-button"
+              disabled
+              title="Dark mode activé par défaut"
+            >
+              {darkMode ? <Moon size={18} /> : <Sun size={18} />}
+            </button>
+          </div>
+
+          <div className="setting-item">
+            <span>Version</span>
+            <span className="version-text">v3.0</span>
+          </div>
+
+          <a
+            href="https://github.com/andrea-ai992/trackr-ai-hub"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="github-link"
+          >
+            <Github size={18} />
+            <span>GitHub</span>
+          </a>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function ModuleCard({ emoji, badge, title, desc }) {
+  const badgeColors = {
+    LIVE: 'badge-live',
+    NEW: 'badge-new',
+    PRO: 'badge-pro',
+    BETA: 'badge-beta'
+  };
+
+  return (
+    <Link to={`/${title.toLowerCase()}`} className="module-card">
+      <div className="module-header">
+        <div className="emoji">{emoji}</div>
+        {badge && <div className={`badge ${badgeColors[badge] || ''}`}>{badge}</div>}
+      </div>
+
+      <h3 className="module-title">{title}</h3>
+      <p className="module-desc">{desc}</p>
+
+      <div className="module-footer">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1 11L11 1M11 1H1M11 1V11" stroke="var(--neon)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+    </Link>
+  );
+}
