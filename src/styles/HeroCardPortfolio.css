@@ -1,0 +1,311 @@
+Je vais créer un redesign complet du composant `HeroCardPortfolio` avec un effet neon vert et des données dynamiques. Voici les fichiers nécessaires :
+
+src/components/HeroCardPortfolio.jsx
+```jsx
+import { useState, useEffect } from 'react';
+import { TrendingUp, TrendingDown, DollarSign, PieChart, RefreshCw } from 'lucide-react';
+import './HeroCardPortfolio.css';
+
+const HeroCardPortfolio = ({ portfolioData }) => {
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Animation de refresh toutes les 30 secondes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRefreshKey(prev => prev + 1);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Calcul des métriques dynamiques
+  const totalValue = portfolioData?.holdings?.reduce((sum, holding) => sum + (holding.value || 0), 0) || 0;
+  const totalGain = portfolioData?.holdings?.reduce((sum, holding) => sum + (holding.gain || 0), 0) || 0;
+  const totalGainPercent = totalValue ? (totalGain / (totalValue - totalGain)) * 100 : 0;
+
+  const gainColor = totalGain >= 0 ? 'var(--green)' : '#ff4444';
+  const gainIcon = totalGain >= 0 ? <TrendingUp size={20} /> : <TrendingDown size={20} />;
+
+  return (
+    <div className="hero-card-portfolio">
+      <div className="hero-card-header">
+        <h2>Portfolio Overview</h2>
+        <div className="refresh-icon" onClick={() => setRefreshKey(prev => prev + 1)}>
+          <RefreshCw size={18} />
+          <span>Auto-refresh: {Math.floor(refreshKey * 30 / 60)}m</span>
+        </div>
+      </div>
+
+      <div className="portfolio-grid">
+        <div className="portfolio-card main-card">
+          <div className="card-header">
+            <DollarSign size={24} />
+            <span>Total Value</span>
+          </div>
+          <div className="card-value">${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div className="card-subtitle">All assets combined</div>
+        </div>
+
+        <div className="portfolio-card gain-card">
+          <div className="card-header">
+            {gainIcon}
+            <span>Total Gain</span>
+          </div>
+          <div className="card-value" style={{ color: gainColor }}>
+            ${Math.abs(totalGain).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+          <div className="card-subtitle">
+            {totalGainPercent.toFixed(2)}% {totalGain >= 0 ? 'profit' : 'loss'}
+          </div>
+        </div>
+
+        <div className="portfolio-card">
+          <div className="card-header">
+            <PieChart size={24} />
+            <span>Holdings</span>
+          </div>
+          <div className="card-value">{portfolioData?.holdings?.length || 0}</div>
+          <div className="card-subtitle">Assets in portfolio</div>
+        </div>
+      </div>
+
+      {portfolioData?.holdings && portfolioData.holdings.length > 0 && (
+        <div className="holdings-list">
+          <h3>Asset Breakdown</h3>
+          <div className="holdings-grid">
+            {portfolioData.holdings.map((holding, index) => {
+              const gainPercent = holding.value ? (holding.gain / holding.value) * 100 : 0;
+              const gainColor = holding.gain >= 0 ? 'var(--green)' : '#ff4444';
+
+              return (
+                <div key={index} className="holding-card">
+                  <div className="holding-name">{holding.name}</div>
+                  <div className="holding-value">${holding.value.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                  <div className="holding-gain" style={{ color: gainColor }}>
+                    {holding.gain >= 0 ? '+' : ''}{gainPercent.toFixed(2)}%
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default HeroCardPortfolio;
+```
+
+src/styles/HeroCardPortfolio.css
+```css
+.hero-card-portfolio {
+  --card-radius: 12px;
+  --neon-glow: 0 0 10px rgba(0, 255, 136, 0.3);
+  --neon-glow-active: 0 0 20px rgba(0, 255, 136, 0.6);
+
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 20px;
+  background: var(--bg2);
+  border-radius: var(--card-radius);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+}
+
+.hero-card-portfolio::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--green), transparent);
+  animation: neonPulse 2s infinite;
+}
+
+@keyframes neonPulse {
+  0% { opacity: 0.7; }
+  50% { opacity: 1; }
+  100% { opacity: 0.7; }
+}
+
+.hero-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.hero-card-header h2 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--t1);
+  margin: 0;
+}
+
+.refresh-icon {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--t2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.refresh-icon:hover {
+  color: var(--green);
+  transform: scale(1.05);
+}
+
+.refresh-icon svg {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.portfolio-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.portfolio-card {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--card-radius);
+  padding: 15px;
+  border: 1px solid var(--border);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.portfolio-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--green), transparent);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.portfolio-card:hover::before {
+  transform: scaleX(1);
+}
+
+.portfolio-card:hover {
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+  border-color: var(--green);
+  transform: translateY(-2px);
+}
+
+.portfolio-card.main-card {
+  grid-column: 1 / -1;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+  color: var(--t2);
+}
+
+.card-header svg {
+  color: var(--green);
+}
+
+.card-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--t1);
+  margin-bottom: 5px;
+}
+
+.card-subtitle {
+  font-size: 0.8rem;
+  color: var(--t3);
+}
+
+.gain-card .card-value {
+  color: var(--green) !important;
+}
+
+.holdings-list {
+  margin-top: 20px;
+}
+
+.holdings-list h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--t1);
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.holdings-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.holding-card {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+
+.holding-card:hover {
+  background: rgba(0, 255, 136, 0.05);
+  border-color: var(--green);
+}
+
+.holding-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--t1);
+  margin-bottom: 5px;
+}
+
+.holding-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--t1);
+  margin-bottom: 3px;
+}
+
+.holding-gain {
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+@media (max-width: 600px) {
+  .portfolio-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .portfolio-card.main-card {
+    grid-column: 1;
+  }
+
+  .hero-card-portfolio {
+    padding: 15px;
+  }
+}
