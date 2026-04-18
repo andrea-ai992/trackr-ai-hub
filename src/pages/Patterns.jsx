@@ -1,6 +1,3 @@
-Je vais créer le composant `SignalCard.jsx` et l'intégrer dans `Patterns.jsx` selon les spécifications.
-
-```jsx
 // src/components/SignalCard.jsx
 import { TrendingUp, Info, Zap, Target, BarChart3 } from 'lucide-react'
 
@@ -23,9 +20,9 @@ export function SignalCard({ signal }) {
 
   const getTypeIcon = (type) => {
     const typeLower = type.toLowerCase()
-    if (typeLower.includes('bullish')) return <TrendingUp className="w-4 h-4" style={{ color: '#10b981' }} />
-    if (typeLower.includes('bearish')) return <TrendingUp className="w-4 h-4" style={{ color: '#ef4444' }} />
-    if (typeLower.includes('continuation')) return <Zap className="w-4 h-4" style={{ color: '#f59e0b' }} />
+    if (typeLower.includes('bullish')) return <TrendingUp className="w-4 h-4" style={{ color: '#00ff88' }} />
+    if (typeLower.includes('bearish')) return <TrendingUp className="w-4 h-4" style={{ color: '#ff4444' }} />
+    if (typeLower.includes('continuation')) return <Zap className="w-4 h-4" style={{ color: '#ffcc00' }} />
     if (typeLower.includes('reversal')) return <Target className="w-4 h-4" style={{ color: '#8b5cf6' }} />
     return <BarChart3 className="w-4 h-4" style={{ color: '#3b82f6' }} />
   }
@@ -65,13 +62,13 @@ export function SignalCard({ signal }) {
           <div className="flex gap-4 text-xs">
             {support && (
               <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#10b981' }} />
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#00ff88' }} />
                 <span style={{ color: '#888' }}>Support</span>
               </div>
             )}
             {resistance && (
               <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#ef4444' }} />
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#ff4444' }} />
                 <span style={{ color: '#888' }}>Résistance</span>
               </div>
             )}
@@ -83,7 +80,7 @@ export function SignalCard({ signal }) {
             )}
             {pole && (
               <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#f59e0b' }} />
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#ffcc00' }} />
                 <span style={{ color: '#888' }}>Mât</span>
               </div>
             )}
@@ -151,7 +148,7 @@ const PATTERNS = [
     support: [[10, 80], [130, 80]],
     resistance: [[30, 20], [110, 20]],
     breakout: [130, 110],
-    color: '#ef4444'
+    color: '#ff4444'
   },
   {
     id: 'triple-bottom',
@@ -162,7 +159,7 @@ const PATTERNS = [
     support: [[30, 80], [110, 80]],
     resistance: [[10, 20], [130, 20]],
     breakout: [130, -10],
-    color: '#10b981'
+    color: '#00ff88'
   },
   {
     id: 'downward-flag',
@@ -173,7 +170,7 @@ const PATTERNS = [
     pole: [[10, 100], [40, 20]],
     resistance: [[40, 20], [100, 20]],
     support: [[60, 40], [120, 40]],
-    color: '#10b981'
+    color: '#00ff88'
   },
   {
     id: 'upward-flag',
@@ -184,7 +181,7 @@ const PATTERNS = [
     pole: [[10, 20], [40, 100]],
     resistance: [[60, 80], [120, 80]],
     support: [[40, 100], [100, 100]],
-    color: '#ef4444'
+    color: '#ff4444'
   },
   {
     id: 'double-top',
@@ -194,7 +191,7 @@ const PATTERNS = [
     points: [[10, 90], [40, 20], [70, 90], [100, 20], [130, 120]],
     neckline: [[10, 90], [130, 90]],
     resistance: [[40, 20], [100, 20]],
-    color: '#ef4444'
+    color: '#ff4444'
   },
   {
     id: 'double-bottom',
@@ -204,7 +201,7 @@ const PATTERNS = [
     points: [[10, 20], [40, 90], [70, 20], [100, 90], [130, -10]],
     neckline: [[10, 20], [130, 20]],
     support: [[40, 90], [100, 90]],
-    color: '#10b981'
+    color: '#00ff88'
   },
   {
     id: 'falling-wedge',
@@ -214,7 +211,7 @@ const PATTERNS = [
     points: [[10, 10], [130, 90], [40, 30], [110, 80], [60, 45], [100, 65], [140, 20]],
     resistance: [[10, 10], [140, 70]],
     support: [[130, 90], [140, 85]],
-    color: '#10b981'
+    color: '#00ff88'
   },
   {
     id: 'rising-wedge',
@@ -224,7 +221,7 @@ const PATTERNS = [
     points: [[10, 110], [130, 30], [40, 90], [110, 40], [60, 75], [100, 55], [140, 100]],
     resistance: [[10, 110], [140, 50]],
     support: [[130, 30], [140, 35]],
-    color: '#ef4444'
+    color: '#ff4444'
   },
   {
     id: 'head-shoulders',
@@ -233,7 +230,7 @@ const PATTERNS = [
     desc: 'Épaule-Tête-Épaule. Le signal de retournement baissier le plus célèbre.',
     points: [[10, 70], [30, 40], [50, 70], [75, 10], [100, 70], [120, 40], [140, 110]],
     neckline: [[10, 70], [140, 70]],
-    color: '#ef4444'
+    color: '#ff4444'
   },
   {
     id: 'inv-head-shoulders',
@@ -242,7 +239,7 @@ const PATTERNS = [
     desc: 'Épaule-Tête-Épaule inversée. Signal puissant de retournement à la hausse.',
     points: [[10, 40], [30, 70], [50, 40], [75, 100], [100, 40], [120, 70], [140, 0]],
     neckline: [[10, 40], [140, 40]],
-    color: '#10b981'
+    color: '#00ff88'
   },
   {
     id: 'cup-handle',
@@ -251,7 +248,7 @@ const PATTERNS = [
     desc: 'Une forme de "tasse" suivie d\'une petite "anse". Signal de cassure haussière.',
     points: [[10, 10], [20, 40], [40, 70], [70, 80], [100, 70], [120, 40], [130, 15], [140, 30], [150, 20], [170, -20]],
     resistance: [[130, 15], [150, 15]],
-    color: '#10b981'
+    color: '#00ff88'
   },
   {
     id: 'sym-triangle',
@@ -271,9 +268,11 @@ const PATTERNS = [
     points: [[10, 110], [130, 20], [40, 80], [130, 20], [80, 50], [130, 20], [160, -20]],
     resistance: [[10, 20], [160, 20]],
     support: [[10, 110], [130, 20]],
-    color: '#10b981'
+    color: '#00ff88'
   },
   {
     id: 'desc-triangle',
     name: 'Descending Triangle',
-    type: 'Continuation
+    type: 'Continuation (Bearish)',
+    desc: 'Une ligne de support plate et une résistance descendante. Souvent résolu par le bas.',
+    points: [[10, 20
