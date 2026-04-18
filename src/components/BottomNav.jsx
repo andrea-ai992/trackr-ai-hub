@@ -23,7 +23,6 @@ export default function BottomNav() {
 
   if (location.pathname.startsWith('/widget')) return null
 
-  // News badge events
   useEffect(() => {
     const handler = e => {
       if (e.detail?.increment) setNewsBadge(prev => prev + (e.detail.count ?? 1))
@@ -37,7 +36,6 @@ export default function BottomNav() {
     if (location.pathname.startsWith('/news')) setNewsBadge(0)
   }, [location.pathname])
 
-  // Animate the sliding pill to the active tab
   useEffect(() => {
     const activeIdx = TABS.findIndex(tab =>
       tab.matches.some(pattern => new RegExp(pattern).test(location.pathname))
@@ -49,7 +47,7 @@ export default function BottomNav() {
 
     const navRect = nav.getBoundingClientRect()
     const elRect  = el.getBoundingClientRect()
-    const pillWidth  = elRect.width + 12   // 6px padding each side
+    const pillWidth  = elRect.width + 12
     const pillHeight = elRect.height + 12
     setPillStyle({
       left:  elRect.left - navRect.left - 6,
@@ -98,7 +96,6 @@ export default function BottomNav() {
           padding: '0 8px',
         }}
       >
-        {/* Animated sliding pill background */}
         {pillStyle.width > 0 && (
           <div
             aria-hidden
@@ -153,7 +150,6 @@ export default function BottomNav() {
                 transition: 'transform 100ms ease',
               }}
             >
-              {/* Icon + badge */}
               <div style={{ position: 'relative', display: 'inline-flex' }}>
                 <Icon
                   size={22}
@@ -200,7 +196,7 @@ export default function BottomNav() {
                 transition: 'color 250ms ease, font-weight 250ms ease',
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
-                fontFamily: "'Space Grotesk', system-ui, sans-serif",
+                fontFamily: "'Inter', system-ui, sans-serif",
               }}>
                 {tab.label}
               </span>
