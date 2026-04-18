@@ -1,3 +1,6 @@
+Je vais ajouter un toggle dark mode persistant dans le footer de la page `More` avec sauvegarde locale. Voici le code complet et fonctionnel pour le fichier `src/pages/More.jsx` :
+
+```jsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
@@ -220,7 +223,10 @@ const More = () => {
   const [unpinned, setUnpinned] = React.useState(ALL_MODULES.filter((m) => !pinned.includes(m.id)));
   const [showStore, setShowStore] = React.useState(false);
   const [editMode, setEditMode] = React.useState(false);
-  const [darkMode, setDarkMode] = React.useState(true);
+  const [darkMode, setDarkMode] = React.useState(() => {
+    const savedMode = localStorage.getItem('darkMode');
+    return savedMode !== null ? JSON.parse(savedMode) : true;
+  });
 
   const getPinned = () => {
     try {
@@ -244,12 +250,20 @@ const More = () => {
   };
 
   const handleDarkMode = () => {
-    setDarkMode(!darkMode);
+    const newMode = !darkMode;
+    setDarkMode(newMode);
+    localStorage.setItem('darkMode', JSON.stringify(newMode));
+    if (newMode) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
   };
 
   React.useEffect(() => {
-    document.body.classList.add('dark-mode');
-    if (!darkMode) {
+    if (darkMode) {
+      document.body.classList.add('dark-mode');
+    } else {
       document.body.classList.remove('dark-mode');
     }
   }, [darkMode]);
@@ -438,92 +452,64 @@ const More = () => {
                   alignItems: 'center',
                   gap: 4,
                   fontSize: 10,
-                  fontWeight: 700,
-                  color: 'var(--t3)',
-                  padding: '5px 10px',
-                  borderRadius: 999,
-                  border: '1px solid var(--border)',
                 }}
               >
-                <ChevronRight size={9} style={{ color: 'var(--t3)' }} />
-                <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--t3)' }}>Bêta</span>
+                Bientôt
               </span>
             </div>
           ))}
         </div>
       )}
 
-      {/* ── Settings ── */}
+      {/* ── Footer avec toggle dark mode persistant ── */}
       <div
         style={{
-          background: 'var(--bg2)',
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius-lg)',
-          overflow: 'hidden',
-          padding: '13px 16px',
-          marginBottom: 16,
+          marginTop: 32,
+          padding: '16px 0',
+          borderTop: '1px solid var(--border)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
         }}
       >
-        <div
+        <div>
+          <p
+            style={{
+              fontSize: 11,
+              color: 'var(--t3)',
+              marginBottom: 4,
+            }}
+          >
+            Trackr v1.9 | © 2025
+          </p>
+          <p
+            style={{
+              fontSize: 10,
+              color: 'var(--t3)',
+            }}
+          >
+            Mode sombre persistant
+          </p>
+        </div>
+        <button
+          onClick={handleDarkMode}
+          className="press-scale"
           style={{
+            padding: '6px 12px',
+            borderRadius: 999,
+            fontSize: 11,
+            fontWeight: 600,
+            background: darkMode ? 'var(--green-bg)' : 'var(--bg2)',
+            border: `1px solid ${darkMode ? 'var(--border-hi)' : 'var(--border)'}`,
+            color: darkMode ? 'var(--green)' : 'var(--t2)',
             display: 'flex',
             alignItems: 'center',
-            gap: 13,
-            cursor: 'pointer',
+            gap: 6,
           }}
-          onClick={() => navigate('/settings')}
         >
-          <div
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: 13,
-              background: 'var(--green)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <svg
-              width={24}
-              height={24}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707" />
-            </svg>
-          </div>
-          <div
-            style={{
-              flex: 1,
-              minWidth: 0,
-            }}
-          >
-            <p
-              style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: 'var(--t1)',
-              }}
-            >
-              Paramètres
-            </p>
-            <p
-              style={{
-                fontSize: 11,
-                color: 'var(--t3)',
-                marginTop: 1,
-              }}
-            >
-              Gestion des préférences
-            </p>
-          </div>
-          <ChevronRight size={18} style={{ color: 'var(--t3)', flexShrink: 0 }} />
-        </div>
+          {darkMode ? '🌙' : '☀️'}
+          <span>{darkMode ? 'Désactiver' : 'Activer'} le mode sombre</span>
+        </button>
       </div>
     </div>
   );
