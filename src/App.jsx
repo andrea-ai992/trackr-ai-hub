@@ -162,16 +162,8 @@ function AppInner() {
           <PageTransition>
             <Routes>
               <Route path="/login" element={<Login />} />
-
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route
-                path="/flights"
-                element={
-                  <Suspense fallback={<SkeletonPage />}>
-                    <ProtectedRoute><FlightTracker /></ProtectedRoute>
-                  </Suspense>
-                }
-              />
+              <Route path="/flights" element={<Suspense fallback={<SkeletonPage />}><ProtectedRoute><FlightTracker /></ProtectedRoute></Suspense>} />
               <Route path="/markets" element={<ProtectedRoute><Markets /></ProtectedRoute>} />
               <Route path="/stocks/:id" element={<ProtectedRoute><StockDetail /></ProtectedRoute>} />
               <Route path="/crypto/:id" element={<ProtectedRoute><CryptoDetail /></ProtectedRoute>} />
@@ -179,85 +171,22 @@ function AppInner() {
               <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
               <Route path="/translator" element={<ProtectedRoute><Translator /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route
-                path="/sneakers"
-                element={
-                  <Suspense fallback={<SkeletonPage />}>
-                    <ProtectedRoute><Sneakers /></ProtectedRoute>
-                  </Suspense>
-                }
-              />
-              <Route
-                path="/watches"
-                element={
-                  <Suspense fallback={<SkeletonPage />}>
-                    <ProtectedRoute><Watches /></ProtectedRoute>
-                  </Suspense>
-                }
-              />
-              <Route
-                path="/real-estate"
-                element={
-                  <Suspense fallback={<SkeletonPage />}>
-                    <ProtectedRoute><RealEstate /></ProtectedRoute>
-                  </Suspense>
-                }
-              />
-              <Route
-                path="/business"
-                element={
-                  <Suspense fallback={<SkeletonPage />}>
-                    <ProtectedRoute><BusinessPlan /></ProtectedRoute>
-                  </Suspense>
-                }
-              />
+              <Route path="/sneakers" element={<Suspense fallback={<SkeletonPage />}><ProtectedRoute><Sneakers /></ProtectedRoute></Suspense>} />
+              <Route path="/watches" element={<Suspense fallback={<SkeletonPage />}><ProtectedRoute><Watches /></ProtectedRoute></Suspense>} />
+              <Route path="/real-estate" element={<Suspense fallback={<SkeletonPage />}><ProtectedRoute><RealEstate /></ProtectedRoute></Suspense>} />
+              <Route path="/business" element={<Suspense fallback={<SkeletonPage />}><ProtectedRoute><BusinessPlan /></ProtectedRoute></Suspense>} />
               <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
               <Route path="/category/:id" element={<ProtectedRoute><CategoryPage /></ProtectedRoute>} />
               <Route path="/sports" element={<ProtectedRoute><Sports /></ProtectedRoute>} />
               <Route path="/widget" element={<ProtectedRoute><Widget /></ProtectedRoute>} />
               <Route path="/andy" element={<ProtectedRoute><Andy /></ProtectedRoute>} />
-              <Route
-                path="/charts"
-                element={
-                  <Suspense fallback={<SkeletonPage />}>
-                    <ProtectedRoute><ChartAnalysis /></ProtectedRoute>
-                  </Suspense>
-                }
-              />
+              <Route path="/charts" element={<Suspense fallback={<SkeletonPage />}><ProtectedRoute><ChartAnalysis /></ProtectedRoute></Suspense>} />
               <Route path="/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
-              <Route
-                path="/patterns"
-                element={
-                  <Suspense fallback={<SkeletonPage />}>
-                    <ProtectedRoute><Patterns /></ProtectedRoute>
-                  </Suspense>
-                }
-              />
+              <Route path="/patterns" element={<Suspense fallback={<SkeletonPage />}><ProtectedRoute><Patterns /></ProtectedRoute></Suspense>} />
               <Route path="/brain" element={<ProtectedRoute><BrainStatus /></ProtectedRoute>} />
-              <Route
-                path="/crypto-trader"
-                element={
-                  <Suspense fallback={<SkeletonPage />}>
-                    <ProtectedRoute><CryptoTrader /></ProtectedRoute>
-                  </Suspense>
-                }
-              />
-              <Route
-                path="/signals"
-                element={
-                  <Suspense fallback={<SkeletonPage />}>
-                    <ProtectedRoute><Signals /></ProtectedRoute>
-                  </Suspense>
-                }
-              />
-              <Route
-                path="/brain-explorer"
-                element={
-                  <Suspense fallback={<SkeletonPage />}>
-                    <ProtectedRoute><BrainExplorer /></ProtectedRoute>
-                  </Suspense>
-                }
-              />
+              <Route path="/crypto-trader" element={<Suspense fallback={<SkeletonPage />}><ProtectedRoute><CryptoTrader /></ProtectedRoute></Suspense>} />
+              <Route path="/signals" element={<Suspense fallback={<SkeletonPage />}><ProtectedRoute><Signals /></ProtectedRoute></Suspense>} />
+              <Route path="/brain-explorer" element={<Suspense fallback={<SkeletonPage />}><ProtectedRoute><BrainExplorer /></ProtectedRoute></Suspense>} />
               <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
             </Routes>
           </PageTransition>
