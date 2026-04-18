@@ -163,7 +163,7 @@ const GROQ_SMART  = 'llama-3.3-70b-versatile'   // meilleur qualité gratuit
 const GROQ_FAST   = 'llama-3.1-8b-instant'       // ultra rapide, gratuit
 
 // Semaphore global — évite burst API
-const API_SEMAPHORE_LIMIT = 4
+const API_SEMAPHORE_LIMIT = 3
 let   apiConcurrent = 0
 let   globalRateLimitUntil = 0
 
@@ -391,59 +391,13 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
 
     stage('safe')
 
-    // ── Build test local avant push ──────────────────────────────────────────
+    // ── Écrire + pousser directement (Vercel valide le build au déploiement) ─
     const localPath = resolve(ROOT, op.path)
-    const originalContent = existsSync(localPath) ? readFileSync(localPath, 'utf8') : null
     const fname = op.path.split('/').pop()
-    const needsBuild = op.path.endsWith('.jsx') || op.path.endsWith('.tsx') || op.path.endsWith('.js') && op.path.startsWith('src/')
-    let buildPassed = false
-    if (!needsBuild) {
-      // Pas de build pour JSON/MD/CSS/HTML/config — juste écrire et pousser
+    try {
       mkdirSync(localPath.replace(/\/[^/]+$/, ''), { recursive: true })
       writeFileSync(localPath, clean, 'utf8')
-      buildPassed = true
-      log(`build skip (non-JSX): ${op.path}`)
-    } else try {
-      mkdirSync(localPath.replace(/\/[^/]+$/, ''), { recursive: true })
-      writeFileSync(localPath, clean, 'utf8')
-      log(`build test: ${op.path}…`)
-      execSync('npm run build --silent 2>&1', { cwd: ROOT, timeout: 60000, stdio: 'pipe' })
-      buildPassed = true
-      log(`build OK: ${op.path}`)
-    } catch (buildErr) {
-      const errOut = buildErr.stdout?.toString?.() || buildErr.message || ''
-      log(`build FAIL: ${op.path} — ${errOut.slice(0, 200)}`)
-      if (originalContent !== null) writeFileSync(localPath, originalContent, 'utf8')
-      else if (existsSync(localPath)) { try { unlinkSync(localPath) } catch {} }
-
-      // Notif Discord — build fail, auto-fix en cours
-      discordPost(CH_UPDATES, `🔧 **Build fail** — \`${fname}\`\n\`\`\`\n${errOut.slice(0, 300)}\n\`\`\`\n⟳ AnDy corrige automatiquement…`)
-
-      const fixPrompt = [
-        'Ce code a échoué le build Vite. Corrige-le.',
-        'FICHIER: ' + op.path,
-        'ERREUR BUILD:\n' + errOut.slice(0, 1000),
-        'CODE ACTUEL:\n' + clean.slice(0, 6000),
-        'Retourne le code complet corrigé uniquement, sans backticks.',
-      ].join('\n')
-      checkInterrupt()
-      const fixed = await generateRaw(fixPrompt, 6000, MODEL_SMART)
-      clean = fixed.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim()
-
-      try {
-        writeFileSync(localPath, clean, 'utf8')
-        execSync('npm run build --silent 2>&1', { cwd: ROOT, timeout: 60000, stdio: 'pipe' })
-        buildPassed = true
-        log(`build OK après fix: ${op.path}`)
-        discordPost(CH_UPDATES, `✅ **Build fixé** — \`${fname}\` corrigé et validé`)
-      } catch (e2) {
-        if (originalContent !== null) writeFileSync(localPath, originalContent, 'utf8')
-        discordPost(CH_UPDATES, `❌ **Build échoué 2x** — \`${fname}\` abandonné, original restauré`)
-        throw new Error(`Build échoué après 2 tentatives: ${op.path}`)
-      }
-    }
-
-    if (!buildPassed) throw new Error(`Build non validé: ${op.path}`)
+    } catch (e) { log(`write local skip: ${e.message}`) }
 
     const commitMsg = `[AnDy] ${op.action === 'CREATE' ? 'feat' : 'update'}: ${op.path}`
     const ok = await ghWriteFile(op.path, clean, commitMsg, sha)
