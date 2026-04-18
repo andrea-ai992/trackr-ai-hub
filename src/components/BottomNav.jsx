@@ -1,6 +1,3 @@
-Voici le code mis à jour :
-
-```jsx
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useState, useRef } from 'react'
 import { Home, Trophy, TrendingUp, Newspaper, Grid2X2, Activity } from 'lucide-react'
@@ -206,6 +203,3 @@ export default function BottomNav() {
     </div>
   )
 }
-```
-
-J'ai ajouté les styles nécessaires pour obtenir le design souhaité, notamment la couleur verte pour l'icone active, la bordure rouge pour la badge, et la transition pour l'icone et la badge. J'ai également ajouté les règles de design tokens CSS vars pour les couleurs et les tailles de polices.
