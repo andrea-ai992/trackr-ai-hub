@@ -1,0 +1,248 @@
+PortfolioAllocationPie.jsx
+```jsx
+import { useEffect, useState } from 'react';
+import './Portfolio.css';
+
+const PortfolioAllocationPie = ({ data = [], size = 200, strokeWidth = 20 }) => {
+  const [activeIndex, setActiveIndex] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const total = data.reduce((sum, item) => sum + item.value, 0);
+
+  const getPathColor = (index) => {
+    const colors = [
+      'var(--green)',
+      '#00b8ff',
+      '#ff6b6b',
+      '#ffd93d',
+      '#6bcf7f',
+      '#ff87ce',
+      '#f06292',
+      '#7986cb'
+    ];
+    return colors[index % colors.length];
+  };
+
+  const getPathStyle = (index) => {
+    const isActive = activeIndex === index;
+    const color = getPathColor(index);
+    const opacity = isActive ? 1 : 0.7;
+    const strokeDasharray = circumference;
+    const strokeDashoffset = circumference - (data[index].value / total) * circumference;
+
+    return {
+      stroke: color,
+      strokeOpacity: opacity,
+      strokeWidth: strokeWidth,
+      strokeDasharray: strokeDasharray,
+      strokeDashoffset: strokeDashoffset,
+      fill: 'none',
+      transition: 'all 0.5s ease',
+      cursor: 'pointer',
+      transform: 'rotate(-90deg)',
+      transformOrigin: 'center',
+      filter: isActive ? 'drop-shadow(0 0 8px currentColor)' : 'none'
+    };
+  };
+
+  const handleMouseEnter = (index) => {
+    setActiveIndex(index);
+  };
+
+  const handleMouseLeave = () => {
+    setActiveIndex(null);
+  };
+
+  const formatValue = (value) => {
+    return `${(value * 100).toFixed(1)}%`;
+  };
+
+  const legendItems = data.map((item, index) => (
+    <div
+      key={index}
+      className="portfolio-legend-item"
+      onMouseEnter={() => handleMouseEnter(index)}
+      onMouseLeave={handleMouseLeave}
+    >
+      <div
+        className="portfolio-legend-color"
+        style={{ backgroundColor: getPathColor(index) }}
+      />
+      <div className="portfolio-legend-label">{item.label}</div>
+      <div className="portfolio-legend-value">{formatValue(item.value)}</div>
+    </div>
+  ));
+
+  return (
+    <div className="portfolio-allocation-container">
+      <div className="portfolio-pie-wrapper">
+        <svg
+          width={size}
+          height={size}
+          viewBox={`0 0 ${size} ${size}`}
+          className="portfolio-pie-svg"
+        >
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke="var(--border)"
+            strokeWidth={strokeWidth}
+            fill="none"
+            strokeDasharray={circumference}
+            strokeDashoffset={0}
+          />
+          {data.map((item, index) => (
+            <circle
+              key={index}
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              style={getPathStyle(index)}
+              onMouseEnter={() => handleMouseEnter(index)}
+              onMouseLeave={handleMouseLeave}
+              data-index={index}
+            />
+          ))}
+          <text
+            x={size / 2}
+            y={size / 2}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="portfolio-pie-center-text"
+          >
+            {total > 0 ? formatValue(1) : '0%'}
+          </text>
+        </svg>
+      </div>
+      <div className={`portfolio-legend ${isMobile ? 'portfolio-legend-mobile' : ''}`}>
+        {legendItems}
+      </div>
+    </div>
+  );
+};
+
+export default PortfolioAllocationPie;
+```
+
+Portfolio.css
+```css
+.portfolio-allocation-container {
+  --transition: all 0.3s ease;
+  --easing: cubic-bezier(0.4, 0, 0.2, 1);
+
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--t1);
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.portfolio-pie-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.portfolio-pie-svg {
+  display: block;
+  overflow: visible;
+}
+
+.portfolio-pie-center-text {
+  font-size: calc(var(--size) * 0.2);
+  font-weight: 600;
+  fill: var(--t1);
+  user-select: none;
+  pointer-events: none;
+}
+
+.portfolio-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.portfolio-legend-mobile {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem 1rem;
+}
+
+.portfolio-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.portfolio-legend-item:hover {
+  opacity: 0.9;
+}
+
+.portfolio-legend-color {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 0.25rem;
+  flex-shrink: 0;
+  transition: var(--transition);
+}
+
+.portfolio-legend-label {
+  font-size: 0.9rem;
+  color: var(--t2);
+  transition: var(--transition);
+}
+
+.portfolio-legend-value {
+  font-size: 0.9rem;
+  color: var(--t3);
+  margin-left: auto;
+  transition: var(--transition);
+}
+
+.portfolio-legend-item:hover .portfolio-legend-label,
+.portfolio-legend-item:hover .portfolio-legend-value {
+  color: var(--t1);
+}
+
+@media (min-width: 769px) {
+  .portfolio-allocation-container {
+    max-width: 500px;
+  }
+
+  .portfolio-legend {
+    gap: 0.6rem;
+  }
+
+  .portfolio-legend-item {
+    gap: 0.6rem;
+  }
+
+  .portfolio-legend-label {
+    font-size: 0.95rem;
+  }
+}
+
+@media (min-width: 1025px) {
+  .portfolio-allocation-container {
+    max-width: 600px;
+  }
+}
