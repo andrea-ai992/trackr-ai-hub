@@ -532,6 +532,7 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
       'src/pages/Portfolio.jsx', 'src/pages/FlightTracker.jsx', 'src/App.jsx',
       'src/pages/Signals.jsx', 'src/pages/BrainExplorer.jsx', 'src/pages/Agents.jsx',
       'src/main.jsx', 'src/index.css', 'index.html',
+      'vercel.json', 'vite.config.js', 'package.json', 'public/manifest.json',
     ].includes(o.path)))
     .slice(0, 2)
 
