@@ -171,7 +171,7 @@ const Markets = () => {
                         {asset.image ? (
                           <img src={asset.image} alt={asset.name} className="w-full h-full rounded-full object-cover" />
                         ) : (
-                          asset.symbol.substring(0, 2).toUpperCase()
+                          <span className="text-color">{asset.symbol.substring(0, 2).toUpperCase()}</span>
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -206,7 +206,7 @@ const Markets = () => {
                         {asset.image ? (
                           <img src={asset.image} alt={asset.name} className="w-full h-full rounded-full object-cover" />
                         ) : (
-                          asset.symbol.substring(0, 2).toUpperCase()
+                          <span className="text-color">{asset.symbol.substring(0, 2).toUpperCase()}</span>
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -249,7 +249,7 @@ const Markets = () => {
                         {asset.image ? (
                           <img src={asset.image} alt={asset.name} className="w-full h-full rounded-full object-cover" />
                         ) : (
-                          asset.symbol.substring(0, 2).toUpperCase()
+                          <span className="text-color">{asset.symbol.substring(0, 2).toUpperCase()}</span>
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -292,7 +292,7 @@ const Markets = () => {
                         {asset.image ? (
                           <img src={asset.image} alt={asset.name} className="w-full h-full rounded-full object-cover" />
                         ) : (
-                          asset.symbol.substring(0, 2).toUpperCase()
+                          <span className="text-color">{asset.symbol.substring(0, 2).toUpperCase()}</span>
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
