@@ -1,6 +1,7 @@
 :root {
   --green: #00ff88;
   --bg: #080808;
+  --bg1: #0c0c0c;
   --bg2: #111111;
   --bg3: #161616;
   --bg4: #1c1c1c;
@@ -11,6 +12,7 @@
   --red: #ff4d4d;
   --amber: #fbbf24;
   --blue: #38bdf8;
+  --purple: #a78bfa;
   --t1: #f0f0f0;
   --t2: #888888;
   --t3: #444444;
@@ -25,16 +27,35 @@ body {
   font-family: 'Inter', sans-serif;
   background-color: var(--bg);
   color: var(--t1);
+  padding: 0;
+  margin: 0;
 }
 
-.num {
-  font-feature-settings: "tnum";
+.page {
+  max-width: 520px;
+  padding: 16px;
+  margin: 0 auto;
 }
 
-.section-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  color: var(--t3);
+.card {
+  background-color: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.pill-up {
+  background-color: var(--green);
+  color: var(--t1);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.pill-down {
+  background-color: var(--red);
+  color: var(--t1);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
 }
 
 .scroll-row {
@@ -47,6 +68,104 @@ body {
 .scroll-row::-webkit-scrollbar {
   display: none;
 }
-```
 
-J'ai créé un fichier `index.css` à partir de zéro, en utilisant les règles fournies. J'ai défini les design tokens dans la racine (`:root`) et importé la police Inter depuis Google Fonts. J'ai également ajouté les classes requises pour les stats, les étiquettes de section et les lignes de défilement.
+.tab-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius);
+  background-color: var(--bg);
+  color: var(--t1);
+  cursor: pointer;
+}
+
+.section-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+.press-scale {
+  transform: scale(1);
+  transition: transform 0.2s ease-in-out;
+}
+
+.press-scale:active {
+  transform: scale(0.97);
+}
+
+.live-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--green);
+  animation: ping 1s infinite;
+}
+
+@keyframes ping {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.live-dot.pulse {
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.num {
+  font-feature-settings: "tnum";
+}
+
+@keyframes fadeUp {
+  0% {
+    transform: translateY(16px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.shimmer {
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background: linear-gradient(90deg, var(--green), var(--green));
+  }
+  50% {
+    background: linear-gradient(90deg, var(--bg), var(--bg));
+  }
+  100% {
+    background: linear-gradient(90deg, var(--green), var(--green));
+  }
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
