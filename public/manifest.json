@@ -1,7 +1,7 @@
 {
   "short_name": "Trackr",
-  "name": "Trackr Application",
-  "description": "Suivi financier, sports et actualités en temps réel avec IA",
+  "name": "Trackr",
+  "description": "Dashboard intelligent personnel",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -69,13 +69,13 @@
   },
   "shortcuts": [
     {
-      "name": "Dashboard",
-      "short_name": "Dashboard",
-      "description": "Accéder au tableau de bord principal",
-      "url": "/dashboard",
+      "name": "Markets",
+      "short_name": "Markets",
+      "description": "Suivre les marchés financiers et crypto",
+      "url": "/markets",
       "icons": [
         {
-          "src": "/icons/shortcut-dashboard-96x96.png",
+          "src": "/icons/shortcut-markets-96x96.png",
           "sizes": "96x96",
           "type": "image/png"
         }
@@ -95,13 +95,13 @@
       ]
     },
     {
-      "name": "Markets",
-      "short_name": "Markets",
-      "description": "Suivre les marchés financiers et crypto",
-      "url": "/markets",
+      "name": "AnDy",
+      "short_name": "AnDy",
+      "description": "Discuter avec votre assistant IA",
+      "url": "/andy",
       "icons": [
         {
-          "src": "/icons/shortcut-markets-96x96.png",
+          "src": "/icons/shortcut-andy-96x96.png",
           "sizes": "96x96",
           "type": "image/png"
         }
@@ -115,19 +115,6 @@
       "icons": [
         {
           "src": "/icons/shortcut-news-96x96.png",
-          "sizes": "96x96",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
-      "name": "Andy",
-      "short_name": "Andy",
-      "description": "Discuter avec votre assistant IA",
-      "url": "/andy",
-      "icons": [
-        {
-          "src": "/icons/shortcut-andy-96x96.png",
           "sizes": "96x96",
           "type": "image/png"
         }
