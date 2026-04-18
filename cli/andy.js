@@ -89,40 +89,40 @@ const CRYPTO = [
 ]
 
 // ── Couleurs ──────────────────────────────────────────────────────────────────
-const BG = '\x1b[48;2;4;4;8m'
-const R  = '\x1b[0m' + BG
+const BG = ''           // fond terminal natif (pas de background custom)
+const R  = '\x1b[0m'   // reset complet
 const _  = {
   bold:    '\x1b[1m',
   dim:     '\x1b[2m',
-  // états sémantiques
-  success: '\x1b[38;2;0;255;136m',    // vert neon — DONE, OK, ONLINE
-  search:  '\x1b[38;2;0;180;255m',    // bleu électrique — FETCH, SEARCH
-  think:   '\x1b[38;2;180;100;255m',  // violet neon — THINKING, AI
-  stream:  '\x1b[38;2;0;230;120m',    // vert clair — STREAMING, LIVE
-  retry:   '\x1b[38;2;255;140;0m',    // orange — RETRY, WARN
-  error:   '\x1b[38;2;255;50;50m',    // rouge — ERROR, FAIL
-  run:     '\x1b[38;2;0;220;255m',    // cyan — RUNNING
-  push:    '\x1b[38;2;100;255;180m',  // vert-cyan — PUSH, DEPLOY
+  // états sémantiques — 256 couleurs fiables
+  success: '\x1b[38;5;46m',   // vert neon  — DONE, OK
+  search:  '\x1b[38;5;39m',   // bleu vif   — FETCH, SEARCH
+  think:   '\x1b[38;5;39m',   // bleu       — THINKING, AI (pas de violet)
+  stream:  '\x1b[38;5;46m',   // vert       — STREAMING
+  retry:   '\x1b[38;5;208m',  // orange     — RETRY, WARN
+  error:   '\x1b[38;5;196m',  // rouge      — ERROR, FAIL
+  run:     '\x1b[38;5;51m',   // cyan       — RUNNING
+  push:    '\x1b[38;5;46m',   // vert       — PUSH, DEPLOY
   // compatibilité
-  green:   '\x1b[38;2;0;255;136m',
-  blue:    '\x1b[38;2;0;180;255m',
-  purple:  '\x1b[38;2;180;100;255m',
-  cyan:    '\x1b[38;2;0;220;255m',
-  orange:  '\x1b[38;2;255;140;0m',
-  red:     '\x1b[38;2;255;50;50m',
-  pink:    '\x1b[38;5;198m',
-  yellow:  '\x1b[38;2;255;230;0m',
-  amber:   '\x1b[38;2;255;190;0m',
+  green:   '\x1b[38;5;46m',
+  blue:    '\x1b[38;5;39m',
+  purple:  '\x1b[38;5;39m',   // mappe sur bleu — plus de violet
+  cyan:    '\x1b[38;5;51m',
+  orange:  '\x1b[38;5;208m',
+  red:     '\x1b[38;5;196m',
+  pink:    '\x1b[38;5;213m',
+  yellow:  '\x1b[38;5;226m',
+  amber:   '\x1b[38;5;220m',
   // texte
-  white:   '\x1b[38;2;230;230;240m',
-  silver:  '\x1b[38;2;160;165;180m',
-  grey:    '\x1b[38;2;90;95;110m',
-  dark:    '\x1b[38;2;45;48;58m',
+  white:   '\x1b[38;5;255m',
+  silver:  '\x1b[38;5;250m',
+  grey:    '\x1b[38;5;244m',
+  dark:    '\x1b[38;5;238m',
 }
 
 // ── Output helpers ─────────────────────────────────────────────────────────
 const out  = s => process.stdout.write(s)
-const line = s => process.stdout.write(BG + (s || '') + '\x1b[0m' + BG + '\x1b[K\n')
+const line = s => process.stdout.write((s || '') + '\x1b[0m\n')
 const clr  = () => out('\x1b[2J\x1b[H' + BG)
 const sl   = ms => new Promise(r => setTimeout(r, ms))
 
