@@ -1,35 +1,30 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
+import { execSync } from 'child_process';
 
 async function generateNextTasks() {
   const taskStatusPath = resolve(ROOT, '.task-status.json');
   const errorLogPath = resolve(ROOT, '.error-log.json');
   const memoryPath = resolve(ROOT, 'ANDY_MEMORY.json');
 
-  // Lire les 20 dernières tâches terminées
   const taskStatus = existsSync(taskStatusPath) ? JSON.parse(readFileSync(taskStatusPath, 'utf8')) : [];
   const completedTasks = taskStatus.slice(-20);
-
-  // Lire les 5 dernières erreurs
+  
   const errorLog = existsSync(errorLogPath) ? JSON.parse(readFileSync(errorLogPath, 'utf8')) : [];
   const recentErrors = errorLog.slice(-5);
-
-  // Construire le contexte "état actuel de l'app"
-  const recentChanges = getRecentFileChanges(); // Implémentez cette fonction pour récupérer les fichiers modifiés récemment
+  
+  const recentChanges = getRecentFileChanges();
   const context = {
     completedTasks,
     recentErrors,
     recentChanges,
   };
 
-  // Poser la question à Claude (Haiku)
   const prompt = `Quels sont les 3 problèmes UX les plus urgents à corriger dans cette app mobile basé sur ces modifications récentes ? ${JSON.stringify(context)}`;
-  const response = await callClaude(prompt); // Implémentez cette fonction pour appeler Claude
+  const response = await callClaude(prompt);
 
-  // Utiliser les réponses comme base des nouvelles tâches
-  const newTasks = response.slice(0, 3).map(issue => `Fix UX issue: ${issue}`);
+  const newTasks = await validateAndGenerateTasks(response.slice(0, 3).map(issue => `Fix UX issue: ${issue}`));
 
-  // Sauvegarder le raisonnement dans ANDY_MEMORY.json
   const reflection = {
     timestamp: new Date().toISOString(),
     context,
@@ -38,4 +33,58 @@ async function generateNextTasks() {
   writeFileSync(memoryPath, JSON.stringify(reflection, null, 2), 'utf8');
 
   return newTasks;
+}
+
+async function validateAndGenerateTasks(tasks) {
+  let attempts = 0;
+  let validatedTasks = [];
+  
+  while (attempts < 2) {
+    const validationResult = validateTasks(tasks);
+    
+    if (validationResult.isValid) {
+      validatedTasks = tasks;
+      break;
+    } else {
+      console.error(`ERREUR PRÉCÉDENTE: ${validationResult.error}`);
+      tasks = tasks.map(task => `Fix UX issue: ${task} (prompt plus strict)`);
+      attempts++;
+    }
+  }
+
+  if (validatedTasks.length === 0) {
+    throw new Error('Validation échouée après 2 tentatives.');
+  }
+
+  return validatedTasks;
+}
+
+function validateTasks(tasks) {
+  const jsxRegex = /<[^\/>]+>(?:(?!<\/).)*<\/[^>]+>/g;
+  const todoRegex = /TODO|placeholder|lorem ipsum/i;
+  const importRegex = /import\s+.*\s+from\s+['"]([^'"]+)['"]/g;
+
+  for (const task of tasks) {
+    const matches = task.match(jsxRegex);
+    const openTags = matches ? matches.reduce((count, match) => count + (match.match(/</g) || []).length, 0) : 0;
+    const closeTags = matches ? matches.reduce((count, match) => count + (match.match(/>/g) || []).length, 0) : 0;
+
+    if (openTags !== closeTags) {
+      return { isValid: false, error: 'Balises JSX non fermées.' };
+    }
+
+    if (todoRegex.test(task)) {
+      return { isValid: false, error: 'Contient des TODO, placeholder ou lorem ipsum.' };
+    }
+
+    let importMatch;
+    while ((importMatch = importRegex.exec(task)) !== null) {
+      const importPath = importMatch[1];
+      if (!existsSync(resolve('node_modules', importPath)) && !existsSync(resolve('src', importPath))) {
+        return { isValid: false, error: `Import non trouvé: ${importPath}` };
+      }
+    }
+  }
+
+  return { isValid: true };
 }
