@@ -421,70 +421,35 @@ export default function News() {
                     bottom: '-8px',
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    width: '6px',
-                    height: '6px',
                     background: 'var(--green)',
-                    borderRadius: '50%',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    color: '#fff',
                   }}
-                />
+                >
+                  Sélectionné
+                </div>
               )}
             </button>
           ))}
         </div>
       </header>
-
-      <main style={{ marginTop: '20px' }}>
+      <div
+        style={{
+          padding: '16px',
+          maxHeight: 'calc(100vh - 64px)',
+          overflowY: 'auto',
+          background: 'var(--bg)',
+        }}
+      >
         {loading ? (
-          <div
-            style={{
-              display: 'grid',
-              gap: '12px',
-            }}
-          >
-            {[...Array(6)].map((_, i) => (
-              <div
-                key={i}
-                style={{
-                  padding: '16px 16px 16px 20px',
-                  background: 'var(--bg2)',
-                  border: '1px solid var(--border)',
-                  borderLeft: '3px solid var(--border)',
-                  borderRadius: '8px',
-                  animation: 'pulse 1.5s infinite ease-in-out',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    gap: 8,
-                    marginBottom: 8,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: '40px',
-                      height: '12px',
-                      background: 'var(--border)',
-                      borderRadius: '4px',
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+          <PullIndicator />
         ) : (
-          <div
-            style={{
-              display: 'grid',
-              gap: '12px',
-            }}
-          >
-            {filtered.map((item) => (
-              <NewsCard key={item.url} item={item} />
-            ))}
-          </div>
+          filtered.map((item) => (
+            <NewsCard key={item.url} item={item} />
+          ))
         )}
-      </main>
+      </div>
     </div>
   );
 }
@@ -492,7 +457,7 @@ export default function News() {
 
 ```jsx
 // src/components/NewsCard.jsx
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   RefreshCw,
   Loader2,
@@ -508,21 +473,6 @@ import {
   Zap,
 } from 'lucide-react';
 
-// ─── Utilities ─────────────────────────────────────────────────────────────────
-function ago(ts) {
-  if (!ts) return '';
-  const m = Math.floor((Date.now() / 1000 - ts) / 60);
-  if (m < 1) return 'Just now';
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
-}
-
-const isBreaking = (ts) => ts && (Date.now() / 1000 - ts) < 30 * 60; // < 30 min
-const isNew = (ts) => ts && (Date.now() / 1000 - ts) < 120 * 60; // < 2h
-
-// ─── Card component ───────────────────────────────────────────────────────────
 function NewsCard({ item }) {
   const breaking = isBreaking(item.time);
   const newItem = isNew(item.time) && !breaking;
@@ -583,3 +533,58 @@ function NewsCard({ item }) {
       )}
       <div
         style={{
+          display: 'flex',
+          gap: 8,
+          marginBottom: 8,
+          alignItems: 'center',
+        }}
+      >
+        <span
+          style={{
+            fontSize: '12px',
+            fontWeight: 700,
+            color: item.sourceColor,
+            background: item.sourceColor === '#1a1a1a' ? 'rgba(255,255,255,0.1)' : 'transparent',
+            padding: item.sourceColor === '#1a1a1a' ? '2px 6px' : 0,
+            borderRadius: item.sourceColor === '#1a1a1a' ? '4px' : 0,
+          }}
+        >
+          {item.sourceEmoji} {item.source}
+        </span>
+        <span
+          style={{
+            fontSize: '11px',
+            color: 'var(--t3)',
+          }}
+        >
+          · {ago(item.time)}
+        </span>
+        <ExternalLink size={14} style={{ color: 'var(--t3)', marginLeft: 'auto', flexShrink: 0 }} />
+      </div>
+      <h3
+        style={{
+          fontSize: '15px',
+          lineHeight: 1.45,
+          color: 'var(--t1)',
+          fontWeight: 500,
+          margin: 0,
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}
+      >
+        {item.title}
+      </h3>
+      {item.thumbnail && (
+        <img
+          src={item.thumbnail}
+          alt=""
+          style={{
+            width: '72px',
+            height: '72px',
+            objectFit: 'cover',
+            borderRadius: '6px',
+            marginLeft: 'auto',
+            marginTop: '12px',
+          }}
