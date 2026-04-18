@@ -1,6 +1,3 @@
-Voici le code mis à jour pour le composant BottomNav :
-
-```jsx
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useState, useRef } from 'react'
 import { Home, Trophy, TrendingUp, Newspaper, Grid2X2, Activity } from 'lucide-react'
@@ -83,7 +80,7 @@ export default function BottomNav() {
       backgroundColor: 'var(--bg)',
       backdropFilter: 'blur(24px)',
       WebkitBackdropFilter: 'blur(24px)',
-      borderTop: `1px solid var(--border)`,
+      borderTop: '1px solid var(--border)',
       zIndex: 1000,
     }}>
       <nav
@@ -111,11 +108,11 @@ export default function BottomNav() {
             width: pillStyle.width,
             height: pillStyle.height,
             backgroundColor: 'var(--green)',
-            border: `1px solid var(--border-hi)`,
+            border: '1px solid var(--border-hi)',
             borderRadius: '12px',
             padding: '6px 16px',
             transform: `translateX(${pillStyle.left}px)`,
-            transition: 'transform 200ms ease',
+            transition: 'transform 200ms cubic-bezier(0.4, 0, 0.2, 1)',
             pointerEvents: 'none',
             zIndex: 0,
           }}
@@ -154,7 +151,7 @@ export default function BottomNav() {
                 WebkitTapHighlightColor: 'transparent',
                 zIndex: 1,
                 transform: pressedTab === i ? 'scale(0.92)' : 'scale(1)',
-                transition: 'transform 100ms ease',
+                transition: 'transform 100ms cubic-bezier(0.4, 0, 0.2, 1)',
               }}
             >
               <div style={{ position: 'relative', display: 'inline-flex' }}>
@@ -163,7 +160,7 @@ export default function BottomNav() {
                   strokeWidth={active ? 2.2 : 1.6}
                   style={{
                     color: active ? 'var(--green)' : 'var(--t3)',
-                    transition: 'color 250ms ease, transform 250ms ease',
+                    transition: 'color 250ms cubic-bezier(0.4, 0, 0.2, 1), transform 250ms cubic-bezier(0.4, 0, 0.2, 1)',
                     transform: active ? 'scale(1.08)' : 'scale(1)',
                     filter: active ? 'drop-shadow(0 0 4px var(--green))' : 'none',
                   }}
@@ -197,7 +194,7 @@ export default function BottomNav() {
                 fontSize: 9,
                 fontWeight: active ? 700 : 500,
                 color: active ? 'var(--green)' : 'var(--t3)',
-                transition: 'color 250ms ease, font-weight 250ms ease',
+                transition: 'color 250ms cubic-bezier(0.4, 0, 0.2, 1), font-weight 250ms cubic-bezier(0.4, 0, 0.2, 1)',
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
                 fontFamily: "'Inter', system-ui, sans-serif",
@@ -211,14 +208,3 @@ export default function BottomNav() {
     </div>
   )
 }
-```
-
-Je n'ai fait que quelques modifications mineures pour que le code soit conforme aux règles :
-
-* J'ai ajouté `transition: 'transform 200ms ease'` pour l'animation du badge.
-* J'ai ajouté `animation: 'itemFadeUp 300ms ease both'` pour l'animation du badge rouge.
-* J'ai ajouté `fontFamily: "'Inter', system-ui, sans-serif"` pour utiliser la police Inter.
-* J'ai ajouté `WebkitTapHighlightColor: 'transparent'` pour supprimer la couleur de fond du bouton lors du clic.
-* J'ai ajouté `pointerEvents: 'none'` pour le badge pour éviter les interactions.
-
-Le reste du code est resté inchangé.
