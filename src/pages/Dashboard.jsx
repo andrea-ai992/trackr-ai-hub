@@ -97,7 +97,7 @@ export default function Dashboard() {
   const coinColor = { bitcoin: '#f59e0b', ethereum: '#6366f1', solana: '#9945ff', binancecoin: '#f0b90b' }
 
   return (
-    <div className="page" style={{ paddingTop: 'max(60px, env(safe-area-inset-top, 0px))', backgroundColor: '#080808', color: '#f0f0f0' }}>
+    <div className="page" style={{ paddingTop: 'max(60px, env(safe-area-inset-top, 0px))', backgroundColor: '#080808', color: '#f0f0f0', maxWidth: '520px', margin: '0 auto', padding: '0 16px' }}>
       <div className="stagger-item" style={{ marginBottom: 24 }}>
         <p style={{ fontSize: 11, color: 'var(--t3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 4 }}>{today}</p>
         <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--t1)', letterSpacing: '-0.3px' }}>
@@ -113,7 +113,7 @@ export default function Dashboard() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--green-bg)', border: '1px solid var(--border-hi)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--bg2)', border: '1px solid var(--border-hi)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <TrendingUp size={15} color="var(--green)" />
             </div>
             <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Portfolio</span>
@@ -202,24 +202,6 @@ export default function Dashboard() {
             <p style={{ fontSize: 10, color: 'var(--green)', opacity: 0.7 }}>En ligne</p>
           </div>
         </button>
-      </div>
-
-      <div className="stagger-item" style={{ marginBottom: 12 }}>
-        <FGGauge value={fg} />
-      </div>
-
-      <div className="stagger-item" style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {news.slice(0, 3).map((item, index) => (
-            <div key={index} style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(12px)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px' }}>
-              <span style={{ fontSize: 12, color: 'var(--t1)', fontWeight: 700 }}>{item.title.length > 40 ? item.title.slice(0, 40) + '...' : item.title}</span>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                <span style={{ fontSize: 10, color: 'var(--t2)', fontWeight: 600 }}>{item.source}</span>
-                <span style={{ fontSize: 10, color: 'var(--t2)' }}>{new Date(item.pubDate).toLocaleTimeString('fr-FR', { hour: 'numeric', minute: 'numeric' })}</span>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   )
