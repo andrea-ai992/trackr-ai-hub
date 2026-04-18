@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { AppProvider } from './context/AppContext'
 import { SettingsProvider } from './context/SettingsContext'
@@ -27,18 +27,17 @@ import { useNewsAlerts } from './hooks/useNewsAlerts'
 import { Search } from 'lucide-react'
 import VoiceAssistant from './components/VoiceAssistant'
 
-const FlightTracker = React.lazy(() => import('./pages/FlightTracker'))
-const ChartAnalysis = React.lazy(() => import('./pages/ChartAnalysis'))
-const Patterns = React.lazy(() => import('./pages/Patterns'))
-const CryptoTrader = React.lazy(() => import('./pages/CryptoTrader'))
-const Signals = React.lazy(() => import('./pages/Signals'))
-const RealEstate = React.lazy(() => import('./pages/RealEstate'))
-const BusinessPlan = React.lazy(() => import('./pages/BusinessPlan'))
-const Admin = React.lazy(() => import('./pages/Admin'))
-const Sneakers = React.lazy(() => import('./pages/Sneakers'))
-const Watches = React.lazy(() => import('./pages/Watches'))
-const BrainExplorer = React.lazy(() => import('./pages/BrainExplorer'))
-const Tasks = React.lazy(() => import('./pages/Tasks'))
+const FlightTracker = lazy(() => import('./pages/FlightTracker'))
+const ChartAnalysis = lazy(() => import('./pages/ChartAnalysis'))
+const Patterns = lazy(() => import('./pages/Patterns'))
+const CryptoTrader = lazy(() => import('./pages/CryptoTrader'))
+const Signals = lazy(() => import('./pages/Signals'))
+const RealEstate = lazy(() => import('./pages/RealEstate'))
+const BusinessPlan = lazy(() => import('./pages/BusinessPlan'))
+const Admin = lazy(() => import('./pages/Admin'))
+const Sneakers = lazy(() => import('./pages/Sneakers'))
+const Watches = lazy(() => import('./pages/Watches'))
+const BrainExplorer = lazy(() => import('./pages/BrainExplorer'))
 
 function AlertWatcher() {
   useAlerts()
@@ -168,11 +167,9 @@ function AppInner() {
               <Route
                 path="/flights"
                 element={
-                  <React.Suspense fallback={
-                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
-                  }>
+                  <Suspense fallback={<SkeletonPage />}>
                     <ProtectedRoute><FlightTracker /></ProtectedRoute>
-                  </React.Suspense>
+                  </Suspense>
                 }
               />
               <Route path="/markets" element={<ProtectedRoute><Markets /></ProtectedRoute>} />
@@ -185,41 +182,33 @@ function AppInner() {
               <Route
                 path="/sneakers"
                 element={
-                  <React.Suspense fallback={
-                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
-                  }>
+                  <Suspense fallback={<SkeletonPage />}>
                     <ProtectedRoute><Sneakers /></ProtectedRoute>
-                  </React.Suspense>
+                  </Suspense>
                 }
               />
               <Route
                 path="/watches"
                 element={
-                  <React.Suspense fallback={
-                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
-                  }>
+                  <Suspense fallback={<SkeletonPage />}>
                     <ProtectedRoute><Watches /></ProtectedRoute>
-                  </React.Suspense>
+                  </Suspense>
                 }
               />
               <Route
                 path="/real-estate"
                 element={
-                  <React.Suspense fallback={
-                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
-                  }>
+                  <Suspense fallback={<SkeletonPage />}>
                     <ProtectedRoute><RealEstate /></ProtectedRoute>
-                  </React.Suspense>
+                  </Suspense>
                 }
               />
               <Route
                 path="/business"
                 element={
-                  <React.Suspense fallback={
-                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
-                  }>
+                  <Suspense fallback={<SkeletonPage />}>
                     <ProtectedRoute><BusinessPlan /></ProtectedRoute>
-                  </React.Suspense>
+                  </Suspense>
                 }
               />
               <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
@@ -230,96 +219,73 @@ function AppInner() {
               <Route
                 path="/charts"
                 element={
-                  <React.Suspense fallback={
-                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
-                  }>
+                  <Suspense fallback={<SkeletonPage />}>
                     <ProtectedRoute><ChartAnalysis /></ProtectedRoute>
-                  </React.Suspense>
+                  </Suspense>
                 }
               />
               <Route path="/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
               <Route
                 path="/patterns"
                 element={
-                  <React.Suspense fallback={
-                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
-                  }>
+                  <Suspense fallback={<SkeletonPage />}>
                     <ProtectedRoute><Patterns /></ProtectedRoute>
-                  </React.Suspense>
+                  </Suspense>
                 }
               />
               <Route path="/brain" element={<ProtectedRoute><BrainStatus /></ProtectedRoute>} />
               <Route
                 path="/crypto-trader"
                 element={
-                  <React.Suspense fallback={
-                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
-                  }>
+                  <Suspense fallback={<SkeletonPage />}>
                     <ProtectedRoute><CryptoTrader /></ProtectedRoute>
-                  </React.Suspense>
+                  </Suspense>
                 }
               />
               <Route
                 path="/signals"
                 element={
-                  <React.Suspense fallback={
-                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
-                  }>
+                  <Suspense fallback={<SkeletonPage />}>
                     <ProtectedRoute><Signals /></ProtectedRoute>
-                  </React.Suspense>
+                  </Suspense>
                 }
               />
               <Route
                 path="/brain-explorer"
                 element={
-                  <React.Suspense fallback={
-                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
-                  }>
+                  <Suspense fallback={<SkeletonPage />}>
                     <ProtectedRoute><BrainExplorer /></ProtectedRoute>
-                  </React.Suspense>
+                  </Suspense>
                 }
               />
-
-              <Route
-                path="/tasks"
-                element={
-                  <React.Suspense fallback={
-                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
-                  }>
-                    <ProtectedRoute><Tasks /></ProtectedRoute>
-                  </React.Suspense>
-                }
-              />
-
-              <Route
-                path="/admin"
-                element={
-                  <React.Suspense fallback={
-                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
-                  }>
-                    <AdminRoute><Admin /></AdminRoute>
-                  </React.Suspense>
-                }
-              />
+              <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
             </Routes>
           </PageTransition>
         </main>
-        <BottomNav />
       </div>
+      <BottomNav />
     </>
   )
 }
 
-export default function App() {
+function SkeletonPage() {
   return (
-    <SettingsProvider>
+    <div style={{ height: '60vh', background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
+  )
+}
+
+function App() {
+  return (
+    <BrowserRouter>
       <AppProvider>
-        <BrowserRouter>
+        <SettingsProvider>
           <AuthProvider>
             <AppInner />
           </AuthProvider>
-        </BrowserRouter>
+        </SettingsProvider>
       </AppProvider>
-    </SettingsProvider>
+    </BrowserRouter>
   )
 }
+
+export default App;
