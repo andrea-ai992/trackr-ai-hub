@@ -224,6 +224,42 @@ export function startBot(cfg) {
     } finally { polling = false }
   }
 
+  // ── Scheduler ─────────────────────────────────────────────────────────────
+  // schedules = [{ hour, minute, channel, prompt, label }]
+  const firedToday = new Set()
+
+  async function postToChannel(chName, content) {
+    const ch = [...monitored.values()].find(c => c.name === chName)
+    if (!ch) { log(`⚠️ Channel #${chName} non trouvé`); return }
+    try {
+      await dPost(`/channels/${ch.id}/messages`, { content: content.slice(0, 1990) })
+      log(`📤 Posted to #${chName}`)
+    } catch (e) { log(`postToChannel #${chName}:`, e.message) }
+  }
+
+  function runScheduler() {
+    const { schedules = [] } = cfg
+    if (!schedules.length) return
+
+    setInterval(async () => {
+      const now = new Date()
+      const hhmm = `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`
+      const key = `${hhmm}`
+
+      for (const s of schedules) {
+        const match = `${s.hour}:${String(s.minute).padStart(2,'0')}`
+        if (hhmm !== match) continue
+        if (firedToday.has(key + s.channel)) continue
+        firedToday.add(key + s.channel)
+        setTimeout(() => firedToday.delete(key + s.channel), 70000)
+
+        log(`⏰ Scheduled: ${s.label || s.channel}`)
+        const reply = await callGroq(s.prompt, s.channel)
+        if (reply) await postToChannel(s.channel, reply)
+      }
+    }, 30000) // check every 30s
+  }
+
   async function run() {
     log(`🚀 Démarrage...`)
     if (!token || !guildId || !groqKey) { log('❌ Config manquante'); return }
@@ -231,6 +267,7 @@ export function startBot(cfg) {
     await initLastSeen()
     setInterval(pollAll, pollInterval)
     setInterval(discover, 5 * 60 * 1000)
+    runScheduler()
     log(`🟢 En ligne`)
   }
 
