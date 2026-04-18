@@ -1,3 +1,164 @@
+Je vais implémenter `AbortSignal.timeout()` pour tous les `fetch()` dans les fichiers demandés. Voici les modifications pour chaque fichier :
+
+### api/brain.js
+```javascript
+// api/brain.js
+// ─── Brain API — 45 AnDy Agents ────────────────────────────────────────────
+// Receives requests from Trackr app, routes to agent logic
+// Background processing: res.json() sends immediately, function continues up to 60s
+
+import crypto from 'crypto'
+
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
+const APP_URL = process.env.APP_URL || 'https://trackr-app-nu.vercel.app'
+
+// ─── Anthropic Helpers ─────────────────────────────────────────────────────
+async function anthropicStream(prompt, max_tokens = 4000, timeoutMs = 30000) {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20240620',
+        max_tokens,
+        messages: [{ role: 'user', content: prompt }],
+        stream: true,
+      }),
+      signal: controller.signal
+    })
+
+    if (!response.ok) {
+      throw new Error(`Anthropic API error: ${response.status}`)
+    }
+
+    if (!response.body) {
+      throw new Error('No response body from Anthropic')
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+
+    return new ReadableStream({
+      start(controller) {
+        function pump() {
+          reader.read().then(({ done, value }) => {
+            if (done) {
+              controller.close()
+              clearTimeout(timeoutId)
+              return
+            }
+            const text = decoder.decode(value, { stream: true })
+            controller.enqueue(text)
+            pump()
+          }).catch(err => {
+            controller.error(err)
+            clearTimeout(timeoutId)
+          })
+        }
+        pump()
+      }
+    })
+  } catch (error) {
+    clearTimeout(timeoutId)
+    throw error
+  }
+}
+
+async function anthropicComplete(prompt, max_tokens = 4000, timeoutMs = 30000) {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20240620',
+        max_tokens,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+      signal: controller.signal
+    })
+
+    if (!response.ok) {
+      throw new Error(`Anthropic API error: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.content[0].text
+  } catch (error) {
+    clearTimeout(timeoutId)
+    throw error
+  }
+}
+
+// ─── Agent Logic ───────────────────────────────────────────────────────────
+async function handleAgentRequest(agent, payload) {
+  switch (agent) {
+    case 'andy':
+    case 'nexus':
+    case 'pulse':
+    case 'synapse':
+    case 'oracle':
+      return await anthropicComplete(payload.prompt, 4000, 30000)
+    case 'market_scanner':
+    case 'tech_analyst':
+    case 'crypto_tracker':
+    case 'alert_bot':
+    case 'portfolio_guard':
+    case 'sector_spy':
+    case 'news_digest':
+    case 'sentiment_bot':
+    case 'macro_watch':
+    case 'options_flow':
+      return await anthropicComplete(payload.prompt, 4000, 30000)
+    case 'code_reviewer':
+    case 'bug_hunter':
+    case 'perf_optimizer':
+    case 'security_audit':
+    case 'refactor_bot':
+    case 'test_coverage':
+    case 'api_monitor':
+    case 'deploy_watch':
+    case 'dependency_bot':
+    case 'doc_writer':
+      return await anthropicComplete(payload.prompt, 4000, 30000)
+    case 'ui_inspector':
+    case 'ux_analyst':
+    case 'color_master':
+    case 'typography_bot':
+    case 'animation_bot':
+    case 'responsive_bot':
+    case 'access_bot':
+    case 'pixel_perfect':
+      return await anthropicComplete(payload.prompt, 4000, 30000)
+    case 'data_miner':
+    case 'stats_bot':
+    case 'correlation_bot':
+    case 'backtest_bot':
+    case 'risk_metrics':
+      return await anthropicComplete(payload.prompt, 4000, 30000)
+    default:
+      throw new Error(`Unknown agent: ${agent}`)
+  }
+}
+
+export { anthropicStream, anthropicComplete, handleAgentRequest }
+```
+
+### api/discord.js
+```javascript
 // api/discord.js
 // ─── Discord Interaction Handler — 45 AnDy Agents ───────────────────────────
 // Receives slash commands from Discord, routes to agent logic
@@ -5,15 +166,15 @@
 
 import crypto from 'crypto'
 
-const DISCORD_API    = 'https://discord.com/api/v10'
-const APP_ID         = process.env.DISCORD_APPLICATION_ID
-const BOT_TOKEN      = process.env.DISCORD_BOT_TOKEN
-const PUBLIC_KEY     = process.env.DISCORD_PUBLIC_KEY
-const ANTHROPIC_KEY  = process.env.ANTHROPIC_API_KEY
-const APP_URL        = process.env.APP_URL || 'https://trackr-app-nu.vercel.app'
+const DISCORD_API = 'https://discord.com/api/v10'
+const APP_ID = process.env.DISCORD_APPLICATION_ID
+const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN
+const PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY
+const APP_URL = process.env.APP_URL || 'https://trackr-app-nu.vercel.app'
 
 // ─── Crypto helpers ───────────────────────────────────────────────────────────
-const CRYPTO_LIST   = ['BTC','ETH','SOL','BNB','XRP','ADA','DOGE','AVAX','DOT','MATIC','LINK','UNI','LTC','ATOM']
+const CRYPTO_LIST = ['BTC','ETH','SOL','BNB','XRP','ADA','DOGE','AVAX','DOT','MATIC','LINK','UNI','LTC','ATOM']
 const CRYPTO_ID_MAP = { BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana', BNB: 'binancecoin', XRP: 'ripple', ADA: 'cardano', DOGE: 'dogecoin', AVAX: 'avalanche-2', DOT: 'polkadot', MATIC: 'matic-network', LINK: 'chainlink', UNI: 'uniswap', LTC: 'litecoin', ATOM: 'cosmos' }
 
 function quickRSI(closes, period = 14) {
@@ -49,38 +210,48 @@ async function getQuickSignal(symbol, type) {
     if (priceRes.status === 'fulfilled') { const d = priceRes.value?.[id]; price = d?.usd; change24h = d?.usd_24h_change }
     if (ohlcRes.status === 'fulfilled' && Array.isArray(ohlcRes.value)) rsi = quickRSI(ohlcRes.value.map(c => c[4]))
   } else {
-    const data = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=30d`, {
-      headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(5000)
-    })
-      .then(async r => {
-        const ct = r.headers.get('content-type') || ''
-        if (!r.ok) { console.warn(`Yahoo Finance ${symbol}: HTTP ${r.status}`); return null }
-        if (
-          !ct.includes('application/json') &&
-          !ct.includes('text/json') &&
-          !ct.includes('text/plain') &&
-          !ct.includes('application/x-www-form-urlencoded')
-        ) {
-          console.warn(`Yahoo Finance ${symbol}: unexpected content-type "${ct}" (possible SSE/stream), skipping .json()`)
-          await r.body?.cancel().catch(() => {})
-          return null
-        }
-        try {
-          return await r.json()
-        } catch (parseErr) {
-          console.warn(`Yahoo Finance ${symbol}: JSON parse error:`, parseErr.message)
-          return null
-        }
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 5000)
+
+    try {
+      const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=30d`, {
+        headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' },
+        signal: controller.signal
       })
-      .catch(e => { console.warn(`Yahoo Finance ${symbol} fetch error:`, e.message); return null })
-    if (data?.chart?.result?.[0]) {
-      const r = data.chart.result[0]
-      const closes = (r.indicators?.quote?.[0]?.close || []).filter(Boolean)
-      price = r.meta?.regularMarketPrice
-      const prev = r.meta?.previousClose || r.meta?.chartPreviousClose
-      if (prev && price) change24h = (price - prev) / prev * 100
-      rsi = quickRSI(closes)
+
+      clearTimeout(timeoutId)
+
+      const ct = response.headers.get('content-type') || ''
+      if (!response.ok) {
+        console.warn(`Yahoo Finance ${symbol}: HTTP ${response.status}`)
+        return null
+      }
+      if (
+        !ct.includes('application/json') &&
+        !ct.includes('text/json') &&
+        !ct.includes('text/plain') &&
+        !ct.includes('application/x-www-form-urlencoded')
+      ) {
+        console.warn(`Yahoo Finance ${symbol}: unexpected content-type "${ct}" (possible SSE/stream), skipping .json()`)
+        await response.body?.cancel().catch(() => {})
+        return null
+      }
+      const data = await response.json().catch(e => {
+        console.warn(`Yahoo Finance ${symbol}: JSON parse error:`, e.message)
+        return null
+      })
+
+      if (data?.chart?.result?.[0]) {
+        const r = data.chart.result[0]
+        const closes = (r.indicators?.quote?.[0]?.close || []).filter(Boolean)
+        price = r.meta?.regularMarketPrice
+        const prev = r.meta?.previousClose || r.meta?.chartPreviousClose
+        if (prev && price) change24h = (price - prev) / prev * 100
+        rsi = quickRSI(closes)
+      }
+    } catch (e) {
+      console.warn(`Yahoo Finance ${symbol} fetch error:`, e.message)
+      return null
     }
   }
   return { price, change24h, rsi }
@@ -102,6 +273,8 @@ async function handleDiscordStream(res, streamUrl, timeoutMs = 10000) {
       },
       signal: controller.signal
     })
+
+    clearTimeout(timeoutId)
 
     if (!response.ok) {
       res.status(response.status).json({ error: `Discord API error: ${response.status}` })
@@ -145,7 +318,6 @@ async function handleDiscordStream(res, streamUrl, timeoutMs = 10000) {
       res.status(500).json({ error: 'Stream processing failed' })
     }
   } finally {
-    clearTimeout(timeoutId)
     res.end()
   }
 }
@@ -170,28 +342,4 @@ export const AGENTS = {
   macro_watch:     { name: 'MacroWatch',     emoji: '🌍', color: 0x0891b2, cat: 'markets', ch: 'macro',             role: 'Indicateurs macro' },
   options_flow:    { name: 'OptionsFlow',    emoji: '🌊', color: 0xec4899, cat: 'markets', ch: 'options-flow',      role: 'Flux options inhabituels' },
   // Dev Agents (10)
-  code_reviewer:   { name: 'CodeReviewer',   emoji: '👁️', color: 0x60a5fa, cat: 'dev',     ch: 'code-review',       role: 'Revue et suggestions code' },
-  bug_hunter:      { name: 'BugHunter',      emoji: '🐛', color: 0xf87171, cat: 'dev',     ch: 'bugs',              role: 'Détection de bugs' },
-  perf_optimizer:  { name: 'PerfOptimizer',  emoji: '⚡', color: 0xfbbf24, cat: 'dev',     ch: 'performance',       role: 'Performance bundle Core Vitals' },
-  security_audit:  { name: 'SecurityAudit',  emoji: '🔐', color: 0xdc2626, cat: 'dev',     ch: 'security',          role: 'Audit sécurité OWASP' },
-  refactor_bot:    { name: 'RefactorBot',    emoji: '🔧', color: 0x7c3aed, cat: 'dev',     ch: 'refactor',          role: 'Qualité code et patterns' },
-  test_coverage:   { name: 'TestCoverage',   emoji: '✅', color: 0x16a34a, cat: 'dev',     ch: 'testing',           role: 'Couverture de tests' },
-  api_monitor:     { name: 'APIMonitor',     emoji: '🔌', color: 0x0284c7, cat: 'dev',     ch: 'api-health',        role: 'Santé API et latence' },
-  deploy_watch:    { name: 'DeployWatch',    emoji: '🚀', color: 0x4ade80, cat: 'dev',     ch: 'deployments',       role: 'Statut déploiements Vercel' },
-  dependency_bot:  { name: 'DependencyBot',  emoji: '📦', color: 0xfb923c, cat: 'dev',     ch: 'dependencies',      role: 'Dépendances et vulnérabilités' },
-  doc_writer:      { name: 'DocWriter',      emoji: '📝', color: 0x64748b, cat: 'dev',     ch: 'documentation',     role: 'Génération de docs' },
-  // Design Agents (8)
-  ui_inspector:    { name: 'UIInspector',    emoji: '🎨', color: 0xf9a8d4, cat: 'design',  ch: 'ui-review',         role: 'Revue composants UI' },
-  ux_analyst:      { name: 'UXAnalyst',      emoji: '👤', color: 0xc4b5fd, cat: 'design',  ch: 'ux-feedback',       role: 'Analyse flux utilisateur' },
-  color_master:    { name: 'ColorMaster',    emoji: '🌈', color: 0xff6b6b, cat: 'design',  ch: 'colors',            role: 'Palette couleurs et contrastes' },
-  typography_bot:  { name: 'TypographyBot',  emoji: '🔤', color: 0xddd6fe, cat: 'design',  ch: 'typography',        role: 'Hiérarchie typographique' },
-  animation_bot:   { name: 'AnimationBot',   emoji: '✨', color: 0x7dd3fc, cat: 'design',  ch: 'animations',        role: 'Fluidité et micro-interactions' },
-  responsive_bot:  { name: 'ResponsiveBot',  emoji: '📱', color: 0x86efac, cat: 'design',  ch: 'responsive',        role: 'Mobile et breakpoints' },
-  access_bot:      { name: 'AccessBot',      emoji: '♿', color: 0xfde68a, cat: 'design',  ch: 'accessibility',     role: 'Accessibilité WCAG 2.1' },
-  pixel_perfect:   { name: 'PixelPerfect',   emoji: '🔍', color: 0xe9d5ff, cat: 'design',  ch: 'pixel-review',      role: 'Espacements et alignements' },
-  // Data Agents (7)
-  data_miner:      { name: 'DataMiner',      emoji: '⛏️', color: 0x6ee7b7, cat: 'data',    ch: 'data-patterns',     role: 'Patterns marché et portfolio' },
-  stats_bot:       { name: 'StatsBot',       emoji: '📊', color: 0x93c5fd, cat: 'data',    ch: 'statistics',        role: 'Statistiques descriptives' },
-  correlation_bot: { name: 'CorrelationBot', emoji: '🔗', color: 0xfca5a5, cat: 'data',    ch: 'correlations',      role: 'Corrélations entre actifs' },
-  backtest_bot:    { name: 'BacktestBot',    emoji: '⏪', color: 0xa5b4fc, cat: 'data',    ch: 'backtests',         role: 'Backtesting stratégies' },
-  risk_metrics:    { name: 'RiskMetrics',    emoji: '⚖️', color: 0xfcd34d, cat
+  code_reviewer:   { name: 'CodeReviewer',   emoji: '👁️', color: 0
