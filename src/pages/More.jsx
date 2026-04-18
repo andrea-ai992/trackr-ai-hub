@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import {
   Plane, Languages, Footprints, FolderOpen, Settings2, Plus, X,
   TrendingUp, Bitcoin, ChevronRight, Sparkles, Lock, LayoutDashboard,
-  Bot, Radio, Brain, Shield, Watch, Home, Briefcase, BarChart2, LineChart
+  Bot, Radio, Brain, Shield, Watch, Home, Briefcase, BarChart2, LineChart, ListTodo
 } from 'lucide-react'
 
 const ALL_MODULES = [
+  { id: 'tasks',       to: '/tasks',       icon: ListTodo,        label: 'Tâches AnDy',     desc: 'Donne des tâches · suivi live · logs',      color: '#00ff88', badge: 'Live' },
   { id: 'brain',       to: '/brain',       icon: Brain,           label: 'Brain IA',        desc: 'Cycles auto · mémoire · rapports',          color: '#a78bfa', badge: '24/7' },
   { id: 'agents',      to: '/agents',      icon: Radio,           label: 'Mission Control', desc: 'Agents IA · activité live · scans',           color: '#00ff88', badge: 'Live' },
   { id: 'andy',        to: '/andy',        icon: Bot,             label: 'AnDy AI',         desc: 'Assistant IA · conseiller & dev',             color: '#00ff88', badge: 'AI' },

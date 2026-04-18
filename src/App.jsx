@@ -38,6 +38,7 @@ const Admin = React.lazy(() => import('./pages/Admin'))
 const Sneakers = React.lazy(() => import('./pages/Sneakers'))
 const Watches = React.lazy(() => import('./pages/Watches'))
 const BrainExplorer = React.lazy(() => import('./pages/BrainExplorer'))
+const Tasks = React.lazy(() => import('./pages/Tasks'))
 
 function AlertWatcher() {
   useAlerts()
@@ -275,6 +276,17 @@ function AppInner() {
                     <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
                   }>
                     <ProtectedRoute><BrainExplorer /></ProtectedRoute>
+                  </React.Suspense>
+                }
+              />
+
+              <Route
+                path="/tasks"
+                element={
+                  <React.Suspense fallback={
+                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
+                  }>
+                    <ProtectedRoute><Tasks /></ProtectedRoute>
                   </React.Suspense>
                 }
               />
