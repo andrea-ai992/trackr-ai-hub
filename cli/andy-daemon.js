@@ -989,6 +989,16 @@ async function worker(id) {
   writeLiveState()
 
   while (true) {
+    // Si tous les providers sont en cooldown, dormir jusqu'au prochain dispo
+    const soonest = Math.min(...Object.values(providerCooldown))
+    const wait = Math.max(0, soonest - Date.now())
+    if (wait > 3000) {
+      const secs = Math.ceil(wait / 1000)
+      log(`[LLM] tous en cooldown — attente ${secs}s`)
+      await sl(Math.min(wait, 60000))
+      continue
+    }
+
     const fp = claimNextTask()
     if (fp) {
       const fname = fp.split('/').pop()
