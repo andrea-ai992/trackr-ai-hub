@@ -395,9 +395,9 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
     // ── Build test local avant push ──────────────────────────────────────────
     const localPath = resolve(ROOT, op.path)
     const originalContent = existsSync(localPath) ? readFileSync(localPath, 'utf8') : null
+    const fname = op.path.split('/').pop()
     let buildPassed = false
     try {
-      // Écrit le fichier localement pour tester le build
       mkdirSync(localPath.replace(/\/[^/]+$/, ''), { recursive: true })
       writeFileSync(localPath, clean, 'utf8')
       log(`build test: ${op.path}…`)
@@ -407,11 +407,12 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
     } catch (buildErr) {
       const errOut = buildErr.stdout?.toString?.() || buildErr.message || ''
       log(`build FAIL: ${op.path} — ${errOut.slice(0, 200)}`)
-      // Restaure l'original avant de retry
       if (originalContent !== null) writeFileSync(localPath, originalContent, 'utf8')
       else if (existsSync(localPath)) { try { unlinkSync(localPath) } catch {} }
 
-      // Demande à l'IA de corriger avec l'erreur de build
+      // Notif Discord — build fail, auto-fix en cours
+      discordPost(CH_UPDATES, `🔧 **Build fail** — \`${fname}\`\n\`\`\`\n${errOut.slice(0, 300)}\n\`\`\`\n⟳ AnDy corrige automatiquement…`)
+
       const fixPrompt = [
         'Ce code a échoué le build Vite. Corrige-le.',
         'FICHIER: ' + op.path,
@@ -423,15 +424,15 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
       const fixed = await generateRaw(fixPrompt, 6000, MODEL_SMART)
       clean = fixed.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim()
 
-      // Deuxième tentative de build
       try {
         writeFileSync(localPath, clean, 'utf8')
         execSync('npm run build --silent 2>&1', { cwd: ROOT, timeout: 90000, stdio: 'pipe' })
         buildPassed = true
         log(`build OK après fix: ${op.path}`)
+        discordPost(CH_UPDATES, `✅ **Build fixé** — \`${fname}\` corrigé et validé`)
       } catch (e2) {
-        // Restaure l'original et abandonne
         if (originalContent !== null) writeFileSync(localPath, originalContent, 'utf8')
+        discordPost(CH_UPDATES, `❌ **Build échoué 2x** — \`${fname}\` abandonné, original restauré`)
         throw new Error(`Build échoué après 2 tentatives: ${op.path}`)
       }
     }
@@ -443,6 +444,8 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
     if (ok) {
       stage('live')
       log(`pushed: ${op.path} → Vercel deploying`)
+      // Notif Discord — déployé, app à jour
+      discordPost(CH_UPDATES, `🚀 **Déployé** — \`${fname}\` pushé sur GitHub\n📱 Vercel redéploie → **ton app se met à jour dans ~2min**\n🔗 ${APP_URL}`)
     } else {
       const online = await checkOnline()
       if (!online) {
@@ -516,6 +519,9 @@ async function runTask(filePath) {
   renameSync(filePath, runningPath)
 
   const isManual = name.startsWith('manual-') || name.startsWith('urgent-')
+  if (isManual) {
+    discordPost(CH_UPDATES, `⚡ **Tâche prioritaire démarrée**\n\`${name}\`\n> ${content.slice(0, 120)}`)
+  }
   try {
     await executeTask(content, name, isManual)
     const dur = Math.round((Date.now() - startTime) / 1000)
