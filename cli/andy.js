@@ -145,29 +145,94 @@ async function glitch(text, color = _.cyan, passes = 4) {
   out(`\r${BG}  ${color}${_.bold}${text}${R}\n`)
 }
 
+// ── Big block letters (5 rows) ─────────────────────────────────────────────
+// AnDy DaDDy — one color per letter
+const LOGO_A = [
+  ' ▄▀▄ ',
+  '█   █',
+  '█████',
+  '█   █',
+  '█   █',
+]
+const LOGO_n = [
+  '     ',
+  '█▄ █ ',
+  '█ ▀█ ',
+  '█  █ ',
+  '█  █ ',
+]
+const LOGO_D = [
+  '██▄  ',
+  '█  █ ',
+  '█  █ ',
+  '█  █ ',
+  '███▀ ',
+]
+const LOGO_y = [
+  '     ',
+  '█  █ ',
+  '█  █ ',
+  '▀▄▄█ ',
+  '   █ ',
+]
+const LOGO_SP = ['     ','     ','     ','     ','     ']
+const LOGO_a = [
+  '     ',
+  ' ▄▀▄ ',
+  '▀▄▄▄█',
+  '█   █',
+  ' ▀▄▄█',
+]
+
+async function bigLogo(quick = false) {
+  // colors: A=green, n=cyan, D=blue, y=orange | SP | D=yellow, a=green, D=cyan, D=blue, y=orange
+  const cols = [
+    '\x1b[38;5;46m',   // A — green
+    '\x1b[38;5;51m',   // n — cyan
+    '\x1b[38;5;39m',   // D — blue
+    '\x1b[38;5;208m',  // y — orange
+    null,              // space
+    '\x1b[38;5;226m',  // D — yellow
+    '\x1b[38;5;46m',   // a — green
+    '\x1b[38;5;51m',   // D — cyan
+    '\x1b[38;5;39m',   // D — blue
+    '\x1b[38;5;208m',  // y — orange
+  ]
+  const letters = [LOGO_A, LOGO_n, LOGO_D, LOGO_y, LOGO_SP, LOGO_D, LOGO_a, LOGO_D, LOGO_D, LOGO_y]
+  const D = _.dark
+
+  for (let row = 0; row < 5; row++) {
+    if (!quick && row === 0) await sl(40)
+    out(`  ${D}│  `)
+    for (let li = 0; li < letters.length; li++) {
+      const c = cols[li] || ''
+      if (!quick) {
+        for (const ch of letters[li][row]) { out(`${c}${_.bold}${ch}${R}`); await sl(4) }
+        out(' ')
+      } else {
+        out(`${c}${_.bold}${letters[li][row]}${R} `)
+      }
+    }
+    out('\n')
+  }
+}
+
 // ── Banner ────────────────────────────────────────────────────────────────────
 async function banner(quick = false) {
   clr()
   if (!quick) await sl(60)
 
   const D = _.dark, S = _.success, T = _.think
-  line()
-  line(`  ${D}┌────────────────────────────────────────────────────────────┐`)
-  line(`  ${D}│`)
-  out(`${BG}  ${D}│   `)
-  if (!quick) {
-    for (const ch of '▄▀█ █▄░█ █▀▄ █▄█') { out(`${S}${_.bold}${ch}${R}`); await sl(18) }
-    out(`  `)
-    for (const ch of '█▀█ █░▀█ █▄▀ ░█░') { out(`${T}${_.bold}${ch}${R}`); await sl(18) }
-  } else {
-    out(`${S}${_.bold}▄▀█ █▄░█ █▀▄ █▄█${R}  ${T}${_.bold}█▀█ █░▀█ █▄▀ ░█░${R}`)
-  }
-  out(`\n`)
-  line(`  ${D}│`)
-  line(`  ${D}│   ${_.grey}PERSONAL INTELLIGENCE SYSTEM  ·  TRACKR AI`)
   const model   = process.env._CLI_MODEL || 'claude-3-5-sonnet-20241022'
   const groqOk  = !!process.env.GROQ_API_KEY
   const claudeOk= !!process.env.ANTHROPIC_API_KEY
+
+  line()
+  line(`  ${D}┌────────────────────────────────────────────────────────────┐`)
+  line(`  ${D}│`)
+  await bigLogo(quick)
+  line(`  ${D}│`)
+  line(`  ${D}│   ${_.grey}PERSONAL INTELLIGENCE SYSTEM  ·  TRACKR AI`)
   line(`  ${D}│   ${groqOk ? S+'● GROQ' : D+'○ GROQ'}${R}   ${claudeOk ? T+'● CLAUDE' : D+'○ CLAUDE'}${R}   ${_.search}● GITHUB${R}   ${_.run}● DAEMON${R}`)
   line(`  ${D}│   ${_.grey}${model}`)
   line(`  ${D}│`)
