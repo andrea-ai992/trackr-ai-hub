@@ -1265,9 +1265,8 @@ http.createServer(async (req, res) => {
     return
   }
 
-  // API — Chat (proxy Anthropic, histoire par session)
+  // API — Chat (Groq primary → Anthropic fallback)
   if (url.pathname === '/api/chat' && req.method === 'POST') {
-    if (!ANTHROPIC_KEY) return json({ error: 'ANTHROPIC_API_KEY manquante sur le serveur' })
     const sess = getSession(req)
     let body = ''
     req.on('data', c => body += c)
@@ -1280,25 +1279,55 @@ http.createServer(async (req, res) => {
 
         history.push({ role: 'user', content: message.trim() })
 
-        const SYSTEM = `Tu es AnDy, l'IA personnelle d'Andrea Matlega.
+        const CHAT_SYSTEM = `Tu es AnDy, l'IA personnelle d'Andrea Matlega.
 App Trackr : React 19 + Vite, mobile-first, déployée sur Vercel. Repo: ${GITHUB_REPO}. App: ${APP_URL}.
 Réponds en français. Direct, concis, sans intro inutile.
 Tu peux aussi recevoir des commandes de tâche — si le message commence par /task, crée une tâche dans andy-tasks/.`
 
-        const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-          body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1024, system: SYSTEM, stream: false, messages: history.slice(-20) }),
-          signal: AbortSignal.timeout(60000),
-        }).catch(e => ({ ok: false, _err: e.message }))
+        const msgs20 = history.slice(-20)
+        let reply = null
+        let providerUsed = ''
 
-        if (!apiRes.ok) {
-          const errBody = await apiRes.json?.().catch(() => ({}))
-          return json({ error: errBody?.error?.message || `API ${apiRes.status}` })
+        // 1) Groq (gratuit)
+        const GROQ_KEY = process.env.GROQ_API_KEY || ''
+        if (GROQ_KEY && !reply) {
+          try {
+            const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GROQ_KEY}` },
+              body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: CHAT_SYSTEM }, ...msgs20], max_tokens: 1024, temperature: 0.5 }),
+              signal: AbortSignal.timeout(30000),
+            })
+            if (r.ok) {
+              const d = await r.json().catch(() => null)
+              reply = d?.choices?.[0]?.message?.content?.trim() || null
+              if (reply) providerUsed = 'groq'
+            }
+          } catch {}
         }
 
-        const d = await apiRes.json().catch(() => null)
-        const reply = d?.content?.[0]?.text?.trim() || ''
+        // 2) Anthropic fallback
+        if (!reply && ANTHROPIC_KEY) {
+          try {
+            const r = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+              body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1024, system: CHAT_SYSTEM, stream: false, messages: msgs20 }),
+              signal: AbortSignal.timeout(60000),
+            })
+            if (r.ok) {
+              const d = await r.json().catch(() => null)
+              reply = d?.content?.[0]?.text?.trim() || null
+              if (reply) providerUsed = 'anthropic'
+            } else {
+              const errBody = await r.json().catch(() => ({}))
+              if (!reply) reply = `⚠️ API ${r.status}: ${errBody?.error?.message || 'erreur inconnue'}`
+            }
+          } catch (e) { if (!reply) reply = `⚠️ Erreur réseau: ${e.message}` }
+        }
+
+        if (!reply) return json({ error: 'Aucun provider IA disponible (GROQ_API_KEY ou ANTHROPIC_API_KEY requis)' })
+
         history.push({ role: 'assistant', content: reply })
         if (sess) sess.session.history = history.slice(-40)
 
@@ -1308,7 +1337,7 @@ Tu peux aussi recevoir des commandes de tâche — si le message commence par /t
           if (desc) writeFileSync(resolve(TASKS, `chat-${Date.now()}.txt`), desc, 'utf8')
         }
 
-        return json({ reply, historyLen: history.length })
+        return json({ reply, historyLen: history.length, provider: providerUsed })
       } catch (e) { return json({ error: e.message }) }
     })
     return
