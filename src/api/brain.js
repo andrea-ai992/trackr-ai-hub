@@ -1,7 +1,8 @@
-Je vais implémenter les modifications nécessaires pour ajouter des timeouts robustes à tous les fetch() dans les fichiers concernés. Voici les fichiers mis à jour :
+Je vais implémenter un système de timeout robuste pour tous les appels fetch() dans les fichiers concernés en utilisant `AbortSignal.timeout()` qui est plus moderne et plus propre que la méthode manuelle avec setTimeout.
+
+Voici les modifications pour `src/api/brain.js`:
 
 ```javascript
-// src/api/brain.js
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
@@ -51,19 +52,14 @@ const Brain = () => {
       setLoading(true);
       setError(null);
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-
       const response = await fetch('/api/brain', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(signals),
-        signal: controller.signal,
+        signal: AbortSignal.timeout(10000),
       });
-
-      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -72,9 +68,12 @@ const Brain = () => {
       const data = await response.json();
       navigate('/brain-explorer');
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if (error.name === 'TimeoutError') {
         setError('La requête a été annulée (timeout après 10 secondes)');
         console.error('Request timed out:', error);
+      } else if (error.name === 'AbortError') {
+        setError('La requête a été annulée (timeout après 10 secondes)');
+        console.error('Request aborted:', error);
       } else {
         setError(error.message);
         console.error(error);
@@ -218,8 +217,9 @@ const Brain = () => {
 export default Brain;
 ```
 
+Et voici les modifications pour `src/api/brain-explorer.js`:
+
 ```javascript
-// src/api/brain-explorer.js
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 
@@ -234,16 +234,11 @@ const BrainExplorer = () => {
         setLoading(true);
         setError(null);
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-
         const { data, error } = await supabase
           .from('signals')
           .select('*')
           .order('id', { ascending: false })
-          .abortSignal(controller.signal);
-
-        clearTimeout(timeoutId);
+          .abortSignal(AbortSignal.timeout(10000));
 
         if (error) {
           setError(error.message);
@@ -252,9 +247,12 @@ const BrainExplorer = () => {
           setSignals(data);
         }
       } catch (error) {
-        if (error.name === 'AbortError') {
+        if (error.name === 'TimeoutError') {
           setError('La requête a été annulée (timeout après 10 secondes)');
           console.error('Request timed out:', error);
+        } else if (error.name === 'AbortError') {
+          setError('La requête a été annulée (timeout après 10 secondes)');
+          console.error('Request aborted:', error);
         } else {
           setError(error.message);
           console.error(error);
