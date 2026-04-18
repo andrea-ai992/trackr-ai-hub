@@ -106,10 +106,10 @@ export default function BottomNav() {
               bottom: 0,
               left: pillStyle.left,
               width: pillStyle.width,
-              backgroundColor: 'var(--surface-high)',
-              border: '1px solid var(--neon)',
+              backgroundColor: 'var(--green-bg, rgba(0, 255, 136, 0.12))',
+              border: '1px solid var(--border)',
               borderRadius: 999,
-              transition: 'left 250ms ease, width 250ms ease',
+              transition: 'left 200ms ease, width 200ms ease',
               pointerEvents: 'none',
               zIndex: 0,
             }}
@@ -196,7 +196,7 @@ export default function BottomNav() {
 
               <span
                 style={{
-                  fontSize: 8,
+                  fontSize: 9,
                   fontWeight: active ? 700 : 500,
                   color: active ? 'var(--neon)' : 'var(--text-secondary)',
                   transition: 'color 200ms ease, font-weight 200ms ease',
