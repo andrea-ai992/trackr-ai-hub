@@ -575,7 +575,7 @@ async function flushDiscordNotif(force = false) {
   lastNotifTime = Date.now()
 }
 
-const TASK_TIMEOUT_MS = 4 * 60 * 1000  // 4min max par tâche
+const TASK_TIMEOUT_MS = 10 * 60 * 1000  // 10min max — OpenRouter peut prendre 60s/call
 const skipQueue = []                  // tâches à retry après la queue principale
 
 async function runTask(filePath) {
