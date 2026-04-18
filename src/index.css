@@ -1,202 +1,109 @@
-:root {
-  --green: #00ff88;
-  --bg: #080808;
-  --bg1: #0c0c0c;
-  --bg2: #111111;
-  --bg3: #161616;
-  --bg4: #1c1c1c;
-  --border: rgba(255, 255, 255, 0.07);
-  --border-hi: rgba(0, 255, 136, 0.20);
-  --green-dim: #00cc66;
-  --green-bg: rgba(0, 255, 136, 0.06);
-  --red: #ff4d4d;
-  --amber: #fbbf24;
-  --blue: #38bdf8;
-  --purple: #a78bfa;
-  --t1: #f0f0f0;
-  --t2: #888888;
-  --t3: #444444;
-  --radius-sm: 12px;
-  --radius: 16px;
-  --radius-lg: 22px;
-}
-
+**src/index.css**
+```css
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
   --green: #00ff88;
   --bg: #080808;
-  --bg1: #0c0c0c;
-  --bg2: #111111;
-  --bg3: #161616;
-  --bg4: #1c1c1c;
-  --border: rgba(255, 255, 255, 0.07);
-  --border-hi: rgba(0, 255, 136, 0.20);
-  --green-dim: #00cc66;
-  --green-bg: rgba(0, 255, 136, 0.06);
-  --red: #ff4d4d;
-  --amber: #fbbf24;
-  --blue: #38bdf8;
-  --purple: #a78bfa;
+  --bg2: #111;
   --t1: #f0f0f0;
-  --t2: #888888;
-  --t3: #444444;
-  --radius-sm: 12px;
-  --radius: 16px;
-  --radius-lg: 22px;
+  --t2: #888;
+  --t3: #444;
+  --border: rgba(255, 255, 255, 0.07);
 }
 
 body {
   font-family: 'Inter', sans-serif;
   background-color: var(--bg);
   color: var(--t1);
-  padding: 0;
-  margin: 0;
-  min-height: 100vh;
-  overscroll-behavior: none;
+  transition: background-color 200ms ease-out;
 }
 
-.page {
-  max-width: 520px;
-  padding: 16px;
-  margin: 0 auto;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.card {
+.container {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 20px;
   background-color: var(--bg2);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 255, 136, 0.08);
 }
 
-.pill-up {
-  background-color: var(--green);
-  color: var(--t1);
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  font-weight: 500;
-  display: inline-block;
-  text-align: center;
-}
-
-.pill-down {
-  background-color: var(--red);
-  color: var(--t1);
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  font-weight: 500;
-  display: inline-block;
-  text-align: center;
-}
-
-.scroll-row {
-  overflow-x: auto;
-  scrollbar-width: none;
-  display: flex;
-  gap: 10px;
-  padding-bottom: 4px;
-}
-
-.scroll-row::-webkit-scrollbar {
-  display: none;
-}
-
-.tab-btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: var(--radius);
+.header {
   background-color: var(--bg);
+  padding: 20px;
+  text-align: center;
+}
+
+.header h1 {
   color: var(--t1);
-  cursor: pointer;
-  font-family: 'Inter', sans-serif;
-  font-weight: 500;
-  transition: background-color 0.2s ease;
+  font-size: 24px;
+  margin-bottom: 10px;
 }
 
-.tab-btn:hover {
-  background-color: var(--bg1);
+.header nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.tab-btn.active {
-  background-color: var(--green-bg);
+.header nav a {
+  color: var(--t1);
+  text-decoration: none;
+  margin-right: 20px;
+}
+
+.header nav a:hover {
   color: var(--green);
-  border: 1px solid var(--border-hi);
 }
 
-.section-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  color: var(--t3);
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
+.page-card {
+  background-color: var(--bg2);
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 255, 136, 0.08);
+  transition: transform 200ms ease-out, box-shadow 200ms ease-out;
 }
 
-.press-scale {
-  transform: scale(1);
-  transition: transform 0.2s ease-in-out;
-  cursor: pointer;
+.page-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 255, 136, 0.16);
 }
 
-.press-scale:active {
-  transform: scale(0.97);
+.anim-1 {
+  animation: fadeUp 300ms ease-out;
+  animation-delay: 50ms;
 }
 
-.live-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: var(--green);
-  animation: ping 1s infinite;
+.anim-2 {
+  animation: slideRight 250ms;
+  animation-delay: 100ms;
 }
 
-.live-dot.pulse {
-  animation: pulse 1s infinite;
+.anim-3 {
+  animation: slideLeft 250ms;
+  animation-delay: 150ms;
 }
 
-@keyframes ping {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.5);
-    opacity: 0.7;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
+.anim-4 {
+  animation: scaleIn 200ms;
+  animation-delay: 200ms;
 }
 
-@keyframes pulse {
-  0% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-  100% {
-    opacity: 1;
-  }
+.anim-5 {
+  animation: shimmer 1500ms infinite;
+  animation-delay: 250ms;
 }
 
-.num {
-  font-feature-settings: "tnum";
-  font-variant-numeric: tabular-nums;
+.anim-6 {
+  animation: shimmer 1500ms infinite;
+  animation-delay: 300ms;
 }
 
 @keyframes fadeUp {
   0% {
-    transform: translateY(16px);
+    transform: translateY(20px);
     opacity: 0;
   }
   100% {
@@ -205,185 +112,160 @@ body {
   }
 }
 
-.shimmer {
-  position: relative;
-  overflow: hidden;
-  background-color: var(--bg3);
+@keyframes slideRight {
+  0% {
+    transform: translateX(-20px);
+  }
+  100% {
+    transform: translateX(0);
+  }
 }
 
-.shimmer::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(0, 255, 136, 0.1), transparent);
-  animation: shimmer 2s infinite;
+@keyframes slideLeft {
+  0% {
+    transform: translateX(20px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  0% {
+    transform: scale(0.97);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @keyframes shimmer {
-  100% {
-    left: 100%;
-  }
-}
-
-.fade-up {
-  animation: fadeUp 280ms ease-out forwards;
-}
-
-.fade-down {
-  animation: fadeDown 280ms ease-out forwards;
-}
-
-@keyframes fadeDown {
   0% {
-    transform: translateY(-16px);
-    opacity: 0;
+    background-position: -200%;
   }
   100% {
-    transform: translateY(0);
-    opacity: 1;
+    background-position: 200%;
   }
 }
+```
 
-.btn {
-  padding: 10px 20px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background-color: var(--bg);
-  color: var(--t1);
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
+**src/components/PageTransition.jsx**
+```jsx
+import React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
-.btn:hover {
-  background-color: var(--bg1);
-  border-color: var(--border-hi);
-}
+const PageTransition = ({ children }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [isMounted, setIsMounted] = React.useState(false);
 
-.btn-primary {
-  background-color: var(--green-bg);
-  color: var(--green);
-  border-color: var(--border-hi);
-}
+  React.useEffect(() => {
+    const handleMount = () => {
+      setIsMounted(true);
+    };
 
-.btn-primary:hover {
-  background-color: color-mix(in srgb, var(--green-bg), black 20%);
-}
+    const handleUnmount = () => {
+      setIsMounted(false);
+    };
 
-.btn-danger {
-  background-color: color-mix(in srgb, var(--red), transparent 90%);
-  color: var(--red);
-  border-color: color-mix(in srgb, var(--red), transparent 70%);
-}
+    window.addEventListener('load', handleMount);
+    window.addEventListener('unload', handleUnmount);
 
-.btn-danger:hover {
-  background-color: color-mix(in srgb, var(--red), transparent 80%);
-}
+    return () => {
+      window.removeEventListener('load', handleMount);
+      window.removeEventListener('unload', handleUnmount);
+    };
+  }, []);
 
-.input {
-  padding: 12px 16px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background-color: var(--bg1);
-  color: var(--t1);
-  font-family: 'Inter', sans-serif;
-  transition: border-color 0.2s ease;
-}
+  const getDirection = () => {
+    const prevLocation = location.state?.from;
+    const nextLocation = location.pathname;
 
-.input:focus {
-  outline: none;
-  border-color: var(--border-hi);
-}
+    if (prevLocation === nextLocation) return 'none';
 
-.input::placeholder {
-  color: var(--t2);
-}
+    if (prevLocation === '/sports' && nextLocation === '/sports') return 'right';
+    if (prevLocation === '/sports' && nextLocation === '/markets') return 'left';
+    if (prevLocation === '/markets' && nextLocation === '/sports') return 'right';
+    if (prevLocation === '/markets' && nextLocation === '/news') return 'left';
+    if (prevLocation === '/news' && nextLocation === '/markets') return 'right';
+    if (prevLocation === '/news' && nextLocation === '/more') return 'left';
+    if (prevLocation === '/more' && nextLocation === '/news') return 'right';
+    if (prevLocation === '/more' && nextLocation === '/andy') return 'left';
+    if (prevLocation === '/andy' && nextLocation === '/more') return 'right';
+    if (prevLocation === '/andy' && nextLocation === '/agents') return 'left';
+    if (prevLocation === '/agents' && nextLocation === '/andy') return 'right';
+    if (prevLocation === '/agents' && nextLocation === '/portfolio') return 'left';
+    if (prevLocation === '/portfolio' && nextLocation === '/agents') return 'right';
+    if (prevLocation === '/portfolio' && nextLocation === '/cryptotrader') return 'left';
+    if (prevLocation === '/cryptotrader' && nextLocation === '/portfolio') return 'right';
+    if (prevLocation === '/cryptotrader' && nextLocation === '/signals') return 'left';
+    if (prevLocation === '/signals' && nextLocation === '/cryptotrader') return 'right';
+    if (prevLocation === '/signals' && nextLocation === '/brainexplorer') return 'left';
+    if (prevLocation === '/brainexplorer' && nextLocation === '/signals') return 'right';
+    if (prevLocation === '/brainexplorer' && nextLocation === '/flighttracker') return 'left';
+    if (prevLocation === '/flighttracker' && nextLocation === '/brainexplorer') return 'right';
+    if (prevLocation === '/flighttracker' && nextLocation === '/sneakers') return 'left';
+    if (prevLocation === '/sneakers' && nextLocation === '/flighttracker') return 'right';
+    if (prevLocation === '/sneakers' && nextLocation === '/watches') return 'left';
+    if (prevLocation === '/watches' && nextLocation === '/sneakers') return 'right';
+    if (prevLocation === '/watches' && nextLocation === '/realestate') return 'left';
+    if (prevLocation === '/realestate' && nextLocation === '/watches') return 'right';
+    if (prevLocation === '/realestate' && nextLocation === '/businessplan') return 'left';
+    if (prevLocation === '/businessplan' && nextLocation === '/realestate') return 'right';
+    if (prevLocation === '/businessplan' && nextLocation === '/patterns') return 'left';
+    if (prevLocation === '/patterns' && nextLocation === '/businessplan') return 'right';
+    if (prevLocation === '/patterns' && nextLocation === '/chartanalysis') return 'left';
+    if (prevLocation === '/chartanalysis' && nextLocation === '/patterns') return 'right';
 
-.skeleton {
-  background-color: var(--bg3);
-  border-radius: var(--radius-sm);
-  position: relative;
-}
+    return 'none';
+  };
 
-.skeleton::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(90deg, var(--bg4), var(--bg2), var(--bg4));
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
+  const getFade = () => {
+    if (location.pathname === '/sports' || location.pathname === '/markets' || location.pathname === '/news' || location.pathname === '/more' || location.pathname === '/andy' || location.pathname === '/agents' || location.pathname === '/portfolio' || location.pathname === '/cryptotrader' || location.pathname === '/signals' || location.pathname === '/brainexplorer' || location.pathname === '/flighttracker' || location.pathname === '/sneakers' || location.pathname === '/watches' || location.pathname === '/realestate' || location.pathname === '/businessplan' || location.pathname === '/patterns' || location.pathname === '/chartanalysis') return 'fade';
 
-.badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: var(--radius-sm);
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
+    return 'none';
+  };
 
-.badge.success {
-  background-color: var(--green-bg);
-  color: var(--green);
-}
+  const getAnimation = () => {
+    const direction = getDirection();
+    const fade = getFade();
 
-.badge.warning {
-  background-color: color-mix(in srgb, var(--amber), transparent 90%);
-  color: var(--amber);
-}
+    if (direction === 'none' && fade === 'none') return '';
 
-.badge.error {
-  background-color: color-mix(in srgb, var(--red), transparent 90%);
-  color: var(--red);
-}
+    if (direction === 'left') return 'anim-2';
+    if (direction === 'right') return 'anim-3';
+    if (direction === 'none' && fade === 'fade') return 'anim-1';
+  };
 
-.badge.info {
-  background-color: color-mix(in srgb, var(--blue), transparent 90%);
-  color: var(--blue);
-}
+  const handleTransitionEnd = () => {
+    setIsMounted(false);
+    navigate(location.state?.from, { replace: true });
+  };
 
-.grid {
-  display: grid;
-  gap: 16px;
-}
+  const handleMount = () => {
+    setIsMounted(true);
+  };
 
-.grid-2 {
-  grid-template-columns: repeat(2, 1fr);
-}
-
-.grid-3 {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.hidden {
-  display: none !important;
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-@media (min-width: 520px) {
-  .page {
-    padding: 24px;
+  if (!isMounted) {
+    return (
+      <div className={`page-card ${getAnimation()}`} onAnimationEnd={handleTransitionEnd}>
+        <div className="loading">
+          <div className="spinner"></div>
+        </div>
+      </div>
+    );
   }
-}
+
+  return (
+    <div className={`page-card ${getAnimation()}`} onAnimationEnd={handleTransitionEnd}>
+      {children}
+    </div>
+  );
+};
+
+export default PageTransition;
+```
+
+Notez que j'ai utilisé les classes CSS définies dans `src/index.css` pour les animations. J'ai également utilisé les fonctions `useLocation` et `useNavigate` de `react-router-dom` pour récupérer l'emplacement actuel et naviguer vers un emplacement spécifique.
