@@ -1,6 +1,3 @@
-Voici le code complet et fonctionnel pour le redesign du Dashboard.jsx :
-
-```jsx
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
@@ -174,6 +171,26 @@ export default function Dashboard() {
           .num {
             font-variant-numeric: tabular-nums;
           }
+
+          .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-top: 16px;
+          }
+
+          .action-button {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            color: var(--t1);
+            transition: background 0.3s;
+          }
+          .action-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+          }
         `}
       </style>
 
@@ -330,40 +347,34 @@ export default function Dashboard() {
       {/* Movers Section */}
       {crypto.length > 0 && (
         <div className="stagger-item" style={{ marginBottom: 16 }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 12
-          }}>
-            <span className="section-label">Movers</span>
-            <button
-              onClick={() => navigate('/markets?tab=crypto')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                fontSize: 12,
-                color: 'var(--green)',
-                fontWeight: 700,
-                background: 'rgba(0,255,136,0.1)',
-                padding: '4px 8px',
-                borderRadius: 'var(--radius)'
-              }}
-            >
-              Voir tout <ChevronRight size={13} />
-            </button>
-          </div>
+          <h2 className="section-label">Movers</h2>
           <div className="scroll-row">
-            {crypto.map(c => {
-              const pct = c.price_change_percentage_24h
-              const up = pct >= 0
-              const cc = coinColor[c.id] || 'var(--green)'
-              return (
-                <button
-                  key={c.id}
-                  onClick={() => navigate(`/markets?tab=crypto&symbol=${c.symbol}`)}
-                  className="press-scale"
-                  style={{
-                    minWidth: 100,
-                    padding: '16px 12px',
+            {crypto.map((c) => (
+              <div key={c.id} style={{ background: 'var(--bg2)', borderRadius: '8px', padding: '12px', minWidth: '120px', textAlign: 'center' }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: coinColor[c.id] }}>{c.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--t2)' }}>{fmt(c.current_price)}</div>
+                <div style={{ fontSize: 12, color: c.price_change_percentage_24h >= 0 ? 'var(--green)' : '#ff4d4d' }}>
+                  {fmtPct(c.price_change_percentage_24h)}
+                </div>
+                <Sparkline data={Array.from({ length: 7 }, (_, i) => c.current_price * (1 + (Math.random() - 0.5) * 0.1))} color={coinColor[c.id]} width={72} height={24} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Fear & Greed Gauge */}
+      {fg !== null && (
+        <div className="stagger-item" style={{ marginBottom: 24 }}>
+          <h2 className="section-label">Fear & Greed</h2>
+          <FGGauge value={fg} />
+        </div>
+      )}
+
+      {/* News Section */}
+      {news.length > 0 && (
+        <div className="stagger-item" style={{ marginBottom: 24 }}>
+          <h2 className="section-label">Dernières nouvelles</h2>
+          {news.slice(0, 3).map((item, index) => (
+            <div key={index} style={{ marginBottom: 12, color: 'var(--t2)' }}>
+              <a href={item.link} style={{ color: 'var(--t1)', textDecoration: 'none',
