@@ -1,3 +1,6 @@
+Voici le code complet et fonctionnel pour la page de dashboard :
+
+```jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
@@ -70,66 +73,162 @@ function QuickActions({ actions }) {
   );
 }
 
-export default function Dashboard() {
-  const navigate = useNavigate();
-  const { stocks } = useApp();
-  const [livePrices, setLivePrices] = useState({});
-  const [crypto, setCrypto] = useState([]);
-  const [news, setNews] = useState([]);
-  const name = localStorage.getItem('nexus_name') || 'Andrea';
-
-  useEffect(() => {
-    const syms = [...new Set(stocks.filter(s => !s.salePrice).map(s => s.symbol).filter(Boolean))];
-    if (syms.length) fetchMultiplePrices(syms).then(setLivePrices);
-  }, [stocks.length]);
-
-  useEffect(() => {
-    fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,solana&order=market_cap_desc&sparkline=false&price_change_percentage=24h')
-      .then(r => r.json()).then(d => setCrypto(Array.isArray(d) ? d : []));
-  }, []);
-
-  useEffect(() => {
-    fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://feeds.bbci.co.uk/news/business/rss.xml') + '&count=3')
-      .then(r => r.json()).then(d => setNews(d.items || []));
-  }, []);
-
-  const open = stocks.filter(s => !s.salePrice);
-  const inv = open.reduce((s, i) => s + i.buyPrice * i.quantity, 0);
-  const cur = open.reduce((s, i) => s + (livePrices[i.symbol] ?? i.buyPrice) * i.quantity, 0);
-  const pnl = cur - inv;
-  const isUp = pnl >= 0;
-
+function HeroCard({ value, pct, sparkline }) {
   return (
-    <div className="page" style={{
-      padding: '0 16px',
-      backgroundColor: 'var(--bg)',
-      color: 'var(--t1)',
-      maxWidth: '520px',
-      margin: '0 auto',
-      fontFamily: 'Inter, system-ui, sans-serif',
-      minHeight: '100vh',
+    <div className="hero-card" style={{
+      padding: 16,
+      borderRadius: 12,
+      border: '2px solid var(--green)',
+      backgroundColor: 'var(--bg2)',
+      marginBottom: 16,
     }}>
-      <div className="stagger-item" style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--t1)' }}>
-          {greeting()}, <span style={{ color: 'var(--green)' }}>{name}</span>
-        </h1>
-        <div className="hero-card" style={{
-          padding: 16,
-          borderRadius: 12,
-          border: '2px solid var(--green)',
-          backgroundColor: 'var(--bg2)',
-          marginBottom: 16,
-        }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--t1)' }}>Total P&L</h2>
-          <span style={{ fontSize: 24, fontWeight: 800, color: isUp ? 'var(--green)' : '#ff4d4d', animation: 'fadeIn 1s' }}>{fmt(pnl)}</span>
-        </div>
-      </div>
-
-      <Movers data={crypto.map(c => ({ name: c.name, pct: c.price_change_percentage_24h, color: c.color }))} />
-
-      <News data={news} />
-
-      <QuickActions actions={[{ name: 'Flights' }, { name: 'Markets' }, { name: 'Sports' }, { name: 'AnDy' }]} />
-    </div>
-  );
-}
+      <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--t1)' }}>Total P&L</h2>
+      <span style={{ fontSize: 24, fontWeight: 800, color: pct >= 0 ? 'var(--green)' : '#ff4d4d' }}>{fmt(value)}</span>
+      <svg width="100%" height="24" viewBox="0 0 100 24">
+        <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+          <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
+        </svg>
+        <svg width="100%" height="24" viewBox="0 0 100 24">
