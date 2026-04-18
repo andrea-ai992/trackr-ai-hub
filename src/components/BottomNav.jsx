@@ -6,7 +6,7 @@ const TABS = [
   { to: '/', icon: Home, label: 'Hub', matches: ['^/$'] },
   { to: '/sports', icon: Activity, label: 'Sports', matches: ['^/sports'] },
   { to: '/markets', icon: TrendingUp, label: 'Markets', matches: ['^/markets', '^/stocks'] },
-  { to: '/news', icon: Newspaper, label: 'Pulse', matches: ['^/news'] },
+  { to: '/news', icon: Newspaper, label: 'News', matches: ['^/news'] },
   { to: '/more', icon: MoreHorizontal, label: 'More', matches: ['^/more', '^/translator', '^/settings', '^/sneakers', '^/portfolio', '^/category', '^/flights'] },
 ];
 
@@ -102,7 +102,6 @@ export default function BottomNav() {
           WebkitTapHighlightColor: 'transparent',
         }}
       >
-        {/* Animated sliding pill indicator */}
         {pillStyle.width > 0 && (
           <div
             aria-hidden
@@ -112,11 +111,10 @@ export default function BottomNav() {
               bottom: 4,
               left: pillStyle.left,
               width: pillStyle.width,
-              background: 'var(--neon)',
-              opacity: 0.12,
-              border: '1px solid var(--neon)',
+              backgroundColor: 'var(--surface-high)',
+              border: '1px solid var(--border)',
               borderRadius: 999,
-              transition: 'left 250ms ease, width 250ms ease',
+              transition: 'left 200ms ease, width 200ms ease',
               pointerEvents: 'none',
             }}
           />
@@ -152,7 +150,6 @@ export default function BottomNav() {
                 zIndex: 1,
               }}
             >
-              {/* Icon + badge */}
               <div
                 style={{
                   position: 'relative',
@@ -166,12 +163,12 @@ export default function BottomNav() {
                   strokeWidth={active ? 2.2 : 1.6}
                   style={{
                     color: active ? 'var(--neon)' : 'var(--text-secondary)',
-                    transition: 'color 250ms cubic-bezier(0.32, 0.72, 0, 1)',
+                    transition: 'color 200ms ease',
                     filter: active ? 'drop-shadow(0 0 5px rgba(0, 255, 136, 0.7))' : 'none',
                     transform: active ? 'scale(1.08)' : 'scale(1)',
                     transitionProperty: 'color, filter, transform',
-                    transitionDuration: '250ms',
-                    transitionTimingFunction: 'cubic-bezier(0.32, 0.72, 0, 1)',
+                    transitionDuration: '200ms',
+                    transitionTimingFunction: 'ease',
                   }}
                 />
                 {badge > 0 && (
@@ -193,7 +190,6 @@ export default function BottomNav() {
                       padding: '0 3px',
                       boxShadow: '0 0 6px rgba(239, 68, 68, 0.6)',
                       border: '1.5px solid #0b1323',
-                      animation: 'itemFadeUp 300ms cubic-bezier(0.32, 0.72, 0, 1) both',
                     }}
                   >
                     {badge > 99 ? '99+' : badge}
@@ -203,10 +199,10 @@ export default function BottomNav() {
 
               <span
                 style={{
-                  fontSize: 8,
+                  fontSize: 9,
                   fontWeight: active ? 700 : 500,
                   color: active ? 'var(--neon)' : 'var(--text-secondary)',
-                  transition: 'color 250ms ease, font-weight 250ms ease',
+                  transition: 'color 200ms ease, font-weight 200ms ease',
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                   fontFamily: 'JetBrains Mono, monospace',
