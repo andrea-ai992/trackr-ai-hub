@@ -1,0 +1,94 @@
+**src/styles/index.css**
+```css
+:root {
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --border: rgba(255, 255, 255, 0.07);
+  --font-family: 'Inter', sans-serif;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg);
+  color: var(--t1);
+  transition: background-color 0.3s ease;
+}
+
+.container {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 20px;
+  background-color: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.badge {
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1;
+  text-align: center;
+  color: var(--t2);
+  background-color: var(--green);
+  transition: background-color 0.3s ease;
+}
+
+.badge LIVE {
+  background-color: var(--t3);
+  color: var(--t1);
+}
+
+.badge NEW {
+  background-color: var(--t3);
+  color: var(--t1);
+}
+```
+
+**src/pages/More/index.js**
+```jsx
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { Container, Badge } from '../styles';
+
+const More = () => {
+  return (
+    <Container>
+      <h1>Plus</h1>
+      <p>Voici quelques-unes de nos fonctionnalités supplémentaires</p>
+      <ul>
+        <li>
+          <Link to="/news">News</Link>
+          <Badge>LIVE</Badge>
+        </li>
+        <li>
+          <Link to="/sneakers">Sneakers</Link>
+          <Badge>NEW</Badge>
+        </li>
+        <li>
+          <Link to="/watches">Montres</Link>
+          <Badge>LIVE</Badge>
+        </li>
+        <li>
+          <Link to="/realestate">Immobilier</Link>
+          <Badge>NEW</Badge>
+        </li>
+      </ul>
+    </Container>
+  );
+};
+
+export default More;
+```
+
+**src/pages/More/index.css**
+```css
+.badge {
+  margin-left: 8px;
+}
