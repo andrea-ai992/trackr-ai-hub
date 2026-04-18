@@ -1,0 +1,133 @@
+/* src/components/FlightTracker/FlightTracker.css */
+
+/* Import Inter font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* Set CSS variables */
+:root {
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --border: rgba(255, 255, 255, 0.07);
+}
+
+/* Global styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg);
+  color: var(--t1);
+}
+
+.container {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 20px;
+  background-color: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.header h2 {
+  font-weight: 600;
+  color: var(--green);
+}
+
+.header button {
+  background-color: var(--green);
+  color: var(--t1);
+  border: none;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.header button:hover {
+  background-color: var(--green);
+}
+
+.content {
+  padding: 20px;
+}
+
+.content ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.content li {
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.content li:last-child {
+  border-bottom: none;
+}
+
+.content li button {
+  background-color: var(--green);
+  color: var(--t1);
+  border: none;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.content li button:hover {
+  background-color: var(--green);
+}
+
+/* Responsiveness */
+@media (max-width: 768px) {
+  .container {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .header button {
+    display: none;
+  }
+  .content li button {
+    display: none;
+  }
+}
+```
+
+```css
+/* src/components/FlightTracker/FlightTracker.css (suite) */
+
+/* Responsive design for mobile devices */
+@media (max-width: 480px) {
+  .content {
+    padding: 10px;
+  }
+  .content ul {
+    flex-direction: column;
+  }
+  .content li {
+    padding: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .content li:last-child {
+    border-bottom: none;
+  }
+}
