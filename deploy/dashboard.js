@@ -105,192 +105,191 @@ const VIBE_HTML = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="AnDy Dev">
+<meta name="apple-mobile-web-app-title" content="AnDy">
 <meta name="theme-color" content="#050505">
-<title>AnDy — Vibe Dev</title>
+<title>AnDy — Dev</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-:root{--bg:#050505;--bg2:#0a0a0a;--bg3:#0f0f0f;--border:#1c1c1c;--green:#00ff88;--cyan:#00d4ff;--purple:#a78bfa;--amber:#fbbf24;--red:#ef4444;--text:#e8e8e8;--dim:#444}
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:'SF Mono',ui-monospace,monospace;overflow:hidden}
-.app{display:flex;flex-direction:column;height:100dvh;max-width:480px;margin:0 auto}
+:root{--bg:#050505;--bg2:#0d0d0d;--bg3:#141414;--border:#1e1e1e;--green:#00ff88;--cyan:#00d4ff;--purple:#a78bfa;--amber:#fbbf24;--red:#ef4444;--text:#efefef;--dim:#3a3a3a;--dim2:#555}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,'SF Pro Text',ui-sans-serif,sans-serif;overflow:hidden}
+.app{display:flex;flex-direction:column;height:100dvh;max-width:430px;margin:0 auto;position:relative}
 
-/* Header */
-.hdr{padding:env(safe-area-inset-top,14px) 16px 10px;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
+/* ── Header ── */
+.hdr{padding:calc(env(safe-area-inset-top,0px) + 14px) 20px 14px;background:rgba(5,5,5,.9);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:10}
 .hdr-l{display:flex;align-items:center;gap:10px}
-.pulse{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite;flex-shrink:0}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.title{font-size:15px;font-weight:700;color:var(--green);letter-spacing:.08em}
-.subtitle{font-size:10px;color:var(--dim);margin-top:1px}
-.nav-btns{display:flex;gap:6px}
-.nb{background:transparent;border:1px solid var(--border);color:var(--dim);font-size:10px;padding:4px 9px;border-radius:7px;cursor:pointer;font-family:inherit;transition:.15s;letter-spacing:.05em}
-.nb.on{color:var(--green);border-color:rgba(0,255,136,.3);background:rgba(0,255,136,.05)}
-.nb:active{background:var(--border)}
+.pulse{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 2s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.75)}}
+.hdr-title{font-size:16px;font-weight:700;color:var(--green);letter-spacing:.04em}
+.hdr-sub{font-size:11px;color:var(--dim2);margin-top:2px;font-variant-numeric:tabular-nums}
+.hdr-badge{background:rgba(0,255,136,.12);border:1px solid rgba(0,255,136,.2);color:var(--green);font-size:10px;padding:3px 8px;border-radius:20px;font-weight:600;letter-spacing:.04em}
 
-/* Tabs */
-.tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg)}
-.tab{flex:1;padding:10px;font-size:10px;letter-spacing:.08em;color:var(--dim);background:transparent;border:none;cursor:pointer;font-family:inherit;transition:.15s;border-bottom:2px solid transparent}
-.tab.on{color:var(--green);border-bottom-color:var(--green)}
-
-/* Scrollable content */
-.view{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none}
+/* ── Scrollable content ── */
+.view{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;scroll-padding-bottom:24px}
 .view.on{display:block}
-.pad{padding:12px}
+.pad{padding:16px 16px 24px}
 
-/* Live card */
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;overflow:hidden}
-.card-title{font-size:9px;color:var(--dim);letter-spacing:.15em;text-transform:uppercase;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
-.refresh-btn{background:transparent;border:none;color:var(--dim);cursor:pointer;font-size:13px;padding:0}
-.refresh-btn:active{color:var(--green)}
+/* ── Cards ── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:16px;margin-bottom:12px}
+.card-hd{font-size:10px;color:var(--dim2);letter-spacing:.12em;text-transform:uppercase;font-weight:600;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.card-hd span{color:var(--text);font-size:13px;font-weight:600;letter-spacing:0;text-transform:none}
+.rbtn{background:transparent;border:none;color:var(--dim2);cursor:pointer;font-size:15px;line-height:1;padding:2px 4px;border-radius:6px;transition:.15s}
+.rbtn:active{background:var(--border);color:var(--text)}
 
-/* Stats row */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
-.stat{background:var(--bg3);border-radius:10px;padding:10px 6px;text-align:center}
-.stat-n{font-size:20px;font-weight:700;line-height:1}
-.stat-l{font-size:8px;color:var(--dim);margin-top:3px;letter-spacing:.08em}
+/* ── Stats ── */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:4px}
+.stat{background:var(--bg3);border-radius:14px;padding:12px 6px;text-align:center;border:1px solid var(--border)}
+.stat-n{font-size:24px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.stat-l{font-size:9px;color:var(--dim2);margin-top:4px;letter-spacing:.08em;font-weight:500}
 
-/* Pipeline */
-.pipeline{display:flex;align-items:center;gap:4px;font-size:10px;flex-wrap:wrap;margin-top:6px}
-.stage{padding:3px 8px;border-radius:6px;background:var(--bg3);color:var(--dim);font-size:9px;letter-spacing:.05em}
-.stage.done{color:var(--green);background:rgba(0,255,136,.08)}
-.stage.cur{color:var(--amber);background:rgba(251,191,36,.1);font-weight:700}
-.arrow{color:var(--border);font-size:9px}
+/* ── Pipeline ── */
+.pipeline{display:flex;align-items:center;gap:3px;flex-wrap:wrap;margin-top:8px}
+.stage{padding:4px 9px;border-radius:8px;background:var(--bg3);color:var(--dim2);font-size:9px;letter-spacing:.05em;font-weight:600;border:1px solid var(--border)}
+.stage.done{color:var(--green);background:rgba(0,255,136,.07);border-color:rgba(0,255,136,.15)}
+.stage.cur{color:var(--amber);background:rgba(251,191,36,.08);border-color:rgba(251,191,36,.2);font-weight:700}
+.arrow{color:var(--dim);font-size:10px}
 
-/* Commit item */
-.commit{border-bottom:1px solid var(--border);padding:10px 0;display:flex;gap:10px;align-items:flex-start}
+/* ── Queue items ── */
+.q-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.q-item:last-child{border-bottom:none}
+.q-dot{width:6px;height:6px;border-radius:50%;background:var(--purple);flex-shrink:0}
+.q-name{font-size:12px;color:var(--dim2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── Commits ── */
+.commit{display:flex;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);align-items:flex-start}
 .commit:last-child{border-bottom:none}
-.sha{font-size:9px;color:var(--cyan);font-family:monospace;flex-shrink:0;margin-top:2px;background:rgba(0,212,255,.07);padding:2px 6px;border-radius:4px}
-.commit-msg{font-size:12px;color:var(--text);line-height:1.4;flex:1}
-.commit-meta{font-size:9px;color:var(--dim);margin-top:3px}
-.file-tag{display:inline-block;background:rgba(167,139,250,.08);color:var(--purple);font-size:8px;padding:1px 5px;border-radius:4px;margin:2px 2px 0 0}
+.sha{font-size:10px;color:var(--cyan);font-family:'SF Mono',monospace;flex-shrink:0;background:rgba(0,212,255,.07);padding:3px 7px;border-radius:6px;margin-top:1px}
+.commit-msg{font-size:13px;color:var(--text);line-height:1.4;flex:1;overflow:hidden}
+.commit-meta{font-size:10px;color:var(--dim2);margin-top:3px}
 
-/* Diff */
-.diff-line{font-size:10px;font-family:monospace;padding:1px 6px;line-height:1.6;white-space:pre-wrap;word-break:break-all}
-.diff-line.add{background:rgba(0,255,136,.06);color:#6ee7b7}
-.diff-line.del{background:rgba(239,68,68,.06);color:#fca5a5}
-.diff-line.hdr{color:var(--cyan);background:rgba(0,212,255,.05)}
-.diff-line.ctx{color:var(--dim)}
-
-/* Task form */
-.task-form{background:var(--bg2);border:1px solid rgba(0,255,136,.2);border-radius:14px;padding:14px}
-.task-form textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-size:13px;font-family:inherit;resize:none;outline:none;min-height:80px;transition:.2s;-webkit-overflow-scrolling:touch}
-.task-form textarea:focus{border-color:rgba(0,255,136,.4)}
-.task-form .send-btn{margin-top:8px;width:100%;padding:12px;background:var(--green);color:#050505;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s;letter-spacing:.04em}
-.task-form .send-btn:active{background:#00cc66;transform:scale(.98)}
-
-/* Quick tasks */
-.quick{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin-bottom:10px}
-.quick::-webkit-scrollbar{display:none}
-.chip{background:var(--bg3);border:1px solid var(--border);color:var(--dim);font-size:10px;padding:6px 12px;border-radius:20px;white-space:nowrap;cursor:pointer;flex-shrink:0;font-family:inherit}
-.chip:active{background:var(--border);color:var(--text)}
-
-/* Logs */
-.log-line{font-size:10px;font-family:monospace;padding:2px 0;line-height:1.6;border-bottom:1px solid rgba(255,255,255,.03);color:var(--dim)}
+/* ── Logs ── */
+.log-wrap{background:var(--bg3);border-radius:12px;padding:10px;font-family:'SF Mono',ui-monospace,monospace;max-height:420px;overflow-y:auto}
+.log-line{font-size:10px;padding:2px 0;line-height:1.7;border-bottom:1px solid rgba(255,255,255,.025);color:var(--dim2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .log-line.push{color:var(--green)}
 .log-line.err{color:var(--red)}
-.log-line.task{color:#818cf8}
+.log-line.task{color:var(--purple)}
 .log-line.rev{color:var(--cyan)}
 
-/* Bottom bar */
-.bottom-bar{padding:10px 12px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:8px}
-.bottom-bar input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:9px 14px;color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:.2s}
-.bottom-bar input:focus{border-color:rgba(0,255,136,.4)}
-.bottom-bar input::placeholder{color:var(--dim)}
-.send-btn-sm{width:38px;height:38px;border-radius:50%;background:var(--green);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#050505}
-.send-btn-sm:active{transform:scale(.9)}
-.empty{text-align:center;padding:40px 20px;color:var(--dim);font-size:12px}
+/* ── Task form ── */
+.task-card{background:var(--bg2);border:1px solid rgba(0,255,136,.15);border-radius:18px;padding:16px;margin-bottom:12px}
+.task-card textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;resize:none;outline:none;min-height:90px;transition:.2s;-webkit-overflow-scrolling:touch;line-height:1.5}
+.task-card textarea:focus{border-color:rgba(0,255,136,.35);box-shadow:0 0 0 3px rgba(0,255,136,.05)}
+.task-card textarea::placeholder{color:var(--dim2)}
+.send-btn{margin-top:10px;width:100%;padding:14px;background:var(--green);color:#050505;border:none;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s;letter-spacing:.03em}
+.send-btn:active{background:#00cc66;transform:scale(.98)}
+
+/* ── Quick chips ── */
+.chips{display:flex;gap:7px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px;margin-bottom:12px}
+.chips::-webkit-scrollbar{display:none}
+.chip{background:var(--bg2);border:1px solid var(--border);color:var(--dim2);font-size:11px;padding:7px 13px;border-radius:20px;white-space:nowrap;cursor:pointer;flex-shrink:0;font-family:inherit;transition:.15s}
+.chip:active{background:rgba(0,255,136,.08);border-color:rgba(0,255,136,.2);color:var(--green)}
+
+/* ── Bottom nav ── */
+.bnav{flex-shrink:0;padding:10px 12px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));background:rgba(5,5,5,.9);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid var(--border)}
+.bnav-inner{display:flex;gap:6px;background:var(--bg2);border:1px solid var(--border);border-radius:22px;padding:5px}
+.btab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 6px;border-radius:17px;background:transparent;border:none;cursor:pointer;transition:.2s;font-family:inherit}
+.btab.on{background:rgba(0,255,136,.1)}
+.btab:active{background:rgba(0,255,136,.06)}
+.btab-icon{font-size:18px;line-height:1}
+.btab-lbl{font-size:9px;letter-spacing:.06em;color:var(--dim2);font-weight:500;transition:.15s}
+.btab.on .btab-lbl{color:var(--green)}
+
+/* ── Misc ── */
+.empty{text-align:center;padding:48px 20px;color:var(--dim2);font-size:13px}
+.running-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.18);border-radius:10px;padding:6px 10px;font-size:11px;color:var(--amber);margin-bottom:10px;width:100%;overflow:hidden}
+.running-pill span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 </style>
 </head>
 <body>
 <div class="app">
 
+  <!-- Header -->
   <div class="hdr">
     <div class="hdr-l">
       <div class="pulse"></div>
       <div>
-        <div class="title">⟨◈⟩ AnDy Dev</div>
-        <div class="subtitle" id="hdr-sub">Chargement…</div>
+        <div class="hdr-title">⟨◈⟩ AnDy</div>
+        <div class="hdr-sub" id="hdr-sub">Chargement…</div>
       </div>
     </div>
-    <div class="nav-btns">
-      <a href="/chat" class="nb">💬</a>
-      <a href="/" class="nb">⚙️</a>
-    </div>
-  </div>
-
-  <div class="tabs">
-    <button class="tab on" onclick="tab('live')" id="t-live">⚡ LIVE</button>
-    <button class="tab" onclick="tab('commits')" id="t-commits">📦 COMMITS</button>
-    <button class="tab" onclick="tab('task')" id="t-task">➕ TÂCHE</button>
-    <button class="tab" onclick="tab('logs')" id="t-logs">📋 LOGS</button>
+    <div class="hdr-badge" id="hdr-badge">LIVE</div>
   </div>
 
   <!-- LIVE -->
   <div class="view on pad" id="v-live">
     <div class="card">
-      <div class="card-title">STATUT <button class="refresh-btn" onclick="loadLive()">↺</button></div>
+      <div class="card-hd">Statut <button class="rbtn" onclick="loadLive()">↺</button></div>
       <div class="stats">
         <div class="stat"><div class="stat-n" id="v-done" style="color:var(--green)">—</div><div class="stat-l">DONE</div></div>
-        <div class="stat"><div class="stat-n" id="v-queue" style="color:#818cf8">—</div><div class="stat-l">QUEUE</div></div>
+        <div class="stat"><div class="stat-n" id="v-queue" style="color:var(--purple)">—</div><div class="stat-l">QUEUE</div></div>
         <div class="stat"><div class="stat-n" id="v-run" style="color:var(--amber)">—</div><div class="stat-l">RUN</div></div>
         <div class="stat"><div class="stat-n" id="v-err" style="color:var(--red)">—</div><div class="stat-l">ERR</div></div>
       </div>
-      <div id="v-current" style="font-size:12px;color:var(--dim)">—</div>
     </div>
 
     <div class="card">
-      <div class="card-title">EN COURS — PIPELINE</div>
-      <div id="v-pipeline"><div style="color:var(--dim);font-size:11px">Idle…</div></div>
+      <div class="card-hd">Pipeline</div>
+      <div id="v-pipeline"><div style="color:var(--dim2);font-size:12px">Idle…</div></div>
     </div>
 
     <div class="card">
-      <div class="card-title">QUEUE (prochaines)</div>
-      <div id="v-queuelist" style="font-size:11px;color:var(--dim)">—</div>
+      <div class="card-hd">Queue <span id="v-qcount" style="color:var(--purple);font-size:12px"></span></div>
+      <div id="v-queuelist"><div style="color:var(--dim);font-size:12px">Vide</div></div>
     </div>
   </div>
 
   <!-- COMMITS -->
   <div class="view pad" id="v-commits">
     <div class="card">
-      <div class="card-title">DERNIERS COMMITS <button class="refresh-btn" onclick="loadCommits()">↺</button></div>
+      <div class="card-hd">Commits récents <button class="rbtn" onclick="loadCommits()">↺</button></div>
       <div id="commits-list"><div class="empty">Chargement…</div></div>
     </div>
   </div>
 
   <!-- TASK -->
   <div class="view pad" id="v-task">
-    <div class="quick" id="quick-chips">
+    <div class="chips">
       <button class="chip" onclick="setTask('Redesign page Sports style ESPN dark stadium, scores animés')">🏟 Sports ESPN</button>
-      <button class="chip" onclick="setTask('Redesign page Markets style Bloomberg terminal, candlestick charts')">📈 Markets Bloomberg</button>
-      <button class="chip" onclick="setTask('Optimiser les performances — code splitting, LCP < 1.5s')">⚡ Performance</button>
-      <button class="chip" onclick="setTask('Redesign page News style Apple News, cards avec image cover')">📰 News Apple</button>
-      <button class="chip" onclick="setTask('Audit sécurité complet — XSS, CSRF, headers HTTP')">🔒 Sécurité</button>
+      <button class="chip" onclick="setTask('Redesign page Markets style Bloomberg terminal, candlestick charts')">📈 Bloomberg</button>
+      <button class="chip" onclick="setTask('Optimiser les performances — code splitting, LCP < 1.5s')">⚡ Perf</button>
+      <button class="chip" onclick="setTask('Redesign page News style Apple News, cards avec image cover')">📰 News</button>
+      <button class="chip" onclick="setTask('Audit sécurité complet — XSS, CSRF, headers HTTP')">🔒 Sécu</button>
+      <button class="chip" onclick="setTask('Améliore le design global — dark neon #00ff88, glassmorphism, animations fluides')">✨ Design</button>
     </div>
-    <div class="task-form">
-      <div class="card-title" style="margin-bottom:8px">NOUVELLE TÂCHE POUR ANDY</div>
-      <textarea id="task-txt" placeholder="Décris ce que tu veux qu'AnDy développe ou améliore…"></textarea>
-      <button class="send-btn" onclick="submitTask()">Envoyer la tâche à AnDy →</button>
+    <div class="task-card">
+      <div class="card-hd" style="margin-bottom:10px">Nouvelle tâche pour AnDy</div>
+      <textarea id="task-txt" placeholder="Décris ce qu'AnDy doit développer ou améliorer…"></textarea>
+      <button class="send-btn" id="send-btn" onclick="submitTask()">Envoyer à AnDy →</button>
     </div>
   </div>
 
   <!-- LOGS -->
   <div class="view pad" id="v-logs">
     <div class="card">
-      <div class="card-title">LOGS DAEMON <button class="refresh-btn" onclick="loadLogs()">↺</button></div>
-      <div id="logs-list"><div class="empty">Chargement…</div></div>
+      <div class="card-hd">Logs daemon <button class="rbtn" onclick="loadLogs()">↺</button></div>
+      <div class="log-wrap" id="logs-list"><div class="empty">Chargement…</div></div>
+    </div>
+  </div>
+
+  <!-- Bottom nav -->
+  <div class="bnav">
+    <div class="bnav-inner">
+      <button class="btab on" id="bt-live" onclick="tab('live')"><div class="btab-icon">⚡</div><div class="btab-lbl">LIVE</div></button>
+      <button class="btab" id="bt-commits" onclick="tab('commits')"><div class="btab-icon">📦</div><div class="btab-lbl">COMMITS</div></button>
+      <button class="btab" id="bt-task" onclick="tab('task')"><div class="btab-icon">➕</div><div class="btab-lbl">TÂCHE</div></button>
+      <button class="btab" id="bt-logs" onclick="tab('logs')"><div class="btab-icon">📋</div><div class="btab-lbl">LOGS</div></button>
     </div>
   </div>
 
 </div>
-
 <script>
 let curTab = 'live'
 const STAGES = ['planning','generating','testing','safe','live']
 
 function tab(name) {
   curTab = name
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'))
+  document.querySelectorAll('.btab').forEach(b => b.classList.remove('on'))
   document.querySelectorAll('.view').forEach(v => v.classList.remove('on'))
-  document.getElementById('t-'+name).classList.add('on')
+  document.getElementById('bt-'+name).classList.add('on')
   document.getElementById('v-'+name).classList.add('on')
   if (name==='live') loadLive()
   else if (name==='commits') loadCommits()
@@ -301,37 +300,36 @@ async function loadLive() {
   try {
     const r = await fetch('/api/tasks')
     const d = await r.json()
-    const f = d.files||{}
-    const s = d.status||[]
+    const f = d.files||{}, s = d.status||[]
     const done=(f.done||[]).length, queue=(f.queue||[]).length, run=(f.running||[]).length, err=(f.error||[]).length
-
     document.getElementById('v-done').textContent = done
     document.getElementById('v-queue').textContent = queue
     document.getElementById('v-run').textContent = run
     document.getElementById('v-err').textContent = err
     document.getElementById('hdr-sub').textContent = 'DONE '+done+' · QUEUE '+queue+' · '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})
+    document.getElementById('hdr-badge').textContent = run > 0 ? '● ACTIF' : 'IDLE'
+    document.getElementById('hdr-badge').style.color = run > 0 ? 'var(--green)' : 'var(--dim2)'
 
-    // Pipeline
     const running = f.running||[]
     const pipeEl = document.getElementById('v-pipeline')
     if (running.length) {
       const e = s.find(t=>t.name===running[0])
       const curIdx = STAGES.indexOf(e?.stage||'planning')
-      const pipe = STAGES.map((st,i) => {
-        const cls = i<curIdx?'done':i===curIdx?'cur':''
-        return \`<span class="stage \${cls}">\${st.toUpperCase()}</span>\`
-      }).join('<span class="arrow">›</span>')
-      pipeEl.innerHTML = \`<div style="color:var(--amber);font-size:11px;margin-bottom:6px">⟳ \${running[0].slice(0,44)}</div><div class="pipeline">\${pipe}</div>\`
-      if (e?.desc) pipeEl.innerHTML += \`<div style="font-size:10px;color:var(--dim);margin-top:6px">\${e.desc.slice(0,60)}</div>\`
+      const pipe = STAGES.map((st,i)=>{
+        const cls=i<curIdx?'done':i===curIdx?'cur':''
+        return \`<span class="stage \${cls}">\${st}</span>\`
+      }).join('<span class="arrow"> › </span>')
+      pipeEl.innerHTML = \`<div class="running-pill"><span>⟳ \${running[0].replace('.running','').slice(0,50)}</span></div><div class="pipeline">\${pipe}</div>\`
+      if (e?.desc) pipeEl.innerHTML += \`<div style="font-size:11px;color:var(--dim2);margin-top:8px;line-height:1.5">\${e.desc.slice(0,80)}</div>\`
     } else {
-      pipeEl.innerHTML = '<div style="color:var(--dim);font-size:11px">⟨◈⟩ Idle — génération prochaine vague…</div>'
+      pipeEl.innerHTML = '<div style="color:var(--dim2);font-size:12px">⟨◈⟩ Idle — en attente de tâches…</div>'
     }
 
-    // Queue list
     const q = f.queue||[]
+    document.getElementById('v-qcount').textContent = q.length ? q.length : ''
     document.getElementById('v-queuelist').innerHTML = q.length
-      ? q.slice(0,5).map(n=>\`<div style="padding:4px 0;border-bottom:1px solid var(--border);color:#555;font-size:10px">· \${n.slice(0,50)}</div>\`).join('')+(q.length>5?'<div style="color:#333;font-size:9px;padding-top:4px">+\${q.length-5} de plus</div>':'')
-      : '<div style="color:#222;font-size:10px">Queue vide</div>'
+      ? q.slice(0,6).map(n=>\`<div class="q-item"><div class="q-dot"></div><div class="q-name">\${n.replace('.txt','').slice(0,52)}</div></div>\`).join('')+(q.length>6?'<div style="color:var(--dim2);font-size:11px;padding:8px 0 0">+\${q.length-6} de plus</div>':'')
+      : '<div style="color:var(--dim);font-size:12px">Queue vide</div>'
   } catch(e) {
     document.getElementById('hdr-sub').textContent = '⚠ Serveur inaccessible'
   }
@@ -344,16 +342,15 @@ async function loadCommits() {
     const r = await fetch('/api/commits')
     const commits = await r.json()
     el.innerHTML = commits.map(c => {
-      const msg   = c.commit.message.split('\\n')[0]
-      const sha   = c.sha.slice(0,7)
-      const date  = new Date(c.commit.author.date).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
+      const msg = c.commit.message.split('\\n')[0]
+      const sha = c.sha.slice(0,7)
+      const date = new Date(c.commit.author.date).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
       const isAndy = msg.includes('[AnDy]')
-      const color = isAndy ? 'var(--green)' : 'var(--text)'
       return \`<div class="commit">
         <div class="sha">\${sha}</div>
-        <div style="flex:1">
-          <div class="commit-msg" style="color:\${color}">\${msg.slice(0,70).replace(/</g,'&lt;')}</div>
-          <div class="commit-meta">\${date}</div>
+        <div style="flex:1;min-width:0">
+          <div class="commit-msg" style="color:\${isAndy?'var(--green)':'var(--text)'}">\${msg.slice(0,68).replace(/</g,'&lt;')}</div>
+          <div class="commit-meta">\${date}\${isAndy?' · AnDy':''}</div>
         </div>
       </div>\`
     }).join('')
@@ -362,40 +359,45 @@ async function loadCommits() {
 
 async function loadLogs() {
   const el = document.getElementById('logs-list')
-  el.innerHTML = '<div class="empty">Chargement…</div>'
+  el.innerHTML = '<div style="color:var(--dim2);font-size:10px;font-family:monospace;padding:4px">Chargement…</div>'
   try {
     const r = await fetch('/api/logs?which=daemon')
     const d = await r.json()
-    const lines = (d.lines||[]).slice(-50).reverse()
+    const lines = (d.lines||[]).slice(-60).reverse()
     el.innerHTML = lines.map(l => {
-      const cls = l.includes('pushed')||l.includes('DONE')?'push':l.includes('ERROR')?'err':l.includes('TASK')?'task':l.includes('review')||l.includes('pushed')?'rev':''
-      return \`<div class="log-line \${cls}">\${l.replace(/</g,'&lt;').slice(0,90)}</div>\`
+      const cls = l.includes('pushed')||l.includes('DONE')?'push':l.includes('ERROR')?'err':l.includes('TASK')||l.includes('tâche')?'task':l.includes('review')||l.includes('commit')?'rev':''
+      return \`<div class="log-line \${cls}">\${l.replace(/</g,'&lt;').slice(0,100)}</div>\`
     }).join('')
-  } catch(e) { el.innerHTML = '<div class="empty">Logs inaccessibles</div>' }
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);font-size:11px;font-family:monospace">Logs inaccessibles</div>' }
 }
 
 function setTask(text) {
   document.getElementById('task-txt').value = text
+  tab('task')
   document.getElementById('task-txt').focus()
 }
 
 async function submitTask() {
   const v = document.getElementById('task-txt').value.trim()
   if (!v) return
-  const btn = document.querySelector('.task-form .send-btn')
+  const btn = document.getElementById('send-btn')
   btn.textContent = '…'
+  btn.disabled = true
   try {
     await fetch('/api/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({desc:v})})
     document.getElementById('task-txt').value = ''
     btn.textContent = '✅ Tâche envoyée !'
     btn.style.background = '#00cc66'
-    setTimeout(()=>{ btn.textContent='Envoyer la tâche à AnDy →'; btn.style.background='var(--green)'; tab('live') }, 1500)
-  } catch(e) { btn.textContent = '⚠ Erreur'; setTimeout(()=>{ btn.textContent='Envoyer la tâche à AnDy →' },2000) }
+    setTimeout(()=>{ btn.textContent='Envoyer à AnDy →'; btn.style.background='var(--green)'; btn.disabled=false; tab('live') }, 1600)
+  } catch(e) {
+    btn.textContent = '⚠ Erreur'
+    btn.disabled = false
+    setTimeout(()=>{ btn.textContent='Envoyer à AnDy →' }, 2000)
+  }
 }
 
-// Init
 loadLive()
-setInterval(()=>{ if(curTab==='live') loadLive() }, 10000)
+setInterval(()=>{ if(curTab==='live') loadLive() }, 8000)
 </script>
 </body>
 </html>`
