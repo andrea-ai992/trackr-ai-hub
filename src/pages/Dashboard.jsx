@@ -97,7 +97,7 @@ export default function Dashboard() {
   const coinColor = { bitcoin: '#f59e0b', ethereum: '#6366f1', solana: '#9945ff', binancecoin: '#f0b90b' }
 
   return (
-    <div className="page" style={{ paddingTop: 'max(60px, env(safe-area-inset-top, 0px))', backgroundColor: '#080808', color: '#f0f0f0', maxWidth: '520px', margin: '0 auto', padding: '0 16px' }}>
+    <div className="page" style={{ paddingTop: 'max(60px, env(safe-area-inset-top, 0px))', backgroundColor: '#080808', color: '#f0f0f0', maxWidth: '520px', margin: '0 auto', padding: '0 16px', animation: 'fadeUp 0.6s ease-out' }}>
       <div className="stagger-item" style={{ marginBottom: 24 }}>
         <p style={{ fontSize: 11, color: 'var(--t3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 4 }}>{today}</p>
         <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--t1)', letterSpacing: '-0.3px' }}>
@@ -201,25 +201,26 @@ export default function Dashboard() {
           <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--green)', marginBottom: 2 }}>AnDy AI</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <span className="live-dot" style={{ width: 5, height: 5 }} />
-            <p style={{ fontSize: 10, color: 'var(--t3)' }}>Live</p>
+            <p style={{ fontSize: 10, color: 'var(--t3)' }}>Actif</p>
           </div>
         </button>
       </div>
 
       <div className="stagger-item" style={{ marginBottom: 12 }}>
-        <div style={{ marginBottom: 10 }}>
-          <span className="section-label">Actualités</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingLeft: 2 }}>
+          <span className="section-label">News</span>
         </div>
-        {news.slice(0, 3).map(item => (
-          <div key={item.guid} style={{ marginBottom: 8, padding: '12px', background: 'var(--bg2)', borderRadius: 'var(--radius)', display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)' }}>{item.title}</span>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-              <span style={{ fontSize: 10, color: 'var(--t3)' }}>{item.source}</span>
-              <span style={{ fontSize: 10, color: 'var(--t3)' }}>{new Date(item.pubDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
-            </div>
+        {news.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {news.map((item, index) => (
+              <a key={index} href={item.link} target="_blank" rel="noopener noreferrer" style={{
+                background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(12px)', borderRadius: 'var(--radius)', padding: '12px', color: 'var(--t1)',
+                textDecoration: 'none', transition: 'background 0.3s',
+              }}>
+                <h3 style={{ fontSize: 14, fontWeight: 700 }}>{item.title}</h3>
+                <p style={{ fontSize: 12, color: 'var(--t3)' }}>{item.pubDate}</p>
+              </a>
+            ))}
           </div>
-        ))}
-      </div>
-    </div>
-  )
-}
+        ) : (
+          <p style={{ color: 'var(--t3)', textAlign: 'center' }}>Aucune nouvelle disponible
