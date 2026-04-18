@@ -235,36 +235,13 @@ export default function BrainExplorer() {
           ].map(s => (
             <div key={s.label} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 0', textAlign: 'center' }}>
               <div className="num" style={{ fontSize: 18, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.v}</div>
+              <div style={{ fontSize: 9, color: 'var(--t3)', marginTop: 2 }}>{s.label}</div>
             </div>
           ))}
         </div>
-      </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 10 }}>
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, padding: '10px', background: tab === t.id ? 'var(--bg2)' : 'transparent', border: 'none', color: 'var(--t1)', fontWeight: tab === t.id ? 700 : 400 }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab Content */}
-      {tab === 'workers' && (
-        <div>
-          {Object.entries(workers).map(([id, worker]) => (
-            <WorkerCard key={id} id={id} worker={worker} />
-          ))}
-          <button onClick={() => window.open('http://62.238.12.221:4000/brain', '_blank')} style={{ marginTop: 20, padding: '10px', background: 'var(--green)', color: 'white', border: 'none', borderRadius: 5 }}>
-            Ouvrir dashboard live
-          </button>
-        </div>
-      )}
-
-      {tab === 'log' && log.map((entry, index) => <LogLine key={index} entry={entry} />)}
-      {tab === 'done' && done.map(task => <TaskNode key={task.id} task={task} />)}
-      {tab === 'errors' && errors.map(task => <TaskNode key={task.id} task={task} />)}
-      {tab === 'tree' && <div>Tree content here...</div>}
-
-      {/* New Task Section */}
-      <div style={{ marginTop: 20, padding: '10px', background: 'var(--bg2)',
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: 6, padding: '0 16px 12px' }}>
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              style={{ flex: 1, padding: '8px 0', background: tab === t.id ? 'var(--bg3)' : 'var(--bg2)', border
