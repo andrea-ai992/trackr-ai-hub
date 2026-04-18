@@ -1,50 +1,203 @@
-// src/components/SearchBar.jsx
-import { useState, useEffect, useCallback } from 'react';
-import { Search } from 'lucide-react';
+Je vais créer le composant `FearGreedGauge` avec un SVG animé et une intégration de l'API Fear & Greed Index. Voici le code complet :
 
-const SearchBar = ({
-  value,
-  onChange,
-  placeholder = "Search assets...",
-  debounceTime = 300,
-  className = ""
-}) => {
-  const [localValue, setLocalValue] = useState(value);
+```jsx
+// src/components/FearGreedGauge.jsx
+import { useState, useEffect } from 'react';
 
-  const debouncedOnChange = useCallback(
-    (e) => {
-      const newValue = e.target.value;
-      setLocalValue(newValue);
-    },
-    []
-  );
+const FearGreedGauge = () => {
+  const [fearGreedData, setFearGreedData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      onChange(localValue);
-    }, debounceTime);
+    const fetchFearGreedIndex = async () => {
+      try {
+        const response = await fetch('https://api.alternative.me/fng/?limit=1');
+        if (!response.ok) throw new Error('Failed to fetch Fear & Greed Index');
 
-    return () => {
-      clearTimeout(timer);
+        const data = await response.json();
+        setFearGreedData({
+          value: parseInt(data.data[0].value),
+          valueText: data.data[0].value_classification,
+          timestamp: new Date(parseInt(data.data[0].timestamp) * 1000)
+        });
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching Fear & Greed Index:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
     };
-  }, [localValue, debounceTime, onChange]);
+
+    fetchFearGreedIndex();
+    const interval = setInterval(fetchFearGreedIndex, 300000); // Rafraîchir toutes les 5 minutes
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const getGaugeColor = (value) => {
+    if (value < 25) return '#007bff'; // Extreme Fear
+    if (value < 45) return '#00c8ff'; // Fear
+    if (value < 55) return '#ffc107'; // Neutral
+    if (value < 75) return '#ff9800'; // Greed
+    return '#ff0000'; // Extreme Greed
+  };
+
+  const getNeedlePosition = (value) => {
+    // Valeur normalisée entre 0 et 100 pour la position de l'aiguille
+    return (value / 100) * 240 + 15; // 15-255 pour couvrir l'arc de 240°
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-var(--bg2) border border-var(--border) rounded-lg p-4">
+        <div className="animate-pulse">
+          <div className="flex items-center justify-between mb-2">
+            <div className="h-4 bg-var(--bg) rounded w-1/3"></div>
+            <div className="h-4 bg-var(--bg) rounded w-1/4"></div>
+          </div>
+          <div className="h-32 bg-var(--bg) rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-var(--bg2) border border-red-500/30 rounded-lg p-4">
+        <p className="text-red-500 text-sm">Error: {error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-2 px-3 py-1 text-xs bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (!fearGreedData) return null;
 
   return (
-    <div className={`relative ${className}`}>
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-var(--t3)" size={18} />
-      <input
-        type="text"
-        placeholder={placeholder}
-        value={localValue}
-        onChange={debouncedOnChange}
-        className="w-full pl-10 pr-4 py-2.5 bg-var(--bg2) border border-var(--border) rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-var(--green)/50"
-      />
+    <div className="bg-var(--bg2) border border-var(--border) rounded-lg p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-var(--t1)">Fear & Greed Index</h3>
+        <span className="text-xs text-var(--t3)">
+          Updated: {fearGreedData.timestamp.toLocaleTimeString()}
+        </span>
+      </div>
+
+      <div className="relative h-32 flex items-center justify-center">
+        {/* Fond de l'indicateur */}
+        <svg viewBox="0 0 270 120" className="w-full h-full">
+          {/* Cercle de fond */}
+          <circle
+            cx="135"
+            cy="80"
+            r="60"
+            fill="none"
+            stroke="var(--border)"
+            strokeWidth="2"
+          />
+
+          {/* Arc de progression */}
+          <path
+            d="M 75 80 A 60 60 0 0 1 195 80"
+            fill="none"
+            stroke="var(--border)"
+            strokeWidth="2"
+          />
+
+          {/* Graduations */}
+          {[0, 25, 50, 75, 100].map((value) => {
+            const angle = (value / 100) * 240 + 15;
+            const x1 = 135 + 55 * Math.cos((angle - 90) * Math.PI / 180);
+            const y1 = 80 + 55 * Math.sin((angle - 90) * Math.PI / 180);
+            const x2 = 135 + 65 * Math.cos((angle - 90) * Math.PI / 180);
+            const y2 = 80 + 65 * Math.sin((angle - 90) * Math.PI / 180);
+
+            return (
+              <g key={value}>
+                <line
+                  x1={x1}
+                  y1={y1}
+                  x2={x2}
+                  y2={y2}
+                  stroke="var(--t3)"
+                  strokeWidth="1"
+                />
+                <text
+                  x={x2 + 5 * Math.cos((angle - 90) * Math.PI / 180)}
+                  y={y2 + 5 * Math.sin((angle - 90) * Math.PI / 180)}
+                  fill="var(--t3)"
+                  fontSize="8"
+                  textAnchor="middle"
+                >
+                  {value}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Aiguille */}
+          <g transform={`rotate(${getNeedlePosition(fearGreedData.value) - 15}, 135, 80)`}>
+            <line
+              x1="135"
+              y1="80"
+              x2="135"
+              y2="20"
+              stroke={getGaugeColor(fearGreedData.value)}
+              strokeWidth="3"
+              strokeLinecap="round"
+            />
+            <polygon
+              points="135,20 130,30 140,30"
+              fill={getGaugeColor(fearGreedData.value)}
+            />
+          </g>
+
+          {/* Indicateur de valeur */}
+          <circle
+            cx={135 + 30 * Math.cos((getNeedlePosition(fearGreedData.value) - 90) * Math.PI / 180)}
+            cy={80 + 30 * Math.sin((getNeedlePosition(fearGreedData.value) - 90) * Math.PI / 180)}
+            r="8"
+            fill={getGaugeColor(fearGreedData.value)}
+          />
+        </svg>
+      </div>
+
+      {/* Légende */}
+      <div className="flex items-center justify-between mt-2">
+        <div className="flex items-center gap-2">
+          <div
+            className="w-3 h-3 rounded-full"
+            style={{ backgroundColor: getGaugeColor(fearGreedData.value) }}
+          />
+          <span className="text-sm font-medium text-var(--t1)">
+            {fearGreedData.value}: {fearGreedData.valueText}
+          </span>
+        </div>
+      </div>
+
+      {/* Barre de progression */}
+      <div className="mt-3 h-2 bg-var(--bg) rounded-full overflow-hidden">
+        <div
+          className="h-full transition-all duration-500 ease-out"
+          style={{
+            width: `${fearGreedData.value}%`,
+            backgroundColor: getGaugeColor(fearGreedData.value)
+          }}
+        />
+      </div>
     </div>
   );
 };
 
-export default SearchBar;
+export default FearGreedGauge;
 ```
+
+Maintenant, je vais intégrer ce composant dans `Markets.jsx` en ajoutant une nouvelle section dédiée :
 
 ```jsx
 // src/pages/Markets.jsx
@@ -53,332 +206,34 @@ import { useSearchParams } from 'react-router-dom';
 import { Search, ChevronDown, ChevronUp, RefreshCw, AlertTriangle } from 'lucide-react';
 import SearchBar from '../components/SearchBar';
 import Sparkline from '../components/Sparkline';
+import FearGreedGauge from '../components/FearGreedGauge';
 
 const Markets = () => {
-  const [params, setParams] = useSearchParams();
-  const [tab, setTab] = useState(params.get('tab') === 'crypto' ? 'crypto' : 'stocks');
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
-  const [sortBy, setSortBy] = useState('default');
-  const [error, setError] = useState(null);
-  const [retryCount, setRetryCount] = useState(0);
-
-  const showError = useCallback((message) => {
-    setError(message);
-    setTimeout(() => setError(null), 5000);
-  }, []);
-
-  const fetchStocksData = async () => {
-    try {
-      const response = await fetch('/api/markets');
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const json = await response.json();
-      return json.data.filter(item => item.type === 'stock');
-    } catch (error) {
-      console.error('Error fetching stocks:', error);
-      throw new Error(`Failed to fetch stocks: ${error.message}`);
-    }
-  };
-
-  const fetchCryptoData = async () => {
-    try {
-      const response = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=true&price_change_percentage=24h');
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const json = await response.json();
-      return json.map(coin => ({
-        id: coin.id,
-        name: coin.name,
-        symbol: coin.symbol.toUpperCase(),
-        price: coin.current_price,
-        change: coin.price_change_percentage_24h,
-        marketCap: coin.market_cap,
-        volume24h: coin.total_volume,
-        sparkline: coin.sparkline_in_7d.price,
-        image: coin.image,
-        type: 'crypto'
-      }));
-    } catch (error) {
-      console.error('Error fetching crypto:', error);
-      throw new Error(`Failed to fetch crypto: ${error.message}`);
-    }
-  };
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      let stocks = [];
-      let crypto = [];
-
-      if (tab === 'stocks') {
-        stocks = await fetchStocksData();
-      } else {
-        crypto = await fetchCryptoData();
-      }
-
-      setData({ data: [...stocks, ...crypto] });
-      setRetryCount(0);
-    } catch (error) {
-      console.error('Fetch error:', error);
-      showError(error.message);
-      setRetryCount(prev => prev + 1);
-    } finally {
-      setLoading(false);
-    }
-  }, [tab, showError]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const handleRefresh = useCallback(() => {
-    setRefreshing(true);
-    setError(null);
-    fetchData().finally(() => setRefreshing(false));
-  }, [fetchData]);
-
-  const handleRetry = useCallback(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const switchTab = (id) => {
-    setTab(id);
-    if (id === 'crypto') setParams({ tab: 'crypto' });
-    else setParams({});
-  };
-
-  const getChangeColor = (change) => {
-    return change > 0 ? 'var(--green)' : 'var(--red)';
-  };
-
-  const getArrow = (change) => {
-    return change > 0 ? <ChevronUp size={16} /> : <ChevronDown size={16} />;
-  };
-
-  const filterAssets = (assets) => {
-    if (!assets) return [];
-    if (!search) return assets;
-
-    const searchLower = search.toLowerCase();
-    return assets.filter(asset =>
-      asset.name.toLowerCase().includes(searchLower) ||
-      asset.symbol.toLowerCase().includes(searchLower)
-    );
-  };
-
-  const sortAssets = (assets) => {
-    if (sortBy === 'gain') {
-      return [...assets].sort((a, b) => b.change - a.change);
-    } else if (sortBy === 'loss') {
-      return [...assets].sort((a, b) => a.change - b.change);
-    }
-    return assets;
-  };
-
-  const stocksAssets = data?.data?.filter(item => item.type === 'stock') || [];
-  const cryptoAssets = data?.data?.filter(item => item.type === 'crypto') || [];
-
-  const filteredStocks = filterAssets(stocksAssets);
-  const filteredCrypto = filterAssets(cryptoAssets);
-
-  const sortedStocks = sortAssets(filteredStocks);
-  const sortedCrypto = sortAssets(filteredCrypto);
-
-  const tabIndicatorStyle = {
-    transform: `translateX(${tab === 'stocks' ? '0' : '100%'})`,
-    width: '50%'
-  };
+  // ... (le code existant reste inchangé jusqu'à la partie return)
 
   return (
     <div className="min-h-screen bg-var(--bg) text-var(--t1) font-['Inter']">
-      <style jsx global>{`
-        @keyframes pulseGreen {
-          0%, 100% { text-shadow: 0 0 5px var(--green), 0 0 10px var(--green); }
-          50% { text-shadow: 0 0 10px var(--green), 0 0 20px var(--green); }
-        }
-        @keyframes pulseRed {
-          0%, 100% { text-shadow: 0 0 5px var(--red), 0 0 10px var(--red); }
-          50% { text-shadow: 0 0 10px var(--red), 0 0 20px var(--red); }
-        }
-        .pulse-green {
-          animation: pulseGreen 1.5s ease-in-out infinite;
-        }
-        .pulse-red {
-          animation: pulseRed 1.5s ease-in-out infinite;
-        }
-        .error-overlay {
-          animation: slideIn 0.3s ease-out;
-        }
-        @keyframes slideIn {
-          from { transform: translateY(-100%); }
-          to { transform: translateY(0); }
-        }
-        .retry-countdown {
-          animation: countdown 5s linear forwards;
-        }
-        @keyframes countdown {
-          0% { width: 100%; }
-          100% { width: 0%; }
-        }
-      `}</style>
-
-      {error && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-var(--red)/20 backdrop-blur-sm border-b border-var(--red)/50 error-overlay">
-          <div className="flex items-center gap-3 px-4 py-3">
-            <AlertTriangle size={20} className="text-var(--red) flex-shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-var(--red)">{error}</p>
-              <div className="h-1 bg-var(--red)/30 rounded-full mt-2 overflow-hidden">
-                <div className="h-full bg-var(--red) retry-countdown"></div>
-              </div>
-            </div>
-            <button
-              onClick={handleRetry}
-              className="px-3 py-1 text-xs font-semibold text-var(--red) border border-var(--red) rounded-lg hover:bg-var(--red)/10 transition-colors whitespace-nowrap"
-            >
-              Retry Now
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="sticky top-0 z-40 bg-var(--bg2) border-b border-var(--border)">
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between mb-3">
-            <h1 className="text-xl font-bold tracking-tight">Markets</h1>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="p-2 rounded-lg hover:bg-var(--bg)/50 transition-colors disabled:opacity-50"
-              aria-label="Refresh data"
-            >
-              <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
-            </button>
-          </div>
-
-          <SearchBar
-            value={search}
-            onChange={setSearch}
-            placeholder="Search assets..."
-            className="mb-3"
-          />
-
-          <div className="relative flex items-center justify-between">
-            <div className="absolute bottom-0 left-0 right-0 h-px bg-var(--border) transform -translate-y-1/2">
-              <div
-                className="absolute bottom-0 h-0.5 bg-var(--green) transition-all duration-300"
-                style={tabIndicatorStyle}
-              />
-            </div>
-            {[
-              { id: 'stocks', label: 'Stocks' },
-              { id: 'crypto', label: 'Crypto' },
-            ].map(t => (
-              <button
-                key={t.id}
-                onClick={() => switchTab(t.id)}
-                className={`relative z-10 px-6 py-2 text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
-                  tab === t.id ? 'text-var(--green)' : 'text-var(--t2) hover:text-var(--t1)'
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="px-4 pb-3 border-t border-var(--border)">
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              <span className="text-var(--t3)">Sort by:</span>
-              <button
-                onClick={() => setSortBy(sortBy === 'gain' ? 'default' : 'gain')}
-                className={`px-2 py-1 rounded-md transition-colors ${
-                  sortBy === 'gain' ? 'bg-var(--green)/20 text-var(--green)' : 'text-var(--t3) hover:text-var(--t1)'
-                }`}
-              >
-                Gain
-              </button>
-              <button
-                onClick={() => setSortBy(sortBy === 'loss' ? 'default' : 'loss')}
-                className={`px-2 py-1 rounded-md transition-colors ${
-                  sortBy === 'loss' ? 'bg-red-500/20 text-red-500' : 'text-var(--t3) hover:text-var(--t1)'
-                }`}
-              >
-                Loss
-              </button>
-            </div>
-            <button
-              onClick={() => setSortBy('default')}
-              className={`px-2 py-1 rounded-md transition-colors ${
-                sortBy === 'default' ? 'text-var(--green)' : 'text-var(--t3) hover:text-var(--t1)'
-              }`}
-            >
-              Default
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* ... (le code existant reste inchangé jusqu'à la section des onglets) */}
 
       <div className="px-4 pt-4 pb-24">
         {loading && retryCount === 0 ? (
           <div className="space-y-3">
-            {[...Array(10)].map((_, i) => (
-              <div key={i} className="animate-pulse bg-var(--bg2)/50 rounded-lg p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-var(--bg2) rounded-full" />
-                  <div className="flex-1">
-                    <div className="h-4 bg-var(--bg2) rounded w-3/4 mb-1" />
-                    <div className="h-3 bg-var(--bg2) rounded w-1/2" />
-                  </div>
-                </div>
-              </div>
-            ))}
+            {/* ... (le code existant reste inchangé) */}
           </div>
         ) : (
           <>
+            {/* Nouveau composant FearGreedGauge */}
+            <div className="mb-6">
+              <FearGreedGauge />
+            </div>
+
             {data && (tab === 'stocks' ? sortedStocks : sortedCrypto).length === 0 ? (
               <div className="text-center py-12">
-                <AlertTriangle size={48} className="mx-auto mb-4 text-var(--t3)" />
-                <p className="text-var(--t3)">No assets found matching your criteria</p>
+                {/* ... (le code existant reste inchangé) */}
               </div>
             ) : (
               <div className="space-y-2 mb-6">
-                {(tab === 'stocks' ? sortedStocks : sortedCrypto).map((asset, index) => (
-                  <div key={asset.id || index} className="flex items-center justify-between p-3 rounded-lg hover:bg-var(--bg2)/50 transition-colors cursor-pointer">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="w-8 h-8 rounded-full bg-var(--bg) flex items-center justify-center text-xs font-bold text-var(--t1) flex-shrink-0">
-                        {asset.image ? (
-                          <img src={asset.image} alt={asset.name} className="w-full h-full rounded-full object-cover" />
-                        ) : (
-                          asset.symbol.substring(0, 2)
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="font-semibold text-sm truncate">{asset.name}</h3>
-                        <p className="text-xs text-var(--t3) truncate">{asset.symbol}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-sm">${asset.price?.toLocaleString()}</p>
-                      <div className="flex items-center gap-1 justify-end">
-                        {asset.change !== undefined && (
-                          <>
-                            <span className="text-xs" style={{ color: getChangeColor(asset.change) }}>
-                              {asset.change > 0 ? '+' : ''}{asset.change.toFixed(2)}%
-                            </span>
-                            {getArrow(asset.change)}
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <div className="w-20 h-10 ml-4">
-                      <Sparkline data={asset.sparkline} color={asset.change > 0 ? 'var(--green)' : 'var(--red)'} />
-                    </div>
-                  </div>
-                ))}
+                {/* ... (le code existant pour afficher les actifs) */}
               </div>
             )}
           </>
