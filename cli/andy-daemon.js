@@ -972,9 +972,9 @@ async function selfUpdate() {
 
 // ── Parallel workers ──────────────────────────────────────────────────────────
 // Gemini free = 15 req/min → 1 worker. Repasser à 3 quand Groq (autre compte) disponible.
-const WORKER_COUNT     = 1
-const PAUSE_AFTER_TASK = 4
-const PAUSE_IDLE       = 8
+const WORKER_COUNT     = 2
+const PAUSE_AFTER_TASK = 1
+const PAUSE_IDLE       = 4
 
 const claimedTasks = new Set()
 
