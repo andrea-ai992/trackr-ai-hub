@@ -1,353 +1,237 @@
-Création de src/pages/More.jsx
-```jsx
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { ModuleCard } from './ModuleCard';
-import { Inter } from 'next/font/google';
-import styles from '../styles/Mobile.module.css';
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-});
-
-const modules = [
-  {
-    id: 1,
-    title: 'FlightTracker',
-    description: 'Suivi de vols',
-    icon: '✈️',
-    badge: 'LIVE',
-    link: '/flighttracker',
-  },
-  {
-    id: 2,
-    title: 'CryptoTrader',
-    description: 'Trading crypto',
-    icon: '📈',
-    badge: 'NEW',
-    link: '/cryptotrader',
-  },
-  {
-    id: 3,
-    title: 'Signals IA',
-    description: 'Signaux IA',
-    icon: '⚡',
-    badge: 'NEW',
-    link: '/signals-ia',
-  },
-  {
-    id: 4,
-    title: 'Portfolio',
-    description: 'Gestion de portefeuille',
-    icon: '💼',
-    badge: '',
-    link: '/portfolio',
-  },
-  {
-    id: 5,
-    title: 'Patterns',
-    description: 'Modèles',
-    icon: '📊',
-    badge: '',
-    link: '/patterns',
-  },
-  {
-    id: 6,
-    title: 'Translator',
-    description: 'Traducteur',
-    icon: '🌐',
-    badge: '',
-    link: '/translator',
-  },
-  {
-    id: 7,
-    title: 'RealEstate',
-    description: 'Immobilier',
-    icon: '🏠',
-    badge: 'PRO',
-    link: '/realestate',
-  },
-  {
-    id: 8,
-    title: 'Sneakers',
-    description: 'Sneakers',
-    icon: '👟',
-    badge: '',
-    link: '/sneakers',
-  },
-  {
-    id: 9,
-    title: 'Watches',
-    description: 'Montres',
-    icon: '⌚',
-    badge: 'PRO',
-    link: '/watches',
-  },
-  {
-    id: 10,
-    title: 'BusinessPlan',
-    description: 'Plan d\'entreprise',
-    icon: '📋',
-    badge: '',
-    link: '/businessplan',
-  },
-];
-
-const More = () => {
-  const location = useLocation();
-
-  return (
-    <div className={`${styles.container} ${styles.darkMode}`}>
-      <h1 className={styles.title}>Modules premium</h1>
-      <div className={styles.modules}>
-        {modules.map((module) => (
-          <ModuleCard
-            key={module.id}
-            title={module.title}
-            description={module.description}
-            icon={module.icon}
-            badge={module.badge}
-            link={module.link}
-          />
-        ))}
-      </div>
-      <div className={styles.settings}>
-        <div className={styles.darkModeToggle}>
-          <input
-            type="checkbox"
-            id="dark-mode-toggle"
-            className={styles.checkbox}
-            disabled
-            title="Dark mode déjà activé"
-          />
-          <label className={styles.label} htmlFor="dark-mode-toggle">
-            Dark mode
-          </label>
-        </div>
-        <p className={styles.version}>Version app : v3.0</p>
-        <p className={styles.github}>
-          <a
-            href="https://github.com/andrea-ai992/trackr-ai-hub"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            GitHub
-          </a>
-        </p>
-      </div>
-    </div>
-  );
-};
-
-export default More;
-```
-
 Création de src/components/ModuleCard.jsx
 ```jsx
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Inter } from 'next/font/google';
-import styles from './ModuleCard.module.css';
+import { styled } from 'styled-components';
+import { ChevronRightIcon } from 'lucide-react';
 
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-});
+const ModuleCardContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background-color: var(--bg2);
+  min-height: 130px;
+  width: 100%;
+  @media (min-width: 768px) {
+    width: calc(50% - 16px);
+  }
+`;
 
-const ModuleCard = ({ title, description, icon, badge, link }) => {
+const ModuleCardHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  @media (min-width: 768px) {
+    width: 50%;
+  }
+`;
+
+const ModuleCardIcon = styled.div`
+  font-size: 28px;
+  margin-right: 8px;
+`;
+
+const ModuleCardBadge = styled.div`
+  background-color: var(--green);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+`;
+
+const ModuleCardTitle = styled.h2`
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--t1);
+  margin-bottom: 4px;
+`;
+
+const ModuleCardDescription = styled.p`
+  font-size: 11px;
+  color: var(--t3);
+  margin-bottom: 8px;
+`;
+
+const ModuleCardFooter = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  width: 100%;
+  @media (min-width: 768px) {
+    width: 50%;
+  }
+`;
+
+const ModuleCard = ({ title, description, icon, badge, children }) => {
   return (
-    <div className={`${styles.card} ${styles.minHeight}`}>
-      <div className={styles.icon}>{icon}</div>
-      <div className={styles.badge}>{badge}</div>
-      <h2 className={styles.title}>{title}</h2>
-      <p className={styles.description}>{description}</p>
-      <Link to={link} className={styles.link}>
-        Découvrir
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className={styles.chevron}
-          viewBox="0 0 24 24"
-        >
-          <path d="M0 0h24v24H0V0z" fill="none" />
-          <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12l4.58-4.59z" />
-        </svg>
-      </Link>
-    </div>
+    <ModuleCardContainer>
+      <ModuleCardHeader>
+        <ModuleCardIcon>{icon}</ModuleCardIcon>
+        <ModuleCardBadge>{badge}</ModuleCardBadge>
+      </ModuleCardHeader>
+      <ModuleCardTitle>{title}</ModuleCardTitle>
+      <ModuleCardDescription>{description}</ModuleCardDescription>
+      <ModuleCardFooter>
+        <ChevronRightIcon size={16} />
+      </ModuleCardFooter>
+      {children}
+    </ModuleCardContainer>
   );
 };
 
 export default ModuleCard;
 ```
 
-Création de src/styles/Mobile.module.css
-```css
-.container {
-  max-width: 800px;
-  margin: 40px auto;
-  padding: 20px;
-  background-color: var(--bg);
-  color: var(--t1);
-}
+Création de src/pages/More.jsx
+```jsx
+import React from 'react';
+import { Link } from 'react-router-dom';
+import ModuleCard from '../components/ModuleCard';
+import { styled } from 'styled-components';
+import { ChevronRightIcon } from 'lucide-react';
 
-.title {
+const MoreContainer = styled.div`
+  padding: 16px;
+  background-color: var(--bg);
+`;
+
+const MoreHeader = styled.h1`
   font-size: 24px;
-  font-weight: bold;
-  margin-bottom: 20px;
-}
+  color: var(--t1);
+  margin-bottom: 16px;
+`;
 
-.modules {
+const ModuleGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-}
+  grid-template-columns: 1fr;
+  gap: 16px;
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+`;
 
-.card {
+const Settings = styled.div`
+  padding: 16px;
   background-color: var(--bg2);
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-}
+  border-radius: 8px;
+  margin-top: 16px;
+`;
 
-.minHeight {
-  min-height: 130px;
-}
+const SettingsToggle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--t2);
+  cursor: not-allowed;
+  &:hover {
+    color: var(--t2);
+  }
+`;
 
-.icon {
-  font-size: 28px;
-  margin-bottom: 10px;
-}
-
-.badge {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  padding: 5px 10px;
-  border-radius: 10px;
-  background-color: var(--green);
-  color: var(--t1);
-}
-
-.title {
-  font-size: 13px;
-  font-weight: bold;
-  margin-bottom: 10px;
-}
-
-.description {
-  font-size: 11px;
+const SettingsVersion = styled.p`
+  font-size: 12px;
   color: var(--t3);
-  line-height: 1.5;
-}
+  margin-bottom: 8px;
+`;
 
-.link {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background-color: var(--bg2);
-  color: var(--t1);
+const SettingsGitHub = styled.a`
+  font-size: 12px;
+  color: var(--green);
   text-decoration: none;
-}
+  &:hover {
+    color: var(--green);
+  }
+`;
 
-.chevron {
-  width: 20px;
-  height: 20px;
-  margin-left: 10px;
-}
+const More = () => {
+  return (
+    <MoreContainer>
+      <MoreHeader>Plus</MoreHeader>
+      <ModuleGrid>
+        <ModuleCard
+          title="FlightTracker"
+          description="Suivi des vols en temps réel"
+          icon="✈️"
+          badge="LIVE"
+          children={<Link to="/flighttracker">Voir plus</Link>}
+        />
+        <ModuleCard
+          title="CryptoTrader"
+          description="Analyse et trading de cryptomonnaies"
+          icon="📈"
+          badge="NEW"
+          children={<Link to="/cryptotrader">Voir plus</Link>}
+        />
+        <ModuleCard
+          title="Signals IA"
+          description="Signaux de trading générés par l'IA"
+          icon="⚡"
+          badge="NEW"
+          children={<Link to="/signals">Voir plus</Link>}
+        />
+        <ModuleCard
+          title="Portfolio"
+          description="Gestion de votre portefeuille"
+          icon="💼"
+          children={<Link to="/portfolio">Voir plus</Link>}
+        />
+        <ModuleCard
+          title="Patterns"
+          description="Analyse de tendances et de modèles"
+          icon="📊"
+          children={<Link to="/patterns">Voir plus</Link>}
+        />
+        <ModuleCard
+          title="Translator"
+          description="Traduction instantanée"
+          icon="🌐"
+          children={<Link to="/translator">Voir plus</Link>}
+        />
+        <ModuleCard
+          title="RealEstate"
+          description="Analyse de marché immobilier"
+          icon="🏠"
+          badge="PRO"
+          children={<Link to="/realestate">Voir plus</Link>}
+        />
+        <ModuleCard
+          title="Sneakers"
+          description="Analyse de marché des sneakers"
+          icon="👟"
+          children={<Link to="/sneakers">Voir plus</Link>}
+        />
+        <ModuleCard
+          title="Watches"
+          description="Analyse de marché des montres"
+          icon="⌚"
+          badge="PRO"
+          children={<Link to="/watches">Voir plus</Link>}
+        />
+        <ModuleCard
+          title="BusinessPlan"
+          description="Création de plans d'affaires"
+          icon="📋"
+          children={<Link to="/businessplan">Voir plus</Link>}
+        />
+      </ModuleGrid>
+      <Settings>
+        <SettingsToggle>
+          <span>Mode sombre</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 0L16 8L8 16L0 8" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </SettingsToggle>
+        <SettingsVersion>v3.0</SettingsVersion>
+        <SettingsGitHub href="https://github.com/andrea-ai992/trackr-ai-hub" target="_blank">GitHub</SettingsGitHub>
+      </Settings>
+    </MoreContainer>
+  );
+};
 
-.settings {
-  margin-top: 40px;
-  padding: 20px;
-  background-color: var(--bg);
-  color: var(--t1);
-}
-
-.darkModeToggle {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.checkbox {
-  margin-right: 10px;
-}
-
-.label {
-  font-size: 14px;
-  color: var(--t2);
-}
-
-.version {
-  font-size: 14px;
-  color: var(--t2);
-  margin-bottom: 10px;
-}
-
-.github {
-  font-size: 14px;
-  color: var(--t2);
-}
-```
-
-Création de src/styles/ModuleCard.module.css
-```css
-.card {
-  background-color: var(--bg2);
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-}
-
-.minHeight {
-  min-height: 130px;
-}
-
-.icon {
-  font-size: 28px;
-  margin-bottom: 10px;
-}
-
-.badge {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  padding: 5px 10px;
-  border-radius: 10px;
-  background-color: var(--green);
-  color: var(--t1);
-}
-
-.title {
-  font-size: 13px;
-  font-weight: bold;
-  margin-bottom: 10px;
-}
-
-.description {
-  font-size: 11px;
-  color: var(--t3);
-  line-height: 1.5;
-}
-
-.link {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background-color: var(--bg2);
-  color: var(--t1);
-  text-decoration: none;
-}
-
-.chevron {
-  width: 20px;
-  height: 20px;
-  margin-left: 10px;
-}
+export default More;
