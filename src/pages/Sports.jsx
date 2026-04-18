@@ -1,121 +1,316 @@
-Je vais créer un composant réutilisable pour les onglets horizontaux avec animations fluides et l'intégrer dans la page Sports.
+Je vais implémenter les skeletons shimmer et les effets de pulse pour les pages Sports. Voici les modifications nécessaires :
 
-Fichier: src/components/SportsTabs.jsx
+Fichier: src/components/Sports/TeamCard.jsx
 ```jsx
-import React, { useState, useEffect } from 'react';
-import './SportsTabs.css';
+import React from 'react';
+import './TeamCard.css';
 
-const SPORTS_TABS = [
-  { id: 'PSG', label: 'PSG' },
-  { id: 'NBA', label: 'NBA' },
-  { id: 'NFL', label: 'NFL' },
-  { id: 'UFC', label: 'UFC' }
-];
+const TeamCard = ({
+  homeTeam,
+  awayTeam,
+  competition,
+  status,
+  time,
+  venue,
+  homeScore,
+  awayScore,
+  isLoading = false,
+  isPulse = false
+}) => {
+  const getMatchStatusClass = (status) => {
+    if (status === 'LIVE' || status === 'Q1' || status === 'Q2' || status === 'Q3' || status === 'Round 1' || status === 'Round 2') {
+      return 'status-live';
+    } else if (status === 'FINAL' || status === 'FT') {
+      return 'status-final';
+    } else {
+      return 'status-scheduled';
+    }
+  };
 
-const SportsTabs = ({ activeTab, onTabChange }) => {
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const getTeamColor = (teamName) => {
+    switch (teamName) {
+      case 'PSG':
+        return 'var(--green)';
+      case 'NBA':
+        return 'var(--t1)';
+      case 'NFL':
+        return 'var(--t1)';
+      case 'UFC':
+        return 'var(--t3)';
+      default:
+        return 'var(--t2)';
+    }
+  };
 
   return (
-    <div className="sports-tabs-container">
-      <div className="sports-tabs">
-        {SPORTS_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
-            onClick={() => onTabChange(tab.id)}
-            aria-label={`Afficher les matchs ${tab.label}`}
+    <div className={`team-card ${isLoading ? 'skeleton' : ''} ${isPulse ? 'pulse' : ''}`}>
+      <div className="match-header">
+        {isLoading ? (
+          <div className="skeleton-text skeleton-competition"></div>
+        ) : (
+          <span className="competition">{competition}</span>
+        )}
+        {isLoading ? (
+          <div className="skeleton-text skeleton-status"></div>
+        ) : (
+          <span className={`status ${getMatchStatusClass(status)}`}>
+            {status}
+          </span>
+        )}
+      </div>
+
+      <div className="match-details">
+        {isLoading ? (
+          <div className="skeleton-team skeleton-home"></div>
+        ) : (
+          <span
+            className="team home"
+            style={{ backgroundColor: getTeamColor(homeTeam) }}
           >
-            <span className="tab-label">{tab.label}</span>
-            {activeTab === tab.id && (
-              <motionIndicator
-                className="motion-indicator"
-                initial={{ width: 0 }}
-                animate={{ width: '100%' }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
-              />
-            )}
-          </button>
-        ))}
+            {homeTeam}
+          </span>
+        )}
+
+        <div className="score-container">
+          {isLoading ? (
+            <div className="skeleton-score"></div>
+          ) : (
+            <>
+              <div className="score-value">{homeScore}</div>
+              <span className="vs">vs</span>
+              <div className="score-value">{awayScore}</div>
+            </>
+          )}
+        </div>
+
+        {isLoading ? (
+          <div className="skeleton-team skeleton-away"></div>
+        ) : (
+          <span
+            className="team away"
+            style={{ backgroundColor: getTeamColor(awayTeam) }}
+          >
+            {awayTeam}
+          </span>
+        )}
+      </div>
+
+      <div className="match-footer">
+        {isLoading ? (
+          <div className="skeleton-text skeleton-time"></div>
+        ) : (
+          <span className="time">{time}</span>
+        )}
+        {isLoading ? (
+          <div className="skeleton-text skeleton-venue"></div>
+        ) : (
+          <span className="venue">{venue}</span>
+        )}
       </div>
     </div>
   );
 };
 
-const MotionIndicator = ({ className, ...props }) => {
-  return <div className={className} {...props} />;
-};
-
-export default SportsTabs;
+export default TeamCard;
 ```
 
-Fichier: src/components/SportsTabs.css
+Fichier: src/components/Sports/TeamCard.css
 ```css
-.sports-tabs-container {
-  width: 100%;
-  padding: 0 16px;
-  margin-bottom: 24px;
-}
-
-.sports-tabs {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.sports-tabs::-webkit-scrollbar {
-  display: none;
-}
-
-.tab-button {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-  padding: 12px 16px;
+.team-card {
   background-color: var(--bg2);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--t2);
-  font-size: 1rem;
-  font-weight: 500;
-  text-align: center;
-  white-space: nowrap;
-  cursor: pointer;
+  border-radius: 12px;
+  padding: 16px;
   transition: all 0.2s ease;
+  position: relative;
   overflow: hidden;
 }
 
-.tab-button:hover:not(.active) {
-  background-color: var(--bg3);
+.team-card:hover {
   border-color: var(--border-hi);
+  transform: translateY(-2px);
 }
 
-.tab-button.active {
-  background-color: var(--bg);
-  border-color: var(--green);
-  color: var(--t1);
-  box-shadow: 0 0 0 1px var(--green);
-}
-
-.tab-label {
-  display: inline-block;
-  position: relative;
-  z-index: 1;
-}
-
-.motion-indicator {
+.team-card::before {
+  content: '';
   position: absolute;
-  bottom: -1px;
+  top: 0;
   left: 0;
-  height: 2px;
-  background-color: var(--green);
-  border-radius: 1px;
-  z-index: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(0, 255, 136, 0.1), transparent);
+  transform: translateX(-100%);
+  animation: shimmer 1.5s infinite;
+}
+
+.team-card.skeleton::before {
+  animation: shimmer 1.5s infinite;
+}
+
+.team-card.pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.match-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  color: var(--t2);
+}
+
+.competition {
+  font-weight: 600;
+}
+
+.status {
+  font-weight: 500;
+}
+
+.status-live {
+  color: var(--green);
+}
+
+.status-final {
+  color: var(--t3);
+}
+
+.status-scheduled {
+  color: var(--t2);
+}
+
+.match-details {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.team {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--t1);
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home {
+  margin-right: 8px;
+}
+
+.away {
+  margin-left: 8px;
+}
+
+.score-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 80px;
+  justify-content: center;
+}
+
+.score-value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--t1);
+}
+
+.vs {
+  font-size: 0.9rem;
+  color: var(--t2);
+  font-weight: 500;
+}
+
+.match-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  color: var(--t2);
+}
+
+.skeleton {
+  background-color: var(--bg3);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transform: translateX(-100%);
+  animation: skeleton-shimmer 1.5s infinite;
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-text {
+  height: 16px;
+  width: 60px;
+}
+
+.skeleton-competition {
+  width: 80px;
+}
+
+.skeleton-status {
+  width: 40px;
+}
+
+.skeleton-team {
+  height: 32px;
+  width: 100px;
+}
+
+.skeleton-home {
+  margin-right: 8px;
+}
+
+.skeleton-away {
+  margin-left: 8px;
+}
+
+.skeleton-score {
+  height: 24px;
+  width: 40px;
+  border-radius: 4px;
+}
+
+.skeleton-time, .skeleton-venue {
+  height: 14px;
+  width: 50px;
 }
 ```
 
@@ -124,6 +319,7 @@ Fichier: src/pages/Sports.jsx
 import React, { useState, useEffect } from 'react';
 import './Sports.css';
 import SportsTabs from '../components/SportsTabs';
+import TeamCard from '../components/Sports/TeamCard';
 
 const Sports = () => {
   const [activeTab, setActiveTab] = useState('PSG');
@@ -137,6 +333,7 @@ const Sports = () => {
     nfl: null,
     ufc: null
   });
+  const [isLoading, setIsLoading] = useState(true);
   const [animated, setAnimated] = useState(false);
 
   const updateLiveScores = () => {
@@ -147,6 +344,7 @@ const Sports = () => {
   useEffect(() => {
     const fetchSportsData = async () => {
       try {
+        setIsLoading(true);
         const [psgRes, nbaRes, nflRes, ufcRes] = await Promise.all([
           fetch('/api/sports/psg'),
           fetch('/api/sports/nba'),
@@ -167,6 +365,8 @@ const Sports = () => {
         setUfcData(ufcData);
       } catch (error) {
         console.error('Error fetching sports data:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -178,16 +378,6 @@ const Sports = () => {
 
     return () => clearInterval(interval);
   }, []);
-
-  const getMatchStatusClass = (status) => {
-    if (status === 'LIVE' || status === 'Q1' || status === 'Q2' || status === 'Q3' || status === 'Round 1' || status === 'Round 2') {
-      return 'status-live';
-    } else if (status === 'FINAL' || status === 'FT') {
-      return 'status-final';
-    } else {
-      return 'status-scheduled';
-    }
-  };
 
   const animateScore = (key) => {
     return (
@@ -229,36 +419,45 @@ const Sports = () => {
   };
 
   const renderTabContent = () => {
+    if (isLoading) {
+      return (
+        <div className="loading-container">
+          {[...Array(3)].map((_, index) => (
+            <TeamCard
+              key={index}
+              isLoading={true}
+              homeTeam=""
+              awayTeam=""
+              competition=""
+              status=""
+              time=""
+              venue=""
+              homeScore=""
+              awayScore=""
+            />
+          ))}
+        </div>
+      );
+    }
+
     switch (activeTab) {
       case 'PSG':
         return (
           <div className="psg-content">
             <div className="match-card">
               {psgData.map((match, index) => (
-                <div key={index} className="match-info">
-                  <div className="match-header">
-                    <span className="competition">{match.competition}</span>
-                    <span className={`status ${getMatchStatusClass(match.status)}`}>
-                      {match.status}
-                    </span>
-                  </div>
-                  <div className="match-details">
-                    <span
-                      className="team home"
-                      style={{ backgroundColor: getTeamColor(match.homeTeam.name) }}
-                    >
-                      {match.homeTeam.name}
-                    </span>
-                    {animateScore('psg')}
-                    <span className="team away" style={{ backgroundColor: getTeamColor(match.awayTeam.name) }}>
-                      {match.awayTeam.name}
-                    </span>
-                  </div>
-                  <div className="match-footer">
-                    <span className="time">{match.time}</span>
-                    <span className="venue">{match.venue}</span>
-                  </div>
-                </div>
+                <TeamCard
+                  key={index}
+                  homeTeam={match.homeTeam.name}
+                  awayTeam={match.awayTeam.name}
+                  competition={match.competition}
+                  status={match.status}
+                  time={match.time}
+                  venue={match.venue}
+                  homeScore={match.homeTeam.score || 0}
+                  awayScore={match.awayTeam.score || 0}
+                  isPulse={animated}
+                />
               ))}
             </div>
           </div>
@@ -268,30 +467,18 @@ const Sports = () => {
           <div className="nba-content">
             <div className="match-card">
               {nbaData.map((match, index) => (
-                <div key={index} className="match-info">
-                  <div className="match-header">
-                    <span className="competition">{match.competition}</span>
-                    <span className={`status ${getMatchStatusClass(match.status)}`}>
-                      {match.status}
-                    </span>
-                  </div>
-                  <div className="match-details">
-                    <span
-                      className="team home"
-                      style={{ backgroundColor: getTeamColor(match.homeTeam.name) }}
-                    >
-                      {match.homeTeam.name}
-                    </span>
-                    {animateScore('nba')}
-                    <span className="team away" style={{ backgroundColor: getTeamColor(match.awayTeam.name) }}>
-                      {match.awayTeam.name}
-                    </span>
-                  </div>
-                  <div className="match-footer">
-                    <span className="time">{match.time}</span>
-                    <span className="venue">{match.venue}</span>
-                  </div>
-                </div>
+                <TeamCard
+                  key={index}
+                  homeTeam={match.homeTeam.name}
+                  awayTeam={match.awayTeam.name}
+                  competition={match.competition}
+                  status={match.status}
+                  time={match.time}
+                  venue={match.venue}
+                  homeScore={match.homeTeam.score || 0}
+                  awayScore={match.awayTeam.score || 0}
+                  isPulse={animated}
+                />
               ))}
             </div>
           </div>
@@ -301,30 +488,18 @@ const Sports = () => {
           <div className="nfl-content">
             <div className="match-card">
               {nflData.map((match, index) => (
-                <div key={index} className="match-info">
-                  <div className="match-header">
-                    <span className="competition">{match.competition}</span>
-                    <span className={`status ${getMatchStatusClass(match.status)}`}>
-                      {match.status}
-                    </span>
-                  </div>
-                  <div className="match-details">
-                    <span
-                      className="team home"
-                      style={{ backgroundColor: getTeamColor(match.homeTeam.name) }}
-                    >
-                      {match.homeTeam.name}
-                    </span>
-                    {animateScore('nfl')}
-                    <span className="team away" style={{ backgroundColor: getTeamColor(match.awayTeam.name) }}>
-                      {match.awayTeam.name}
-                    </span>
-                  </div>
-                  <div className="match-footer">
-                    <span className="time">{match.time}</span>
-                    <span className="venue">{match.venue}</span>
-                  </div>
-                </div>
+                <TeamCard
+                  key={index}
+                  homeTeam={match.homeTeam.name}
+                  awayTeam={match.awayTeam.name}
+                  competition={match.competition}
+                  status={match.status}
+                  time={match.time}
+                  venue={match.venue}
+                  homeScore={match.homeTeam.score || 0}
+                  awayScore={match.awayTeam.score || 0}
+                  isPulse={animated}
+                />
               ))}
             </div>
           </div>
@@ -334,30 +509,18 @@ const Sports = () => {
           <div className="ufc-content">
             <div className="match-card">
               {ufcData.map((match, index) => (
-                <div key={index} className="match-info">
-                  <div className="match-header">
-                    <span className="competition">{match.competition}</span>
-                    <span className={`status ${getMatchStatusClass(match.status)}`}>
-                      {match.status}
-                    </span>
-                  </div>
-                  <div className="match-details">
-                    <span
-                      className="team home"
-                      style={{ backgroundColor: getTeamColor(match.fighter1.name) }}
-                    >
-                      {match.fighter1.name}
-                    </span>
-                    {animateScore('ufc')}
-                    <span className="team away" style={{ backgroundColor: getTeamColor(match.fighter2.name) }}>
-                      {match.fighter2.name}
-                    </span>
-                  </div>
-                  <div className="match-footer">
-                    <span className="time">{match.time}</span>
-                    <span className="venue">{match.venue}</span>
-                  </div>
-                </div>
+                <TeamCard
+                  key={index}
+                  homeTeam={match.fighter1.name}
+                  awayTeam={match.fighter2.name}
+                  competition={match.competition}
+                  status={match.status}
+                  time={match.time}
+                  venue={match.venue}
+                  homeScore={match.fighter1.score || 0}
+                  awayScore={match.fighter2.score || 0}
+                  isPulse={animated}
+                />
               ))}
             </div>
           </div>
@@ -395,118 +558,119 @@ Fichier: src/pages/Sports.css
   padding: 0 16px;
 }
 
-.match-info {
-  background-color: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px;
-  transition: all 0.2s ease;
-}
-
-.match-info:hover {
-  border-color: var(--border-hi);
-  transform: translateY(-2px);
-}
-
-.match-header {
+.loading-container {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-  font-size: 0.9rem;
-  color: var(--t2);
-}
-
-.competition {
-  font-weight: 600;
-}
-
-.status {
-  font-weight: 500;
-}
-
-.match-details {
-  display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 12px;
-  margin-bottom: 12px;
-}
-
-.team {
-  padding: 8px 12px;
-  border-radius: 8px;
-  color: var(--t1);
-  font-weight: 600;
-  font-size: 1rem;
-  flex: 1;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.team.home {
-  background-color: var(--green);
-  border: 1px solid var(--green);
-}
-
-.team.away {
-  background-color: var(--bg3);
-  border: 1px solid var(--border);
+  padding: 0 16px;
 }
 
 .animate-score {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 1;
-  min-width: 0;
+  min-width: 80px;
+  justify-content: center;
 }
 
 .score-value {
   font-size: 1.1rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--t1);
-  min-width: 24px;
-  text-align: center;
-  flex-shrink: 0;
 }
 
 .vs {
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: var(--t2);
   font-weight: 500;
 }
 
-.match-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.85rem;
-  color: var(--t2);
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
-}
-
-.status-live {
-  color: var(--green);
-}
-
-.status-final {
-  color: var(--t3);
-}
-
-.status-scheduled {
-  color: var(--t2);
-}
-
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (max-width: 768px) {
+  .sports-container {
+    padding: 12px 0;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .match-card {
+    gap: 8px;
+  }
+
+  .loading-container {
+    gap: 8px;
   }
 }
+```
+
+Fichier: src/components/SportsTabs.jsx
+```jsx
+import React, { useState, useEffect } from 'react';
+import './SportsTabs.css';
+
+const SPORTS_TABS = [
+  { id: 'PSG', label: 'PSG' },
+  { id: 'NBA', label: 'NBA' },
+  { id: 'NFL', label: 'NFL' },
+  { id: 'UFC', label: 'UFC' }
+];
+
+const SportsTabs = ({ activeTab, onTabChange }) => {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  return (
+    <div className="sports-tabs-container">
+      <div className="sports-tabs">
+        {SPORTS_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
+            onClick={() => onTabChange(tab.id)}
+            aria-label={`Afficher les matchs ${tab.label}`}
+          >
+            <span className="tab-label">{tab.label}</span>
+            {activeTab === tab.id && (
+              <div
+                className="motion-indicator"
+                style={{
+                  width: isMounted ? '100%' : '0'
+                }}
+              />
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default SportsTabs;
+```
+
+Fichier: src/components/SportsTabs.css
+```css
+.sports-tabs-container {
+  width: 100%;
+  padding: 0 16px;
+  margin-bottom: 24px;
+}
+
+.sports-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sports-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab
