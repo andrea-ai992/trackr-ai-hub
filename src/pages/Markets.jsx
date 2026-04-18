@@ -1,10 +1,57 @@
-Je vais implémenter un système de gestion des erreurs robuste pour les appels API dans `Markets.jsx` avec affichage d'erreurs utilisateur en overlay neon et retry automatique après 5s. Voici les modifications nécessaires :
+// src/components/SearchBar.jsx
+import { useState, useEffect, useCallback } from 'react';
+import { Search } from 'lucide-react';
+
+const SearchBar = ({
+  value,
+  onChange,
+  placeholder = "Search assets...",
+  debounceTime = 300,
+  className = ""
+}) => {
+  const [localValue, setLocalValue] = useState(value);
+
+  const debouncedOnChange = useCallback(
+    (e) => {
+      const newValue = e.target.value;
+      setLocalValue(newValue);
+    },
+    []
+  );
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onChange(localValue);
+    }, debounceTime);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [localValue, debounceTime, onChange]);
+
+  return (
+    <div className={`relative ${className}`}>
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-var(--t3)" size={18} />
+      <input
+        type="text"
+        placeholder={placeholder}
+        value={localValue}
+        onChange={debouncedOnChange}
+        className="w-full pl-10 pr-4 py-2.5 bg-var(--bg2) border border-var(--border) rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-var(--green)/50"
+      />
+    </div>
+  );
+};
+
+export default SearchBar;
+```
 
 ```jsx
 // src/pages/Markets.jsx
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, ChevronDown, ChevronUp, RefreshCw, AlertTriangle } from 'lucide-react';
+import SearchBar from '../components/SearchBar';
 import Sparkline from '../components/Sparkline';
 
 const Markets = () => {
@@ -211,16 +258,12 @@ const Markets = () => {
             </button>
           </div>
 
-          <div className="relative mb-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-var(--t3)" size={18} />
-            <input
-              type="text"
-              placeholder="Search assets..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-var(--bg2) border border-var(--border) rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-var(--green)/50"
-            />
-          </div>
+          <SearchBar
+            value={search}
+            onChange={setSearch}
+            placeholder="Search assets..."
+            className="mb-3"
+          />
 
           <div className="relative flex items-center justify-between">
             <div className="absolute bottom-0 left-0 right-0 h-px bg-var(--border) transform -translate-y-1/2">
@@ -310,35 +353,29 @@ const Markets = () => {
                         {asset.image ? (
                           <img src={asset.image} alt={asset.name} className="w-full h-full rounded-full object-cover" />
                         ) : (
-                          <span className="text-color">{asset.symbol.substring(0, 2).toUpperCase()}</span>
+                          asset.symbol.substring(0, 2)
                         )}
                       </div>
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-0">
                         <h3 className="font-semibold text-sm truncate">{asset.name}</h3>
                         <p className="text-xs text-var(--t3) truncate">{asset.symbol}</p>
                       </div>
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <div className={`font-mono font-bold tabular-nums text-sm ${
-                        asset.change > 0 ? 'pulse-green' : 'pulse-red'
-                      }`}>
-                        ${asset.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </div>
-                      <div className="flex items-center justify-end gap-1 text-xs">
-                        <span style={{ color: getChangeColor(asset.change) }}>
-                          {asset.change?.toFixed(2)}%
-                        </span>
-                        {getArrow(asset.change)}
+                    <div className="text-right">
+                      <p className="font-semibold text-sm">${asset.price?.toLocaleString()}</p>
+                      <div className="flex items-center gap-1 justify-end">
+                        {asset.change !== undefined && (
+                          <>
+                            <span className="text-xs" style={{ color: getChangeColor(asset.change) }}>
+                              {asset.change > 0 ? '+' : ''}{asset.change.toFixed(2)}%
+                            </span>
+                            {getArrow(asset.change)}
+                          </>
+                        )}
                       </div>
                     </div>
-                    <div className="ml-4 w-20 h-8">
-                      <Sparkline
-                        data={asset.sparkline}
-                        width={80}
-                        height={32}
-                        color={asset.change > 0 ? 'var(--green)' : 'var(--red)'}
-                        pulse={asset.change !== 0}
-                      />
+                    <div className="w-20 h-10 ml-4">
+                      <Sparkline data={asset.sparkline} color={asset.change > 0 ? 'var(--green)' : 'var(--red)'} />
                     </div>
                   </div>
                 ))}
