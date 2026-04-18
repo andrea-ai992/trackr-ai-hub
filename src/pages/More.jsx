@@ -1,6 +1,3 @@
-Je vais ajouter un toggle dark mode persistant dans le footer de la page `More` avec sauvegarde locale. Voici le code complet et fonctionnel pour le fichier `src/pages/More.jsx` :
-
-```jsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
@@ -47,8 +44,8 @@ const ModuleGrid = ({
             justifyContent: 'center',
             minHeight: 140,
             borderRadius: 'var(--radius-lg)',
-            background: onStoreToggle ? 'var(--green-bg)' : 'transparent',
-            border: `1.5px dashed ${onStoreToggle ? 'var(--border-hi)' : 'var(--border)'}`,
+            background: 'var(--bg2)',
+            border: `1.5px dashed var(--border)`,
             transition: 'all 0.2s ease',
           }}
         >
@@ -57,20 +54,20 @@ const ModuleGrid = ({
               width: 38,
               height: 38,
               borderRadius: 12,
-              background: onStoreToggle ? 'rgba(0,255,136,0.12)' : 'var(--bg3)',
+              background: 'var(--bg3)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               marginBottom: 8,
             }}
           >
-            <ChevronRight size={18} style={{ color: onStoreToggle ? 'var(--green)' : 'var(--t3)' }} />
+            <ChevronRight size={18} style={{ color: 'var(--t3)' }} />
           </div>
           <p
             style={{
               fontSize: 12,
               fontWeight: 600,
-              color: onStoreToggle ? 'var(--green)' : 'var(--t3)',
+              color: 'var(--t3)',
             }}
           >
             Ajouter
@@ -217,6 +214,33 @@ const ModuleCard = ({
   );
 };
 
+const useAbortableFetch = () => {
+  const [error, setError] = React.useState(null);
+
+  const abortableFetch = React.useCallback(async (url, options = {}) => {
+    setError(null);
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    try {
+      const response = await fetch(url, { ...options, signal });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        setError(err.message);
+      }
+      throw err;
+    } finally {
+      controller.abort();
+    }
+  }, []);
+
+  return { abortableFetch, error };
+};
+
 const More = () => {
   const navigate = useNavigate();
   const [pinned, setPinned] = React.useState(getPinned());
@@ -227,6 +251,14 @@ const More = () => {
     const savedMode = localStorage.getItem('darkMode');
     return savedMode !== null ? JSON.parse(savedMode) : true;
   });
+
+  const { abortableFetch, error } = useAbortableFetch();
+
+  React.useEffect(() => {
+    if (error) {
+      console.error('Erreur globale:', error);
+    }
+  }, [error]);
 
   const getPinned = () => {
     try {
@@ -438,79 +470,18 @@ const More = () => {
                 </p>
                 <p
                   style={{
-                    fontSize: 11,
+                    fontSize: 12,
                     color: 'var(--t3)',
-                    marginTop: 1,
+                    marginTop: 2,
                   }}
                 >
                   {m.desc}
                 </p>
               </div>
-              <span
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  fontSize: 10,
-                }}
-              >
-                Bientôt
-              </span>
             </div>
           ))}
         </div>
       )}
-
-      {/* ── Footer avec toggle dark mode persistant ── */}
-      <div
-        style={{
-          marginTop: 32,
-          padding: '16px 0',
-          borderTop: '1px solid var(--border)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <div>
-          <p
-            style={{
-              fontSize: 11,
-              color: 'var(--t3)',
-              marginBottom: 4,
-            }}
-          >
-            Trackr v1.9 | © 2025
-          </p>
-          <p
-            style={{
-              fontSize: 10,
-              color: 'var(--t3)',
-            }}
-          >
-            Mode sombre persistant
-          </p>
-        </div>
-        <button
-          onClick={handleDarkMode}
-          className="press-scale"
-          style={{
-            padding: '6px 12px',
-            borderRadius: 999,
-            fontSize: 11,
-            fontWeight: 600,
-            background: darkMode ? 'var(--green-bg)' : 'var(--bg2)',
-            border: `1px solid ${darkMode ? 'var(--border-hi)' : 'var(--border)'}`,
-            color: darkMode ? 'var(--green)' : 'var(--t2)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
-          {darkMode ? '🌙' : '☀️'}
-          <span>{darkMode ? 'Désactiver' : 'Activer'} le mode sombre</span>
-        </button>
-      </div>
     </div>
   );
 };
