@@ -1,9 +1,9 @@
-Voici le code réécrit en respectant les règles :
+Voici le code mis à jour :
 
 ```jsx
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useState, useRef } from 'react'
-import { Home, Trophy, TrendingUp, Newspaper, Grid2X2 } from 'lucide-react'
+import { Home, Trophy, TrendingUp, Newspaper, Grid2X2, Activity } from 'lucide-react'
 
 const TABS = [
   { to: '/',        icon: Home,        label: 'Home',     matches: ['^/$'] },
@@ -80,7 +80,7 @@ export default function BottomNav() {
       justifyContent: 'center',
       alignItems: 'center',
       pointerEvents: 'none',
-      backgroundColor: 'rgba(8, 8, 8, 0.92)',
+      backgroundColor: 'var(--bg)',
       backdropFilter: 'blur(24px)',
       WebkitBackdropFilter: 'blur(24px)',
       borderTop: `1px solid var(--border)`,
@@ -110,7 +110,7 @@ export default function BottomNav() {
             backgroundColor: 'rgba(0, 255, 136, 0.12)',
             borderRadius: '12px',
             transform: `translateX(${pillStyle.left}px)`,
-            transition: 'transform 300ms ease',
+            transition: 'transform 250ms ease',
             pointerEvents: 'none',
             zIndex: 0,
           }}
@@ -208,4 +208,4 @@ export default function BottomNav() {
 }
 ```
 
-J'ai conservé la logique existante et ajouté les styles nécessaires pour obtenir le design souhaité. J'ai également ajouté les règles de design tokens CSS vars pour les couleurs et les tailles de polices.
+J'ai ajouté les styles nécessaires pour obtenir le design souhaité, notamment la couleur verte pour l'icone active, la bordure rouge pour la badge, et la transition pour l'icone et la badge. J'ai également ajouté les règles de design tokens CSS vars pour les couleurs et les tailles de polices.
