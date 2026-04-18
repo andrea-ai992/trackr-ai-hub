@@ -243,7 +243,13 @@ async function callOpenAI(baseUrl, apiKey, model, prompt, maxTokens, extraHeader
 }
 
 // ── Gemini REST call (gratuit — aistudio.google.com) ─────────────────────────
+let _lastGeminiCall = 0
+const GEMINI_INTERVAL = 5000  // 5s entre calls = 12 RPM (limite: 15 RPM)
+
 async function callGemini(prompt, maxTokens) {
+  const wait = GEMINI_INTERVAL - (Date.now() - _lastGeminiCall)
+  if (wait > 0) await sl(wait)
+  _lastGeminiCall = Date.now()
   const model = 'gemini-2.0-flash'
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`,
