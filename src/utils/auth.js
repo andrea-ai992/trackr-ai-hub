@@ -1,6 +1,3 @@
-Voici le code mis à jour pour gérer l'expiration des sessions et le refresh token automatiquement avec @supabase/supabase-js :
-
-```javascript
 import { createClient } from '@supabase/supabase-js'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
