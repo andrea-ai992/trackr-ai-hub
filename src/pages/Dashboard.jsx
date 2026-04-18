@@ -1,4 +1,5 @@
 Voici la refonte complète de la page Dashboard en suivant les règles et les spécifications fournies :
+
 ```jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -56,6 +57,73 @@ function FGGauge({ value }) {
   );
 }
 
+function Movers({ data }) {
+  return (
+    <div className="scroll-row">
+      {data.map((item, i) => (
+        <div key={i} className="stagger-item" style={{ padding: 12, borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 24, height: 24, borderRadius: 12, background: item.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <TrendingUp size={16} color="white" />
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--t2)' }}>{item.name}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: item.pct >= 0 ? 'var(--green)' : '#ff4d4d' }}>{fmt(item.pct)}</span>
+            <Sparkline data={item.spark} width={36} height={12} color={item.pct >= 0 ? 'var(--green)' : '#ff4d4d'} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function News({ data }) {
+  return (
+    <div className="grid">
+      {data.map((item, i) => (
+        <div key={i} className="stagger-item" style={{ padding: 16, borderBottom: '1px solid var(--border)' }}>
+          <h2 style={{ fontSize: 16, fontWeight: 800, color: 'var(--t1)' }}>{item.title}</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--t2)' }}>{item.source}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--t2)' }}>{item.time}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function QuickActions({ data }) {
+  return (
+    <div className="grid">
+      {data.map((item, i) => (
+        <div key={i} className="stagger-item" style={{ padding: 16, borderBottom: '1px solid var(--border)' }}>
+          <button style={{
+            background: 'rgba(255, 255, 255, 0.04)',
+            border: '1px solid var(--border)',
+            borderRadius: 12,
+            padding: 16,
+            display: 'block',
+            position: 'relative',
+            overflow: 'hidden',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--t2)' }}>{item.name}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)' }}>{item.count}</span>
+                <div style={{ width: 24, height: 24, borderRadius: 12, background: item.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <TrendingUp size={16} color="white" />
+                </div>
+              </div>
+            </div>
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const { stocks, sneakers } = useApp();
@@ -63,26 +131,27 @@ export default function Dashboard() {
   const [fearGreed, setFearGreed] = useState(null);
   const [crypto, setCrypto] = useState([]);
   const [news, setNews] = useState([]);
+  const [loading, setLoading] = useState(true);
   const name = localStorage.getItem('nexus_name') || 'Andrea';
 
   useEffect(() => {
     const syms = [...new Set(stocks.filter(s => !s.salePrice).map(s => s.symbol).filter(Boolean))];
-    if (syms.length) fetchMultiplePrices(syms).then(setLivePrices);
+    if (syms.length) fetchMultiplePrices(syms).then(setLivePrices).finally(() => setLoading(false));
   }, [stocks.length]);
 
   useEffect(() => {
     fetch('https://api.alternative.me/fng/?limit=1', { signal: AbortSignal.timeout(8000) })
-      .then(r => r.json()).then(d => setFearGreed(d.data?.[0])).catch(() => {});
+      .then(r => r.json()).then(d => setFearGreed(d.data?.[0])).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
     fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,solana,binancecoin&order=market_cap_desc&sparkline=false&price_change_percentage=24h', { signal: AbortSignal.timeout(12000) })
-      .then(r => r.json()).then(d => setCrypto(Array.isArray(d) ? d : [])).catch(() => {});
+      .then(r => r.json()).then(d => setCrypto(Array.isArray(d) ? d : [])).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
     fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://feeds.bbci.co.uk/news/business/rss.xml') + '&count=4', { signal: AbortSignal.timeout(10000) })
-      .then(r => r.json()).then(d => setNews(d.items || [])).catch(() => {});
+      .then(r => r.json()).then(d => setNews(d.items || [])).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   const open = stocks.filter(s => !s.salePrice);
@@ -297,104 +366,4 @@ export default function Dashboard() {
           marginBottom: 8,
           lineHeight: 1,
         }}>
-          {fmt(cur)}
-        </div>
-
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          marginBottom: 20,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {isUp ? (
-              <ArrowUpRight size={16} color="var(--green)" />
-            ) : (
-              <ArrowDownRight size={16} color="#ff4d4d" />
-            )}
-            <span style={{
-              fontSize: 14,
-              fontWeight: 700,
-              color: isUp ? 'var(--green)' : '#ff4d4d',
-            }}>
-              {fmt(Math.abs(pnl))}
-            </span>
-          </div>
-          <span className={`pill ${isUp ? 'pill-up' : 'pill-down'}`}>
-            {fmtPct(pnlPct)}
-          </span>
-        </div>
-
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{
-              width: 36,
-              height: 36,
-              borderRadius: 12,
-              background: 'rgba(0,255,136,0.1)',
-              border: '1px solid rgba(0,255,136,0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <TrendingUp size={16} color="var(--green)" />
-            </div>
-            <span style={{
-              fontSize: 11,
-              fontWeight: 700,
-              color: 'var(--t2)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-            }}>
-              Total
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <div className="live-dot" style={{ width: 5, height: 5 }} />
-            <span style={{
-              fontSize: 10,
-              color: 'var(--green)',
-              fontWeight: 600,
-            }}>
-              Live
-            </span>
-          </div>
-        </div>
-
-        <div style={{
-          fontSize: 24,
-          fontWeight: 700,
-          color: 'var(--t1)',
-          letterSpacing: '-0.3px',
-          marginTop: 16,
-        }}>
-          +2.4%
-        </div>
-
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{
-              width: 36,
-              height: 36,
-              borderRadius: 12,
-              background: 'rgba(0,255,136,0.1)',
-              border: '1px solid rgba(0,255,136,0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <TrendingUp size={16} color="var(--green)" />
-            </div>
-            <span style={{
-              fontSize: 11,
-              fontWeight: 700,
-              color: 'var(--t2)',
-              textTransform
+          {fmt(cur
