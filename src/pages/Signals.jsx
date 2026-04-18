@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import { Container, Row, Col } from 'lucide-react';
-import { supabase } from '../supabaseClient';
+const Container = ({children,className='',...p}) => <div className={className} {...p}>{children}</div>; const Row = Container; const Col = Container;
+import { supabase } from '../lib/supabaseClient';
 
 const Signals = () => {
   const [signals, setSignals] = useState([

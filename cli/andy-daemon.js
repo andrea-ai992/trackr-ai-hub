@@ -67,8 +67,12 @@ function log(msg) {
 const sl = ms => new Promise(r => setTimeout(r, ms))
 
 // ── Discord ───────────────────────────────────────────────────────────────────
+// Cache des channels valides pour éviter le spam de 404
+const _deadChannels = new Set()
+
 async function discordPost(channelId, content) {
-  if (!BOT_TOKEN || !channelId) { log('Discord: BOT_TOKEN ou channelId manquant'); return false }
+  if (!BOT_TOKEN || !channelId) return false
+  if (_deadChannels.has(channelId)) return false
   try {
     const r = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
       method: 'POST',
@@ -78,7 +82,12 @@ async function discordPost(channelId, content) {
     })
     if (!r.ok) {
       const body = await r.text().catch(() => '')
-      log(`Discord error ${r.status}: ${body.slice(0, 100)}`)
+      if (r.status === 404 || r.status === 403) {
+        _deadChannels.add(channelId)
+        log(`Discord: channel ${channelId} introuvable — désactivé`)
+      } else {
+        log(`Discord error ${r.status}: ${body.slice(0, 80)}`)
+      }
     }
     return r.ok
   } catch (e) { log(`Discord exception: ${e.message}`); return false }
@@ -573,10 +582,26 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
     }
     // Reject if output is prose (doesn't start like code)
     const ext = op.path.split('.').pop()
-    const looksLikeCode = /^(import |export |const |let |var |function |\/\/|<!|{|\()/.test(clean)
-    const looksLikeCSS = /^[.#@a-zA-Z:*]/.test(clean) && clean.includes('{')
-    if (!looksLikeCode && !looksLikeCSS) throw new Error(`Réponse IA invalide pour ${op.path} — commence par: ${clean.slice(0,50)}`)
+    const ext = op.path.split('.').pop().toLowerCase()
+    const looksLikeCode = /^(import |export |const |let |var |function |\/\/|<!|{|\(|'use )/.test(clean)
+    const looksLikeCSS  = (ext === 'css' || ext === 'scss') && /^[.#@:*a-zA-Z\[]/.test(clean) && clean.includes('{')
+    const looksLikeMd   = (ext === 'md' || ext === 'txt') && clean.length > 20
+    const looksLikeJson = (ext === 'json') && /^\s*[\[{]/.test(clean)
+    if (!looksLikeCode && !looksLikeCSS && !looksLikeMd && !looksLikeJson)
+      throw new Error(`Réponse IA invalide pour ${op.path} — commence par: ${clean.slice(0,50)}`)
     if (clean.length < 50) throw new Error('Code trop court')
+
+    // Interdire imports de libs non installées (cause builds cassés)
+    const BANNED_IMPORTS = ['recharts', 'framer-motion', 'chart.js', 'styled-components', 'emotion', 'antd', 'material-ui', '@mui', 'bootstrap', 'sass', 'node-sass', 'BrowserRouter', 'Container, Row, Col']
+    const bannedFound = BANNED_IMPORTS.filter(b => clean.includes(`from '${b}'`) || clean.includes(`from "${b}"`))
+    if (bannedFound.length) throw new Error(`Import interdit détecté: ${bannedFound.join(', ')} — lib non installée`)
+
+    // Interdire code tronqué (JSX sans export default)
+    if ((ext === 'jsx' || ext === 'tsx' || ext === 'js' || ext === 'ts') && clean.length > 200) {
+      if (!clean.includes('export default') && !clean.includes('export {') && !clean.includes('module.exports')) {
+        throw new Error(`Code tronqué — pas d'export dans ${op.path}`)
+      }
+    }
 
     stage('safe')
 
