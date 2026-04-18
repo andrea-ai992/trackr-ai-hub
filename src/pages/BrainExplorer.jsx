@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, RefreshCw, ChevronRight, ChevronDown, Activity, CheckCircle, XCircle, Clock, Zap, Cpu, GitCommit } from 'lucide-react'
 
@@ -142,19 +142,22 @@ export default function BrainExplorer() {
   const [newTask, setNewTask] = useState('')
   const [feedback, setFeedback] = useState('')
   const [timeoutErrors, setTimeoutErrors] = useState({ live: false, tasks: false })
-
-  const controllerRef = useCallback(() => {
-    const controller = new AbortController()
-    return controller
-  }, [])
+  const abortControllersRef = useRef({ live: null, tasks: null, task: null })
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
     setTimeoutErrors({ live: false, tasks: false })
 
     try {
-      const liveController = controllerRef()
-      const tasksController = controllerRef()
+      // Abort previous requests
+      if (abortControllersRef.current.live) abortControllersRef.current.live.abort()
+      if (abortControllersRef.current.tasks) abortControllersRef.current.tasks.abort()
+
+      const liveController = new AbortController()
+      const tasksController = new AbortController()
+
+      abortControllersRef.current.live = liveController
+      abortControllersRef.current.tasks = tasksController
 
       const [liveR, tasksR] = await Promise.all([
         fetch(`${SERVER}/api/live`,  {
@@ -189,23 +192,32 @@ export default function BrainExplorer() {
         if (err.message.includes('/api/tasks')) {
           setTimeoutErrors(prev => ({ ...prev, tasks: true }))
         }
-      } else {
+      } else if (err.name !== 'AbortError') {
         console.error('Error fetching data:', err)
       }
     } finally {
       setLoading(false)
     }
-  }, [controllerRef])
+  }, [])
 
   useEffect(() => {
     load()
     const id = setInterval(() => load(true), 4000)
-    return () => clearInterval(id)
+    return () => {
+      clearInterval(id)
+      if (abortControllersRef.current.live) abortControllersRef.current.live.abort()
+      if (abortControllersRef.current.tasks) abortControllersRef.current.tasks.abort()
+    }
   }, [load])
 
   const submitTask = async () => {
     if (!newTask) return
     try {
+      if (abortControllersRef.current.task) abortControllersRef.current.task.abort()
+
+      const controller = new AbortController()
+      abortControllersRef.current.task = controller
+
       const response = await fetch(`${SERVER}/api/task`, {
         method: 'POST',
         headers: { ...HEADERS, 'Content-Type': 'application/json' },
@@ -230,6 +242,8 @@ export default function BrainExplorer() {
         ? 'Timeout lors de l\'ajout de la tâche'
         : 'Erreur réseau lors de l\'ajout de la tâche')
       setTimeout(() => setFeedback(''), 3000)
+    } finally {
+      abortControllersRef.current.task = null
     }
   }
 
@@ -269,13 +283,7 @@ export default function BrainExplorer() {
             <ArrowLeft size={16} />
           </button>
           <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-              <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--t1)' }}>AnDy Explorer</span>
-              {isLive && <span style={{ width: 8, height: 8, background: 'var(--green)', borderRadius: '50%', boxShadow: '0 0 6px var(--green)' }} />}
-            </div>
-            <p style={{ fontSize: 10, color: isLive ? 'var(--green)' : 'var(--red)', marginTop: 1 }}>
-              {isLive ? `live · ${age}s` : 'daemon hors ligne'}
-            </p>
-          </div>
-          <button onClick={() => load()} style={{ width: 34, height: 34, borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: loading ? 'var(--t3)' : 'var(--t2)' }}>
-            <RefreshC
+            <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--t1)' }}>Brain Explorer</h1>
+            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+              <span style={{ fontSize: 10, color: isLive ? 'var(--green)' : 'var(--t3)' }}>
+                {isLive ?
