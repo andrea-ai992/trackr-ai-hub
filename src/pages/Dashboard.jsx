@@ -236,10 +236,10 @@ export default function Dashboard() {
           width: '100%',
           textAlign: 'left',
           marginBottom: 16,
-          background: 'var(--bg2)',
+          background: 'rgba(255, 255, 255, 0.04)',
           backdropFilter: 'blur(12px)',
           border: `1px solid ${isUp ? 'rgba(0,255,136,0.2)' : 'rgba(255,77,77,0.2)'}`,
-          borderRadius: 'var(--radius-xl)',
+          borderRadius: '12px',
           padding: '24px',
           display: 'block',
           position: 'relative',
@@ -332,56 +332,76 @@ export default function Dashboard() {
         </div>
       </button>
 
-      {/* Movers Section */}
+      {/* Top Movers */}
       <div className="stagger-item" style={{ marginBottom: 24 }}>
-        <h2 className="section-label">Movers</h2>
+        <h2 style={{
+          fontSize: 18,
+          fontWeight: 700,
+          color: 'var(--t1)',
+          marginBottom: 12
+        }}>Top Movers</h2>
         <div className="scroll-row">
-          {crypto.map(coin => (
-            <div key={coin.id} style={{
-              background: 'var(--bg2)',
+          {crypto.map(c => (
+            <div key={c.id} style={{
+              background: 'rgba(255, 255, 255, 0.04)',
               borderRadius: '12px',
               padding: '16px',
-              minWidth: '120px',
+              minWidth: 120,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'flex-start',
-              gap: 4
+              gap: 8
             }}>
-              <span style={{ fontWeight: 700, color: coinColor[coin.id] }}>{coin.symbol.toUpperCase()}</span>
-              <span style={{ color: coin.price_change_percentage_24h >= 0 ? 'var(--green)' : '#ff4d4d' }}>
-                {fmt(coin.current_price)} ({fmtPct(coin.price_change_percentage_24h)})
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8
+              }}>
+                <div style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: '50%',
+                  backgroundColor: coinColor[c.id],
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white'
+                }}>{c.symbol.toUpperCase()}</div>
+                <span style={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: 'var(--t1)'
+                }}>{fmt(c.current_price)}</span>
+              </div>
+              <span style={{
+                fontSize: 12,
+                fontWeight: 500,
+                color: c.price_change_percentage_24h >= 0 ? 'var(--green)' : '#ff4d4d'
+              }}>
+                {fmtPct(c.price_change_percentage_24h)}
               </span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Fear & Greed Section */}
+      {/* Fear & Greed Gauge */}
       <div className="stagger-item" style={{ marginBottom: 24 }}>
-        <h2 className="section-label">Fear & Greed</h2>
+        <h2 style={{
+          fontSize: 18,
+          fontWeight: 700,
+          color: 'var(--t1)',
+          marginBottom: 12
+        }}>Fear & Greed</h2>
         <FGGauge value={fg} />
       </div>
 
-      {/* News Feed Section */}
+      {/* News Feed */}
       <div className="stagger-item" style={{ marginBottom: 24 }}>
-        <h2 className="section-label">Dernières nouvelles</h2>
-        {news.slice(0, 3).map(item => (
-          <div key={item.guid} style={{
-            background: 'var(--bg2)',
-            borderRadius: '12px',
-            padding: '16px',
-            marginBottom: 8
-          }}>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)', margin: 0 }}>{item.title}</h3>
-            <span style={{ fontSize: 12, color: 'var(--t2)' }}>{item.source} - {new Date(item.pubDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Quick Actions Section */}
-      <div className="grid">
-        <button className="action-button press-scale" onClick={() => navigate('/markets')}>
-          <Wallet size={24} color="var(--t1)" />
-          <span>Markets</span>
-        </button>
-        <button className="action-button press-scale" on
+        <h2 style={{
+          fontSize: 18,
+          fontWeight: 700,
+          color: 'var(--t1)',
+          marginBottom: 12
+        }}>Dernières Nouvelles</h2>
+        {news.slice(0, 3).map(n
