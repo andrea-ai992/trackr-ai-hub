@@ -18,6 +18,10 @@ export const useAbortableFetch = () => {
       const response = await fetch(url, {
         ...options,
         signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
       });
 
       if (!response.ok) {
@@ -29,7 +33,9 @@ export const useAbortableFetch = () => {
       return result;
     } catch (err) {
       if (err.name === 'AbortError') {
-        setError('Request timed out');
+        setError('Request timed out after 10 seconds');
+      } else if (err.message.includes('Failed to fetch')) {
+        setError('Network error. Please check your connection.');
       } else {
         setError(err.message);
       }
