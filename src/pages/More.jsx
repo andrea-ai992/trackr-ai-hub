@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import ModuleCard from './ModuleCard';
 import { ChevronRight } from 'lucide-react';
 import { ALL_MODULES, COMING_SOON, PINNED_KEY } from './constants';
 
@@ -17,8 +16,8 @@ const ModuleGrid = ({
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: 10,
+        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+        gap: 12,
         marginBottom: 16,
       }}
     >
@@ -47,6 +46,7 @@ const ModuleGrid = ({
             borderRadius: 'var(--radius-lg)',
             background: onStoreToggle ? 'var(--green-bg)' : 'transparent',
             border: `1.5px dashed ${onStoreToggle ? 'var(--border-hi)' : 'var(--border)'}`,
+            transition: 'all 0.2s ease',
           }}
         >
           <div
@@ -91,13 +91,136 @@ const ModuleGrid = ({
   );
 };
 
+const ModuleCard = ({
+  icon: Icon,
+  label,
+  desc,
+  badge,
+  editMode,
+  onPinToggle,
+  onClick,
+}) => {
+  return (
+    <div
+      onClick={onClick}
+      className="press-scale"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+        padding: 12,
+        borderRadius: 'var(--radius-md)',
+        background: 'var(--bg2)',
+        border: '1px solid var(--border)',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        position: 'relative',
+        minHeight: 140,
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+        }}
+      >
+        <div
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: 12,
+            background: badge ? 'rgba(0,255,136,0.12)' : 'var(--bg3)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {Icon && <Icon size={19} style={{ color: badge ? 'var(--green)' : 'var(--t1)' }} />}
+        </div>
+        {editMode && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onPinToggle();
+            }}
+            className="press-scale"
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: 999,
+              background: 'var(--bg3)',
+              border: '1px solid var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 10,
+              color: 'var(--t3)',
+            }}
+          >
+            {badge === 'pinned' ? '✓' : '📌'}
+          </button>
+        )}
+      </div>
+
+      <div style={{ flex: 1, minHeight: 0 }}>
+        <h3
+          style={{
+            fontSize: 14,
+            fontWeight: 600,
+            color: 'var(--t1)',
+            marginBottom: 4,
+            textOverflow: 'ellipsis',
+            overflow: 'hidden',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {label}
+        </h3>
+        <p
+          style={{
+            fontSize: 11,
+            color: 'var(--t3)',
+            textOverflow: 'ellipsis',
+            overflow: 'hidden',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+          }}
+        >
+          {desc}
+        </p>
+      </div>
+
+      {badge && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 8,
+            right: 12,
+            fontSize: 9,
+            fontWeight: 700,
+            color: 'var(--bg)',
+            background: badge === 'new' ? 'var(--green)' : 'var(--border-hi)',
+            padding: '2px 6px',
+            borderRadius: 999,
+            border: badge === 'new' ? '1px solid var(--green)' : 'none',
+          }}
+        >
+          {badge === 'new' ? 'NEW' : 'LIVE'}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const More = () => {
   const navigate = useNavigate();
-  const [pinned, setPinned] = useState(getPinned());
-  const [unpinned, setUnpinned] = useState(ALL_MODULES.filter((m) => !pinned.includes(m.id)));
-  const [showStore, setShowStore] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [darkMode, setDarkMode] = useState(true);
+  const [pinned, setPinned] = React.useState(getPinned());
+  const [unpinned, setUnpinned] = React.useState(ALL_MODULES.filter((m) => !pinned.includes(m.id)));
+  const [showStore, setShowStore] = React.useState(false);
+  const [editMode, setEditMode] = React.useState(false);
+  const [darkMode, setDarkMode] = React.useState(true);
 
   const getPinned = () => {
     try {
@@ -111,6 +234,7 @@ const More = () => {
     setPinned((prev) => {
       const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
       localStorage.setItem(PINNED_KEY, JSON.stringify(next));
+      setUnpinned(ALL_MODULES.filter((m) => !next.includes(m.id)));
       return next;
     });
   };
@@ -123,7 +247,7 @@ const More = () => {
     setDarkMode(!darkMode);
   };
 
-  useEffect(() => {
+  React.useEffect(() => {
     document.body.classList.add('dark-mode');
     if (!darkMode) {
       document.body.classList.remove('dark-mode');
@@ -255,7 +379,7 @@ const More = () => {
             items={unpinned}
             editMode={false}
             onPinToggle={togglePin}
-            onItemClick={() => {}}
+            onItemClick={(to) => navigate(to)}
             emptyMessage="Tous les modules sont ajoutés !"
           />
           {COMING_SOON.map((m) => (
@@ -268,6 +392,7 @@ const More = () => {
                 padding: '13px 16px',
                 borderTop: '1px solid var(--border)',
                 opacity: 0.45,
+                cursor: 'not-allowed',
               }}
             >
               <div
@@ -344,7 +469,9 @@ const More = () => {
             display: 'flex',
             alignItems: 'center',
             gap: 13,
+            cursor: 'pointer',
           }}
+          onClick={() => navigate('/settings')}
         >
           <div
             style={{
