@@ -1,15 +1,135 @@
-Je vais implémenter un système de timeout robuste pour `src/api/andy.js` en utilisant `AbortSignal.timeout()` et améliorer la gestion des erreurs. Voici les modifications :
+Je vais corriger les appels fetch() sans timeout dans `src/api/brain.js` et `src/api/andy.js` en implémentant un système de timeout robuste avec `AbortSignal.timeout()`.
+
+**src/api/brain.js**
+```javascript
+import axios from 'axios';
+
+const DEFAULT_TIMEOUT = 10000; // 10 secondes par défaut
+
+const brain = {
+  async fetchPatterns(timeout = DEFAULT_TIMEOUT) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+      const response = await axios.get('/api/patterns', {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      return response.data;
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error(`Patterns fetch timed out after ${timeout}ms`);
+      }
+      if (error.response) {
+        throw new Error(`Patterns fetch failed with status ${error.response.status}: ${error.response.statusText}`);
+      }
+      throw error;
+    }
+  },
+
+  async fetchPatternDetails(patternId, timeout = DEFAULT_TIMEOUT) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+      const response = await axios.get(`/api/patterns/${patternId}`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      return response.data;
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error(`Pattern details fetch timed out after ${timeout}ms`);
+      }
+      if (error.response) {
+        throw new Error(`Pattern details fetch failed with status ${error.response.status}: ${error.response.statusText}`);
+      }
+      throw error;
+    }
+  },
+
+  async createPattern(data, timeout = DEFAULT_TIMEOUT) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+      const response = await axios.post('/api/patterns', data, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      return response.data;
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error(`Pattern creation timed out after ${timeout}ms`);
+      }
+      if (error.response) {
+        throw new Error(`Pattern creation failed with status ${error.response.status}: ${error.response.statusText}`);
+      }
+      throw error;
+    }
+  },
+
+  async updatePattern(patternId, data, timeout = DEFAULT_TIMEOUT) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+      const response = await axios.put(`/api/patterns/${patternId}`, data, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      return response.data;
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error(`Pattern update timed out after ${timeout}ms`);
+      }
+      if (error.response) {
+        throw new Error(`Pattern update failed with status ${error.response.status}: ${error.response.statusText}`);
+      }
+      throw error;
+    }
+  },
+
+  async deletePattern(patternId, timeout = DEFAULT_TIMEOUT) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+      const response = await axios.delete(`/api/patterns/${patternId}`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      return response.data;
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error(`Pattern deletion timed out after ${timeout}ms`);
+      }
+      if (error.response) {
+        throw new Error(`Pattern deletion failed with status ${error.response.status}: ${error.response.statusText}`);
+      }
+      throw error;
+    }
+  }
+};
+
+export default brain;
+```
 
 **src/api/andy.js**
 ```javascript
 import axios from 'axios';
 import { SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://your-supabase-url.supabase.co';
-const supabaseKey = 'your-supabase-key';
-const supabaseSecret = 'your-supabase-secret';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-const supabase = new SupabaseClient(supabaseUrl, supabaseKey, supabaseSecret);
+const supabase = new SupabaseClient(supabaseUrl, supabaseKey);
 
 const DEFAULT_TIMEOUT = 10000; // 10 secondes par défaut
 
@@ -94,134 +214,28 @@ const andy = {
       throw error;
     }
   },
+
+  async chat(query, timeout = DEFAULT_TIMEOUT) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+      const response = await axios.post('/chat', { query }, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      return response.data;
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error(`Chat request timed out after ${timeout}ms`);
+      }
+      if (error.response) {
+        throw new Error(`Chat request failed with status ${error.response.status}: ${error.response.statusText}`);
+      }
+      throw error;
+    }
+  }
 };
 
 export default andy;
-```
-
-**src/pages/More/index.js**
-```javascript
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import andy from '../../api/andy';
-
-function More() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState(null);
-  const [lastRefresh, setLastRefresh] = useState(null);
-
-  useEffect(() => {
-    const intervalId = setInterval(async () => {
-      try {
-        await andy.refreshToken();
-        setLastRefresh(new Date());
-        setError(null);
-      } catch (error) {
-        setError(error.message);
-      }
-    }, 60 * 1000); // Refresh token every 1 minute
-
-    return () => clearInterval(intervalId);
-  }, []);
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    setError(null);
-    try {
-      await andy.refreshToken();
-      setLastRefresh(new Date());
-      navigate(location.pathname, { replace: true });
-    } catch (error) {
-      setError(error.message);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  return (
-    <div className="container">
-      <h1 className="title">More</h1>
-      <div className="refresh-info">
-        {lastRefresh && (
-          <p className="last-refresh">
-            Last refresh: {lastRefresh.toLocaleTimeString()}
-          </p>
-        )}
-      </div>
-      <button
-        className="refresh-button"
-        onClick={handleRefresh}
-        disabled={refreshing}
-      >
-        {refreshing ? 'Refreshing...' : 'Refresh Token'}
-      </button>
-      {error && <p className="error">{error}</p>}
-    </div>
-  );
-}
-
-export default More;
-```
-
-**src/pages/More/index.css**
-```css
-.container {
-  max-width: 400px;
-  margin: 40px auto;
-  padding: 20px;
-  background-color: var(--bg);
-  color: var(--t1);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-family: 'Inter', sans-serif;
-}
-
-.title {
-  margin-top: 0;
-  color: var(--green);
-  font-size: 24px;
-  text-align: center;
-}
-
-.refresh-info {
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.last-refresh {
-  font-size: 14px;
-  color: var(--t3);
-  margin: 0;
-}
-
-.refresh-button {
-  display: block;
-  width: 100%;
-  background-color: var(--green);
-  color: var(--t1);
-  border: none;
-  padding: 12px 20px;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-}
-
-.refresh-button:hover:not(:disabled) {
-  background-color: color-mix(in srgb, var(--green), black 20%);
-}
-
-.refresh-button:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.error {
-  color: #ff4444;
-  font-size: 14px;
-  margin-top: 10px;
-  text-align: center;
-}
