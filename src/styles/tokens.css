@@ -1,0 +1,135 @@
+src/styles/tokens.css
+```css
+:root {
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --bg3: #1a1a1a;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-hi: rgba(0, 255, 136, 0.2);
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --font: 'Inter', sans-serif;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter.var.woff2') format('woff2-variations');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  background-color: var(--bg);
+  color: var(--t1);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100dvh;
+  background-color: var(--bg);
+  color: var(--t1);
+}
+
+a {
+  color: var(--t1);
+  text-decoration: none;
+}
+
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+input, textarea, select {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--t1);
+  font-family: var(--font);
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--green);
+}
+```
+
+src/components/Card/Card.jsx
+```jsx
+import React, { useEffect, useRef } from 'react';
+import './Card.css';
+
+export const Card = ({ children, className = '', delay = 0 }) => {
+  const cardRef = useRef(null);
+
+  useEffect(() => {
+    const card = cardRef.current;
+    if (!card) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const index = Array.from(card.parentNode.children).indexOf(card);
+            const delayMs = delay + index * 340;
+
+            setTimeout(() => {
+              card.style.opacity = '1';
+              card.style.transform = 'translateY(0)';
+            }, delayMs);
+            observer.unobserve(card);
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(card);
+
+    return () => observer.disconnect();
+  }, [delay]);
+
+  return (
+    <div
+      ref={cardRef}
+      className={`card ${className}`}
+      style={{
+        opacity: 0,
+        transform: 'translateY(20px)',
+        transition: 'opacity 340ms ease-out, transform 340ms ease-out',
+      }}
+    >
+      {children}
+    </div>
+  );
+};
+```
+
+src/components/Card/Card.css
+```css
+.card {
+  width: 100%;
+  max-width: 100%;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  background-color: var(--bg2);
+  border: 1px solid var(--border);
+  transition: opacity 340ms ease-out, transform 340ms ease-out;
+}
+
+.card:hover {
+  border-color: var(--border-hi);
+}
