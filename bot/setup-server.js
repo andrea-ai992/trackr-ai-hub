@@ -1,6 +1,6 @@
-// ─── Setup Discord Server — Run once ──────────────────────────────────────────
+// ─── Setup Discord Server — Full Reset & Rebuild ──────────────────────────────
 // node bot/setup-server.js
-// Crée toutes les catégories + channels + poste le guide
+// Supprime tout, recrée proprement, poste le guide
 
 import { readFileSync, writeFileSync } from 'fs'
 import { resolve, dirname } from 'path'
@@ -23,189 +23,181 @@ const H        = { Authorization: `Bot ${TOKEN}`, 'Content-Type': 'application/j
 
 if (!TOKEN || !GUILD_ID) { console.error('❌ TOKEN ou GUILD_ID manquant'); process.exit(1) }
 
-async function api(method, path, body) {
+async function req(method, path, body) {
+  await sleep(350) // respect rate limits
   const r = await fetch(`${API}${path}`, {
     method, headers: H,
-    ...(body ? { body: JSON.stringify(body) } : {})
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {})
   })
+  if (r.status === 429) {
+    const d = await r.json().catch(() => ({}))
+    const wait = (d.retry_after || 2) * 1000 + 500
+    console.log(`  ⏳ Rate limit — attente ${wait}ms`)
+    await sleep(wait)
+    return req(method, path, body)
+  }
   const text = await r.text()
-  try { return JSON.parse(text) } catch { return { _raw: text, status: r.status } }
+  try { return { ok: r.ok, status: r.status, data: JSON.parse(text) } }
+  catch { return { ok: r.ok, status: r.status, data: text } }
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
-// ─── Structure du serveur ─────────────────────────────────────────────────────
+// ─── Nouvelle structure consumer-friendly ────────────────────────────────────
 const STRUCTURE = [
   {
-    category: '📋 GUIDE',
+    name: '🏠 Accueil',
     channels: [
-      { name: 'guide-andy',  topic: 'Guide complet — commandes & statut live · mis à jour auto' },
-      { name: 'bienvenue',   topic: 'Bienvenue sur le serveur AnDy' },
+      { name: 'bienvenue',  topic: 'Bienvenue sur le serveur AnDy · Trackr Intelligence' },
+      { name: 'guide',      topic: 'Guide complet AnDy — commandes & statut live · mis à jour automatiquement', isGuide: true },
+      { name: 'annonces',   topic: 'Annonces importantes — output seulement' },
     ]
   },
   {
-    category: '🧠 ANDY IA',
+    name: '🤖 AnDy',
     channels: [
-      { name: 'andy-chat',   topic: 'Chat IA général — pose n\'importe quelle question' },
-      { name: 'andy-voice',  topic: 'Commandes vocales & transcriptions' },
+      { name: 'chat',         topic: 'Parle à AnDy — questions, idées, conseils, n\'importe quoi' },
+      { name: 'tâches',       topic: '!task <desc> · !urgent <desc> · !status · !queue — Donner des tâches à AnDy' },
+      { name: 'mémoire',      topic: 'Ce qu\'AnDy a appris et retenu — log automatique' },
     ]
   },
   {
-    category: '📊 FINANCE',
+    name: '📊 Marchés',
     channels: [
-      { name: 'crypto',          topic: 'Crypto, Bitcoin, altcoins — analyses AnDy' },
-      { name: 'trading',         topic: 'Trading, positions, thèses' },
-      { name: 'market-scanner',  topic: 'Scanner marchés — signaux auto' },
-      { name: 'oracle-predictions', topic: 'Prédictions IA — ne pas utiliser comme conseil' },
+      { name: 'crypto',     topic: 'Bitcoin, altcoins, DeFi — analyses & discussions' },
+      { name: 'trading',    topic: 'Positions, niveaux, thèses de trading' },
+      { name: 'signaux',    topic: 'Signaux automatiques — output AnDy' },
+      { name: 'actus',      topic: 'Actualités financières — flux auto' },
     ]
   },
   {
-    category: '🔧 DÉVELOPPEMENT',
+    name: '🏗️ Trackr',
     channels: [
-      { name: 'dev',          topic: 'Développement Trackr — questions, idées, code' },
-      { name: 'tasks',        topic: '!task, !urgent, !status, !queue' },
-      { name: 'deployments',  topic: 'Déploiements Vercel — commits & releases' },
-      { name: 'code-review',  topic: 'Reviews de code — output AnDy' },
-      { name: 'bugs',         topic: 'Bugs détectés — issues à résoudre' },
-      { name: 'performance',  topic: 'Métriques & optimisations' },
+      { name: 'déploiements', topic: 'Commits GitHub & déploiements Vercel — !deploy' },
+      { name: 'bugs',         topic: 'Bugs & issues — !task fix: description' },
+      { name: 'idées',        topic: 'Idées de features — envoie tes suggestions' },
     ]
   },
   {
-    category: '📡 MONITORING',
+    name: '📡 Statut',
     channels: [
-      { name: 'brain-cycles', topic: 'IA autonome — cycles d\'amélioration' },
-      { name: 'agent-forge',  topic: 'Agents IA en action' },
-      { name: 'app-pulse',    topic: 'Statut app & alertes auto' },
-      { name: 'andy-logs',    topic: 'Logs daemon — notifications secondaires' },
+      { name: 'live',       topic: 'Statut daemon IA en direct — tasks running, queue, done' },
+      { name: 'logs',       topic: 'Logs système — output seulement' },
     ]
   },
   {
-    category: '🔒 ADMIN',
+    name: '🔐 Admin',
     channels: [
-      { name: 'admin',        topic: 'Commandes admin — accès restreint' },
-      { name: 'admin-tasks',  topic: 'Tâches admin — !task, !run, !status' },
-      { name: 'admin-logs',   topic: 'Logs admin — output only' },
+      { name: 'admin',      topic: 'Commandes admin — accès restreint' },
     ]
   },
 ]
 
-const GUIDE_CONTENT = `# ⟨◈⟩ AnDy — Guide & Statut
+// ─── Guide content ────────────────────────────────────────────────────────────
+function buildGuide() {
+  const now = new Date().toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return `# ⟨◈⟩ AnDy — Guide
 
-## 🧠 AnDy (bot principal)
-Parle normalement dans n'importe quel canal.
+## 💬 Parler à AnDy
+Va dans **#chat** et écris ce que tu veux — AnDy répond à tout.
 
-| Commande | Action |
-|---------|--------|
-| \`!think <question>\` | Analyse approfondie |
-| \`!web <question>\` | Mode infos récentes |
-| \`!task <desc>\` | Créer une tâche IA (admin) |
-| \`!status\` | Statut du bot |
-| \`!help\` | Aide complète |
+\`!think <question>\` → analyse approfondie
+\`!web <question>\` → infos récentes
 
 ---
 
-## 🔧 AnDy Dev (bot développement)
-Actif dans : \`#dev\` \`#tasks\` \`#deployments\` \`#bugs\`
+## ✅ Donner une tâche
+Va dans **#tâches** :
 
-| Commande | Action |
-|---------|--------|
-| \`!task <desc>\` | Tâche manuelle (priorité haute) |
-| \`!urgent <desc>\` | Tâche urgente — interruption immédiate |
-| \`!status\` | DONE / QUEUE / RUNNING / ERROR |
-| \`!queue\` | Liste complète de la queue |
-| \`!logs [n]\` | Derniers logs daemon |
-| \`!deploy\` | Derniers commits GitHub |
+\`!task redesign la page dashboard\` → tâche normale
+\`!urgent fix le bug de login\` → priorité max, interrompt tout
+
+\`!status\` → voir ce qu'AnDy est en train de faire
+\`!queue\` → voir toutes les tâches en attente
+\`!logs\` → voir les derniers logs
+\`!deploy\` → voir les derniers commits
 
 ---
 
-## 📡 Channels
-| Canal | Rôle |
-|-------|------|
-| \`#andy-chat\` | 🧠 Chat IA général |
-| \`#crypto\` \`#trading\` | 📊 Finance & marchés |
-| \`#dev\` \`#tasks\` | 🔧 Développement |
-| \`#deployments\` | 🚀 Commits & releases |
-| \`#brain-cycles\` | 🤖 IA autonome |
-| \`#bugs\` \`#performance\` | 🐛 Issues |
+## 📊 Finance
+**#crypto** et **#trading** → parle à AnDy de tes positions, il analyse comme un trader pro.
 
-*Se rafraîchit automatiquement toutes les 5 min*`
+---
 
+## 🏗️ Trackr App
+**#déploiements** → chaque commit GitHub apparaît ici automatiquement
+**#bugs** → signale un bug avec \`!task fix: description du bug\`
+**#idées** → tes suggestions de features
+
+---
+
+## 📡 Statut en direct
+**#live** → daemon IA online/offline, tâche en cours, queue
+
+---
+
+*Mis à jour le ${now} · Se rafraîchit toutes les 5 min*`
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
 async function setup() {
-  console.log('🚀 Setup serveur Discord...\n')
+  console.log('🚀 Reset & Setup serveur Discord...\n')
 
-  // Récupère les channels existants
-  const existing = await api('GET', `/guilds/${GUILD_ID}/channels`)
+  // 1. Récupère tous les channels existants
+  const { data: existing } = await req('GET', `/guilds/${GUILD_ID}/channels`)
   if (!Array.isArray(existing)) {
-    console.error('❌ Impossible de récupérer les channels:', existing)
+    console.error('❌ Impossible de récupérer les channels. Vérifie que le bot a la permission ADMIN.')
+    console.error(existing)
     process.exit(1)
   }
 
-  const existingNames = new Set(existing.map(c => c.name.toLowerCase()))
-  const existingCats  = new Map(existing.filter(c => c.type === 4).map(c => [c.name, c.id]))
+  console.log(`📋 ${existing.length} channels trouvés\n`)
 
+  // 2. Supprime tous les channels/catégories existants (sauf ceux gérés par Discord)
+  console.log('🗑️  Suppression des channels existants...')
+  for (const ch of existing) {
+    if (ch.type === 4 || ch.type === 0 || ch.type === 2) {
+      const { ok } = await req('DELETE', `/channels/${ch.id}`)
+      console.log(`  ${ok ? '✅' : '❌'} Supprimé: #${ch.name} (${ch.type === 4 ? 'catégorie' : 'channel'})`)
+    }
+  }
+
+  console.log('\n🏗️  Création de la nouvelle structure...\n')
   let guideChannelId = null
 
-  for (const { category, channels } of STRUCTURE) {
-    await sleep(500)
-
-    // Crée ou trouve la catégorie
-    let catId = existingCats.get(category)
-    if (!catId) {
-      const cat = await api('POST', `/guilds/${GUILD_ID}/channels`, { name: category, type: 4 })
-      catId = cat.id
-      console.log(`📁 Catégorie créée: ${category}`)
-      await sleep(400)
-    } else {
-      console.log(`📁 Catégorie existante: ${category}`)
-    }
+  // 3. Crée la nouvelle structure
+  for (const { name: catName, channels } of STRUCTURE) {
+    // Crée la catégorie
+    const { data: cat } = await req('POST', `/guilds/${GUILD_ID}/channels`, { name: catName, type: 4 })
+    console.log(`📁 ${catName}`)
 
     // Crée les channels
     for (const ch of channels) {
-      if (existingNames.has(ch.name.toLowerCase())) {
-        console.log(`  ✓ #${ch.name} existe déjà`)
-        const found = existing.find(c => c.name.toLowerCase() === ch.name.toLowerCase())
-        if (ch.name === 'guide-andy' && found) guideChannelId = found.id
-        continue
-      }
-
-      const created = await api('POST', `/guilds/${GUILD_ID}/channels`, {
+      const { data: created, ok } = await req('POST', `/guilds/${GUILD_ID}/channels`, {
         name: ch.name,
         type: 0,
-        parent_id: catId,
+        parent_id: cat.id,
         topic: ch.topic,
       })
-      console.log(`  ✅ #${ch.name} créé`)
-      if (ch.name === 'guide-andy') guideChannelId = created.id
-      await sleep(600)
+      console.log(`  ${ok ? '✅' : '❌'} #${ch.name}`)
+      if (ch.isGuide && created?.id) guideChannelId = created.id
     }
+    console.log()
   }
 
-  // Poste le guide dans #guide-andy
+  // 4. Poste le guide
   if (guideChannelId) {
-    console.log('\n📋 Posting guide dans #guide-andy...')
-
-    // Cherche un message existant du bot
-    const msgs = await api('GET', `/channels/${guideChannelId}/messages?limit=10`)
-    const botMsg = Array.isArray(msgs) ? msgs.find(m => m.author?.bot && m.content?.includes('⟨◈⟩ AnDy')) : null
-
-    if (botMsg) {
-      await api('PATCH', `/channels/${guideChannelId}/messages/${botMsg.id}`, { content: GUIDE_CONTENT })
-      console.log('✅ Guide mis à jour')
-      // Sauvegarde l'ID pour andy-dev.js
-      writeFileSync(resolve(__dir, '.guide-state.json'), JSON.stringify({ channelId: guideChannelId, messageId: botMsg.id }), 'utf8')
-    } else {
-      const msg = await api('POST', `/channels/${guideChannelId}/messages`, { content: GUIDE_CONTENT })
-      console.log('✅ Guide posté')
-      if (msg?.id) {
-        await api('PUT', `/channels/${guideChannelId}/pins/${msg.id}`, {})
-        writeFileSync(resolve(__dir, '.guide-state.json'), JSON.stringify({ channelId: guideChannelId, messageId: msg.id }), 'utf8')
-        console.log('📌 Guide épinglé')
-      }
+    console.log('📋 Posting le guide dans #guide...')
+    const { data: msg } = await req('POST', `/channels/${guideChannelId}/messages`, { content: buildGuide() })
+    if (msg?.id) {
+      await req('PUT', `/channels/${guideChannelId}/pins/${msg.id}`, {})
+      writeFileSync(resolve(__dir, '.guide-state.json'), JSON.stringify({ channelId: guideChannelId, messageId: msg.id }), 'utf8')
+      console.log('✅ Guide posté et épinglé\n')
     }
   }
 
-  console.log('\n✅ Setup terminé !')
-  console.log('💡 Lance maintenant: pm2 restart andy-dev-bot')
+  console.log('🎉 Setup terminé ! Serveur réorganisé au propre.')
+  console.log('💡 Relance: pm2 restart andy-dev-bot discord-bot')
 }
 
-setup().catch(e => { console.error('❌ Erreur:', e.message); process.exit(1) })
+setup().catch(e => { console.error('❌ Erreur fatale:', e.message); process.exit(1) })
