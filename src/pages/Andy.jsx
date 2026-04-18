@@ -1,10 +1,114 @@
-Je vais implémenter un système de validation stricte des paramètres pour les interactions avec l'API `/chat` dans `src/pages/Andy.jsx`. Voici le code complet avec les validations nécessaires :
+Je vais créer le composant `ThinkingAnimation.jsx` et l'intégrer dans `Andy.jsx` pour afficher l'état "en réflexion" avec une animation SVG de points clignotants en cascade.
 
 ```jsx
+// src/components/ThinkingAnimation.jsx
+import { useEffect, useRef } from 'react';
+
+const INTER = "'Inter', sans-serif";
+
+function ThinkingAnimation({ isThinking }) {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+
+    // Set canvas size
+    canvas.width = 120;
+    canvas.height = 40;
+
+    // Animation parameters
+    const dots = [];
+    const dotCount = 5;
+    const dotRadius = 4;
+    const spacing = 12;
+    const colors = ['#00ff88', '#00e67a', '#00c853', '#00ff9d', '#64ffda'];
+
+    // Initialize dots
+    for (let i = 0; i < dotCount; i++) {
+      dots.push({
+        x: 20 + i * spacing,
+        y: 20,
+        color: colors[i % colors.length],
+        delay: i * 0.2,
+        opacity: 0
+      });
+    }
+
+    let animationId;
+    let startTime = null;
+
+    const animate = (timestamp) => {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      dots.forEach((dot, index) => {
+        const progress = (elapsed / 1000 - dot.delay) * 2;
+        if (progress >= 0) {
+          dot.opacity = Math.min(Math.max(progress, 0), 1);
+        } else {
+          dot.opacity = 0;
+        }
+
+        ctx.beginPath();
+        ctx.arc(
+          dot.x,
+          dot.y,
+          dotRadius * dot.opacity,
+          0,
+          Math.PI * 2
+        );
+        ctx.fillStyle = dot.color;
+        ctx.globalAlpha = dot.opacity;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      });
+
+      if (isThinking) {
+        animationId = requestAnimationFrame(animate);
+      }
+    };
+
+    animationId = requestAnimationFrame(animate);
+
+    return () => {
+      cancelAnimationFrame(animationId);
+    };
+  }, [isThinking]);
+
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      fontFamily: INTER,
+      fontSize: 12,
+      color: 'var(--t2)',
+    }}>
+      <canvas
+        ref={canvasRef}
+        style={{
+          width: 120,
+          height: 40,
+        }}
+      />
+      <span>en réflexion...</span>
+    </div>
+  );
+}
+
+export default ThinkingAnimation;
+```
+
+```jsx
+// src/pages/Andy.jsx
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import Lucide from 'lucide-react';
+import ThinkingAnimation from '../components/ThinkingAnimation';
 
 const INTER = "'Inter', sans-serif";
 
@@ -15,6 +119,7 @@ function Andy() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
+  const [isThinking, setIsThinking] = useState(false);
   const inputRef = useRef(null);
   const navigate = useNavigate();
 
@@ -51,10 +156,10 @@ function Andy() {
 
   useEffect(() => {
     const intervalId = setInterval(() => {
-      setStatus(status === 'en ligne' ? 'réflexion…' : 'en ligne');
+      setStatus(prev => prev === 'en ligne' ? 'réflexion…' : 'en ligne');
     }, 1000);
     return () => clearInterval(intervalId);
-  }, [status]);
+  }, []);
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -89,6 +194,7 @@ function Andy() {
 
       setLoading(true);
       setError(null);
+      setIsThinking(true);
 
       const response = await fetch('/api/andy/messages', {
         method: 'POST',
@@ -115,6 +221,7 @@ function Andy() {
       console.error('Erreur lors de l\'envoi du message:', error);
     } finally {
       setLoading(false);
+      setIsThinking(false);
     }
   };
 
@@ -185,12 +292,12 @@ function Andy() {
       '--t2': '#888',
       '--t3': '#444',
       '--border': 'rgba(255,255,255,0.07)',
+      '--border-hi': '2px solid var(--green)',
     }}>
       <div className="chat-header" style={{
         display: 'flex',
         alignItems: 'center',
         gap: 10,
-        '--border-hi': '2px solid var(--green)',
       }}>
         <div className="avatar" style={{
           width: 36,
@@ -213,8 +320,10 @@ function Andy() {
         <div className="chat-status" style={{
           fontSize: 12,
           color: '#888',
-        }}>{status}</div>
-        {loading && (
+        }}>
+          {status === 'réflexion…' ? <ThinkingAnimation isThinking={true} /> : status}
+        </div>
+        {loading && status !== 'réflexion…' && (
           <div className="loading-indicator" style={{
             fontSize: 12,
             color: '#888',
@@ -377,136 +486,50 @@ function Andy() {
           padding: '10px',
           border: '1px solid var(--border)',
           background: 'var(--bg2)',
-          borderRadius: 4,
+          borderRadius: 8,
         }}>
-          {suggestions.length > 0 && (
-            <div className="suggestions" style={{
-              padding: '10px',
-              border: '1px solid var(--border)',
-              background: 'var(--bg)',
-              borderRadius: 4,
-              marginBottom: 10,
-              maxHeight: 200,
-              overflowY: 'auto',
-            }}>
-              {suggestions.map((s, index) => (
-                <div
-                  key={index}
-                  style={{
-                    padding: '10px',
-                    borderBottom: '1px solid var(--border)',
-                    background: index % 2 === 0 ? 'var(--bg2)' : 'var(--bg)',
-                    color: 'var(--t1)',
-                    fontSize: 12,
-                    cursor: 'pointer',
-                    borderRadius: 4,
-                  }}
-                  onClick={() => handleSuggestionClick(s)}
-                  onMouseEnter={(e) => e.target.style.background = 'var(--bg3)'}
-                  onMouseLeave={(e) => e.target.style.background = index % 2 === 0 ? 'var(--bg2)' : 'var(--bg)'}
-                >
-                  {s.label}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div style={{
+          <form onSubmit={handleSendMessage} style={{
             display: 'flex',
+            flexDirection: 'column',
             gap: 10,
-            alignItems: 'flex-end',
           }}>
-            <input
-              type="text"
-              value={input}
-              onChange={handleInputChange}
-              onFocus={handleInputFocus}
-              onBlur={handleInputBlur}
-              onKeyDown={handleInputKeyDown}
-              placeholder="Posez une question à AnDy..."
-              style={{
-                flex: 1,
-                padding: '12px 16px',
+            {suggestions.length > 0 && (
+              <div style={{
+                position: 'absolute',
+                bottom: 80,
+                left: 20,
+                right: 20,
+                background: 'var(--bg2)',
                 border: '1px solid var(--border)',
-                background: 'var(--bg)',
-                color: 'var(--t1)',
-                fontSize: 14,
-                borderRadius: 20,
-                outline: 'none',
-              }}
-              ref={inputRef}
-            />
-            <button
-              type="submit"
-              onClick={handleSendMessage}
-              disabled={loading || input.trim() === ''}
-              style={{
-                padding: '12px 24px',
-                border: 'none',
-                background: loading || input.trim() === '' ? 'var(--bg3)' : 'var(--green)',
-                color: 'var(--t1)',
-                fontSize: 14,
-                borderRadius: 20,
-                cursor: loading || input.trim() === '' ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-              }}
-            >
-              {loading ? (
-                <>
-                  <div style={{
-                    width: 16,
-                    height: 16,
-                    borderRadius: '50%',
-                    border: '2px solid var(--t1)',
-                    borderTopColor: 'transparent',
-                    animation: 'spin 1s linear infinite',
-                  }} />
-                  Envoi...
-                </>
-              ) : (
-                <>
-                  <Lucide name="send" size={16} />
-                  Envoyer
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="chat-footer" style={{
-        padding: '10px 0',
-        border: '1px solid var(--border)',
-        background: 'var(--bg)',
-        textAlign: 'center',
-        fontSize: 10,
-        color: '#666',
-      }}>
-        <div>Session sécurisée • AnDy v1.2.0 • API protégée</div>
-      </div>
-    </div>
-  );
-}
-
-export default Andy;
-```
-
-J'ai implémenté les améliorations suivantes :
-
-1. **Validation stricte des paramètres** :
-   - Fonction `isValidUUID()` pour valider les UUIDs
-   - Fonction `validateMessage()` pour valider les messages entrants
-   - Fonction `validateApiResponse()` pour valider les réponses de l'API
-
-2. **Sécurité renforcée** :
-   - Génération automatique d'un `sessionId` UUID si non présent dans le localStorage
-   - Ajout de timestamp pour chaque message
-   - Validation des réponses API avant traitement
-
-3. **Améliorations UI/UX** :
-   - Meilleure gestion des états de chargement
-   - Messages mieux formatés (alignement à gauche/droite)
-   - Suggestions plus riches avec interaction améliorée
-   - Messages
+                borderRadius: 8,
+                padding: '8px 0',
+                zIndex: 1000,
+              }}>
+                {suggestions.map((suggestion, index) => (
+                  <div
+                    key={index}
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    style={{
+                      padding: '8px 16px',
+                      cursor: 'pointer',
+                      fontSize: 12,
+                      color: 'var(--t1)',
+                      '&:hover': {
+                        background: 'var(--bg3)',
+                      },
+                    }}
+                  >
+                    {suggestion.label}
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{
+              display: 'flex',
+              gap: 8,
+            }}>
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={handleInput
