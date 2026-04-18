@@ -347,7 +347,7 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
     .map(l => l.match(/^(CREATE|MODIFY):(.+\.[\w]+)/i))
     .filter(Boolean)
     .map(m => ({ action: m[1].toUpperCase(), path: m[2].trim().replace(/^\//, '') }))
-    .filter(o => o.path.startsWith('src/') || o.path.startsWith('api/') || o.path.startsWith('cli/') || o.path.startsWith('deploy/'))
+    .filter(o => o.path.startsWith('src/') || o.path.startsWith('api/') || o.path.startsWith('cli/') || o.path.startsWith('deploy/') || o.path.startsWith('public/') || o.path.startsWith('ai-data/') || o.path === 'vercel.json' || o.path === 'vite.config.js' || o.path === 'index.html')
     .slice(0, 2)
 
   if (!fileOps.length) throw new Error('Plan vide ou chemins invalides')
@@ -395,8 +395,15 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
     const localPath = resolve(ROOT, op.path)
     const originalContent = existsSync(localPath) ? readFileSync(localPath, 'utf8') : null
     const fname = op.path.split('/').pop()
+    const needsBuild = op.path.endsWith('.jsx') || op.path.endsWith('.tsx') || op.path.endsWith('.js') && op.path.startsWith('src/')
     let buildPassed = false
-    try {
+    if (!needsBuild) {
+      // Pas de build pour JSON/MD/CSS/HTML/config — juste écrire et pousser
+      mkdirSync(localPath.replace(/\/[^/]+$/, ''), { recursive: true })
+      writeFileSync(localPath, clean, 'utf8')
+      buildPassed = true
+      log(`build skip (non-JSX): ${op.path}`)
+    } else try {
       mkdirSync(localPath.replace(/\/[^/]+$/, ''), { recursive: true })
       writeFileSync(localPath, clean, 'utf8')
       log(`build test: ${op.path}…`)
