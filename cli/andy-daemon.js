@@ -186,8 +186,8 @@ const MODEL_FAST   = 'claude-3-5-haiku-20241022'
 const GROQ_SMART   = 'llama-3.3-70b-versatile'
 const GROQ_FAST    = 'llama-3.1-8b-instant'
 
-// Semaphore global
-const API_SEMAPHORE_LIMIT = 3
+// Semaphore global — Groq/Anthropic: 3 parallèles · Gemini seul: 1 (15 req/min)
+const API_SEMAPHORE_LIMIT = GROQ_KEY ? 3 : 1
 let   apiConcurrent = 0
 
 // Cooldown par provider — évite retry inutile quand daily limit ou crédits épuisés
@@ -306,9 +306,9 @@ async function generateRaw(prompt, maxTokens = 4096, hint = 'smart') {
       if (text) return text
     }
 
-    // 2. Gemini 1.5 Flash — gratuit, 1M tokens/jour (aistudio.google.com)
+    // 2. Gemini 2.0 Flash — gratuit (aistudio.google.com), 15 req/min
     if (GEMINI_KEY && providerAvailable('gemini')) {
-      const text = await tryProvider('gemini', () => callGemini(prompt, maxTokens), 2)
+      const text = await tryProvider('gemini', () => callGemini(prompt, maxTokens), 8)
       if (text) return text
     }
 
