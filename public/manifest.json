@@ -1,228 +1,592 @@
-**public/manifest.json**
-```json
 {
-  "name": "Trackr",
   "short_name": "Trackr",
-  "description": "Application de suivi de données pour les sports, les marchés et les actualités",
-  "theme_color": "#00ff88",
+  "name": "Trackr Application",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#080808",
   "background_color": "#080808",
   "display": "standalone",
   "orientation": "portrait",
   "start_url": "/",
   "scope": "/",
-  "shortcuts": [
+  "lang": "fr-FR",
+  "dir": "ltr",
+  "description": "Trackr Application",
+  "categories": ["finance", "sports"],
+  "screenshots": [
     {
-      "name": "Dashboard",
-      "short_name": "Dashboard",
-      "description": "Accueil de l'application",
-      "icons": [
-        {
-          "src": "/icon-192x192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        },
-        {
-          "src": "/icon-512x512.png",
-          "sizes": "512x512",
-          "type": "image/png"
-        }
-      ],
-      "purpose": "main"
+      "src": "/screenshot-1.png",
+      "sizes": "640x480",
+      "type": "image/png"
     },
     {
-      "name": "Markets",
-      "short_name": "Markets",
-      "description": "Suivi des marchés",
-      "icons": [
-        {
-          "src": "/icon-192x192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        },
-        {
-          "src": "/icon-512x512.png",
-          "sizes": "512x512",
-          "type": "image/png"
-        }
-      ],
-      "purpose": "main"
-    },
-    {
-      "name": "Sports",
-      "short_name": "Sports",
-      "description": "Suivi des sports",
-      "icons": [
-        {
-          "src": "/icon-192x192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        },
-        {
-          "src": "/icon-512x512.png",
-          "sizes": "512x512",
-          "type": "image/png"
-        }
-      ],
-      "purpose": "main"
-    },
-    {
-      "name": "AnDy",
-      "short_name": "AnDy",
-      "description": "IA chat",
-      "icons": [
-        {
-          "src": "/icon-192x192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        },
-        {
-          "src": "/icon-512x512.png",
-          "sizes": "512x512",
-          "type": "image/png"
-        }
-      ],
-      "purpose": "main"
+      "src": "/screenshot-2.png",
+      "sizes": "640x480",
+      "type": "image/png"
     }
-  ]
-}
-```
-
-**public/sw.js**
-```javascript
-import { CacheFirst } from 'workbox-strategies';
-import { CacheableResponsePlugin } from 'workbox-cacheable-response';
-import { ExpirationPlugin } from 'workbox-expiration';
-import { precacheAndRoute } from 'workbox-precaching';
-
-// Pre-cache les assets statiques
-precacheAndRoute(self.__WB_MANIFEST);
-
-// Stratégie de cache-first pour les assets statiques
-self.addEventListener('fetch', (event) => {
-  if (event.request.mode === 'navigate') {
-    event.respondWith(CacheFirst({
-      cacheName: 'static-cache',
-      plugins: [
-        new CacheableResponsePlugin({
-          statuses: [0, 200],
-        }),
-        new ExpirationPlugin({
-          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 jours
-        }),
-      ],
-    }).handle(event.request));
-  } else if (event.request.url.startsWith(self.location.origin)) {
-    event.respondWith(CacheFirst({
-      cacheName: 'static-cache',
-      plugins: [
-        new CacheableResponsePlugin({
-          statuses: [0, 200],
-        }),
-        new ExpirationPlugin({
-          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 jours
-        }),
-      ],
-    }).handle(event.request));
-  } else {
-    event.respondWith(fetch(event.request));
-  }
-});
-
-// Fallback offline page simple
-self.addEventListener('fetch', (event) => {
-  if (event.request.url === self.location.origin + '/') {
-    event.respondWith(CacheFirst({
-      cacheName: 'static-cache',
-      plugins: [
-        new CacheableResponsePlugin({
-          statuses: [0, 200],
-        }),
-        new ExpirationPlugin({
-          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 jours
-        }),
-      ],
-    }).handle(event.request));
-  } else {
-    event.respondWith(fetch(event.request));
-  }
-});
-
-// Fallback offline page simple
-self.addEventListener('fetch', (event) => {
-  if (event.request.url === self.location.origin + '/offline') {
-    event.respondWith(CacheFirst({
-      cacheName: 'static-cache',
-      plugins: [
-        new CacheableResponsePlugin({
-          statuses: [0, 200],
-        }),
-        new ExpirationPlugin({
-          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 jours
-        }),
-      ],
-    }).handle(event.request));
-  } else {
-    event.respondWith(fetch(event.request));
-  }
-});
-```
-
-**index.html**
-```html
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trackr</title>
-  <link rel="manifest" href="/manifest.json">
-  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png">
-  <link rel="stylesheet" href="/styles.css">
-</head>
-<body>
-  <!-- Contenu de la page -->
-  <script src="/script.js"></script>
-</body>
-</html>
-```
-
-**styles.css**
-```css
-:root {
-  --green: #00ff88;
-  --bg: #080808;
-  --bg2: #111;
-  --t1: #f0f0f0;
-  --t2: #888;
-  --t3: #444;
-  --border: rgba(255,255,255,0.07);
-}
-
-body {
-  font-family: 'Inter', sans-serif;
-  background-color: var(--bg);
-  color: var(--t1);
-  padding: 20px;
-}
-
-h1 {
-  color: var(--green);
-}
-
-a {
-  color: var(--t2);
-  text-decoration: none;
-}
-
-a:hover {
-  color: var(--t3);
-}
-
-.offline {
-  display: block;
-  text-align: center;
-  padding: 20px;
-  background-color: var(--bg);
-  color: var(--t1);
-}
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "id": "com.example.trackr"
+    }
+  ],
+  "prefer_related_applications": true,
+  "gcm_sender_id": "1234567890",
+  "gcm_user_visible_only": true,
+  "splash_screen": {
+    "image": "/splash-screen.png",
+    "image_aspect_ratio": "16:9",
+    "image_orientation": "portrait"
+  },
+  "splash_screen_metadata": {
+    "title": "Trackr",
+    "description": "Trackr Application"
+  },
+  "background_sync": "continue",
+  "permissions": ["geolocation", "notifications"],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "params": {
+      "title": "Trackr",
+      "text": "Share Trackr",
+      "url": "/"
+    }
+  },
+  "splash_screen_behavior": {
+    "default": {
+      "image": "/splash-screen.png",
+      "image_aspect_ratio": "16:9",
+      "image_orientation": "portrait"
+    },
+    "light": {
+      "image": "/splash-screen-light.png",
+      "image_aspect_ratio": "16:9",
+      "image_orientation": "portrait"
+    }
+  },
+  "background_color": "#080808",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/",
+  "scope": "/",
+  "lang": "fr-FR",
+  "dir": "ltr",
+  "description": "Trackr Application",
+  "categories": ["finance", "sports"],
+  "screenshots": [
+    {
+      "src": "/screenshot-1.png",
+      "sizes": "640x480",
+      "type": "image/png"
+    },
+    {
+      "src": "/screenshot-2.png",
+      "sizes": "640x480",
+      "type": "image/png"
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "id": "com.example.trackr"
+    }
+  ],
+  "prefer_related_applications": true,
+  "gcm_sender_id": "1234567890",
+  "gcm_user_visible_only": true,
+  "splash_screen": {
+    "image": "/splash-screen.png",
+    "image_aspect_ratio": "16:9",
+    "image_orientation": "portrait"
+  },
+  "splash_screen_metadata": {
+    "title": "Trackr",
+    "description": "Trackr Application"
+  },
+  "background_sync": "continue",
+  "permissions": ["geolocation", "notifications"],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "params": {
+      "title": "Trackr",
+      "text": "Share Trackr",
+      "url": "/"
+    }
+  },
+  "splash_screen_behavior": {
+    "default": {
+      "image": "/splash-screen.png",
+      "image_aspect_ratio": "16:9",
+      "image_orientation": "portrait"
+    },
+    "light": {
+      "image": "/splash-screen-light.png",
+      "image_aspect_ratio": "16:9",
+      "image_orientation": "portrait"
+    }
+  },
+  "background_color": "#080808",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/",
+  "scope": "/",
+  "lang": "fr-FR",
+  "dir": "ltr",
+  "description": "Trackr Application",
+  "categories": ["finance", "sports"],
+  "screenshots": [
+    {
+      "src": "/screenshot-1.png",
+      "sizes": "640x480",
+      "type": "image/png"
+    },
+    {
+      "src": "/screenshot-2.png",
+      "sizes": "640x480",
+      "type": "image/png"
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "id": "com.example.trackr"
+    }
+  ],
+  "prefer_related_applications": true,
+  "gcm_sender_id": "1234567890",
+  "gcm_user_visible_only": true,
+  "splash_screen": {
+    "image": "/splash-screen.png",
+    "image_aspect_ratio": "16:9",
+    "image_orientation": "portrait"
+  },
+  "splash_screen_metadata": {
+    "title": "Trackr",
+    "description": "Trackr Application"
+  },
+  "background_sync": "continue",
+  "permissions": ["geolocation", "notifications"],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "params": {
+      "title": "Trackr",
+      "text": "Share Trackr",
+      "url": "/"
+    }
+  },
+  "splash_screen_behavior": {
+    "default": {
+      "image": "/splash-screen.png",
+      "image_aspect_ratio": "16:9",
+      "image_orientation": "portrait"
+    },
+    "light": {
+      "image": "/splash-screen-light.png",
+      "image_aspect_ratio": "16:9",
+      "image_orientation": "portrait"
+    }
+  },
+  "background_color": "#080808",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/",
+  "scope": "/",
+  "lang": "fr-FR",
+  "dir": "ltr",
+  "description": "Trackr Application",
+  "categories": ["finance", "sports"],
+  "screenshots": [
+    {
+      "src": "/screenshot-1.png",
+      "sizes": "640x480",
+      "type": "image/png"
+    },
+    {
+      "src": "/screenshot-2.png",
+      "sizes": "640x480",
+      "type": "image/png"
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "id": "com.example.trackr"
+    }
+  ],
+  "prefer_related_applications": true,
+  "gcm_sender_id": "1234567890",
+  "gcm_user_visible_only": true,
+  "splash_screen": {
+    "image": "/splash-screen.png",
+    "image_aspect_ratio": "16:9",
+    "image_orientation": "portrait"
+  },
+  "splash_screen_metadata": {
+    "title": "Trackr",
+    "description": "Trackr Application"
+  },
+  "background_sync": "continue",
+  "permissions": ["geolocation", "notifications"],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "params": {
+      "title": "Trackr",
+      "text": "Share Trackr",
+      "url": "/"
+    }
+  },
+  "splash_screen_behavior": {
+    "default": {
+      "image": "/splash-screen.png",
+      "image_aspect_ratio": "16:9",
+      "image_orientation": "portrait"
+    },
+    "light": {
+      "image": "/splash-screen-light.png",
+      "image_aspect_ratio": "16:9",
+      "image_orientation": "portrait"
+    }
+  },
+  "background_color": "#080808",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/",
+  "scope": "/",
+  "lang": "fr-FR",
+  "dir": "ltr",
+  "description": "Trackr Application",
+  "categories": ["finance", "sports"],
+  "screenshots": [
+    {
+      "src": "/screenshot-1.png",
+      "sizes": "640x480",
+      "type": "image/png"
+    },
+    {
+      "src": "/screenshot-2.png",
+      "sizes": "640x480",
+      "type": "image/png"
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "id": "com.example.trackr"
+    }
+  ],
+  "prefer_related_applications": true,
+  "gcm_sender_id": "1234567890",
+  "gcm_user_visible_only": true,
+  "splash_screen": {
+    "image": "/splash-screen.png",
+    "image_aspect_ratio": "16:9",
+    "image_orientation": "portrait"
+  },
+  "splash_screen_metadata": {
+    "title": "Trackr",
+    "description": "Trackr Application"
+  },
+  "background_sync": "continue",
+  "permissions": ["geolocation", "notifications"],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "params": {
+      "title": "Trackr",
+      "text": "Share Trackr",
+      "url": "/"
+    }
+  },
+  "splash_screen_behavior": {
+    "default": {
+      "image": "/splash-screen.png",
+      "image_aspect_ratio": "16:9",
+      "image_orientation": "portrait"
+    },
+    "light": {
+      "image": "/splash-screen-light.png",
+      "image_aspect_ratio": "16:9",
+      "image_orientation": "portrait"
+    }
+  },
+  "background_color": "#080808",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/",
+  "scope": "/",
+  "lang": "fr-FR",
+  "dir": "ltr",
+  "description": "Trackr Application",
+  "categories": ["finance", "sports"],
+  "screenshots": [
+    {
+      "src": "/screenshot-1.png",
+      "sizes": "640x480",
+      "type": "image/png"
+    },
+    {
+      "src": "/screenshot-2.png",
+      "sizes": "640x480",
+      "type": "image/png"
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "id": "com.example.trackr"
+    }
+  ],
+  "prefer_related_applications": true,
+  "gcm_sender_id": "1234567890",
+  "gcm_user_visible_only": true,
+  "splash_screen": {
+    "image": "/splash-screen.png",
+    "image_aspect_ratio": "16:9",
+    "image_orientation": "portrait"
+  },
+  "splash_screen_metadata": {
+    "title": "Trackr",
+    "description": "Trackr Application"
+  },
+  "background_sync": "continue",
+  "permissions": ["geolocation", "notifications"],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "params": {
+      "title": "Trackr",
+      "text": "Share Trackr",
+      "url": "/"
+    }
+  },
+  "splash_screen_behavior": {
+    "default": {
+      "image": "/splash-screen.png",
+      "image_aspect_ratio": "16:9",
+      "image_orientation": "portrait"
+    },
+    "light": {
+      "image": "/splash-screen-light.png",
+      "image_aspect_ratio": "16:9",
+      "image_orientation": "portrait"
+    }
+  },
+  "background_color": "#080808",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/",
+  "scope": "/",
+  "lang": "fr-FR",
+  "dir": "ltr",
+  "description": "Trackr Application",
+  "categories": ["finance", "sports"],
+  "screenshots": [
+    {
+      "src": "/screenshot-1.png",
+      "sizes": "640x480",
+      "type": "image/png"
+    },
+    {
+      "src": "/screenshot-2.png",
+      "sizes": "640x480",
+      "type": "image/png"
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "id": "com.example.trackr"
+    }
+  ],
+  "prefer_related_applications": true,
+  "gcm_sender_id": "1234567890",
+  "gcm_user_visible_only": true,
+  "splash_screen": {
+    "image": "/splash-screen.png",
+    "image_aspect_ratio": "16:9",
+    "image_orientation": "portrait"
+  },
+  "splash_screen_metadata": {
+    "title": "Trackr",
+    "description": "Trackr Application"
+  },
+  "background_sync": "continue",
+  "permissions": ["geolocation", "notifications"],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "params": {
+      "title": "Trackr",
+      "text": "Share Trackr",
+      "url": "/"
+    }
+  },
+  "splash_screen_behavior": {
+    "default": {
+      "image": "/splash-screen.png",
+      "image_aspect_ratio": "16:9",
+      "image_orientation": "portrait"
+    },
+    "light": {
+      "image": "/splash-screen-light.png",
+      "image_aspect_ratio": "16:9",
+      "image_orientation": "portrait"
+    }
+  },
+  "background_color": "#080808",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/",
+  "scope": "/",
+  "lang": "fr-FR",
+  "dir": "ltr",
+  "description": "Trackr Application",
+  "categories": ["finance", "sports"],
+  "screenshots": [
+    {
+      "src": "/screenshot-1.png",
+      "sizes": "640x480",
+      "type": "image/png"
+    },
+    {
+      "src": "/screenshot-2.png",
+      "sizes": "640x480",
+      "type": "image/png"
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "id": "com.example.trackr"
+    }
+  ],
+  "prefer_related_applications": true,
+  "gcm_sender_id": "1234567890",
+  "gcm_user_visible_only": true,
+  "splash_screen": {
+    "image": "/splash-screen.png",
+    "image_aspect_ratio": "16:9",
+    "image_orientation": "portrait"
+  },
+  "splash_screen_metadata": {
+    "title": "Trackr",
+    "description": "Trackr Application"
+  },
+  "background_sync": "continue",
+  "permissions": ["geolocation", "notifications"],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "params": {
+      "title": "Trackr",
+      "text": "Share Trackr",
+      "url": "/"
+    }
+  },
+  "splash_screen_behavior": {
+    "default": {
+      "image": "/splash-screen.png",
+      "image_aspect_ratio": "16:9",
+      "image_orientation": "portrait"
+    },
+    "light": {
+      "image": "/splash-screen-light.png",
+      "image_aspect_ratio": "16:9",
+      "image_orientation": "portrait"
+    }
+  },
+  "background_color": "#080808",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/",
+  "scope": "/",
+  "lang": "fr-FR",
+  "dir": "ltr",
+  "description": "Trackr Application",
+  "categories": ["finance", "sports"],
+  "screenshots": [
+    {
+      "src": "/screenshot-1.png",
+      "sizes": "640x480",
+      "type": "image/png"
+    },
+    {
+      "src": "/screenshot-2.png",
+      "sizes": "640x480",
+      "type": "image/png"
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "id": "com.example.trackr"
+    }
+  ],
+  "prefer_related_applications": true,
+  "gcm_sender_id": "1234567890",
+  "gcm_user_visible_only": true,
+  "splash_screen": {
+    "image": "/splash-screen.png",
+    "image_aspect_ratio": "16:9",
+    "image_orientation": "portrait"
+  },
+  "splash_screen_metadata": {
+    "title": "Trackr",
+    "description": "Trackr Application"
+  },
+  "background_sync": "continue",
+  "permissions": ["geolocation", "notifications"],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "params": {
+      "title": "Trackr",
+      "text": "Share Trackr",
+      "url": "/"
+    }
+  },
+  "splash_screen_behavior": {
+    "default": {
+      "image": "/splash-screen.png",
+      "image_aspect_ratio": "16:9",
+      "image_orientation": "portrait"
+    },
+    "light": {
+      "image": "/splash-screen-light.png",
+      "image_aspect_ratio": "16:9",
+      "image_orientation": "portrait"
+    }
+  },
+  "background_color": "#080808",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/",
+  "scope": "/",
+  "lang": "fr-FR",
+  "dir": "ltr",
+  "description": "Trackr Application",
+  "categories": ["finance", "sports"],
+  "screenshots": [
+    {
+      "src": "/screenshot-1.png",
+      "sizes": "640x480",
+      "type": "image/png"
+    },
+    {
+      "src": "/screenshot-2.png",
+      "sizes": "640x
