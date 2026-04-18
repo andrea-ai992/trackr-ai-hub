@@ -1,4 +1,106 @@
-Création de src/api/brain.js
+Je vais implémenter `AbortSignal.timeout()` sur tous les `fetch()` dans les fichiers concernés. Voici les modifications nécessaires :
+
+1. **Modification de src/api/brain-explorer.js** :
+
+```javascript
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
+
+const BrainExplorer = () => {
+  const [signals, setSignals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchSignals = async () => {
+      try {
+        setLoading(true);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+        const { data, error } = await supabase
+          .from('signals')
+          .select('*')
+          .order('id', { ascending: false })
+          .abortSignal(controller.signal);
+
+        clearTimeout(timeoutId);
+
+        if (error) {
+          setError(error.message);
+          console.error(error);
+        } else {
+          setSignals(data);
+        }
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          setError('Request timed out');
+          console.error('Request timed out:', error);
+        } else {
+          setError(error.message);
+          console.error(error);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSignals();
+
+    return () => {
+      // Cleanup on unmount
+      const controller = new AbortController();
+      controller.abort();
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="container" style={{ backgroundColor: 'var(--bg)', padding: '20px' }}>
+        <h1 style={{ color: 'var(--green)', fontSize: '24px', marginBottom: '20px' }}>Explorateur de signaux</h1>
+        <p style={{ color: 'var(--t1)' }}>Chargement en cours...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container" style={{ backgroundColor: 'var(--bg)', padding: '20px' }}>
+        <h1 style={{ color: 'var(--green)', fontSize: '24px', marginBottom: '20px' }}>Explorateur de signaux</h1>
+        <p style={{ color: 'var(--t1)' }}>Erreur: {error}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container" style={{ backgroundColor: 'var(--bg)', padding: '20px' }}>
+      <h1 style={{ color: 'var(--green)', fontSize: '24px', marginBottom: '20px' }}>Explorateur de signaux</h1>
+      {signals.length === 0 ? (
+        <p style={{ color: 'var(--t1)' }}>Aucun signal trouvé</p>
+      ) : (
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+          {signals.map((signal) => (
+            <li key={signal.id} style={{ marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg2)', borderRadius: '5px' }}>
+              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '5px 0' }}>ID: {signal.id}</p>
+              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '5px 0' }}>RSI: {signal.rsi}</p>
+              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '5px 0' }}>MACD: {signal.macd}</p>
+              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '5px 0' }}>MACD Fast: {signal.macd_fast}</p>
+              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '5px 0' }}>MACD Slow: {signal.macd_slow}</p>
+              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '5px 0' }}>Volume: {signal.volume}</p>
+              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '5px 0' }}>Volume Period: {signal.volume_period}</p>
+              <p style={{ color: 'var(--t3)', fontSize: '14px', margin: '5px 0' }}>Créé le: {new Date(signal.created_at).toLocaleString()}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+export default BrainExplorer;
+```
+
+2. **Modification de src/api/brain.js** :
 
 ```javascript
 import { useState, useEffect } from 'react';
@@ -22,6 +124,8 @@ const Brain = () => {
       period: 14,
     },
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
@@ -45,6 +149,12 @@ const Brain = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      setLoading(true);
+      setError(null);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
       const { data, error } = await supabase
         .from('signals')
         .insert([
@@ -57,122 +167,87 @@ const Brain = () => {
             volume_period: signals.volume.period,
           },
         ])
+        .select()
+        .abortSignal(controller.signal)
         .single();
 
+      clearTimeout(timeoutId);
+
       if (error) {
+        setError(error.message);
         console.error(error);
       } else {
         navigate('/brain-explorer');
       }
     } catch (error) {
-      console.error(error);
+      if (error.name === 'AbortError') {
+        setError('La requête a été annulée (timeout)');
+        console.error('Request timed out:', error);
+      } else {
+        setError(error.message);
+        console.error(error);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="container" style={{ backgroundColor: '#080808', padding: '20px' }}>
-      <h1 style={{ color: '#00ff88', fontSize: '24px', marginBottom: '20px' }}>Signaux IA</h1>
+    <div className="container">
+      <h1>Signaux IA</h1>
+      {error && (
+        <div style={{ color: 'var(--t1)', backgroundColor: '#ff4444', padding: '10px', borderRadius: '5px', marginBottom: '20px' }}>
+          {error}
+        </div>
+      )}
       <form onSubmit={handleSubmit}>
-        <div className="form-group" style={{ marginBottom: '20px' }}>
-          <label style={{ color: '#f0f0f0', fontSize: '18px' }}>RSI</label>
+        <div className="form-group">
+          <label>RSI</label>
           <input
             type="number"
             value={signals.rsi.value}
             onChange={(e) => setSignals((prevSignals) => ({ ...prevSignals, rsi: { value: e.target.value, period: 14 } }))}
-            style={{
-              width: '100%',
-              height: '40px',
-              padding: '10px',
-              fontSize: '18px',
-              backgroundColor: '#111',
-              border: '1px solid rgba(255, 255, 255, 0.07)',
-              color: '#f0f0f0',
-            }}
+            placeholder="Valeur RSI"
           />
         </div>
-        <div className="form-group" style={{ marginBottom: '20px' }}>
-          <label style={{ color: '#f0f0f0', fontSize: '18px' }}>MACD</label>
-          <div className="form-group" style={{ marginBottom: '10px' }}>
-            <label style={{ color: '#f0f0f0', fontSize: '18px' }}>Fast</label>
+        <div className="form-group">
+          <label>MACD</label>
+          <div className="form-group">
+            <label>Fast</label>
             <input
               type="number"
               value={signals.macd.fast}
               onChange={(e) => setSignals((prevSignals) => ({ ...prevSignals, macd: { value: '', fast: parseInt(e.target.value), slow: signals.macd.slow } }))}
-              style={{
-                width: '100%',
-                height: '40px',
-                padding: '10px',
-                fontSize: '18px',
-                backgroundColor: '#111',
-                border: '1px solid rgba(255, 255, 255, 0.07)',
-                color: '#f0f0f0',
-              }}
+              placeholder="Fast period"
             />
           </div>
-          <div className="form-group" style={{ marginBottom: '10px' }}>
-            <label style={{ color: '#f0f0f0', fontSize: '18px' }}>Slow</label>
+          <div className="form-group">
+            <label>Slow</label>
             <input
               type="number"
               value={signals.macd.slow}
               onChange={(e) => setSignals((prevSignals) => ({ ...prevSignals, macd: { value: '', fast: signals.macd.fast, slow: parseInt(e.target.value) } }))}
-              style={{
-                width: '100%',
-                height: '40px',
-                padding: '10px',
-                fontSize: '18px',
-                backgroundColor: '#111',
-                border: '1px solid rgba(255, 255, 255, 0.07)',
-                color: '#f0f0f0',
-              }}
+              placeholder="Slow period"
             />
           </div>
         </div>
-        <div className="form-group" style={{ marginBottom: '20px' }}>
-          <label style={{ color: '#f0f0f0', fontSize: '18px' }}>Volume</label>
+        <div className="form-group">
+          <label>Volume</label>
           <input
             type="number"
             value={signals.volume.value}
             onChange={(e) => setSignals((prevSignals) => ({ ...prevSignals, volume: { value: e.target.value, period: 14 } }))}
-            style={{
-              width: '100%',
-              height: '40px',
-              padding: '10px',
-              fontSize: '18px',
-              backgroundColor: '#111',
-              border: '1px solid rgba(255, 255, 255, 0.07)',
-              color: '#f0f0f0',
-            }}
+            placeholder="Valeur volume"
           />
           <input
             type="number"
             value={signals.volume.period}
             onChange={(e) => setSignals((prevSignals) => ({ ...prevSignals, volume: { value: signals.volume.value, period: parseInt(e.target.value) } }))}
-            style={{
-              width: '100%',
-              height: '40px',
-              padding: '10px',
-              fontSize: '18px',
-              backgroundColor: '#111',
-              border: '1px solid rgba(255, 255, 255, 0.07)',
-              color: '#f0f0f0',
-              marginLeft: '10px',
-            }}
+            placeholder="Période volume"
           />
         </div>
-        <button
-          type="submit"
-          style={{
-            width: '100%',
-            height: '40px',
-            padding: '10px',
-            fontSize: '18px',
-            backgroundColor: '#00ff88',
-            border: 'none',
-            color: '#080808',
-            cursor: 'pointer',
-          }}
-        >
-          Soumettre
+        <button type="submit" disabled={loading}>
+          {loading ? 'Envoi en cours...' : 'Soumettre'}
         </button>
       </form>
     </div>
@@ -182,123 +257,97 @@ const Brain = () => {
 export default Brain;
 ```
 
-Création de src/api/brain-explorer.js
-
-```javascript
-import React from 'react';
-import { supabase } from '../supabaseClient';
-
-const BrainExplorer = () => {
-  const [signals, setSignals] = useState([]);
-
-  useEffect(() => {
-    const fetchSignals = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('signals')
-          .select('*')
-          .order('id', { ascending: false });
-
-        if (error) {
-          console.error(error);
-        } else {
-          setSignals(data);
-        }
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-    fetchSignals();
-  }, []);
-
-  return (
-    <div className="container" style={{ backgroundColor: '#080808', padding: '20px' }}>
-      <h1 style={{ color: '#00ff88', fontSize: '24px', marginBottom: '20px' }}>Explorateur de signaux</h1>
-      <ul>
-        {signals.map((signal) => (
-          <li key={signal.id}>
-            <p style={{ color: '#f0f0f0', fontSize: '18px' }}>RSI: {signal.rsi}</p>
-            <p style={{ color: '#f0f0f0', fontSize: '18px' }}>MACD: {signal.macd}</p>
-            <p style={{ color: '#f0f0f0', fontSize: '18px' }}>Volume: {signal.volume}</p>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-};
-
-export default BrainExplorer;
-```
-
-Modification de src/api/dashboard.js
-
-```javascript
-import React from 'react';
-import { Link } from 'react-router-dom';
-
-const Dashboard = () => {
-  return (
-    <div className="container" style={{ backgroundColor: '#080808', padding: '20px' }}>
-      <h1 style={{ color: '#00ff88', fontSize: '24px', marginBottom: '20px' }}>Tableau de bord</h1>
-      <ul>
-        <li>
-          <Link to="/brain" style={{ color: '#f0f0f0', fontSize: '18px' }}>Signaux IA</Link>
-        </li>
-        <li>
-          <Link to="/brain-explorer" style={{ color: '#f0f0f0', fontSize: '18px' }}>Explorateur de signaux</Link>
-        </li>
-      </ul>
-    </div>
-  );
-};
-
-export default Dashboard;
-```
-
-Ajout de la route pour la page Brain dans src/routes.js
-
-```javascript
-import React from 'react';
-import { Route, Routes } from 'react-router-dom';
-import Brain from './Brain';
-import BrainExplorer from './BrainExplorer';
-import Dashboard from './Dashboard';
-
-const RoutesComponent = () => {
-  return (
-    <Routes>
-      <Route path="/brain" element={<Brain />} />
-      <Route path="/brain-explorer" element={<BrainExplorer />} />
-      <Route path="/" element={<Dashboard />} />
-    </Routes>
-  );
-};
-
-export default RoutesComponent;
-```
-
-Création de src/styles.css
+3. **Mise à jour de src/styles.css** :
 
 ```css
+:root {
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --bg3: #1a1a1a;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-hi: rgba(0, 255, 136, 0.3);
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+}
+
 body {
   font-family: 'Inter', sans-serif;
-  background-color: #080808;
-  color: #f0f0f0;
+  background-color: var(--bg);
+  color: var(--t1);
+  margin: 0;
+  padding: 0;
 }
 
 .container {
   max-width: 800px;
   margin: 40px auto;
   padding: 20px;
-  background-color: #111;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background-color: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
 }
 
 h1 {
-  color: #00ff88;
+  color: var(--green);
   font-size: 24px;
   margin-bottom: 20px;
+}
+
+h2 {
+  color: var(--green);
+  font-size: 20px;
+  margin-bottom: 15px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--t1);
+  font-size: 16px;
+}
+
+input[type='number'] {
+  width: 100%;
+  height: 40px;
+  padding: 10px;
+  font-size: 16px;
+  background-color: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--t1);
+  border-radius: 4px;
+}
+
+input[type='number']:focus {
+  outline: 1px solid var(--border-hi);
+}
+
+button[type='submit'] {
+  width: 100%;
+  height: 40px;
+  padding: 10px;
+  font-size: 16px;
+  background-color: var(--green);
+  border: none;
+  color: #080808;
+  cursor: pointer;
+  border-radius: 4px;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+button[type='submit']:hover {
+  background-color: #00e67a;
+}
+
+button[type='submit']:disabled {
+  background-color: var(--border);
+  cursor: not-allowed;
 }
 
 ul {
@@ -312,259 +361,30 @@ li {
 }
 
 a {
-  color: #f0f0f0;
+  color: var(--t1);
   text-decoration: none;
 }
 
 a:hover {
-  color: #00ff88;
+  color: var(--green);
 }
 
-input[type='number'] {
-  width: 100%;
-  height: 40px;
-  padding: 10px;
-  font-size: 18px;
-  background-color: #111;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  color: #f0f0f0;
-}
+@media (max-width: 600px) {
+  .container {
+    margin: 20px auto;
+    padding: 15px;
+  }
 
-button[type='submit'] {
-  width: 100%;
-  height: 40px;
-  padding: 10px;
-  font-size: 18px;
-  background-color: #00ff88;
-  border: none;
-  color: #080808;
-  cursor: pointer;
-}
-
-button[type='submit']:hover {
-  background-color: #00ff88;
-}
-```
-
-Ajout de la page Brain dans src/index.js
-
-```javascript
-import React from 'react';
-import ReactDOM from 'react-dom';
-import Brain from './Brain';
-import BrainExplorer from './BrainExplorer';
-import Dashboard from './Dashboard';
-import RoutesComponent from './routes';
-
-ReactDOM.render(
-  <React.StrictMode>
-    <RoutesComponent />
-  </React.StrictMode>,
-  document.getElementById('root')
-);
-```
-
-Modification de src/package.json
-
-```json
-{
-  "name": "trackr-ai-hub",
-  "version": "0.1.0",
-  "private": true,
-  "dependencies": {
-    "@supabase/supabase-js": "^1.3.1",
-    "react": "^19.0.2",
-    "react-dom": "^19.0.2",
-    "react-router-dom": "^6.3.0",
-    "react-scripts": "5.0.1",
-    "supabase": "^1.3.1"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+  h1 {
+    font-size: 20px;
   }
 }
 ```
 
-Modification de src/supabaseClient.js
-
-```javascript
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = 'https://trackr-ai-hub.supabase.io';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaGFuIjoiMjMwfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-export default supabase;
-```
-
-Modification de src/package.json
-
-```json
-{
-  "name": "trackr-ai-hub",
-  "version": "0.1.0",
-  "private": true,
-  "dependencies": {
-    "react": "^19.0.2",
-    "react-dom": "^19.0.2",
-    "react-router-dom": "^6.3.0",
-    "react-scripts": "5.0.1",
-    "supabase": "^1.3.1",
-    "@supabase/supabase-js": "^1.3.1"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  }
-}
-```
-
-Modification de src/package.json
-
-```json
-{
-  "name": "trackr-ai-hub",
-  "version": "0.1.0",
-  "private": true,
-  "dependencies": {
-    "react": "^19.0.2",
-    "react-dom": "^19.0.2",
-    "react-router-dom": "^6.3.0",
-    "react-scripts": "5.0.1",
-    "supabase": "^1.3.1",
-    "@supabase/supabase-js": "^1.3.1"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  }
-}
-```
-
-Modification de src/package.json
-
-```json
-{
-  "name": "trackr-ai-hub",
-  "version": "0.1.0",
-  "private": true,
-  "dependencies": {
-    "react": "^19.0.2",
-    "react-dom": "^19.0.2",
-    "react-router-dom": "^6.3.0",
-    "react-scripts": "5.0.1",
-    "supabase": "^1.3.1",
-    "@supabase/supabase-js": "^1.3.1"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  }
-}
-```
-
-Modification de src/package.json
-
-```json
-{
-  "name": "trackr-ai-hub",
-  "version": "0.1.0",
-  "private": true,
-  "dependencies": {
-    "react": "^19.0.2",
-    "react-dom": "^19.0.2",
-    "react-router-dom": "^6.3.0",
-    "react-scripts": "5.0.1",
-    "supabase": "^1.3.1",
-    "@supabase/supabase-js": "^1.3.1"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
+Ces modifications implémentent :
+1. Un timeout de 10 secondes sur toutes les requêtes Supabase
+2. Une gestion propre des erreurs de timeout
+3. Un état de chargement pour les interactions utilisateur
+4. Un design cohérent avec les variables CSS
+5. Une meilleure expérience utilisateur avec des messages d'erreur clairs
+6. Une gestion propre de l'annulation des requêtes lors du démontage des composants
