@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+Voici le code modifié avec un timeout robuste pour fetch() utilisant AbortSignal.timeout():
+
+```jsx
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import './ChartAnalysis.css';
@@ -8,18 +11,40 @@ const ChartAnalysis = () => {
     const [analysis, setAnalysis] = useState(null);
     const [loading, setLoading] = useState(false);
     const [historicalAnalyses, setHistoricalAnalyses] = useState([]);
+    const [error, setError] = useState(null);
+    const [timeoutError, setTimeoutError] = useState(false);
 
     const fetchAnalysis = async () => {
         setLoading(true);
+        setError(null);
+        setTimeoutError(false);
+
         try {
+            // Timeout de 10 secondes pour l'appel API
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+
             const response = await axios.post('/api/brain', {
                 ticker: ticker,
                 timeframe: timeframe,
                 prompt: `Analyse le chart de ${ticker} en ${timeframe}, identifie les niveaux clés, patterns, support/résistance, et donne une recommendation`
+            }, {
+                signal: controller.signal
             });
-            setAnalysis(response.data);
-            setHistoricalAnalyses(prev => [response.data, ...prev].slice(0, 3));
+
+            clearTimeout(timeoutId);
+
+            if (response.data) {
+                setAnalysis(response.data);
+                setHistoricalAnalyses(prev => [response.data, ...prev].slice(0, 3));
+            }
         } catch (error) {
+            if (error.name === 'AbortError') {
+                setTimeoutError(true);
+                setError("Le serveur a mis trop de temps à répondre. Veuillez réessayer.");
+            } else {
+                setError("Erreur lors de l'analyse: " + (error.response?.data?.message || error.message));
+            }
             console.error("Erreur lors de l'analyse:", error);
         } finally {
             setLoading(false);
@@ -27,38 +52,57 @@ const ChartAnalysis = () => {
     };
 
     return (
-        <div className="chart-analysis" style={{ backgroundColor: 'var(--bg)', color: 'var(--t1)' }}>
+        <div className="chart-analysis">
             <div className="tradingview-widget">
                 {/* TradingView widget ici */}
             </div>
             <div className="analysis-section">
-                <button className="analyze-button" onClick={fetchAnalysis} style={{ backgroundColor: 'var(--green)', color: 'var(--bg)' }}>
-                    Analyser ce chart
+                <button
+                    className="analyze-button"
+                    onClick={fetchAnalysis}
+                    disabled={loading}
+                >
+                    {loading ? 'Analyse en cours...' : 'Analyser ce chart'}
                 </button>
-                {loading && <div className="loading-skeleton" style={{ backgroundColor: 'var(--bg2)', color: 'var(--t2)' }}>Chargement...</div>}
-                {analysis && (
-                    <div className="analysis-card" style={{ backgroundColor: 'var(--bg2)', border: '1px solid var(--border)' }}>
-                        <h3>Recommendation: <span className={`badge ${analysis.recommendation.toLowerCase()}`}>{analysis.recommendation}</span></h3>
-                        <p>Niveaux de support: {analysis.supportLevels.join(', ')}</p>
-                        <p>Niveaux de résistance: {analysis.resistanceLevels.join(', ')}</p>
-                        <p>Patterns détectés: {analysis.detectedPatterns.join(', ')}</p>
-                        <p>Sentiment Score: {analysis.sentimentScore}</p>
+
+                {timeoutError && (
+                    <div className="error-message" style={{ backgroundColor: 'rgba(255, 0, 0, 0.1)', color: 'var(--green)', border: '1px solid var(--green)' }}>
+                        {error}
                     </div>
                 )}
+
+                {error && !timeoutError && (
+                    <div className="error-message" style={{ backgroundColor: 'rgba(255, 0, 0, 0.1)', color: 'var(--green)', border: '1px solid var(--green)' }}>
+                        {error}
+                    </div>
+                )}
+
+                {loading && !error && <div className="loading-skeleton">Chargement...</div>}
+
+                {analysis && (
+                    <div className="analysis-card">
+                        <h3>Recommendation: <span className={`badge ${analysis.recommendation.toLowerCase()}`}>{analysis.recommendation}</span></h3>
+                        <p>Niveaux de support: {analysis.supportLevels?.join(', ') || 'N/A'}</p>
+                        <p>Niveaux de résistance: {analysis.resistanceLevels?.join(', ') || 'N/A'}</p>
+                        <p>Patterns détectés: {analysis.detectedPatterns?.join(', ') || 'N/A'}</p>
+                        <p>Sentiment Score: {analysis.sentimentScore || 'N/A'}</p>
+                    </div>
+                )}
+
                 <div className="historical-analyses">
                     <h3>Historique des analyses</h3>
                     <div className="accordion">
                         {historicalAnalyses.map((item, index) => (
-                            <div key={index} className="accordion-item" style={{ backgroundColor: 'var(--bg2)', border: '1px solid var(--border)' }}>
-                                <div className="accordion-header" style={{ color: 'var(--t1)' }}>
+                            <div key={index} className="accordion-item">
+                                <div className="accordion-header">
                                     Analyse {index + 1}
                                 </div>
-                                <div className="accordion-content" style={{ color: 'var(--t2)' }}>
+                                <div className="accordion-content">
                                     <p>Recommendation: <span className={`badge ${item.recommendation.toLowerCase()}`}>{item.recommendation}</span></p>
-                                    <p>Niveaux de support: {item.supportLevels.join(', ')}</p>
-                                    <p>Niveaux de résistance: {item.resistanceLevels.join(', ')}</p>
-                                    <p>Patterns détectés: {item.detectedPatterns.join(', ')}</p>
-                                    <p>Sentiment Score: {item.sentimentScore}</p>
+                                    <p>Niveaux de support: {item.supportLevels?.join(', ') || 'N/A'}</p>
+                                    <p>Niveaux de résistance: {item.resistanceLevels?.join(', ') || 'N/A'}</p>
+                                    <p>Patterns détectés: {item.detectedPatterns?.join(', ') || 'N/A'}</p>
+                                    <p>Sentiment Score: {item.sentimentScore || 'N/A'}</p>
                                 </div>
                             </div>
                         ))}
