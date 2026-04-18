@@ -1,6 +1,3 @@
-Voici le code modifié pour le composant `BottomNav` :
-
-```jsx
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useState, useRef } from 'react'
 import { Home, Trophy, TrendingUp, Newspaper, Grid2X2, Activity } from 'lucide-react'
@@ -115,7 +112,7 @@ export default function BottomNav() {
             borderRadius: '12px',
             padding: '6px 16px',
             transform: `translateX(${pillStyle.left}px)`,
-            transition: 'transform 300ms ease',
+            transition: 'transform 250ms ease',
             pointerEvents: 'none',
             zIndex: 0,
           }}
@@ -211,6 +208,3 @@ export default function BottomNav() {
     </div>
   )
 }
-```
-
-J'ai ajouté les styles pour le fond, la bordure et le texte pour les boutons. J'ai également ajouté les styles pour la pilule qui s'affiche en dessous du bouton actif. J'ai ajouté les styles pour la badge qui s'affiche en dessus du bouton "News". J'ai ajouté les styles pour la transition de la pilule et de la badge. J'ai également ajouté les événements pour mettre à jour l'état de la pilule lorsque le bouton est cliqué, relâché, hors du bouton ou annulé.
