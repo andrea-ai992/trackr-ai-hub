@@ -329,8 +329,8 @@ async function generateRaw(prompt, maxTokens = 4096, hint = 'smart') {
 
     // 3. OpenRouter — modèles :free (openrouter.ai — compte gratuit)
     if (OPENROUTER_KEY && providerAvailable('openrouter')) {
-      // DeepSeek V3 free = excellent pour le code · gemma-2 fast = léger et fiable
-      const model = hint === 'fast' ? 'google/gemma-2-9b-it:free' : 'deepseek/deepseek-chat:free'
+      // nvidia nemotron 120B = excellent pour le code · gemma-4 26B = rapide
+      const model = hint === 'fast' ? 'google/gemma-4-26b-a4b-it:free' : 'nvidia/nemotron-3-super-120b-a12b:free'
       const text = await tryProvider('openrouter',
         () => callOpenAI('https://openrouter.ai/api', OPENROUTER_KEY, model, prompt, maxTokens,
           { 'HTTP-Referer': APP_URL, 'X-Title': 'AnDy-Daemon' }), 3)
