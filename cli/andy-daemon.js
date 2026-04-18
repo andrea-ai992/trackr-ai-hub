@@ -242,7 +242,7 @@ async function generateRaw(prompt, maxTokens = 4096, hint = 'smart') {
         }).catch(e => { throw new Error(`Réseau: ${e.message}`) })
         if (res.status === 429) { const s = parseInt(res.headers?.get?.('retry-after') || '60') || 60; globalRateLimitUntil = Date.now() + s * 1000; await sl(s * 1000); globalRateLimitUntil = 0; continue }
         if ([500, 503, 529].includes(res.status)) { await sl(30000); continue }
-        if (res.status === 400) { const b = await res.json().catch(() => ({})); const msg = b?.error?.message || ''; if (msg.toLowerCase().includes('credit')) { log('Crédits épuisés'); await sl(300000); continue } throw new Error(`API 400: ${msg}`) }
+        if (res.status === 400) { const b = await res.json().catch(() => ({})); const msg = b?.error?.message || ''; if (msg.toLowerCase().includes('credit')) { log('Crédits Anthropic épuisés — skip Anthropic'); break } throw new Error(`API 400: ${msg}`) }
         if (!res.ok) throw new Error(`API ${res.status}`)
         const d = await res.json().catch(() => null)
         const text = d?.content?.[0]?.text?.trim()
