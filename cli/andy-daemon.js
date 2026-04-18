@@ -163,7 +163,7 @@ const GROQ_SMART  = 'llama-3.3-70b-versatile'   // meilleur qualité gratuit
 const GROQ_FAST   = 'llama-3.1-8b-instant'       // ultra rapide, gratuit
 
 // Semaphore global — évite burst API
-const API_SEMAPHORE_LIMIT = 5
+const API_SEMAPHORE_LIMIT = 3
 let   apiConcurrent = 0
 let   globalRateLimitUntil = 0
 
@@ -389,7 +389,7 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
     ].filter(Boolean).join('\n')
 
     checkInterrupt()
-    const newCode = await generateRaw(codePrompt, 4000, 'smart')
+    const newCode = await generateRaw(codePrompt, 4000, 'fast')
     let clean = newCode.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim()
 
     // Validation de base
@@ -475,7 +475,7 @@ async function flushDiscordNotif(force = false) {
   lastNotifTime = Date.now()
 }
 
-const TASK_TIMEOUT_MS = 90 * 1000   // 90s max par tâche — skip et retry à la fin
+const TASK_TIMEOUT_MS = 4 * 60 * 1000  // 4min max par tâche
 const skipQueue = []                  // tâches à retry après la queue principale
 
 async function runTask(filePath) {
@@ -821,8 +821,8 @@ async function selfUpdate() {
 }
 
 // ── Parallel workers ──────────────────────────────────────────────────────────
-const WORKER_COUNT     = 6
-const PAUSE_AFTER_TASK = 3
+const WORKER_COUNT     = 3
+const PAUSE_AFTER_TASK = 2
 const PAUSE_IDLE       = 8
 
 const claimedTasks = new Set()
