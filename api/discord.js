@@ -1,6 +1,3 @@
-Voici les modifications pour implémenter `AbortSignal.timeout()` dans tous les `fetch()` des fichiers demandés :
-
-```javascript
 // api/discord.js
 // ─── Discord Interaction Handler — 45 AnDy Agents ───────────────────────────
 // Receives slash commands from Discord, routes to agent logic
@@ -89,6 +86,70 @@ async function getQuickSignal(symbol, type) {
   return { price, change24h, rsi }
 }
 
+// ─── Discord SSE Stream Handler ───────────────────────────────────────────────
+async function handleDiscordStream(res, streamUrl, timeoutMs = 10000) {
+  const encoder = new TextEncoder()
+  const decoder = new TextDecoder()
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    const response = await fetch(streamUrl, {
+      headers: {
+        'Authorization': `Bot ${BOT_TOKEN}`,
+        'Accept': 'text/event-stream',
+      },
+      signal: controller.signal
+    })
+
+    if (!response.ok) {
+      res.status(response.status).json({ error: `Discord API error: ${response.status}` })
+      return
+    }
+
+    if (!response.body) {
+      res.status(500).json({ error: 'No response body from Discord' })
+      return
+    }
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    })
+
+    const reader = response.body.getReader()
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      const text = decoder.decode(value, { stream: true })
+      const lines = text.split('\n')
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6))
+            res.write(`data: ${JSON.stringify(data)}\n\n`)
+          } catch (e) {
+            console.warn('Failed to parse Discord SSE data:', e.message)
+          }
+        }
+      }
+    }
+  } catch (error) {
+    if (error.name !== 'AbortError') {
+      console.error('Discord SSE stream error:', error)
+      res.status(500).json({ error: 'Stream processing failed' })
+    }
+  } finally {
+    clearTimeout(timeoutId)
+    res.end()
+  }
+}
+
 // ─── 45 Agent definitions ────────────────────────────────────────────────────
 export const AGENTS = {
   // AI Core (5)
@@ -133,12 +194,4 @@ export const AGENTS = {
   stats_bot:       { name: 'StatsBot',       emoji: '📊', color: 0x93c5fd, cat: 'data',    ch: 'statistics',        role: 'Statistiques descriptives' },
   correlation_bot: { name: 'CorrelationBot', emoji: '🔗', color: 0xfca5a5, cat: 'data',    ch: 'correlations',      role: 'Corrélations entre actifs' },
   backtest_bot:    { name: 'BacktestBot',    emoji: '⏪', color: 0xa5b4fc, cat: 'data',    ch: 'backtests',         role: 'Backtesting stratégies' },
-  risk_metrics:    { name: 'RiskMetrics',    emoji: '⚖️', color: 0xfcd34d, cat: 'data',    ch: 'risk',              role: 'VaR Sharpe drawdown beta' },
-  flow_tracker:    { name: 'FlowTracker',    emoji: '💧', color: 0x22d3ee, cat: 'data',    ch: 'flow',              role: 'Money flow et volumes' },
-  trend_spotter:   { name: 'TrendSpotter',   emoji: '🎯', color: 0xfb7185, cat: 'data',    ch: 'trends',            role: 'Tendances émergentes' },
-  // Utility Agents (5)
-  scheduler:       { name: 'Scheduler',      emoji: '⏰', color: 0x94a3b8, cat: 'utility', ch: 'scheduler',         role: 'Tâches planifiées' },
-  report_bot:      { name: 'ReportBot',      emoji: '📋', color: 0x67e8f9, cat: 'utility', ch: 'reports',           role: 'Rapports quotidiens' },
-  translator:      { name: 'Translator',     emoji: '🌐', color: 0x86efac, cat: 'utility', ch: 'translations',      role: 'Traduction multi-langues' },
-  web_scraper:     { name: 'WebScraper',     emoji: '🕷️', color: 0xcbd5e1, cat: 'utility', ch: 'research',          role: 'Recherche web' },
-  notifier:        { name: 'Notifier',       emoji: '🔔', color: 0xfda4af, cat: 'utility', ch: 'notifications',     role: 'Notifications
+  risk_metrics:    { name: 'RiskMetrics',    emoji: '⚖️', color: 0xfcd34d, cat
