@@ -1,6 +1,3 @@
-Pour améliorer le design et ajouter un header sticky pour les onglets de catégories, voici le code modifié :
-
-```jsx
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   RefreshCw,
@@ -10,7 +7,6 @@ import {
   X,
 } from 'lucide-react';
 
-// ─── Sources ──────────────────────────────────────────────────────────────────
 const SOURCES = [
   {
     id: 'reuters_biz',
@@ -54,7 +50,6 @@ const SOURCES = [
   },
 ];
 
-// ─── Tabs ─────────────────────────────────────────────────────────────────────
 const TABS = [
   { id: 'all', label: 'Tout' },
   { id: 'tech', label: 'Tech' },
@@ -64,7 +59,6 @@ const TABS = [
   { id: 'france', label: 'France' },
 ];
 
-// ─── RSS fetch with 3-tier proxy ──────────────────────────────────────────────
 const CACHE = {};
 const TTL = 90 * 1000;
 
@@ -102,7 +96,6 @@ async function fetchSource(src) {
   return items;
 }
 
-// ─── Utilities ─────────────────────────────────────────────────────────────────
 function ago(ts) {
   if (!ts) return '';
   const m = Math.floor((Date.now() / 1000 - ts) / 60);
@@ -113,10 +106,9 @@ function ago(ts) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-const isBreaking = (ts) => ts && (Date.now() / 1000 - ts) < 30 * 60; // < 30 min
-const isNew = (ts) => ts && (Date.now() / 1000 - ts) < 120 * 60; // < 2h
+const isBreaking = (ts) => ts && (Date.now() / 1000 - ts) < 30 * 60;
+const isNew = (ts) => ts && (Date.now() / 1000 - ts) < 120 * 60;
 
-// ─── Card component ───────────────────────────────────────────────────────────
 function NewsCard({ item }) {
   const breaking = isBreaking(item.time);
   const newItem = isNew(item.time) && !breaking;
@@ -165,7 +157,7 @@ function NewsCard({ item }) {
             left: 12,
             fontSize: '10px',
             fontWeight: 800,
-            color: '#00ff88',
+            color: 'var(--green)',
             background: 'rgba(0,255,136,0.15)',
             padding: '4px 8px',
             borderRadius: '6px',
@@ -237,10 +229,7 @@ function NewsCard({ item }) {
   );
 }
 
-// ─── Header component ─────────────────────────────────────────────────────────
-function Header() {
-  const [tab, setTab] = useState('all');
-
+function Header({ tab, setTab, search, setSearch, setSearchFocused }) {
   return (
     <header
       style={{
@@ -250,22 +239,21 @@ function Header() {
         zIndex: 10,
         padding: '12px 0',
         backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid var(--border)',
       }}
     >
       <div
         style={{
           display: 'flex',
-          alignItems: 'center',
+          flexDirection: 'column',
           gap: '12px',
-          marginBottom: '12px',
         }}
       >
         <div
           style={{
             position: 'relative',
-            flex: 1,
-            maxWidth: '240px',
-            transition: 'max-width 0.3s ease',
+            width: '100%',
+            maxWidth: '100%',
           }}
         >
           <Search
@@ -282,6 +270,10 @@ function Header() {
           <input
             type="text"
             placeholder="Search news..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
             style={{
               width: '100%',
               padding: '10px 12px 10px 38px',
@@ -294,32 +286,36 @@ function Header() {
               transition: 'all 0.3s ease',
             }}
           />
-          <button
-            onClick={() => setTab('all')}
-            style={{
-              position: 'absolute',
-              right: '12px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              background: 'none',
-              border: 'none',
-              color: 'var(--t3)',
-              cursor: 'pointer',
-              padding: '4px',
-            }}
-          >
-            <X size={16} />
-          </button>
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              style={{
+                position: 'absolute',
+                right: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                color: 'var(--t3)',
+                cursor: 'pointer',
+                padding: '4px',
+              }}
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
         <div
           style={{
             display: 'flex',
             overflowX: 'auto',
             gap: '8px',
-            paddingBottom: '8px',
+            paddingBottom: '4px',
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
+            WebkitOverflowScrolling: 'touch',
           }}
+          className="hide-scrollbar"
         >
           {TABS.map((tabItem) => (
             <button
@@ -362,7 +358,6 @@ function Header() {
   );
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
 export default function News() {
   const [tab, setTab] = useState('all');
   const [items, setItems] = useState([]);
@@ -402,15 +397,16 @@ export default function News() {
     return () => clearInterval(timerRef.current);
   }, [load]);
 
-  const filtered = items.filter((item) => {
-    const matchesSearch = search
-      ? item.title?.toLowerCase().includes(search.toLowerCase()) ||
-        item.source?.toLowerCase().includes(search.toLowerCase())
-      : true;
-
-    const matchesTab = tab === 'all' || item.category === tab;
-    return matchesSearch && matchesTab;
-  });
+  const filtered = items
+    .filter((item) => {
+      const matchesSearch = search
+        ? item.title?.toLowerCase().includes(search.toLowerCase()) ||
+          item.source?.toLowerCase().includes(search.toLowerCase())
+        : true;
+      const matchesTab = tab === 'all' || item.category === tab;
+      return matchesSearch && matchesTab;
+    })
+    .sort((a, b) => b.time - a.time);
 
   return (
     <div
@@ -422,23 +418,59 @@ export default function News() {
         fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
       }}
     >
-      <Header />
-      {loading ? (
-        <div style={{ display: 'grid', gap: '12px' }}>
-          {[...Array(6)].map((_, index) => (
-            <div key={index} style={{ background: 'var(--bg2)', padding: '16px', borderRadius: '8px' }}>
-              <Loader2 size={24} />
-            </div>
-          ))}
-        </div>
-      ) : (
-        filtered.map((item) => (
-          <NewsCard key={item.url} item={item} />
-        ))
-      )}
+      <Header
+        tab={tab}
+        setTab={setTab}
+        search={search}
+        setSearch={setSearch}
+        setSearchFocused={setSearchFocused}
+      />
+      <div
+        style={{
+          marginTop: '16px',
+        }}
+      >
+        {loading ? (
+          <div style={{ display: 'grid', gap: '12px' }}>
+            {[...Array(6)].map((_, index) => (
+              <div
+                key={index}
+                style={{
+                  background: 'var(--bg2)',
+                  padding: '16px',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                }}
+              >
+                <Loader2 size={24} className="animate-spin" style={{ color: 'var(--t3)' }} />
+                <span style={{ color: 'var(--t3)' }}>Loading news...</span>
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '40px 20px',
+              color: 'var(--t3)',
+            }}
+          >
+            <Search size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
+            <p>No news found matching your criteria.</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {filtered.map((item, index) => (
+              <NewsCard
+                key={`${item.url}-${index}`}
+                item={item}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
-```
-
-Ce code ajoute un header sticky avec les onglets de catégories, et améliore le design des cartes avec une barre d'accent colorée par source. Les badges BREAKING/NEW sont également dynamiques.
