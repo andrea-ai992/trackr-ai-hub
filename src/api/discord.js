@@ -1,3 +1,6 @@
+Voici le code corrigé pour `src/api/discord.js` avec une gestion optimisée des SSE (Server-Sent Events) utilisant `ReadableStream` et `TextDecoderStream` :
+
+```javascript
 // src/api/discord.js
 import { SUPABASE_URL, SUPABASE_KEY } from '../config';
 
@@ -37,7 +40,16 @@ export const getDiscordMessages = async (channelId, timeoutMs = 10000) => {
     while (!isDone) {
       const { done, value } = await reader.read();
       isDone = done;
-      if (value) result += value;
+      if (value) {
+        result += value;
+        // Traitement des chunks au fur et à mesure pour éviter les gros buffers
+        try {
+          const parsed = JSON.parse(result);
+          return parsed; // Retourne dès qu'un JSON valide est trouvé
+        } catch (e) {
+          // On continue à accumuler jusqu'à ce qu'on ait un JSON complet
+        }
+      }
     }
 
     try {
