@@ -1,0 +1,231 @@
+Création du fichier src/pages/TradingBloomberg.css
+```css
+/* TradingBloomberg.css */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --border: rgba(255, 255, 255, 0.07);
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg);
+  color: var(--t1);
+}
+
+.container {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 20px;
+  background-color: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background-color: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.header h1 {
+  font-weight: 600;
+  color: var(--t1);
+}
+
+.header button {
+  background-color: var(--bg);
+  border: none;
+  padding: 10px 20px;
+  font-size: 16px;
+  color: var(--t1);
+  cursor: pointer;
+}
+
+.header button:hover {
+  background-color: var(--bg2);
+}
+
+.content {
+  padding: 20px;
+}
+
+.chart {
+  width: 100%;
+  height: 400px;
+  background-color: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+.chart canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background-color: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.stats ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.stats li {
+  display: inline-block;
+  margin-right: 20px;
+}
+
+.stats li span {
+  font-size: 16px;
+  color: var(--t1);
+}
+
+.stats li span strong {
+  font-weight: 600;
+  color: var(--green);
+}
+
+.stats li span small {
+  font-size: 14px;
+  color: var(--t2);
+}
+```
+
+Modification du fichier src/pages/TradingBloomberg.js
+```jsx
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Header, Container, Content, Chart, Stats } from './TradingBloomberg';
+
+const TradingBloomberg = () => {
+  const location = useLocation();
+
+  return (
+    <div>
+      <Header>
+        <h1>Trading Bloomberg</h1>
+        <Link to="/dashboard">Retour au dashboard</Link>
+      </Header>
+      <Container>
+        <Content>
+          <Chart />
+          <Stats>
+            <ul>
+              <li>
+                <span>
+                  <strong>10%</strong>
+                  <small>de variation</small>
+                </span>
+              </li>
+              <li>
+                <span>
+                  <strong>50%</strong>
+                  <small>de capital</small>
+                </span>
+              </li>
+              <li>
+                <span>
+                  <strong>20%</strong>
+                  <small>de risque</small>
+                </span>
+              </li>
+            </ul>
+          </Stats>
+        </Content>
+      </Container>
+    </div>
+  );
+};
+
+export default TradingBloomberg;
+```
+
+Création des composants Header, Container, Content, Chart et Stats
+```jsx
+// src/pages/TradingBloomberg.js
+
+import React from 'react';
+
+const Header = () => {
+  return (
+    <header className="header">
+      <h1>Trading Bloomberg</h1>
+      <button>Retour au dashboard</button>
+    </header>
+  );
+};
+
+const Container = () => {
+  return (
+    <div className="container">
+      <div className="content">
+        {/* contenu ici */}
+      </div>
+    </div>
+  );
+};
+
+const Content = () => {
+  return (
+    <div className="content">
+      {/* contenu ici */}
+    </div>
+  );
+};
+
+const Chart = () => {
+  return (
+    <div className="chart">
+      <canvas></canvas>
+    </div>
+  );
+};
+
+const Stats = () => {
+  return (
+    <div className="stats">
+      <ul>
+        <li>
+          <span>
+            <strong>10%</strong>
+            <small>de variation</small>
+          </span>
+        </li>
+        <li>
+          <span>
+            <strong>50%</strong>
+            <small>de capital</small>
+          </span>
+        </li>
+        <li>
+          <span>
+            <strong>20%</strong>
+            <small>de risque</small>
+          </span>
+        </li>
+      </ul>
+    </div>
+  );
+};
+
+export { Header, Container, Content, Chart, Stats };
