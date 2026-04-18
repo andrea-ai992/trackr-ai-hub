@@ -1,5 +1,5 @@
 src/styles/global.css
-```css
+
 :root {
     --green: #00ff88;
     --bg: #080808;
@@ -8,7 +8,6 @@ src/styles/global.css
     --t2: #888;
     --t3: #444;
     --border: rgba(255, 255, 255, 0.07);
-    --border-hi: rgba(255, 255, 255, 0.1);
 }
 
 body {
@@ -20,18 +19,13 @@ body {
     box-sizing: border-box;
 }
 
-.container {
-    max-width: 520px;
-    padding: env(safe-area-inset);
-}
-
 .card {
-    background: rgba(255, 255, 255, 0.04);
+    background-color: rgba(255, 255, 255, 0.04);
     border: 1px solid var(--border);
-    backdrop-filter: blur(12px);
     border-radius: 8px;
+    backdrop-filter: blur(12px);
     padding: 16px;
-    margin: 8px 0;
+    margin: 8px;
 }
 
 .fade-up {
@@ -63,133 +57,104 @@ body {
         background-position: 0 0;
     }
 }
-```
+
+.max-width {
+    max-width: 520px;
+    margin: auto;
+    padding: 0 16px;
+}
+
+.safe-area {
+    padding: env(safe-area-inset);
+}
+
+.scroll-horizontal {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.pill {
+    border-radius: 50px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 8px 16px;
+    margin: 4px;
+}
+
+.bottom-nav {
+    display: flex;
+    justify-content: space-around;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50px;
+    padding: 10px;
+}
+
+.active-indicator {
+    color: var(--green);
+}
 
 src/pages/Dashboard.jsx
-```jsx
-import React, { useEffect, useState } from 'react';
-import { fetchPortfolio, fetchTopMovers, fetchFearGreed, fetchNews } from '../api';
+
+import React from 'react';
 import './Dashboard.css';
+import { Sparkline, TopMovers, FearGreedGauge, NewsFeed, QuickActions } from '../components';
 
 const Dashboard = () => {
-    const [portfolio, setPortfolio] = useState(null);
-    const [topMovers, setTopMovers] = useState([]);
-    const [fearGreed, setFearGreed] = useState(null);
-    const [news, setNews] = useState([]);
-
-    useEffect(() => {
-        const loadData = async () => {
-            const portfolioData = await fetchPortfolio();
-            const topMoversData = await fetchTopMovers();
-            const fearGreedData = await fetchFearGreed();
-            const newsData = await fetchNews();
-
-            setPortfolio(portfolioData);
-            setTopMovers(topMoversData);
-            setFearGreed(fearGreedData);
-            setNews(newsData);
-        };
-
-        loadData();
-    }, []);
-
     return (
-        <div className="container">
-            {portfolio ? (
-                <div className="card fade-up">
-                    <h2>Portfolio Value: ${portfolio.value}</h2>
-                    {/* Sparkline SVG here */}
-                </div>
-            ) : (
-                <div className="skeleton fade-up"></div>
-            )}
-
+        <div className="max-width safe-area">
             <div className="card fade-up">
-                <h3>Top Movers</h3>
-                <div className="top-movers">
-                    {topMovers.map((mover) => (
-                        <div key={mover.id} className="mover">{mover.name}</div>
-                    ))}
-                </div>
+                <h1>Portfolio Value</h1>
+                <Sparkline />
             </div>
-
             <div className="card fade-up">
-                <h3>Fear & Greed Gauge</h3>
-                {/* Gauge SVG here */}
+                <TopMovers />
             </div>
-
             <div className="card fade-up">
-                <h3>News Feed</h3>
-                {news.map((item) => (
-                    <div key={item.id} className="news-item">{item.title}</div>
-                ))}
+                <FearGreedGauge />
             </div>
-
-            <div className="card fade-up quick-actions">
-                {/* Quick actions 2x2 */}
+            <div className="card fade-up">
+                <NewsFeed />
+            </div>
+            <div className="card fade-up">
+                <QuickActions />
             </div>
         </div>
     );
 };
 
 export default Dashboard;
-```
 
 src/components/BottomNav.jsx
-```jsx
+
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import './BottomNav.css';
 
 const BottomNav = () => {
     return (
-        <nav className="bottom-nav">
-            <NavLink to="/dashboard" className="nav-item">
-                {/* Icon */}
-                <span>Dashboard</span>
-            </NavLink>
-            <NavLink to="/markets" className="nav-item">
-                {/* Icon */}
-                <span>Markets</span>
-            </NavLink>
-            {/* Add more nav items here */}
-        </nav>
+        <div className="bottom-nav">
+            <NavLink to="/dashboard" className="pill" activeClassName="active-indicator">Dashboard</NavLink>
+            <NavLink to="/markets" className="pill" activeClassName="active-indicator">Markets</NavLink>
+            <NavLink to="/news" className="pill" activeClassName="active-indicator">News</NavLink>
+            <NavLink to="/portfolio" className="pill" activeClassName="active-indicator">Portfolio</NavLink>
+            <NavLink to="/more" className="pill" activeClassName="active-indicator">More</NavLink>
+        </div>
     );
 };
 
 export default BottomNav;
-```
 
 src/pages/Markets.jsx
-```jsx
-import React, { useEffect, useState } from 'react';
-import { fetchMarkets } from '../api';
+
+import React from 'react';
 import './Markets.css';
+import { MarketList } from '../components';
 
 const Markets = () => {
-    const [markets, setMarkets] = useState([]);
-
-    useEffect(() => {
-        const loadMarkets = async () => {
-            const marketData = await fetchMarkets();
-            setMarkets(marketData);
-        };
-
-        loadMarkets();
-    }, []);
-
     return (
-        <div className="container">
+        <div className="max-width safe-area">
             <div className="card fade-up">
-                <h2>Markets</h2>
-                <div className="markets-list">
-                    {markets.map((market) => (
-                        <div key={market.id} className="market-item">
-                            <span>{market.name}</span>
-                            <span className="price pulse">${market.price}</span>
-                        </div>
-                    ))}
-                </div>
+                <MarketList />
             </div>
         </div>
     );
