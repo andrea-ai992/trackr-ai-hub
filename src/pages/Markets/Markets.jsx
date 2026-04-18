@@ -1,5 +1,3 @@
-Création de src/pages/Markets/Markets.jsx
-```jsx
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AiOutlineSearch } from 'lucide-react';
@@ -7,9 +5,9 @@ import { supabase } from '../supabaseClient';
 import { useTheme } from '../hooks/useTheme';
 
 const Markets = () => {
-  const [assets, setAssets] = useState([]);
+  const [stocks, setStocks] = useState([]);
+  const [crypto, setCrypto] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState('stocks');
   const navigate = useNavigate();
@@ -17,24 +15,29 @@ const Markets = () => {
   const theme = useTheme();
 
   useEffect(() => {
-    const fetchAssets = async () => {
+    const fetchStocks = async () => {
       try {
-        const { data, error } = await supabase
-          .from('assets')
-          .select('id, name, symbol, price, variation')
-          .order('variation', { ascending: false });
-        if (error) {
-          setError(error.message);
-        } else {
-          setAssets(data);
-        }
+        const response = await fetch('/api/yahoo-finance');
+        const data = await response.json();
+        setStocks(data);
       } catch (error) {
-        setError(error.message);
-      } finally {
-        setLoading(false);
+        console.error(error);
       }
     };
-    fetchAssets();
+
+    const fetchCrypto = async () => {
+      try {
+        const response = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=10&page=1&sparkline=false');
+        const data = await response.json();
+        setCrypto(data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchStocks();
+    fetchCrypto();
+    setLoading(false);
   }, []);
 
   const handleSearch = (event) => {
@@ -45,22 +48,11 @@ const Markets = () => {
     setSelectedTab(event.target.dataset.tab);
   };
 
-  const filteredAssets = assets.filter((asset) => {
-    const assetName = asset.name.toLowerCase();
-    const searchTermLower = searchTerm.toLowerCase();
-    return assetName.includes(searchTermLower);
-  });
+  const filteredStocks = stocks.filter(stock => stock.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredCrypto = crypto.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
-  const sortedAssets = filteredAssets.sort((a, b) => {
-    if (selectedTab === 'stocks') {
-      return b.variation - a.variation;
-    } else {
-      return b.price - a.price;
-    }
-  });
-
-  const topGainers = sortedAssets.slice(0, 10);
-  const topLosers = sortedAssets.slice(-10);
+  const sortedStocks = filteredStocks.sort((a, b) => b.variation - a.variation);
+  const sortedCrypto = filteredCrypto.sort((a, b) => b.price - a.price);
 
   return (
     <div className="markets-page">
@@ -111,154 +103,50 @@ const Markets = () => {
           </div>
         ) : (
           <>
-            {topGainers.length > 0 && (
-              <section className="top-gainers">
-                <h2 className="section-label">Top Gainers</h2>
-                {topGainers.map((asset, index) => (
-                  <div key={asset.id} className="asset-card">
+            {selectedTab === 'stocks' && (
+              <section className="assets-list">
+                {sortedStocks.map((stock) => (
+                  <div key={stock.id} className="asset-card">
                     <div className="asset-logo">
-                      {asset.symbol ? (
-                        <span className="asset-symbol">{asset.symbol}</span>
-                      ) : (
-                        <svg
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <rect x="3" y="3" width="18" height="18" rx="2" />
-                          <line x1="3" y1="9" x2="21" y2="9" />
-                          <line x1="3" y1="15" x2="21" y2="15" />
-                        </svg>
-                      )}
+                      <span className="asset-symbol">{stock.symbol}</span>
                     </div>
                     <div className="asset-info">
-                      <h3 className="asset-name">{asset.name}</h3>
+                      <h3 className="asset-name">{stock.name}</h3>
                       <p className="asset-price">
-                        <span className="asset-price-value">
-                          <tabular-nums>{asset.price}</tabular-nums>
-                        </span>
-                        <span className="asset-price-change">
-                          <span
-                            className={`price-change ${asset.variation > 0 ? 'positive' : 'negative'}`}
-                          >
-                            {asset.variation.toFixed(2)}%
-                          </span>
-                          <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 12 12"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            {asset.variation > 0 ? (
-                              <path d="M5 3L2 6L5 9" />
-                            ) : (
-                              <path d="M5 9L2 6L5 3" />
-                            )}
-                          </svg>
+                        <span className="asset-price-value">{stock.price}</span>
+                        <span className={`price-change ${stock.variation > 0 ? 'positive' : 'negative'}`}>
+                          {stock.variation.toFixed(2)}%
                         </span>
                       </p>
                     </div>
                     <div className="asset-chart">
-                      <svg
-                        width="40"
-                        height="20"
-                        viewBox="0 0 40 20"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M5 5L35 5" />
-                        <path d="M5 15L35 15" />
-                        <path d="M5 5L5 15" />
-                        <path d="M35 5L35 15" />
+                      <svg width="40" height="20" viewBox="0 0 40 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        {/* Placeholder for sparkline */}
                       </svg>
                     </div>
                   </div>
                 ))}
               </section>
             )}
-            {topLosers.length > 0 && (
-              <section className="top-losers">
-                <h2 className="section-label">Top Losers</h2>
-                {topLosers.map((asset, index) => (
-                  <div key={asset.id} className="asset-card">
+            {selectedTab === 'crypto' && (
+              <section className="assets-list">
+                {sortedCrypto.map((coin) => (
+                  <div key={coin.id} className="asset-card">
                     <div className="asset-logo">
-                      {asset.symbol ? (
-                        <span className="asset-symbol">{asset.symbol}</span>
-                      ) : (
-                        <svg
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <rect x="3" y="3" width="18" height="18" rx="2" />
-                          <line x1="3" y1="9" x2="21" y2="9" />
-                          <line x1="3" y1="15" x2="21" y2="15" />
-                        </svg>
-                      )}
+                      <span className="asset-symbol">{coin.symbol}</span>
                     </div>
                     <div className="asset-info">
-                      <h3 className="asset-name">{asset.name}</h3>
+                      <h3 className="asset-name">{coin.name}</h3>
                       <p className="asset-price">
-                        <span className="asset-price-value">
-                          <tabular-nums>{asset.price}</tabular-nums>
-                        </span>
-                        <span className="asset-price-change">
-                          <span
-                            className={`price-change ${asset.variation < 0 ? 'positive' : 'negative'}`}
-                          >
-                            {asset.variation.toFixed(2)}%
-                          </span>
-                          <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 12 12"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            {asset.variation < 0 ? (
-                              <path d="M5 9L2 6L5 3" />
-                            ) : (
-                              <path d="M5 3L2 6L5 9" />
-                            )}
-                          </svg>
+                        <span className="asset-price-value">{coin.current_price}</span>
+                        <span className={`price-change ${coin.price_change_percentage_24h > 0 ? 'positive' : 'negative'}`}>
+                          {coin.price_change_percentage_24h.toFixed(2)}%
                         </span>
                       </p>
                     </div>
                     <div className="asset-chart">
-                      <svg
-                        width="40"
-                        height="20"
-                        viewBox="0 0 40 20"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M5 5L35 5" />
-                        <path d="M5 15L35 15" />
-                        <path d="M5 5L5 15" />
-                        <path d="M35 5L35 15" />
+                      <svg width="40" height="20" viewBox="0 0 40 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        {/* Placeholder for sparkline */}
                       </svg>
                     </div>
                   </div>
@@ -273,10 +161,7 @@ const Markets = () => {
 };
 
 export default Markets;
-```
 
-Création de src/pages/Markets/Markets.css
-```css
 .markets-page {
   max-width: 1200px;
   margin: 0 auto;
@@ -360,12 +245,18 @@ Création de src/pages/Markets/Markets.css
   padding: 20px;
 }
 
+.assets-list {
+  display: flex;
+  flex-direction: column;
+}
+
 .asset-card {
   display: flex;
   align-items: center;
   padding: 10px;
   border-bottom: 1px solid var(--border);
   transition: background-color 0.2s ease;
+  min-height: 44px;
 }
 
 .asset-card:hover {
@@ -406,93 +297,27 @@ Création de src/pages/Markets/Markets.css
   color: var(--t1);
 }
 
-.asset-price-change {
-  display: flex;
-  align-items: center;
-  font-size: 14px;
-  color: var(--t2);
-}
-
 .price-change {
-  margin-right: 10px;
+  margin-left: 10px;
+  font-size: 14px;
 }
 
 .price-change.positive {
-  color: var(--green);
+  color: #00ff88;
 }
 
 .price-change.negative {
-  color: var(--t3);
-}
-
-.asset-chart {
-  width: 40px;
-  height: 20px;
-  margin-left: 10px;
-}
-
-.top-gainers,
-.top-losers {
-  padding: 20px;
-  border-bottom: 1px solid var(--border);
-}
-
-.section-label {
-  font-size: 16px;
-  font-weight: bold;
-  color: var(--t1);
-  text-align: center;
+  color: #ff4d4d;
 }
 
 .skeleton-loader {
   display: flex;
-  justify-content: space-between;
-  padding: 20px;
+  flex-direction: column;
 }
 
 .skeleton-card {
-  width: 300px;
-  height: 100px;
-  background-color: var(--bg);
-  border-radius: 12px;
-  margin: 10px;
+  height: 44px;
+  background-color: rgba(255, 255, 255, 0.1);
+  margin-bottom: 10px;
+  border-radius: 8px;
 }
-```
-
-Création de src/pages/Markets/Markets.theme.js
-```javascript
-import { createTheme } from '@material-ui/core/styles';
-
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#00ff88',
-    },
-    background: {
-      default: '#080808',
-      paper: '#111',
-    },
-    text: {
-      primary: '#f0f0f0',
-      secondary: '#888',
-      disabled: '#444',
-    },
-  },
-  typography: {
-    fontFamily: 'Inter',
-  },
-});
-
-export default theme;
-```
-
-Création de src/hooks/useTheme.js
-```javascript
-import { useTheme } from '@material-ui/core/styles';
-
-const useTheme = () => {
-  const theme = useTheme();
-  return theme;
-};
-
-export default useTheme;
