@@ -1,6 +1,5 @@
-import React from 'react';
-import { useEffect, useState } from 'react';
-import { format } from 'date-fns';
+import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import './Dashboard.css';
 import Header from '../components/Header/Header';
 
@@ -8,43 +7,43 @@ const Dashboard = () => {
   const [portfolioValue, setPortfolioValue] = useState(24830);
   const [portfolioChange, setPortfolioChange] = useState(2.4);
   const [topMovers, setTopMovers] = useState([]);
-  const [fearGreedIndex, setFearGreedIndex] = useState(60);
+  const [fearGreed, setFearGreed] = useState(50);
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch data logic here
-    // Simulating data fetch
-    setTimeout(() => {
-      setTopMovers([
-        { symbol: 'BTC', price: 45000, change: 5.2 },
-        { symbol: 'ETH', price: 3000, change: -3.1 },
-      ]);
-      setNews([
-        { title: 'Bitcoin hits new high', source: 'CoinDesk', time: '2 min ago' },
-        { title: 'Ethereum upgrades', source: 'CryptoNews', time: '5 min ago' },
-      ]);
-      setLoading(false);
-    }, 2000);
+    // Fetch data for portfolio, top movers, fear & greed, and news
+    const fetchData = async () => {
+      // Simulated fetch calls
+      setLoading(true);
+      setTimeout(() => {
+        setTopMovers([
+          { symbol: 'AAPL', price: 150, change: -1.2 },
+          { symbol: 'BTC', price: 40000, change: 3.5 },
+          { symbol: 'TSLA', price: 700, change: 1.8 },
+        ]);
+        setFearGreed(60);
+        setNews([
+          { title: 'Market hits all-time high', source: 'CNBC', time: '2min' },
+          { title: 'Crypto regulations on the rise', source: 'Bloomberg', time: '5min' },
+          { title: 'Tech stocks rally', source: 'Reuters', time: '10min' },
+        ]);
+        setLoading(false);
+      }, 1000);
+    };
+
+    fetchData();
   }, []);
 
   const renderTopMovers = () => {
     return topMovers.map((mover, index) => (
       <div key={index} className="top-mover-card">
         <div className="top-mover-logo">{mover.symbol}</div>
-        <div className="top-mover-price" style={{ color: mover.change > 0 ? 'var(--green)' : 'red' }}>
-          ${mover.price.toLocaleString()} <span>{mover.change > 0 ? `+${mover.change}%` : `${mover.change}%`}</span>
+        <div className="top-mover-price">${mover.price.toFixed(2)}</div>
+        <div className={`top-mover-change ${mover.change >= 0 ? 'green' : 'red'}`}>
+          {mover.change >= 0 ? '+' : ''}
+          {mover.change}%
         </div>
-      </div>
-    ));
-  };
-
-  const renderNewsFeed = () => {
-    return news.map((item, index) => (
-      <div key={index} className="news-item">
-        <span className="news-source">{item.source}</span>
-        <span className="news-title">{item.title}</span>
-        <span className="news-time">{item.time}</span>
       </div>
     ));
   };
@@ -53,34 +52,45 @@ const Dashboard = () => {
     <div className="dashboard">
       <Header />
       <div className="hero-card">
-        <h2 className="portfolio-value">${portfolioValue.toLocaleString()}</h2>
-        <span className="portfolio-change" style={{ color: portfolioChange > 0 ? 'var(--green)' : 'red' }}>
-          {portfolioChange > 0 ? `+${portfolioChange}%` : `${portfolioChange}%`}
-        </span>
+        <h1 className="portfolio-value">${portfolioValue.toLocaleString()}</h1>
+        <div className={`portfolio-change ${portfolioChange >= 0 ? 'green' : 'red'}`}>
+          {portfolioChange >= 0 ? '+' : ''}
+          {portfolioChange}%
+        </div>
         <svg className="sparkline" width="100" height="20">
-          {/* SVG sparkline here */}
+          {/* SVG sparkline data */}
         </svg>
       </div>
-      <div className="top-movers">
-        <h3>Top Movers</h3>
-        <div className="top-movers-list">{renderTopMovers()}</div>
+      <div className="top-movers-section">
+        <h2>Top Movers</h2>
+        <div className="top-movers-scroll">
+          {loading ? <div className="skeleton shimmer" /> : renderTopMovers()}
+        </div>
       </div>
-      <div className="fear-greed">
-        <h3>Fear & Greed Index</h3>
-        <svg className="gauge" width="100" height="50">
-          {/* SVG gauge here */}
+      <div className="fear-greed-gauge">
+        <svg width="100" height="50">
+          {/* SVG gauge data */}
         </svg>
-        <span>{fearGreedIndex}</span>
+        <div className="fear-greed-value">{fearGreed}</div>
       </div>
       <div className="news-feed">
-        <h3>Latest News</h3>
-        {loading ? <div className="skeleton" /> : renderNewsFeed()}
+        {loading ? (
+          <div className="skeleton shimmer" />
+        ) : (
+          news.map((item, index) => (
+            <div key={index} className="news-item">
+              <span className={`news-source ${item.source.toLowerCase()}`}>{item.source}</span>
+              <span className="news-title">{item.title}</span>
+              <span className="news-time">{item.time}</span>
+            </div>
+          ))
+        )}
       </div>
       <div className="quick-actions">
-        <div className="action-card">Markets</div>
-        <div className="action-card">Portfolio</div>
-        <div className="action-card">Signals</div>
-        <div className="action-card">AnDy</div>
+        <div className="quick-action-card">Markets</div>
+        <div className="quick-action-card">Portfolio</div>
+        <div className="quick-action-card">Signals</div>
+        <div className="quick-action-card">AnDy</div>
       </div>
     </div>
   );
@@ -92,13 +102,12 @@ import React from 'react';
 import './Header.css';
 
 const Header = () => {
-  const currentTime = new Date();
-  const formattedTime = `${currentTime.getHours()}:${currentTime.getMinutes().toString().padStart(2, '0')}`;
-
+  const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  
   return (
     <div className="header">
       <h1>Bonjour Andrea</h1>
-      <span className="time">{formattedTime}</span>
+      <span className="current-time">{currentTime}</span>
       <span className="live-badge">LIVE</span>
     </div>
   );
@@ -119,29 +128,51 @@ export default Header;
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.07);
   padding: 16px;
+  border-radius: 8px;
   margin-bottom: 16px;
 }
 
 .portfolio-value {
   font-family: 'Inter', sans-serif;
   font-weight: bold;
-  font-size: 24px;
+  font-size: 32px;
 }
 
 .portfolio-change {
   font-size: 16px;
 }
 
-.top-movers {
+.green {
+  color: var(--green);
+}
+
+.red {
+  color: red;
+}
+
+.top-movers-section {
   margin-bottom: 16px;
 }
 
+.top-movers-scroll {
+  display: flex;
+  overflow-x: auto;
+}
+
 .top-mover-card {
-  display: inline-block;
   background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.07);
   padding: 8px;
+  border-radius: 8px;
   margin-right: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.fear-greed-gauge {
+  margin-bottom: 16px;
 }
 
 .news-feed {
@@ -160,10 +191,12 @@ export default Header;
   gap: 8px;
 }
 
-.action-card {
+.quick-action-card {
   background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.07);
   padding: 16px;
+  border-radius: 8px;
   text-align: center;
   cursor: pointer;
 }
@@ -172,17 +205,18 @@ export default Header;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 16px;
 }
 
-.time {
-  margin-left: 8px;
+.current-time {
+  font-size: 16px;
 }
 
 .live-badge {
   background-color: var(--green);
-  color: white;
+  color: #fff;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: 12px;
   animation: pulse 1s infinite;
 }
 
@@ -201,5 +235,18 @@ export default Header;
 .skeleton {
   background: rgba(255, 255, 255, 0.1);
   height: 20px;
-  margin-bottom: 8px;
+  border-radius: 4px;
+}
+
+.shimmer {
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: 200px 0;
+  }
 }
