@@ -329,10 +329,11 @@ async function generateRaw(prompt, maxTokens = 4096, hint = 'smart') {
 
     // 3. OpenRouter — modèles :free (openrouter.ai — compte gratuit)
     if (OPENROUTER_KEY && providerAvailable('openrouter')) {
-      const model = hint === 'fast' ? 'meta-llama/llama-3.1-8b-instruct:free' : 'meta-llama/llama-3.1-70b-instruct:free'
+      // DeepSeek V3 free = excellent pour le code · gemma-2 fast = léger et fiable
+      const model = hint === 'fast' ? 'google/gemma-2-9b-it:free' : 'deepseek/deepseek-chat:free'
       const text = await tryProvider('openrouter',
         () => callOpenAI('https://openrouter.ai/api', OPENROUTER_KEY, model, prompt, maxTokens,
-          { 'HTTP-Referer': APP_URL, 'X-Title': 'AnDy-Daemon' }), 2)
+          { 'HTTP-Referer': APP_URL, 'X-Title': 'AnDy-Daemon' }), 3)
       if (text) return text
     }
 
