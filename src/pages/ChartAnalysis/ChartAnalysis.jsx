@@ -1,7 +1,4 @@
-Voici le code modifié avec un timeout robuste pour fetch() utilisant AbortSignal.timeout():
-
-```jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import './ChartAnalysis.css';
@@ -13,6 +10,7 @@ const ChartAnalysis = () => {
     const [historicalAnalyses, setHistoricalAnalyses] = useState([]);
     const [error, setError] = useState(null);
     const [timeoutError, setTimeoutError] = useState(false);
+    const widgetRef = useRef(null);
 
     const fetchAnalysis = async () => {
         setLoading(true);
@@ -20,7 +18,6 @@ const ChartAnalysis = () => {
         setTimeoutError(false);
 
         try {
-            // Timeout de 10 secondes pour l'appel API
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -51,10 +48,51 @@ const ChartAnalysis = () => {
         }
     };
 
+    useEffect(() => {
+        const script = document.createElement('script');
+        script.src = 'https://s3.tradingview.com/tv.js';
+        script.async = true;
+        script.onload = () => {
+            if (widgetRef.current && ticker) {
+                new window.TradingView.widget({
+                    autosize: true,
+                    symbol: ticker,
+                    interval: timeframe,
+                    timezone: "Etc/UTC",
+                    theme: "dark",
+                    style: "1",
+                    locale: "fr",
+                    toolbar_bg: "#f1f3f6",
+                    enable_publishing: false,
+                    allow_symbol_change: true,
+                    container_id: "tradingview-widget-container"
+                });
+            }
+        };
+        document.body.appendChild(script);
+
+        return () => {
+            document.body.removeChild(script);
+            if (widgetRef.current) {
+                widgetRef.current.innerHTML = '';
+            }
+        };
+    }, [ticker, timeframe]);
+
     return (
         <div className="chart-analysis">
             <div className="tradingview-widget">
-                {/* TradingView widget ici */}
+                <div id="tradingview-widget-container">
+                    {loading && (
+                        <div className="tradingview-skeleton">
+                            <div className="skeleton-line" style={{ width: '20%', height: '20px', marginBottom: '12px' }}></div>
+                            <div className="skeleton-line" style={{ width: '25%', height: '16px', marginBottom: '12px' }}></div>
+                            <div className="skeleton-line" style={{ width: '30%', height: '16px', marginBottom: '12px' }}></div>
+                            <div className="skeleton-line" style={{ width: '100%', height: '300px', marginBottom: '12px' }}></div>
+                            <div className="skeleton-line" style={{ width: '20%', height: '16px' }}></div>
+                        </div>
+                    )}
+                </div>
             </div>
             <div className="analysis-section">
                 <button
@@ -66,18 +104,28 @@ const ChartAnalysis = () => {
                 </button>
 
                 {timeoutError && (
-                    <div className="error-message" style={{ backgroundColor: 'rgba(255, 0, 0, 0.1)', color: 'var(--green)', border: '1px solid var(--green)' }}>
+                    <div className="error-message">
                         {error}
                     </div>
                 )}
 
                 {error && !timeoutError && (
-                    <div className="error-message" style={{ backgroundColor: 'rgba(255, 0, 0, 0.1)', color: 'var(--green)', border: '1px solid var(--green)' }}>
+                    <div className="error-message">
                         {error}
                     </div>
                 )}
 
-                {loading && !error && <div className="loading-skeleton">Chargement...</div>}
+                {loading && !error && (
+                    <div className="loading-skeleton">
+                        <div className="skeleton-card">
+                            <div className="skeleton-line" style={{ width: '30%', height: '24px', marginBottom: '16px' }}></div>
+                            <div className="skeleton-line" style={{ width: '80%', height: '16px', marginBottom: '8px' }}></div>
+                            <div className="skeleton-line" style={{ width: '75%', height: '16px', marginBottom: '8px' }}></div>
+                            <div className="skeleton-line" style={{ width: '60%', height: '16px', marginBottom: '16px' }}></div>
+                            <div className="skeleton-line" style={{ width: '40%', height: '20px' }}></div>
+                        </div>
+                    </div>
+                )}
 
                 {analysis && (
                     <div className="analysis-card">
@@ -95,7 +143,7 @@ const ChartAnalysis = () => {
                         {historicalAnalyses.map((item, index) => (
                             <div key={index} className="accordion-item">
                                 <div className="accordion-header">
-                                    Analyse {index + 1}
+                                    <div className="skeleton-line" style={{ width: '60%', height: '16px' }}></div>
                                 </div>
                                 <div className="accordion-content">
                                     <p>Recommendation: <span className={`badge ${item.recommendation.toLowerCase()}`}>{item.recommendation}</span></p>
