@@ -31,32 +31,32 @@
 - **ChartAnalysis**
 
 ### État Design
-Le design des pages est généralement cohérent avec le thème sombre et l'accent néon vert (#00ff88). Cependant, quelques éléments nécessitent une attention particulière :
-- **Overflow** : Certaines pages peuvent présenter un débordement, en particulier sur les écrans plus petits.
-- **Texte Trop Petit** : Vérifier la taille du texte sur les petits écrans, notamment pour les éléments de navigation.
-- **Mauvais Contraste** : Assurer que tous les textes sont lisibles sur le fond sombre, particulièrement pour les éléments moins accentués.
+- Le design utilise bien le thème sombre avec une cohérence dans l'utilisation de la couleur d'accent vert néon (#00ff88).
+- Les éléments de texte sont généralement bien contrastés, mais certains titres peuvent être trop petits, nécessitant une augmentation de la taille de la police pour une meilleure lisibilité.
+- Quelques pages peuvent présenter des problèmes d'overflow, surtout sur des écrans plus petits. Une révision des composants flexibles est recommandée pour éviter cela.
 
 ### Bugs Visuels Probables
-- Vérifier les éléments de formulaire pour des problèmes de mise en page.
-- Contrôler les images et les icônes pour s'assurer qu'elles s'affichent correctement sans déformation.
+- Overflow sur les pages avec des listes longues (ex: News, Sports).
+- Texte trop petit sur certaines sections (ex: titres dans le Dashboard).
+- Mauvais contraste sur certains éléments interactifs (ex: boutons sur des arrière-plans sombres).
 
 ## CryptoTrader
 
 ### État de la Page
-La page **CryptoTrader** est actuellement en état de stub. Elle nécessite un développement supplémentaire pour intégrer les fonctionnalités prévues.
+- La page **CryptoTrader** est actuellement un stub. Elle nécessite un développement complet pour intégrer les fonctionnalités de trading et d'analyse.
 
 ## Dashboard Serveur
 
 ### Fonctionnalités Disponibles
-- **/brain** : Accès aux fonctionnalités d'IA.
-- **/vibe** : Fournit des données de vibe.
-- **/chat** : Interface pour le chat avec AnDy.
+- **/brain** : Accès aux fonctionnalités d'intelligence artificielle.
+- **/vibe** : Endpoint pour les vibes de données.
+- **/chat** : Interface de chat pour interagir avec AnDy.
 
 ### État Sécurité
-- **CORS** : Vérifier que les en-têtes CORS sont correctement configurés pour limiter l'accès aux domaines autorisés.
-- **Auth Bearer** : Implémentation correcte pour sécuriser les endpoints.
+- **CORS** : Les règles CORS sont en place, mais doivent être vérifiées pour s'assurer qu'elles ne sont pas trop permissives.
+- **Auth Bearer** : L'authentification par token Bearer est implémentée, mais il est essentiel de s'assurer que les tokens sont correctement validés.
 
 ### Failles de Sécurité Connues
-- **Secrets Exposés Côté Client** : S'assurer qu'aucun secret ou clé API n'est exposé dans le code client.
-- **Inputs Non Sanitisés** : Vérifier que toutes les entrées utilisateur sont correctement validées et échappées pour éviter les injections.
-- **Manque CSP Headers** : Implémenter des en-têtes de sécurité Content Security Policy pour protéger contre les attaques XSS.
+- Secrets exposés côté client : Vérifier que les clés API et autres secrets ne sont pas inclus dans le code client.
+- Inputs non sanitisés : S'assurer que toutes les entrées utilisateur sont correctement validées et échappées pour éviter les injections.
+- Manque de CSP headers : Il est recommandé d'ajouter des en-têtes de sécurité CSP pour protéger contre les attaques XSS.
