@@ -1,269 +1,261 @@
-Pour mettre en place la gestion des erreurs pour les appels API dans `api/brain.js` et `api/andy.js`, nous allons ajouter des try/catch pour gérer les erreurs potentielles. Nous utiliserons également les variables CSS pour personnaliser l'interface utilisateur.
+Création de `api/andy.js` from scratch :
 
-**api/andy.js**
 ```javascript
-import { useState, useEffect } from 'react';
-import { fetchPrice, fetchCryptoPrice, technicalAnalysis, scanMarket, triggerAgent } from './api';
-import { styled } from 'styled-components';
+// Import des dépendances
+import express from 'express';
+import { PrismaClient } from '@prisma/client';
+import { v4 as uuidv4 } from 'uuid';
 
-const Container = styled.div`
-  background-color: var(--bg);
-  color: var(--t1);
-  padding: 20px;
-  font-family: 'Inter', sans-serif;
-`;
+// Création d'un client Prisma
+const prisma = new PrismaClient();
 
-const Error = styled.div`
-  color: var(--t3);
-  font-weight: bold;
-  padding: 10px;
-  border: 1px solid var(--border);
-  background-color: var(--bg2);
-`;
+// Création d'une instance Express
+const app = express();
 
-function AnDyAI() {
-  const [error, setError] = useState(null);
-  const [data, setData] = useState(null);
+// Configuration des headers
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+});
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const result = await technicalAnalysis({ symbol: 'AAPL', interval: '1d' });
-        setData(result);
-      } catch (e) {
-        setError(e.message);
-      }
-    };
-    fetchData();
-  }, []);
+// Configuration de la mise en forme des données
+app.use(express.json());
 
-  const handleFetchPrice = async () => {
-    try {
-      const result = await fetchPrice({ symbol: 'AAPL' });
-      setData(result);
-    } catch (e) {
-      setError(e.message);
-    }
-  };
-
-  const handleFetchCryptoPrice = async () => {
-    try {
-      const result = await fetchCryptoPrice({ coinId: 'bitcoin' });
-      setData(result);
-    } catch (e) {
-      setError(e.message);
-    }
-  };
-
-  const handleScanMarket = async () => {
-    try {
-      const result = await scanMarket({ symbols: ['AAPL', 'GOOG'] });
-      setData(result);
-    } catch (e) {
-      setError(e.message);
-    }
-  };
-
-  const handleTriggerAgent = async () => {
-    try {
-      const result = await triggerAgent({ agent: 'my-agent' });
-      setData(result);
-    } catch (e) {
-      setError(e.message);
-    }
-  };
-
-  return (
-    <Container>
-      <h1>AnDy AI</h1>
-      {error && <Error>{error}</Error>}
-      {data && (
-        <div>
-          <h2>Technical Analysis</h2>
-          <p>Symbol: {data.symbol}</p>
-          <p>Interval: {data.interval}</p>
-          <p>Asset Name: {data.assetName}</p>
-          <p>Price: {data.price}</p>
-          <p>Trend: {data.trend}</p>
-          <p>RSI: {data.rsi}</p>
-          <p>EMA9: {data.ema9}</p>
-          <p>EMA21: {data.ema21}</p>
-          <p>EMA50: {data.ema50}</p>
-          <p>EMA200: {data.ema200}</p>
-          <p>MACD: {data.macd?.line}</p>
-          <p>Bollinger: {data.bollinger.middle}</p>
-          <p>Supports: {data.supports.join(', ')}</p>
-          <p>Resistances: {data.resistances.join(', ')}</p>
-          <p>Volume: {data.volume.current}</p>
-          <p>Signals: {data.signals.join(', ')}</p>
-          <p>Trade Setup: {data.tradeSetup.entry}</p>
-        </div>
-      )}
-      <button onClick={handleFetchPrice}>Fetch Price</button>
-      <button onClick={handleFetchCryptoPrice}>Fetch Crypto Price</button>
-      <button onClick={handleScanMarket}>Scan Market</button>
-      <button onClick={handleTriggerAgent}>Trigger Agent</button>
-    </Container>
-  );
+// Fonction pour valider les données sensibles
+function validateSensitiveData(data) {
+  // Suppression des données sensibles
+  delete data.password;
+  delete data.token;
+  delete data.apiKey;
+  return data;
 }
 
-export default AnDyAI;
+// API pour récupérer les données de l'IA
+app.get('/api/andy', async (req, res) => {
+  try {
+    // Récupération des données de l'IA
+    const data = await prisma.ia.findMany();
+    // Validation des données sensibles
+    const validatedData = data.map((item) => validateSensitiveData(item));
+    // Envoi de la réponse
+    res.json(validatedData);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erreur interne' });
+  }
+});
+
+// API pour envoyer des données à l'IA
+app.post('/api/andy', async (req, res) => {
+  try {
+    // Validation des données sensibles
+    const validatedData = validateSensitiveData(req.body);
+    // Enregistrement des données dans la base de données
+    const id = uuidv4();
+    await prisma.ia.create({ data: validatedData, id });
+    // Envoi de la réponse
+    res.json({ message: 'Données enregistrées' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erreur interne' });
+  }
+});
+
+// Export de l'application Express
+export default app;
 ```
 
-**api/brain.js**
+Création de `api/andy.js` pour les requêtes chat :
+
 ```javascript
-import { fetchPrice, fetchCryptoPrice, technicalAnalysis, scanMarket, triggerAgent } from './api';
+// Import des dépendances
+import express from 'express';
+import { PrismaClient } from '@prisma/client';
 
-const brain = async (input) => {
+// Création d'un client Prisma
+const prisma = new PrismaClient();
+
+// Création d'une instance Express
+const app = express();
+
+// Configuration des headers
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+});
+
+// Configuration de la mise en forme des données
+app.use(express.json());
+
+// Fonction pour valider les données sensibles
+function validateSensitiveData(data) {
+  // Suppression des données sensibles
+  delete data.password;
+  delete data.token;
+  delete data.apiKey;
+  return data;
+}
+
+// API pour récupérer les messages de chat
+app.get('/api/andy/chat', async (req, res) => {
   try {
-    const result = await technicalAnalysis(input);
-    return result;
-  } catch (e) {
-    return { error: e.message };
+    // Récupération des messages de chat
+    const messages = await prisma.chat.findMany();
+    // Validation des données sensibles
+    const validatedMessages = messages.map((item) => validateSensitiveData(item));
+    // Envoi de la réponse
+    res.json(validatedMessages);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erreur interne' });
   }
-};
+});
 
-const fetchPriceHandler = async (input) => {
+// API pour envoyer un message de chat
+app.post('/api/andy/chat', async (req, res) => {
   try {
-    const result = await fetchPrice(input);
-    return result;
-  } catch (e) {
-    return { error: e.message };
+    // Validation des données sensibles
+    const validatedMessage = validateSensitiveData(req.body);
+    // Enregistrement du message dans la base de données
+    const id = uuidv4();
+    await prisma.chat.create({ data: validatedMessage, id });
+    // Envoi de la réponse
+    res.json({ message: 'Message envoyé' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erreur interne' });
   }
-};
+});
 
-const fetchCryptoPriceHandler = async (input) => {
-  try {
-    const result = await fetchCryptoPrice(input);
-    return result;
-  } catch (e) {
-    return { error: e.message };
-  }
-};
-
-const scanMarketHandler = async (input) => {
-  try {
-    const result = await scanMarket(input);
-    return result;
-  } catch (e) {
-    return { error: e.message };
-  }
-};
-
-const triggerAgentHandler = async (input) => {
-  try {
-    const result = await triggerAgent(input);
-    return result;
-  } catch (e) {
-    return { error: e.message };
-  }
-};
-
-export { brain, fetchPriceHandler, fetchCryptoPriceHandler, scanMarketHandler, triggerAgentHandler };
+// Export de l'application Express
+export default app;
 ```
 
-**api/api.js**
+Création de `styles/api.css` pour les styles :
+
+```css
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg);
+  color: var(--t1);
+}
+
+.api-container {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 20px;
+  background-color: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.api-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--t2);
+  margin-bottom: 20px;
+}
+
+.api-form {
+  margin-top: 20px;
+}
+
+.api-form input {
+  width: 100%;
+  height: 40px;
+  padding: 10px;
+  font-size: 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.api-form button {
+  width: 100%;
+  height: 40px;
+  padding: 10px;
+  font-size: 18px;
+  background-color: var(--green);
+  color: var(--t1);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.api-form button:hover {
+  background-color: #00cc00;
+}
+
+.api-response {
+  margin-top: 20px;
+}
+
+.api-response pre {
+  background-color: var(--bg3);
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+```
+
+Création de `index.js` pour lancer l'application :
+
 ```javascript
-import { fetchPrice, fetchCryptoPrice, technicalAnalysis, scanMarket, triggerAgent } from './brain';
+import express from 'express';
+import api from './api/andy.js';
 
-const api = {
-  fetchPrice,
-  fetchCryptoPrice,
-  technicalAnalysis,
-  scanMarket,
-  triggerAgent,
-};
+const app = express();
 
-export default api;
+app.use(express.json());
+app.use(express.static('public'));
+
+app.use('/api', api);
+
+const port = 4000;
+app.listen(port, () => {
+  console.log(`Server started on port ${port}`);
+});
 ```
 
-**api/technicalAnalysis.js**
-```javascript
-import { fetchPrice } from './api';
+Création de `package.json` :
 
-const technicalAnalysis = async (input) => {
-  try {
-    const price = await fetchPrice(input);
-    const closes = price.closes;
-    const highs = price.highs;
-    const lows = price.lows;
-    const vols = price.vols;
-
-    // ... (calculations)
-  } catch (e) {
-    throw e;
+```json
+{
+  "name": "andy-api",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "@prisma/client": "^4.0.0",
+    "uuid": "^8.3.2"
   }
-};
-
-export default technicalAnalysis;
+}
 ```
 
-**api/fetchPrice.js**
-```javascript
-import axios from 'axios';
+Création de `prisma/schema.prisma` :
 
-const fetchPrice = async (input) => {
-  try {
-    const response = await axios.get(`https://query1.finance.yahoo.com/v8/finance/chart/${input.symbol}?interval=1d&range=1d`);
-    const data = response.data;
-    // ... (calculations)
-  } catch (e) {
-    throw e;
-  }
-};
+```prisma
+model IA {
+  id       String   @id @default(cuid())
+  name     String
+  data     String
+}
 
-export default fetchPrice;
+model Chat {
+  id       String   @id @default(cuid())
+  message  String
+}
 ```
 
-**api/fetchCryptoPrice.js**
-```javascript
-import axios from 'axios';
+Création de `prisma/.env` :
 
-const fetchCryptoPrice = async (input) => {
-  try {
-    const response = await axios.get(`https://api.coingecko.com/api/v3/simple/price?ids=${input.coinId}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true`);
-    const data = response.data;
-    // ... (calculations)
-  } catch (e) {
-    throw e;
-  }
-};
-
-export default fetchCryptoPrice;
+```makefile
+DATABASE_URL="postgresql://user:password@localhost:5432/database"
 ```
 
-**api/scanMarket.js**
-```javascript
-import axios from 'axios';
-
-const scanMarket = async (input) => {
-  try {
-    const response = await axios.get(`https://query1.finance.yahoo.com/v8/finance/chart/${input.symbols.join(',')}?interval=1d&range=1mo`);
-    const data = response.data;
-    // ... (calculations)
-  } catch (e) {
-    throw e;
-  }
-};
-
-export default scanMarket;
-```
-
-**api/triggerAgent.js**
-```javascript
-import axios from 'axios';
-
-const triggerAgent = async (input) => {
-  try {
-    const response = await axios.post(`${process.env.APP_URL}/api/trigger-agent`, { agent: input.agent });
-    const data = response.data;
-    // ... (calculations)
-  } catch (e) {
-    throw e;
-  }
-};
-
-export default triggerAgent;
-```
-
-Notez que nous avons ajouté des try/catch pour gérer les erreurs potentielles dans chaque fonction. Nous avons également utilisé les variables CSS pour personnaliser l'interface utilisateur.
+Lancer l'application avec `npm start` et accéder à `http://localhost:4000/api/andy` pour tester les API.
