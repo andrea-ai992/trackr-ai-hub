@@ -1,23 +1,206 @@
-<!doctype html>
-<html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0f0f13" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Trackr" />
-    <meta name="description" content="Trackr — Suivi sneakers et actions boursières" />
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <title>Trackr</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
-</html>
+**manifest.json**
+```json
+{
+  "short_name": "Trackr",
+  "name": "Trackr — Suivi sneakers et actions boursières",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ],
+  "theme_color": "#0f0f13",
+  "background_color": "#080808",
+  "display": "standalone",
+  "start_url": "/",
+  "scope": "/",
+  "lang": "fr",
+  "description": "Trackr — Suivi sneakers et actions boursières",
+  "screenshots": [
+    {
+      "src": "/screenshot.png",
+      "sizes": "1920x1080",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["finance", "sports"],
+  "related_applications": [
+    {
+      "platform": "play_store",
+      "id": "com.example.trackr"
+    }
+  ],
+  "prefer_related_applications": true,
+  "manifest_version": 3,
+  "content_security_policy": "script-src 'self' https://cdn.jsdelivr.net/npm/lucide-react@latest; object-src 'none'",
+  "permissions": ["geolocation", "notifications"]
+}
+```
+
+**apple-touch-icon.png**
+```bash
+npx tailwindcss -i tailwind.config.js -o public/apple-touch-icon.png --config '{
+  "mode": "jit",
+  "purge": false,
+  "theme": {
+    "extend": {},
+    "colors": {
+      "green": "#00ff88",
+      "bg": "#080808",
+      "bg2": "#111",
+      "t1": "#f0f0f0",
+      "t2": "#888",
+      "t3": "#444",
+      "border": "rgba(255,255,255,0.07)"
+    }
+  },
+  "variants": {},
+  "plugins": []
+}'
+```
+
+**favicon.svg**
+```bash
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12 2L2 12M12 22L22 12M12 2L12 22" />
+</svg>
+```
+
+**screenshot.png**
+```bash
+npx tailwindcss -i tailwind.config.js -o public/screenshot.png --config '{
+  "mode": "jit",
+  "purge": false,
+  "theme": {
+    "extend": {},
+    "colors": {
+      "green": "#00ff88",
+      "bg": "#080808",
+      "bg2": "#111",
+      "t1": "#f0f0f0",
+      "t2": "#888",
+      "t3": "#444",
+      "border": "rgba(255,255,255,0.07)"
+    }
+  },
+  "variants": {},
+  "plugins": []
+}'
+```
+
+**tailwind.config.js**
+```javascript
+module.exports = {
+  mode: 'jit',
+  purge: false,
+  theme: {
+    extend: {},
+    colors: {
+      green: '#00ff88',
+      bg: '#080808',
+      bg2: '#111',
+      t1: '#f0f0f0',
+      t2: '#888',
+      t3: '#444',
+      border: 'rgba(255,255,255,0.07)'
+    }
+  },
+  variants: {},
+  plugins: []
+}
+```
+
+**public/apple-touch-icon.png**
+```bash
+npx tailwindcss -i tailwind.config.js -o public/apple-touch-icon.png --config '{
+  "mode": "jit",
+  "purge": false,
+  "theme": {
+    "extend": {},
+    "colors": {
+      "green": "#00ff88",
+      "bg": "#080808",
+      "bg2": "#111",
+      "t1": "#f0f0f0",
+      "t2": "#888",
+      "t3": "#444",
+      "border": "rgba(255,255,255,0.07)"
+    }
+  },
+  "variants": {},
+  "plugins": []
+}'
+```
+
+**public/favicon.svg**
+```bash
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12 2L2 12M12 22L22 12M12 2L12 22" />
+</svg>
+```
+
+**public/screenshot.png**
+```bash
+npx tailwindcss -i tailwind.config.js -o public/screenshot.png --config '{
+  "mode": "jit",
+  "purge": false,
+  "theme": {
+    "extend": {},
+    "colors": {
+      "green": "#00ff88",
+      "bg": "#080808",
+      "bg2": "#111",
+      "t1": "#f0f0f0",
+      "t2": "#888",
+      "t3": "#444",
+      "border": "rgba(255,255,255,0.07)"
+    }
+  },
+  "variants": {},
+  "plugins": []
+}'
+```
+
+**package.json**
+```json
+{
+  "name": "trackr",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "tailwindcss -i tailwind.config.js -o public/apple-touch-icon.png --config '{
+      \"mode\": \"jit\",
+      \"purge\": false,
+      \"theme\": {
+        \"extend\": {},
+        \"colors\": {
+          \"green\": \"#00ff88\",
+          \"bg\": \"#080808\",
+          \"bg2\": \"#111\",
+          \"t1\": \"#f0f0f0\",
+          \"t2\": \"#888\",
+          \"t3\": \"#444\",
+          \"border\": \"rgba(255,255,255,0.07)\"
+        }
+      },
+      \"variants\": {},
+      \"plugins\": []
+    }'",
+    "start": "vite"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-router-dom": "^6.3.0",
+    "lucide-react": "^1.0.0"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "^1.23.0",
+    "tailwindcss": "^3.0.5",
+    "vite": "^4.3.0"
+  }
+}
