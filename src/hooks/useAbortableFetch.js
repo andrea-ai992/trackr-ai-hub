@@ -1,28 +1,33 @@
-// src/hooks/useAbortableFetch.js
+src/hooks/useAbortableFetch.js
+```javascript
 import { useState, useEffect, useCallback } from 'react';
 
-export const useAbortableFetch = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+const useAbortableFetch = (initialTimeout = 8000) => {
   const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [abortController, setAbortController] = useState(null);
 
-  const fetchData = useCallback(async (url, options = {}, timeout = 10000) => {
-    setIsLoading(true);
+  const fetchData = useCallback(async (url, options = {}) => {
+    setLoading(true);
     setError(null);
-    setData(null);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    setAbortController(controller);
+
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+      setError(new Error('Request timeout'));
+      setLoading(false);
+    }, options.timeout || initialTimeout);
 
     try {
       const response = await fetch(url, {
         ...options,
         signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -32,19 +37,34 @@ export const useAbortableFetch = () => {
       setData(result);
       return result;
     } catch (err) {
-      if (err.name === 'AbortError') {
-        setError('Request timed out after 10 seconds');
-      } else if (err.message.includes('Failed to fetch')) {
-        setError('Network error. Please check your connection.');
-      } else {
-        setError(err.message);
-      }
-      throw err;
-    } finally {
       clearTimeout(timeoutId);
-      setIsLoading(false);
+      if (err.name !== 'AbortError') {
+        setError(err);
+      }
+    } finally {
+      setLoading(false);
+      setAbortController(null);
     }
-  }, []);
+  }, [initialTimeout]);
 
-  return { fetchData, isLoading, error, data };
+  const abortFetch = useCallback(() => {
+    if (abortController) {
+      abortController.abort();
+      setLoading(false);
+      setError(new Error('Request aborted'));
+      setAbortController(null);
+    }
+  }, [abortController]);
+
+  useEffect(() => {
+    return () => {
+      if (abortController) {
+        abortController.abort();
+      }
+    };
+  }, [abortController]);
+
+  return { data, error, loading, fetchData, abortFetch };
 };
+
+export default useAbortableFetch;
