@@ -1,65 +1,10 @@
-Je vais créer un composant Sparkline optimisé et l'intégrer dans Markets.jsx. Voici les fichiers modifiés :
-
-```jsx
-// src/components/Sparkline.jsx
-import { useMemo } from 'react';
-
-const Sparkline = ({ data, width = 40, height = 20, color, pulse = false }) => {
-  const pathData = useMemo(() => {
-    if (!data || data.length === 0) return null;
-
-    const max = Math.max(...data);
-    const min = Math.min(...data);
-    const range = max - min || 1;
-
-    return data.map((point, i) =>
-      `${i * (width / (data.length - 1))},${height - ((point - min) / range) * height}`
-    ).join(' ');
-  }, [data, width, height]);
-
-  const shouldPulse = pulse && data && data.length > 0;
-  const currentColor = color || (data && data.length > 0 && data[data.length - 1] > data[0] ? 'var(--green)' : 'var(--red)');
-
-  if (!pathData) {
-    return <div className="w-[40px] h-[20px]" />;
-  }
-
-  return (
-    <svg
-      width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      className={shouldPulse ? 'sparkline-pulse' : ''}
-      style={{ '--sparkline-color': currentColor } as React.CSSProperties}
-    >
-      <style jsx>{`
-        @keyframes sparklinePulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.7; }
-        }
-        .sparkline-pulse {
-          animation: sparklinePulse 1.5s ease-in-out infinite;
-        }
-      `}</style>
-      <polyline
-        fill="none"
-        stroke="var(--sparkline-color)"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        points={pathData}
-      />
-    </svg>
-  );
-};
-
-export default Sparkline;
-```
+Je vais implémenter un système de gestion des erreurs robuste pour les appels API dans `Markets.jsx` avec affichage d'erreurs utilisateur en overlay neon et retry automatique après 5s. Voici les modifications nécessaires :
 
 ```jsx
 // src/pages/Markets.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, RefreshCw, AlertTriangle } from 'lucide-react';
 import Sparkline from '../components/Sparkline';
 
 const Markets = () => {
@@ -70,25 +15,30 @@ const Markets = () => {
   const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [sortBy, setSortBy] = useState('default');
+  const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  useEffect(() => {
-    setTab(params.get('tab') === 'crypto' ? 'crypto' : 'stocks');
-  }, [params]);
+  const showError = useCallback((message) => {
+    setError(message);
+    setTimeout(() => setError(null), 5000);
+  }, []);
 
   const fetchStocksData = async () => {
     try {
       const response = await fetch('/api/markets');
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const json = await response.json();
       return json.data.filter(item => item.type === 'stock');
     } catch (error) {
       console.error('Error fetching stocks:', error);
-      return [];
+      throw new Error(`Failed to fetch stocks: ${error.message}`);
     }
   };
 
   const fetchCryptoData = async () => {
     try {
       const response = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=true&price_change_percentage=24h');
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const json = await response.json();
       return json.map(coin => ({
         id: coin.id,
@@ -104,55 +54,47 @@ const Markets = () => {
       }));
     } catch (error) {
       console.error('Error fetching crypto:', error);
-      return [];
+      throw new Error(`Failed to fetch crypto: ${error.message}`);
     }
   };
 
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      let stocks = [];
+      let crypto = [];
+
+      if (tab === 'stocks') {
+        stocks = await fetchStocksData();
+      } else {
+        crypto = await fetchCryptoData();
+      }
+
+      setData({ data: [...stocks, ...crypto] });
+      setRetryCount(0);
+    } catch (error) {
+      console.error('Fetch error:', error);
+      showError(error.message);
+      setRetryCount(prev => prev + 1);
+    } finally {
+      setLoading(false);
+    }
+  }, [tab, showError]);
+
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        let stocks = [];
-        let crypto = [];
-
-        if (tab === 'stocks') {
-          stocks = await fetchStocksData();
-        } else {
-          crypto = await fetchCryptoData();
-        }
-
-        setData({ data: [...stocks, ...crypto] });
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
-  }, [tab]);
+  }, [fetchData]);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     setRefreshing(true);
-    const fetchData = async () => {
-      try {
-        let stocks = [];
-        let crypto = [];
+    setError(null);
+    fetchData().finally(() => setRefreshing(false));
+  }, [fetchData]);
 
-        if (tab === 'stocks') {
-          stocks = await fetchStocksData();
-        } else {
-          crypto = await fetchCryptoData();
-        }
-
-        setData({ data: [...stocks, ...crypto] });
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setRefreshing(false);
-      }
-    };
+  const handleRetry = useCallback(() => {
     fetchData();
-  };
+  }, [fetchData]);
 
   const switchTab = (id) => {
     setTab(id);
@@ -219,9 +161,43 @@ const Markets = () => {
         .pulse-red {
           animation: pulseRed 1.5s ease-in-out infinite;
         }
+        .error-overlay {
+          animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+          from { transform: translateY(-100%); }
+          to { transform: translateY(0); }
+        }
+        .retry-countdown {
+          animation: countdown 5s linear forwards;
+        }
+        @keyframes countdown {
+          0% { width: 100%; }
+          100% { width: 0%; }
+        }
       `}</style>
 
-      <div className="sticky top-0 z-50 bg-var(--bg2) border-b border-var(--border)">
+      {error && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-var(--red)/20 backdrop-blur-sm border-b border-var(--red)/50 error-overlay">
+          <div className="flex items-center gap-3 px-4 py-3">
+            <AlertTriangle size={20} className="text-var(--red) flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-var(--red)">{error}</p>
+              <div className="h-1 bg-var(--red)/30 rounded-full mt-2 overflow-hidden">
+                <div className="h-full bg-var(--red) retry-countdown"></div>
+              </div>
+            </div>
+            <button
+              onClick={handleRetry}
+              className="px-3 py-1 text-xs font-semibold text-var(--red) border border-var(--red) rounded-lg hover:bg-var(--red)/10 transition-colors whitespace-nowrap"
+            >
+              Retry Now
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="sticky top-0 z-40 bg-var(--bg2) border-b border-var(--border)">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between mb-3">
             <h1 className="text-xl font-bold tracking-tight">Markets</h1>
@@ -304,7 +280,7 @@ const Markets = () => {
       </div>
 
       <div className="px-4 pt-4 pb-24">
-        {loading ? (
+        {loading && retryCount === 0 ? (
           <div className="space-y-3">
             {[...Array(10)].map((_, i) => (
               <div key={i} className="animate-pulse bg-var(--bg2)/50 rounded-lg p-4">
@@ -320,48 +296,54 @@ const Markets = () => {
           </div>
         ) : (
           <>
-            <div className="space-y-2 mb-6">
-              {(tab === 'stocks' ? sortedStocks : sortedCrypto).map((asset, index) => (
-                <div key={asset.id || index} className="flex items-center justify-between p-3 rounded-lg hover:bg-var(--bg2)/50 transition-colors cursor-pointer">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-8 h-8 rounded-full bg-var(--bg) flex items-center justify-center text-xs font-bold text-var(--t1) flex-shrink-0">
-                      {asset.image ? (
-                        <img src={asset.image} alt={asset.name} className="w-full h-full rounded-full object-cover" />
-                      ) : (
-                        <span className="text-color">{asset.symbol.substring(0, 2).toUpperCase()}</span>
-                      )}
+            {data && (tab === 'stocks' ? sortedStocks : sortedCrypto).length === 0 ? (
+              <div className="text-center py-12">
+                <AlertTriangle size={48} className="mx-auto mb-4 text-var(--t3)" />
+                <p className="text-var(--t3)">No assets found matching your criteria</p>
+              </div>
+            ) : (
+              <div className="space-y-2 mb-6">
+                {(tab === 'stocks' ? sortedStocks : sortedCrypto).map((asset, index) => (
+                  <div key={asset.id || index} className="flex items-center justify-between p-3 rounded-lg hover:bg-var(--bg2)/50 transition-colors cursor-pointer">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-var(--bg) flex items-center justify-center text-xs font-bold text-var(--t1) flex-shrink-0">
+                        {asset.image ? (
+                          <img src={asset.image} alt={asset.name} className="w-full h-full rounded-full object-cover" />
+                        ) : (
+                          <span className="text-color">{asset.symbol.substring(0, 2).toUpperCase()}</span>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-sm truncate">{asset.name}</h3>
+                        <p className="text-xs text-var(--t3) truncate">{asset.symbol}</p>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-sm truncate">{asset.name}</h3>
-                      <p className="text-xs text-var(--t3) truncate">{asset.symbol}</p>
+                    <div className="text-right flex-shrink-0">
+                      <div className={`font-mono font-bold tabular-nums text-sm ${
+                        asset.change > 0 ? 'pulse-green' : 'pulse-red'
+                      }`}>
+                        ${asset.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                      <div className="flex items-center justify-end gap-1 text-xs">
+                        <span style={{ color: getChangeColor(asset.change) }}>
+                          {asset.change?.toFixed(2)}%
+                        </span>
+                        {getArrow(asset.change)}
+                      </div>
+                    </div>
+                    <div className="ml-4 w-20 h-8">
+                      <Sparkline
+                        data={asset.sparkline}
+                        width={80}
+                        height={32}
+                        color={asset.change > 0 ? 'var(--green)' : 'var(--red)'}
+                        pulse={asset.change !== 0}
+                      />
                     </div>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <div className={`font-mono font-bold tabular-nums text-sm ${
-                      asset.change !== undefined && asset.change !== 0 ? (asset.change > 0 ? 'pulse-green' : 'pulse-red') : ''
-                    }`}>
-                      {asset.price.toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </div>
-                    <div className="flex items-center gap-1 text-xs" style={{ color: getChangeColor(asset.change) }}>
-                      {getArrow(asset.change)}
-                      {Math.abs(asset.change).toFixed(2)}%
-                    </div>
-                  </div>
-                  <div className="ml-4 flex-shrink-0">
-                    <Sparkline
-                      data={asset.sparkline}
-                      width={40}
-                      height={20}
-                      color={asset.change > 0 ? 'var(--green)' : 'var(--red)'}
-                      pulse={true}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </>
         )}
       </div>
