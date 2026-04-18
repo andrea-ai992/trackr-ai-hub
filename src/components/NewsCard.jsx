@@ -1,142 +1,74 @@
-Je vais améliorer le composant NewsCard en ajoutant des cards avec une accent bar colorée selon la source et des badges BREAKING/NEW dynamiques.
+import { Clock, ExternalLink } from 'lucide-react';
 
-```jsx
-import { useRef, useState } from "react";
-import { useIntersectionObserver } from "../hooks/useIntersectionObserver";
-import styles from "../styles/news.module.css";
+const NewsCard = ({
+  title,
+  description,
+  source,
+  url,
+  timestamp,
+  isBreaking = false,
+  isNew = false
+}) => {
+  const getSourceColor = (sourceName) => {
+    const sources = {
+      'BBC': 'linear-gradient(90deg, #ff0000, #ff8c00)',
+      'CNN': 'linear-gradient(90deg, #0066cc, #00ccff)',
+      'Reuters': 'linear-gradient(90deg, #ff6600, #ffcc00)',
+      'Bloomberg': 'linear-gradient(90deg, #003366, #0099cc)',
+      'TechCrunch': 'linear-gradient(90deg, #ff0000, #ff6600)',
+      'The Verge': 'linear-gradient(90deg, #3366cc, #6699cc)',
+      'default': 'linear-gradient(90deg, #00ff88, #00cc66)'
+    };
+    return sources[sourceName] || sources.default;
+  };
 
-const CATEGORY_COLORS = {
-  BBC: { bg: "#e60026", border: "transparent", accent: "#e60026" },
-  Bloomberg: { bg: "#1a1a1a", border: "var(--green)", accent: "#00ff88" },
-  CoinDesk: { bg: "#f7931a", border: "transparent", accent: "#f7931a" },
-  "Le Monde": { bg: "#003189", border: "transparent", accent: "#003189" },
-  Reuters: { bg: "#ff8000", border: "transparent", accent: "#ff8000" },
-  WSJ: { bg: "#003366", border: "transparent", accent: "#003366" },
-  CNBC: { bg: "#1e1e1e", border: "var(--green)", accent: "#00ff88" },
-  ESPN: { bg: "#d50000", border: "transparent", accent: "#d50000" },
-  NBA: { bg: "#c8102e", border: "transparent", accent: "#c8102e" },
-  NFL: { bg: "#013369", border: "transparent", accent: "#013369" },
-  TechCrunch: { bg: "#ff0000", border: "transparent", accent: "#ff0000" },
-  ArsTechnica: { bg: "#000000", border: "var(--green)", accent: "#00ff88" },
-  TheVerge: { bg: "#000000", border: "var(--green)", accent: "#00ff88" },
-  Wired: { bg: "#000000", border: "var(--green)", accent: "#00ff88" },
-  TechMeme: { bg: "#000000", border: "var(--green)", accent: "#00ff88" },
-  Cointelegraph: { bg: "#2d8f47", border: "transparent", accent: "#2d8f47" },
-  TheBlock: { bg: "#000000", border: "var(--green)", accent: "#00ff88" },
-  Decrypt: { bg: "#000000", border: "var(--green)", accent: "#00ff88" },
-  LeFigaro: { bg: "#003366", border: "transparent", accent: "#003366" },
-  Liberation: { bg: "#000000", border: "var(--green)", accent: "#00ff88" },
-  LExpress: { bg: "#003366", border: "transparent", accent: "#003366" },
-  Default: { bg: "var(--t3)", border: "transparent", accent: "var(--t2)" },
-};
-
-function getRelativeTime(dateString) {
-  const now = new Date();
-  const date = new Date(dateString);
-  const diffMs = now - date;
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHour = Math.floor(diffMin / 60);
-
-  if (diffMin < 30) return { type: "BREAKING", time: `${diffMin}m ago` };
-  if (diffMin < 120) return { type: "NEW", time: `${diffMin}m ago` };
-  if (diffHour < 24) return { type: "OLD", time: `${diffHour}h ago` };
-  return { type: "OLD", time: `${Math.floor(diffHour / 24)}d ago` };
-}
-
-function LazyImage({ src, alt, className }) {
-  const imgRef = useRef(null);
-  const [loaded, setLoaded] = useState(false);
-  const [error, setError] = useState(false);
-  const isVisible = useIntersectionObserver(imgRef, { threshold: 0.1, rootMargin: "100px" });
-
-  const placeholderUrl = `https://picsum.photos/seed/${encodeURIComponent(alt || "news")}/72/72`;
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
 
   return (
-    <div ref={imgRef} className={`${styles.imageWrapper} ${className || ""}`}>
-      {!loaded && (
-        <div className={styles.imageSkeleton} aria-hidden="true">
-          <div className={styles.shimmer} />
-        </div>
-      )}
-      {isVisible && (
-        <img
-          src={error || !src ? placeholderUrl : src}
-          alt={alt}
-          className={`${styles.coverImage} ${loaded ? styles.imageLoaded : styles.imageHidden}`}
-          onLoad={() => setLoaded(true)}
-          onError={() => {
-            setError(true);
-            setLoaded(true);
-          }}
-          loading="lazy"
-          decoding="async"
-        />
-      )}
-    </div>
-  );
-}
-
-export function NewsCard({ article, index = 0 }) {
-  const {
-    title,
-    url,
-    urlToImage,
-    publishedAt,
-    source,
-  } = article;
-
-  const catKey = source?.name || "Default";
-  const catStyle = CATEGORY_COLORS[catKey] || CATEGORY_COLORS.Default;
-  const relTime = getRelativeTime(publishedAt);
-
-  return (
-    <article className={styles.card}>
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={styles.cardLink}
-        aria-label={`Read article: ${title}`}
-      >
-        <div className={styles.imageContainer}>
-          <LazyImage src={urlToImage} alt={title} />
-          <div className={styles.imageTop}>
-            <span
-              className={styles.categoryBadge}
-              style={{
-                backgroundColor: catStyle.bg,
-                borderLeft: `3px solid ${catStyle.border}`,
-                color: catStyle.accent,
-              }}
-            >
-              {catKey}
-            </span>
-            {relTime.type === "BREAKING" && (
-              <span className={`${styles.breakingBadge} ${styles.badge}`}>BREAKING</span>
-            )}
-            {relTime.type === "NEW" && (
-              <span className={`${styles.newBadge} ${styles.badge}`}>NEW</span>
-            )}
+    <article className="news-card w-full max-w-md mx-auto p-0 rounded-xl overflow-hidden shadow-lg bg--bg2 border border--border hover:shadow--green/10 transition-all duration-300">
+      <div className="news-header relative">
+        <div
+          className="source-bar h-1 w-full"
+          style={{ background: getSourceColor(source) }}
+        ></div>
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text--t1 font-semibold text-lg truncate">{source}</h3>
+            <div className="flex items-center gap-2">
+              {isBreaking && (
+                <span className="px-2 py-1 text-xs font-bold text--bg bg--green rounded-md">
+                  BREAKING
+                </span>
+              )}
+              {isNew && (
+                <span className="px-2 py-1 text-xs font-bold text--bg bg--green rounded-md">
+                  NEW
+                </span>
+              )}
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text--t3 hover:text--green transition-colors"
+                aria-label="Lire l'article"
+              >
+                <ExternalLink size={16} />
+              </a>
+            </div>
           </div>
+          <p className="text--t2 text-sm mb-3">{formatTime(timestamp)}</p>
         </div>
+      </div>
 
-        <div className={styles.cardBody}>
-          <h3 className={styles.cardTitle}>
-            {title}
-          </h3>
-          <div className={styles.cardFooter}>
-            <span className={styles.sourceName} style={{ color: catStyle.accent }}>
-              {source?.name}
-            </span>
-            <time className={styles.timestamp} dateTime={publishedAt}>
-              {relTime.time}
-            </time>
-          </div>
-        </div>
-      </a>
+      <div className="news-content px-4 pb-4">
+        <h2 className="text--t1 font-bold text-xl mb-3 leading-tight">{title}</h2>
+        <p className="text--t2 text-base leading-relaxed">{description}</p>
+      </div>
     </article>
   );
-}
+};
 
 export default NewsCard;
