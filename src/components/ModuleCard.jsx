@@ -1,162 +1,140 @@
-**src/components/ModuleCard.jsx**
+Création de src/pages/More.jsx
 ```jsx
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { IoChevronForward } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { ModuleCard } from './ModuleCard';
+import { Inter } from 'next/font/google';
+import styles from '../styles/Mobile.module.css';
 
-const ModuleCard = ({ title, description, icon, badge, url }) => {
-  return (
-    <div className="module-card">
-      <div className="module-card-header">
-        <span className="module-card-icon">{icon}</span>
-        <span className="module-card-badge">{badge}</span>
-      </div>
-      <div className="module-card-content">
-        <h3 className="module-card-title">{title}</h3>
-        <p className="module-card-description">{description}</p>
-      </div>
-      <div className="module-card-footer">
-        <Link to={url} className="module-card-link">
-          <IoChevronForward size={24} />
-        </Link>
-      </div>
-    </div>
-  );
-};
-
-export default ModuleCard;
-```
-
-**src/pages/More.jsx**
-```jsx
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { IoChevronForward } from 'lucide-react';
-import ModuleCard from '../components/ModuleCard';
-import { useDarkMode } from '../hooks/useDarkMode';
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+});
 
 const modules = [
   {
+    id: 1,
     title: 'FlightTracker',
-    description: 'Suivi de vols en temps réel',
+    description: 'Suivi de vols',
     icon: '✈️',
     badge: 'LIVE',
-    url: '/flight-tracker',
+    link: '/flighttracker',
   },
   {
+    id: 2,
     title: 'CryptoTrader',
-    description: 'Analyse et trading de crypto-monnaies',
+    description: 'Trading crypto',
     icon: '📈',
     badge: 'NEW',
-    url: '/crypto-trader',
+    link: '/cryptotrader',
   },
   {
+    id: 3,
     title: 'Signals IA',
-    description: 'Signaux de trading générés par IA',
+    description: 'Signaux IA',
     icon: '⚡',
     badge: 'NEW',
-    url: '/signals-ia',
+    link: '/signals-ia',
   },
   {
+    id: 4,
     title: 'Portfolio',
-    description: 'Gestion de votre portefeuille d'investissement',
+    description: 'Gestion de portefeuille',
     icon: '💼',
     badge: '',
-    url: '/portfolio',
+    link: '/portfolio',
   },
   {
+    id: 5,
     title: 'Patterns',
-    description: 'Analyse de données et visualisation de tendances',
+    description: 'Modèles',
     icon: '📊',
     badge: '',
-    url: '/patterns',
+    link: '/patterns',
   },
   {
+    id: 6,
     title: 'Translator',
-    description: 'Traducteur automatique de textes',
+    description: 'Traducteur',
     icon: '🌐',
     badge: '',
-    url: '/translator',
+    link: '/translator',
   },
   {
+    id: 7,
     title: 'RealEstate',
-    description: 'Analyse et visualisation de données immobilières',
+    description: 'Immobilier',
     icon: '🏠',
     badge: 'PRO',
-    url: '/real-estate',
+    link: '/realestate',
   },
   {
+    id: 8,
     title: 'Sneakers',
-    description: 'Suivi de tendances et prix de chaussures',
+    description: 'Sneakers',
     icon: '👟',
     badge: '',
-    url: '/sneakers',
+    link: '/sneakers',
   },
   {
+    id: 9,
     title: 'Watches',
-    description: 'Suivi de tendances et prix de montres',
+    description: 'Montres',
     icon: '⌚',
     badge: 'PRO',
-    url: '/watches',
+    link: '/watches',
   },
   {
+    id: 10,
     title: 'BusinessPlan',
-    description: 'Création et gestion de plans d'affaires',
+    description: 'Plan d\'entreprise',
     icon: '📋',
     badge: '',
-    url: '/business-plan',
+    link: '/businessplan',
   },
 ];
 
 const More = () => {
-  const { darkMode, toggleDarkMode } = useDarkMode();
+  const location = useLocation();
 
   return (
-    <div className="more-page">
-      <h1 className="more-page-title">Modules premium</h1>
-      <div className="more-page-grid">
-        {modules.map((module, index) => (
+    <div className={`${styles.container} ${styles.darkMode}`}>
+      <h1 className={styles.title}>Modules premium</h1>
+      <div className={styles.modules}>
+        {modules.map((module) => (
           <ModuleCard
-            key={index}
+            key={module.id}
             title={module.title}
             description={module.description}
             icon={module.icon}
             badge={module.badge}
-            url={module.url}
+            link={module.link}
           />
         ))}
       </div>
-      <div className="more-page-settings">
-        <div className="more-page-settings-dark-mode">
-          <label className="more-page-settings-dark-mode-label">
-            Mode sombre
-          </label>
+      <div className={styles.settings}>
+        <div className={styles.darkModeToggle}>
           <input
             type="checkbox"
-            checked={darkMode}
-            onChange={toggleDarkMode}
+            id="dark-mode-toggle"
+            className={styles.checkbox}
             disabled
-            title="Mode sombre déjà activé"
+            title="Dark mode déjà activé"
           />
-        </div>
-        <div className="more-page-settings-version">
-          <label className="more-page-settings-version-label">
-            Version app
+          <label className={styles.label} htmlFor="dark-mode-toggle">
+            Dark mode
           </label>
-          <span className="more-page-settings-version-value">v3.0</span>
         </div>
-        <div className="more-page-settings-github">
-          <label className="more-page-settings-github-label">
-            GitHub
-          </label>
+        <p className={styles.version}>Version app : v3.0</p>
+        <p className={styles.github}>
           <a
             href="https://github.com/andrea-ai992/trackr-ai-hub"
             target="_blank"
             rel="noopener noreferrer"
           >
-            Voir le code
+            GitHub
           </a>
-        </div>
+        </p>
       </div>
     </div>
   );
@@ -165,150 +143,211 @@ const More = () => {
 export default More;
 ```
 
-**styles/global.css**
+Création de src/components/ModuleCard.jsx
+```jsx
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { Inter } from 'next/font/google';
+import styles from './ModuleCard.module.css';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+});
+
+const ModuleCard = ({ title, description, icon, badge, link }) => {
+  return (
+    <div className={`${styles.card} ${styles.minHeight}`}>
+      <div className={styles.icon}>{icon}</div>
+      <div className={styles.badge}>{badge}</div>
+      <h2 className={styles.title}>{title}</h2>
+      <p className={styles.description}>{description}</p>
+      <Link to={link} className={styles.link}>
+        Découvrir
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className={styles.chevron}
+          viewBox="0 0 24 24"
+        >
+          <path d="M0 0h24v24H0V0z" fill="none" />
+          <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12l4.58-4.59z" />
+        </svg>
+      </Link>
+    </div>
+  );
+};
+
+export default ModuleCard;
+```
+
+Création de src/styles/Mobile.module.css
 ```css
-:root {
-  --green: #00ff88;
-  --bg: #080808;
-  --bg2: #111;
-  --t1: #f0f0f0;
-  --t2: #888;
-  --t3: #444;
-  --border: rgba(255, 255, 255, 0.07);
-}
-
-.module-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.container {
+  max-width: 800px;
+  margin: 40px auto;
   padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
   background-color: var(--bg);
-  min-height: 130px;
-}
-
-.module-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 10px;
-  border-bottom: 1px solid var(--border);
-}
-
-.module-card-icon {
-  font-size: 28px;
-  color: var(--green);
-}
-
-.module-card-badge {
-  background-color: var(--green);
-  color: #fff;
-  padding: 5px 10px;
-  border-radius: 10px;
-}
-
-.module-card-content {
-  padding: 20px;
-}
-
-.module-card-title {
-  font-size: 13px;
-  font-weight: bold;
   color: var(--t1);
 }
 
-.module-card-description {
-  font-size: 11px;
-  color: var(--t3);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.module-card-footer {
-  padding: 10px;
-  border-top: 1px solid var(--border);
-}
-
-.module-card-link {
-  text-decoration: none;
-  color: var(--t2);
-}
-
-.more-page {
-  padding: 20px;
-}
-
-.more-page-title {
+.title {
   font-size: 24px;
   font-weight: bold;
-  color: var(--t1);
+  margin-bottom: 20px;
 }
 
-.more-page-grid {
+.modules {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 20px;
-  margin-top: 20px;
 }
 
-.more-page-settings {
-  margin-top: 20px;
+.card {
+  background-color: var(--bg2);
   padding: 20px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background-color: var(--bg);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
-.more-page-settings-dark-mode {
-  display: flex;
-  align-items: center;
+.minHeight {
+  min-height: 130px;
 }
 
-.more-page-settings-dark-mode-label {
-  font-size: 14px;
-  color: var(--t2);
+.icon {
+  font-size: 28px;
+  margin-bottom: 10px;
 }
 
-.more-page-settings-dark-mode input {
-  margin-left: 10px;
-}
-
-.more-page-settings-version {
-  display: flex;
-  align-items: center;
-  margin-top: 10px;
-}
-
-.more-page-settings-version-label {
-  font-size: 14px;
-  color: var(--t2);
-}
-
-.more-page-settings-version-value {
-  font-size: 14px;
+.badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 5px 10px;
+  border-radius: 10px;
+  background-color: var(--green);
   color: var(--t1);
 }
 
-.more-page-settings-github {
-  display: flex;
-  align-items: center;
-  margin-top: 10px;
+.title {
+  font-size: 13px;
+  font-weight: bold;
+  margin-bottom: 10px;
 }
 
-.more-page-settings-github-label {
+.description {
+  font-size: 11px;
+  color: var(--t3);
+  line-height: 1.5;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background-color: var(--bg2);
+  color: var(--t1);
+  text-decoration: none;
+}
+
+.chevron {
+  width: 20px;
+  height: 20px;
+  margin-left: 10px;
+}
+
+.settings {
+  margin-top: 40px;
+  padding: 20px;
+  background-color: var(--bg);
+  color: var(--t1);
+}
+
+.darkModeToggle {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.checkbox {
+  margin-right: 10px;
+}
+
+.label {
   font-size: 14px;
   color: var(--t2);
 }
 
-.more-page-settings-github a {
-  text-decoration: none;
+.version {
+  font-size: 14px;
   color: var(--t2);
-  margin-left: 10px;
+  margin-bottom: 10px;
+}
+
+.github {
+  font-size: 14px;
+  color: var(--t2);
 }
 ```
-J'ai créé le composant `ModuleCard` pour afficher chaque module premium, et le composant `More` pour afficher la grille de modules et les paramètres de l'application. J'ai également ajouté les styles nécessaires pour la grille et les paramètres.
+
+Création de src/styles/ModuleCard.module.css
+```css
+.card {
+  background-color: var(--bg2);
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.minHeight {
+  min-height: 130px;
+}
+
+.icon {
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+
+.badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 5px 10px;
+  border-radius: 10px;
+  background-color: var(--green);
+  color: var(--t1);
+}
+
+.title {
+  font-size: 13px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.description {
+  font-size: 11px;
+  color: var(--t3);
+  line-height: 1.5;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background-color: var(--bg2);
+  color: var(--t1);
+  text-decoration: none;
+}
+
+.chevron {
+  width: 20px;
+  height: 20px;
+  margin-left: 10px;
+}
