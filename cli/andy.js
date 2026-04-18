@@ -343,7 +343,7 @@ async function _oaiCall(baseUrl, key, model, prompt, maxTokens, extraHeaders = {
 async function generateRaw(prompt, maxTokens = 4096) {
   // 1) Cerebras — le plus rapide (~2000 tok/s)
   if (CEREBRAS_KEY) {
-    const t = await _oaiCall('https://api.cerebras.ai/v1', CEREBRAS_KEY, 'llama-3.3-70b', prompt, maxTokens)
+    const t = await _oaiCall('https://api.cerebras.ai/v1', CEREBRAS_KEY, 'llama3.3-70b', prompt, maxTokens)
     if (t) return t
   }
   // 2) Groq
