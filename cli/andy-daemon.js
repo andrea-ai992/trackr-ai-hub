@@ -5,7 +5,7 @@
 //         semaphore API global, startup ping, heartbeat 4h, requeue .running
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { existsSync, readFileSync, writeFileSync, renameSync, readdirSync, mkdirSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync, renameSync, readdirSync, mkdirSync, unlinkSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { execSync } from 'child_process'
@@ -391,6 +391,52 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
     }
 
     stage('safe')
+
+    // ── Build test local avant push ──────────────────────────────────────────
+    const localPath = resolve(ROOT, op.path)
+    const originalContent = existsSync(localPath) ? readFileSync(localPath, 'utf8') : null
+    let buildPassed = false
+    try {
+      // Écrit le fichier localement pour tester le build
+      mkdirSync(localPath.replace(/\/[^/]+$/, ''), { recursive: true })
+      writeFileSync(localPath, clean, 'utf8')
+      log(`build test: ${op.path}…`)
+      execSync('npm run build --silent 2>&1', { cwd: ROOT, timeout: 90000, stdio: 'pipe' })
+      buildPassed = true
+      log(`build OK: ${op.path}`)
+    } catch (buildErr) {
+      const errOut = buildErr.stdout?.toString?.() || buildErr.message || ''
+      log(`build FAIL: ${op.path} — ${errOut.slice(0, 200)}`)
+      // Restaure l'original avant de retry
+      if (originalContent !== null) writeFileSync(localPath, originalContent, 'utf8')
+      else if (existsSync(localPath)) { try { unlinkSync(localPath) } catch {} }
+
+      // Demande à l'IA de corriger avec l'erreur de build
+      const fixPrompt = [
+        'Ce code a échoué le build Vite. Corrige-le.',
+        'FICHIER: ' + op.path,
+        'ERREUR BUILD:\n' + errOut.slice(0, 1000),
+        'CODE ACTUEL:\n' + clean.slice(0, 6000),
+        'Retourne le code complet corrigé uniquement, sans backticks.',
+      ].join('\n')
+      checkInterrupt()
+      const fixed = await generateRaw(fixPrompt, 6000, MODEL_SMART)
+      clean = fixed.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim()
+
+      // Deuxième tentative de build
+      try {
+        writeFileSync(localPath, clean, 'utf8')
+        execSync('npm run build --silent 2>&1', { cwd: ROOT, timeout: 90000, stdio: 'pipe' })
+        buildPassed = true
+        log(`build OK après fix: ${op.path}`)
+      } catch (e2) {
+        // Restaure l'original et abandonne
+        if (originalContent !== null) writeFileSync(localPath, originalContent, 'utf8')
+        throw new Error(`Build échoué après 2 tentatives: ${op.path}`)
+      }
+    }
+
+    if (!buildPassed) throw new Error(`Build non validé: ${op.path}`)
 
     const commitMsg = `[AnDy] ${op.action === 'CREATE' ? 'feat' : 'update'}: ${op.path}`
     const ok = await ghWriteFile(op.path, clean, commitMsg, sha)
