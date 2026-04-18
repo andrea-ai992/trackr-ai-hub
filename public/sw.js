@@ -1,6 +1,100 @@
+**public/manifest.json**
+
+```json
+{
+  "name": "Trackr",
+  "short_name": "Trackr",
+  "description": "Une application de suivi de sports et de marché",
+  "theme_color": "#00ff88",
+  "background_color": "#080808",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/",
+  "scope": "/",
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Accéder au tableau de bord",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ],
+      "actions": [
+        {
+          "action": "open",
+          "title": "Ouvrir le tableau de bord"
+        }
+      ]
+    },
+    {
+      "name": "Markets",
+      "short_name": "Markets",
+      "description": "Accéder aux marchés",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ],
+      "actions": [
+        {
+          "action": "open",
+          "title": "Ouvrir les marchés"
+        }
+      ]
+    },
+    {
+      "name": "Sports",
+      "short_name": "Sports",
+      "description": "Accéder aux sports",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ],
+      "actions": [
+        {
+          "action": "open",
+          "title": "Ouvrir les sports"
+        }
+      ]
+    },
+    {
+      "name": "AnDy",
+      "short_name": "AnDy",
+      "description": "Accéder à AnDy",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ],
+      "actions": [
+        {
+          "action": "open",
+          "title": "Ouvrir AnDy"
+        }
+      ]
+    }
+  ]
+}
+```
+
+**public/sw.js**
+
+```javascript
 // Trackr Service Worker — smart news notifications
 const CACHE_NAME = 'trackr-v2'
 const STATIC = ['/', '/index.html', '/manifest.json', '/apple-touch-icon.png']
+const API_URL = 'https://api.trackr.io'
 
 // ─── Install: cache shell ─────────────────────────────────────────────────────
 self.addEventListener('install', e => {
@@ -17,14 +111,21 @@ self.addEventListener('activate', e => {
   )
 })
 
-// ─── Fetch: network first, fallback to cache ─────────────────────────────────
+// ─── Fetch: cache-first for static assets, network-first for API calls ───────
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url)
-  // Don't cache API calls or external resources
-  if (!url.origin.includes(self.location.origin)) return
-  e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
-  )
+  // Cache static assets
+  if (STATIC.includes(url.pathname)) {
+    e.respondWith(caches.match(url).then(r => r || fetch(url).catch(() => Promise.resolve())))
+  }
+  // Network-first for API calls
+  else if (url.origin.includes(API_URL)) {
+    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)))
+  }
+  // Fallback to cache for other requests
+  else {
+    e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).catch(() => Promise.resolve())))
+  }
 })
 
 // ─── Push: receive server-push notification ───────────────────────────────────
@@ -80,3 +181,71 @@ self.addEventListener('notificationclick', e => {
     })
   )
 })
+
+// ─── Offline page ───────────────────────────────────────────────────────────
+self.addEventListener('fetch', e => {
+  if (e.request.url === '/offline') {
+    e.respondWith(new Response(`
+      <html>
+        <head>
+          <title>Page non disponible</title>
+          <style>
+            body {
+              background-color: var(--bg);
+              color: var(--t1);
+              font-family: Inter;
+              text-align: center;
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Page non disponible</h1>
+          <p>Veuillez réessayer plus tard.</p>
+        </body>
+      </html>
+    `, { headers: { 'Content-Type': 'text/html' } }))
+  }
+})
+```
+
+**index.html**
+
+```html
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trackr</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/png" href="/icon-192.png">
+  <link rel="apple-touch-icon" type="image/png" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <!-- Contenu de la page -->
+  <script src="/script.js"></script>
+</body>
+</html>
+```
+
+**styles.css**
+
+```css
+body {
+  background-color: var(--bg);
+  color: var(--t1);
+  font-family: Inter;
+  text-align: center;
+}
+
+/* Ajoutez vos styles ici */
+```
+
+**script.js**
+
+```javascript
+// Ajoutez vos scripts ici
+```
+
+Assurez-vous de mettre à jour votre fichier `package.json` pour inclure les dépendances nécessaires pour le service worker et les manifestes.
