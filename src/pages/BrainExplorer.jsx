@@ -140,47 +140,104 @@ export default function BrainExplorer() {
   const [loading, setLoading] = useState(true)
   const [tab,     setTab]     = useState('workers')
   const [newTask, setNewTask] = useState('')
-  const [feedback, setFeedback] = useState('');
+  const [feedback, setFeedback] = useState('')
+  const [timeoutErrors, setTimeoutErrors] = useState({ live: false, tasks: false })
+
+  const controllerRef = useCallback(() => {
+    const controller = new AbortController()
+    return controller
+  }, [])
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
-    try {
-      const [liveR, tasksR] = await Promise.all([
-        fetch(`${SERVER}/api/live`,  { headers: HEADERS, signal: AbortSignal.timeout(5000) }),
-        fetch(`${SERVER}/api/tasks`, { headers: HEADERS, signal: AbortSignal.timeout(5000) }),
-      ])
-      if (liveR.ok)  setLive(await liveR.json())
-      if (tasksR.ok) setTasks(await tasksR.json())
-    } catch {}
-    setLoading(false)
-  }, [])
+    setTimeoutErrors({ live: false, tasks: false })
 
-  useEffect(() => { load() }, [load])
+    try {
+      const liveController = controllerRef()
+      const tasksController = controllerRef()
+
+      const [liveR, tasksR] = await Promise.all([
+        fetch(`${SERVER}/api/live`,  {
+          headers: HEADERS,
+          signal: AbortSignal.timeout(5000)
+        }),
+        fetch(`${SERVER}/api/tasks`, {
+          headers: HEADERS,
+          signal: AbortSignal.timeout(5000)
+        }),
+      ])
+
+      if (liveR.ok) {
+        setLive(await liveR.json())
+        setTimeoutErrors(prev => ({ ...prev, live: false }))
+      } else {
+        setTimeoutErrors(prev => ({ ...prev, live: true }))
+      }
+
+      if (tasksR.ok) {
+        setTasks(await tasksR.json())
+        setTimeoutErrors(prev => ({ ...prev, tasks: false }))
+      } else {
+        setTimeoutErrors(prev => ({ ...prev, tasks: true }))
+      }
+    } catch (err) {
+      if (err.name === 'TimeoutError') {
+        console.warn('Timeout during API call')
+        if (err.message.includes('/api/live')) {
+          setTimeoutErrors(prev => ({ ...prev, live: true }))
+        }
+        if (err.message.includes('/api/tasks')) {
+          setTimeoutErrors(prev => ({ ...prev, tasks: true }))
+        }
+      } else {
+        console.error('Error fetching data:', err)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [controllerRef])
+
   useEffect(() => {
+    load()
     const id = setInterval(() => load(true), 4000)
     return () => clearInterval(id)
   }, [load])
 
   const submitTask = async () => {
-    if (!newTask) return;
+    if (!newTask) return
     try {
       const response = await fetch(`${SERVER}/api/task`, {
         method: 'POST',
         headers: { ...HEADERS, 'Content-Type': 'application/json' },
         body: JSON.stringify({ task: newTask }),
-      });
+        signal: AbortSignal.timeout(8000)
+      })
+
       if (response.ok) {
-        setFeedback('Tâche ajoutée à la queue');
-        setNewTask('');
+        setFeedback('Tâche ajoutée à la queue')
+        setNewTask('')
         setTimeout(() => {
-          setFeedback('');
-          load();
-        }, 2000);
+          setFeedback('')
+          load()
+        }, 2000)
+      } else {
+        setFeedback('Erreur lors de l\'ajout de la tâche')
+        setTimeout(() => setFeedback(''), 3000)
       }
     } catch (error) {
-      console.error('Erreur lors de l\'ajout de la tâche:', error);
+      console.error('Erreur lors de l\'ajout de la tâche:', error)
+      setFeedback(error.name === 'TimeoutError'
+        ? 'Timeout lors de l\'ajout de la tâche'
+        : 'Erreur réseau lors de l\'ajout de la tâche')
+      setTimeout(() => setFeedback(''), 3000)
     }
-  };
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      submitTask()
+    }
+  }
 
   const st      = live?.stats || {}
   const workers = live?.workers || {}
@@ -214,34 +271,11 @@ export default function BrainExplorer() {
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--t1)' }}>AnDy Explorer</span>
-              {isLive && <span className="live-dot" />}
+              {isLive && <span style={{ width: 8, height: 8, background: 'var(--green)', borderRadius: '50%', boxShadow: '0 0 6px var(--green)' }} />}
             </div>
-            <p style={{ fontSize: 10, color: isLive ? 'var(--green-dim)' : 'var(--red)', marginTop: 1 }}>
+            <p style={{ fontSize: 10, color: isLive ? 'var(--green)' : 'var(--red)', marginTop: 1 }}>
               {isLive ? `live · ${age}s` : 'daemon hors ligne'}
             </p>
           </div>
           <button onClick={() => load()} style={{ width: 34, height: 34, borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: loading ? 'var(--t3)' : 'var(--t2)' }}>
-            <RefreshCw size={15} className={loading ? 'spin' : ''} />
-          </button>
-        </div>
-
-        {/* Stats strip */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6, padding: '0 16px 10px' }}>
-          {[
-            { label: 'DONE',    v: st.done    ?? '—', color: 'var(--green)' },
-            { label: 'ERRORS',  v: st.errors  ?? '—', color: 'var(--red)'   },
-            { label: 'QUEUE',   v: st.queue   ?? '—', color: 'var(--amber)' },
-            { label: 'RUNNING', v: st.running ?? '—', color: 'var(--blue)'  },
-          ].map(s => (
-            <div key={s.label} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 0', textAlign: 'center' }}>
-              <div className="num" style={{ fontSize: 18, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.v}</div>
-              <div style={{ fontSize: 9, color: 'var(--t3)', marginTop: 2 }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: 6, padding: '0 16px 12px' }}>
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              style={{ flex: 1, padding: '8px 0', background: tab === t.id ? 'var(--bg3)' : 'var(--bg2)', border
+            <RefreshC
