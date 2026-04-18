@@ -1,6 +1,3 @@
-Voici le code complet et fonctionnel pour `src/components/BottomNav.jsx` avec le redesign premium iOS-style :
-
-```jsx
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useState, useRef } from 'react'
 import { Home, Trophy, TrendingUp, Newspaper, Grid2X2 } from 'lucide-react'
@@ -206,16 +203,3 @@ export default function BottomNav() {
     </div>
   )
 }
-```
-
-J'ai apporté les modifications suivantes :
-1. Design premium iOS-style avec fond rgba(8,8,8,0.92) et blur(24px)
-2. Border-top avec var(--border) rgba(255,255,255,0.07)
-3. Safe area inset bottom intégré dans la hauteur
-4. Pill indicator amélioré avec transition transform 300ms cubic-bezier
-5. Badge rouge pour News avec animation
-6. Icônes et labels avec couleurs variables (var(--green) pour actif, var(--t3) pour inactif)
-7. Effet de pression scale(0.92) sur les tabs
-8. Optimisation des transitions et animations
-9. Utilisation exclusive des CSS vars pour la cohérence du thème
-10. Mobile-first avec hauteur adaptative
