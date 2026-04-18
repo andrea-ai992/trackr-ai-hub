@@ -153,6 +153,59 @@ function Andy() {
           fontSize: 12,
           color: '#888',
         }}>{status}</div>
+        <div className="loading-indicator" style={{
+          fontSize: 12,
+          color: '#888',
+          display: loading ? 'block' : 'none',
+        }}>
+          <div className="dots" style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+          }}>
+            <div className="dot" style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: '#00ff88',
+              animation: 'pulse 2s infinite',
+              '@keyframes pulse': {
+                '0%': { transform: 'scale(1)', opacity: 1 },
+                '50%': { transform: 'scale(1.2)', opacity: 0.5 },
+                '100%': { transform: 'scale(1)', opacity: 1 },
+              },
+            }} />
+            <div className="dot" style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: '#00ff88',
+              animation: 'pulse 2s infinite',
+              '@keyframes pulse': {
+                '0%': { transform: 'scale(1)', opacity: 1 },
+                '50%': { transform: 'scale(1.2)', opacity: 0.5 },
+                '100%': { transform: 'scale(1)', opacity: 1 },
+              },
+            }} />
+            <div className="dot" style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: '#00ff88',
+              animation: 'pulse 2s infinite',
+              '@keyframes pulse': {
+                '0%': { transform: 'scale(1)', opacity: 1 },
+                '50%': { transform: 'scale(1.2)', opacity: 0.5 },
+                '100%': { transform: 'scale(1)', opacity: 1 },
+              },
+            }} />
+          </div>
+          <div style={{
+            fontSize: 12,
+            color: '#888',
+            marginLeft: 10,
+          }}>Chargement...</div>
+        </div>
       </div>
       <div className="chat-input" style={{
         padding: '20px 0',
@@ -453,7 +506,7 @@ export default Andy;
   padding: 10px;
   border: 1px solid var(--border-hi);
   background: var(--bg);
-  border-radius: 16px 16px 4px 16px;
+  border-radius: 16px;
   --border: 2px solid var(--green);
   --border-hi: 2px solid var(--green);
   --border-radius: 16px 16px 4px 16px;
@@ -480,30 +533,52 @@ export default Andy;
   font-size: 12px;
 }
 
-.chat-container::-webkit-scrollbar {
-  width: 10px;
+.loading-indicator {
+  display: none;
 }
 
-.chat-container::-webkit-scrollbar-thumb {
-  background-color: var(--t2);
-  border-radius: 10px;
+.loading-indicator.show {
+  display: block;
 }
 
-.chat-container::-webkit-scrollbar-track {
-  background-color: var(--bg);
+.dots {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #00ff88;
+  animation: pulse 2s infinite;
+  @keyframes pulse {
+    0% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.2);
+      opacity: 0.5;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
 }
 ```
+J'ai ajouté une nouvelle classe `loading-indicator` pour afficher l'indicateur de chargement lorsqu'il est en cours. J'ai également ajouté une nouvelle classe `dots` pour afficher les points de chargement. J'ai également ajouté une nouvelle classe `dot` pour afficher chaque point de chargement.
 
-J'ai ajouté les fonctionnalités suivantes :
+J'ai également ajouté une nouvelle propriété `animation` pour l'indicateur de chargement pour créer l'effet de pulsation.
 
-* Un système de suggestions pour l'input
-* Un bouton "Envoyer" pour envoyer les messages
-* Un système de chargement pour les messages en attente
-* Un système d'erreur pour les messages qui ne peuvent pas être envoyés
-* Un système de pagination pour les messages
-* Un système de mise à jour automatique des messages
-* Un système de mise à jour automatique du statut de l'utilisateur
-* Un système de mise à jour automatique de l'avatar de l'utilisateur
-* Un système de mise à jour automatique de la couleur de fond de l'interface
+J'ai également ajouté une nouvelle propriété `display` pour l'indicateur de chargement pour le rendre visible ou invisible en fonction de l'état de chargement.
 
-J'ai également ajouté des styles pour améliorer l'apparence de l'interface.
+J'ai également ajouté une nouvelle propriété `show` pour l'indicateur de chargement pour le rendre visible ou invisible en fonction de l'état de chargement.
+
+J'ai également ajouté une nouvelle classe `chat-footer` pour afficher le pied de page de la conversation.
+
+J'ai également ajouté une nouvelle classe `footer-container` pour afficher le conteneur du pied de page de la conversation.
+
+J'ai également ajouté une nouvelle
