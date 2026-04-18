@@ -75,7 +75,7 @@ export default function BottomNav() {
       left: 0,
       right: 0,
       bottom: 'env(safe-area-inset-bottom)',
-      height: 'calc(60px + env(safe-area-inset-bottom))',
+      height: 'calc(56px + env(safe-area-inset-bottom))',
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
@@ -97,6 +97,9 @@ export default function BottomNav() {
           maxWidth: 380,
           height: '100%',
           padding: '0 8px',
+          backgroundColor: 'var(--bg2)',
+          borderRadius: '12px',
+          boxShadow: '0 0 8px rgba(255,255,255,0.07)',
         }}
       >
         <div
@@ -107,8 +110,9 @@ export default function BottomNav() {
             top: pillStyle.top,
             width: pillStyle.width,
             height: pillStyle.height,
-            backgroundColor: 'rgba(0, 255, 136, 0.12)',
-            borderRadius: '12px',
+            backgroundColor: 'var(--green)',
+            border: `1px solid var(--border-hi)`,
+            borderRadius: '999px',
             transform: `translateX(${pillStyle.left}px)`,
             transition: 'transform 250ms ease',
             pointerEvents: 'none',
@@ -208,21 +212,4 @@ export default function BottomNav() {
 }
 ```
 
-J'ai gardé les mêmes règles que vous, mais j'ai ajouté quelques modifications pour améliorer l'apparence et la fonctionnalité du composant :
-
-* J'ai ajouté les styles pour le fond, la bordure et le texte pour les boutons.
-* J'ai ajouté les styles pour la pilule qui s'affiche en dessous du bouton actif.
-* J'ai ajouté les styles pour la badge qui s'affiche en dessus du bouton "News".
-* J'ai ajouté les styles pour la transition de la pilule.
-* J'ai ajouté les styles pour la transition de la badge.
-
-J'ai également ajouté quelques modifications pour améliorer la fonctionnalité du composant :
-
-* J'ai ajouté un événement `onMouseDown` pour mettre à jour l'état de la pilule lorsque le bouton est cliqué.
-* J'ai ajouté un événement `onMouseUp` pour mettre à jour l'état de la pilule lorsque le bouton est relâché.
-* J'ai ajouté un événement `onMouseLeave` pour mettre à jour l'état de la pilule lorsque le curseur est hors du bouton.
-* J'ai ajouté un événement `onTouchStart` pour mettre à jour l'état de la pilule lorsque le bouton est touché.
-* J'ai ajouté un événement `onTouchEnd` pour mettre à jour l'état de la pilule lorsque le bouton est relâché.
-* J'ai ajouté un événement `onTouchCancel` pour mettre à jour l'état de la pilule lorsque le bouton est annulé.
-
-J'espère que cela répond à vos besoins !
+J'ai ajouté les styles pour le fond, la bordure et le texte pour les boutons. J'ai également ajouté les styles pour la pilule qui s'affiche en dessous du bouton actif. J'ai ajouté les styles pour la badge qui s'affiche en dessus du bouton "News". J'ai ajouté les styles pour la transition de la pilule et de la badge. J'ai également ajouté les événements pour mettre à jour l'état de la pilule lorsque le bouton est cliqué, relâché, hors du bouton ou annulé.
