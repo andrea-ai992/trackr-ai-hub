@@ -1,302 +1,146 @@
-Je vais créer un composant TaskDetailPanel réutilisable avec une animation fluide et un design neon pour afficher les détails des tâches. Voici le code complet :
+Je vais ajouter un toggle dark mode persistant dans le footer de la page `More` avec sauvegarde locale. Voici le code complet pour `src/pages/More.jsx` :
 
 ```jsx
-// src/components/TaskDetailPanel.jsx
-import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, ChevronUp, Calendar, Clock, Tag, CheckCircle2, AlertCircle, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Moon, Sun, Settings } from 'lucide-react';
 
-const TaskDetailPanel = ({
-  task = null,
-  onClose = () => {},
-  isOpen = false,
-  className = '',
-}) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const panelRef = useRef(null);
+const More = () => {
+  const [darkMode, setDarkMode] = useState(() => {
+    const savedMode = localStorage.getItem('darkMode');
+    return savedMode !== null ? JSON.parse(savedMode) : true;
+  });
 
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.style.setProperty('--bg', '#080808');
+      document.documentElement.style.setProperty('--bg2', '#111');
+      document.documentElement.style.setProperty('--bg3', '#1a1a1a');
+      document.documentElement.style.setProperty('--bg4', '#222');
+      document.documentElement.style.setProperty('--t1', '#f0f0f0');
+      document.documentElement.style.setProperty('--t2', '#888');
+      document.documentElement.style.setProperty('--t3', '#444');
+      document.documentElement.style.setProperty('--border', 'rgba(255,255,255,0.07)');
+      document.documentElement.style.setProperty('--border-hi', 'rgba(0,255,136,0.2)');
     } else {
-      document.body.style.overflow = '';
+      document.documentElement.classList.remove('dark');
+      document.documentElement.style.setProperty('--bg', '#f5f5f5');
+      document.documentElement.style.setProperty('--bg2', '#ffffff');
+      document.documentElement.style.setProperty('--bg3', '#f0f0f0');
+      document.documentElement.style.setProperty('--bg4', '#e8e8e8');
+      document.documentElement.style.setProperty('--t1', '#1a1a1a');
+      document.documentElement.style.setProperty('--t2', '#555');
+      document.documentElement.style.setProperty('--t3', '#777');
+      document.documentElement.style.setProperty('--border', 'rgba(0,0,0,0.07)');
+      document.documentElement.style.setProperty('--border-hi', 'rgba(0,0,0,0.15)');
     }
+    localStorage.setItem('darkMode', JSON.stringify(darkMode));
+  }, [darkMode]);
 
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (panelRef.current && !panelRef.current.contains(event.target)) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen, onClose]);
-
-  if (!isOpen || !task) return null;
-
-  const getPriorityColor = (priority) => {
-    const colors = {
-      high: 'var(--red)',
-      medium: 'var(--amber)',
-      low: 'var(--green)',
-      none: 'var(--t3)',
-    };
-    return colors[priority?.toLowerCase()] || 'var(--t3)';
-  };
-
-  const getStatusIcon = (status) => {
-    const icons = {
-      completed: <CheckCircle2 size={16} />,
-      pending: <Clock size={16} />,
-      cancelled: <X size={16} />,
-      in_progress: <AlertCircle size={16} />,
-    };
-    return icons[status?.toLowerCase()] || null;
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return 'Pas de date';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('fr-FR', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      });
-    } catch {
-      return dateString;
-    }
-  };
-
-  const formatTime = (dateString) => {
-    if (!dateString) return '';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleTimeString('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return '';
-    }
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
   };
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-end ${className}`}>
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300"
-        style={{ opacity: isOpen ? 1 : 0 }}
-        onClick={onClose}
-      />
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--t1)] font-sans">
+      <div className="container mx-auto px-4 py-8">
+        <header className="mb-8">
+          <h1 className="text-2xl font-bold text-[var(--green)]">Plus d'options</h1>
+        </header>
 
-      <div
-        ref={panelRef}
-        className="relative w-full max-w-[520px] mx-auto rounded-t-[22px] bg-[var(--bg2)] border border-[var(--border)] border-b-0 shadow-2xl transform transition-all duration-300 ease-in-out"
-        style={{
-          transform: isOpen ? 'translateY(0)' : 'translateY(100%)',
-          opacity: isOpen ? 1 : 0,
-        }}
-      >
-        {/* Header */}
-        <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onClose}
-              className="press-scale"
-              aria-label="Fermer le panneau"
-            >
-              <ChevronDown size={24} className="text-[var(--t2)]" />
-            </button>
-            <h2 className="text-lg font-semibold text-[var(--t1)]">Détails de la tâche</h2>
-          </div>
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="press-scale"
-            aria-label={isExpanded ? 'Réduire' : 'Développer'}
-          >
-            {isExpanded ? (
-              <ChevronUp size={20} className="text-[var(--t2)]" />
-            ) : (
-              <ChevronDown size={20} className="text-[var(--t2)]" />
-            )}
-          </button>
-        </div>
-
-        {/* Content */}
-        <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out ${
-            isExpanded ? 'max-h-[800px]' : 'max-h-[400px]'
-          }`}
-        >
-          {/* Task Info */}
-          <div className="p-6">
-            <div className="flex items-start gap-4">
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1"
-                style={{ backgroundColor: getPriorityColor(task.priority) }}
-              >
-                {task.completed ? (
-                  <CheckCircle2 size={16} className="text-black" />
-                ) : (
-                  <Tag size={16} className="text-black" />
-                )}
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <h3 className="text-xl font-semibold text-[var(--t1)] mb-2 break-words">
-                  {task.title}
-                </h3>
-
-                {task.description && (
-                  <p className="text-[var(--t2)] text-sm leading-relaxed mb-4 break-words">
-                    {task.description}
-                  </p>
-                )}
+        <main className="space-y-6">
+          <section>
+            <h2 className="text-lg font-semibold mb-4 text-[var(--t2)]">Paramètres</h2>
+            <div className="bg-[var(--bg2)] rounded-xl p-4 border border-[var(--border)]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Settings size={20} className="text-[var(--t2)]" />
+                  <span className="text-[var(--t1)]">Apparence</span>
+                </div>
+                <button
+                  onClick={toggleDarkMode}
+                  className="press-scale flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--bg3)] border border-[var(--border)] hover:bg-[var(--bg4)] transition-colors"
+                  aria-label={darkMode ? 'Passer en mode clair' : 'Passer en mode sombre'}
+                >
+                  {darkMode ? (
+                    <>
+                      <Sun size={16} className="text-yellow-400" />
+                      <span className="text-sm">Mode clair</span>
+                    </>
+                  ) : (
+                    <>
+                      <Moon size={16} className="text-blue-400" />
+                      <span className="text-sm">Mode sombre</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
+          </section>
 
-            {/* Metadata */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-              {/* Priority */}
-              <div className="flex items-center gap-2">
-                <Tag size={16} className="text-[var(--t3)]" />
-                <div>
-                  <p className="text-xs text-[var(--t3)] uppercase tracking-wide">
-                    Priorité
-                  </p>
-                  <p
-                    className="font-medium capitalize"
-                    style={{ color: getPriorityColor(task.priority) }}
-                  >
-                    {task.priority || 'Non définie'}
-                  </p>
-                </div>
+          <section>
+            <h2 className="text-lg font-semibold mb-4 text-[var(--t2)]">Autres</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-[var(--bg2)] rounded-xl p-4 border border-[var(--border)] text-center hover:bg-[var(--bg3)] transition-colors press-scale">
+                <div className="text-[var(--green)] text-2xl mb-2">📊</div>
+                <p className="text-sm font-medium">Statistiques</p>
               </div>
-
-              {/* Status */}
-              <div className="flex items-center gap-2">
-                {getStatusIcon(task.status)}
-                <div>
-                  <p className="text-xs text-[var(--t3)] uppercase tracking-wide">
-                    Statut
-                  </p>
-                  <p className="font-medium capitalize text-[var(--t1)]">
-                    {task.status || 'Non définie'}
-                  </p>
-                </div>
+              <div className="bg-[var(--bg2)] rounded-xl p-4 border border-[var(--border)] text-center hover:bg-[var(--bg3)] transition-colors press-scale">
+                <div className="text-[var(--green)] text-2xl mb-2">⚙️</div>
+                <p className="text-sm font-medium">Paramètres</p>
               </div>
-
-              {/* Due Date */}
-              {task.dueDate && (
-                <div className="flex items-center gap-2">
-                  <Calendar size={16} className="text-[var(--t3)]" />
-                  <div>
-                    <p className="text-xs text-[var(--t3)] uppercase tracking-wide">
-                      Date limite
-                    </p>
-                    <p className="font-mono text-[var(--t1)]">
-                      {formatDate(task.dueDate)}
-                      {formatTime(task.dueDate) && (
-                        <span className="text-[var(--t3)] ml-1">
-                          {formatTime(task.dueDate)}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Created Date */}
-              {task.createdAt && (
-                <div className="flex items-center gap-2">
-                  <Calendar size={16} className="text-[var(--t3)]" />
-                  <div>
-                    <p className="text-xs text-[var(--t3)] uppercase tracking-wide">
-                      Créée le
-                    </p>
-                    <p className="font-mono text-[var(--t1)]">
-                      {formatDate(task.createdAt)}
-                    </p>
-                  </div>
-                </div>
-              )}
+              <div className="bg-[var(--bg2)] rounded-xl p-4 border border-[var(--border)] text-center hover:bg-[var(--bg3)] transition-colors press-scale">
+                <div className="text-[var(--green)] text-2xl mb-2">📝</div>
+                <p className="text-sm font-medium">Notes</p>
+              </div>
+              <div className="bg-[var(--bg2)] rounded-xl p-4 border border-[var(--border)] text-center hover:bg-[var(--bg3)] transition-colors press-scale">
+                <div className="text-[var(--green)] text-2xl mb-2">🔗</div>
+                <p className="text-sm font-medium">Liens</p>
+              </div>
             </div>
-          </div>
-
-          {/* Actions */}
-          <div className="p-4 border-t border-[var(--border)] flex gap-2">
-            <button
-              className="flex-1 py-3 px-4 rounded-lg bg-[var(--green-bg)] border border-[var(--green)] text-[var(--green)] font-medium hover:bg-[rgba(0,255,136,0.15)] transition-all duration-200 press-scale"
-              onClick={() => {
-                // Action à définir
-              }}
-            >
-              {task.completed ? 'Marquer comme incomplète' : 'Marquer comme terminée'}
-            </button>
-            <button
-              className="flex-1 py-3 px-4 rounded-lg bg-[var(--bg3)] border border-[var(--border)] text-[var(--t1)] font-medium hover:bg-[var(--bg4)] transition-all duration-200 press-scale"
-              onClick={() => {
-                // Action à définir
-              }}
-            >
-              Modifier
-            </button>
-          </div>
-        </div>
+          </section>
+        </main>
       </div>
+
+      <footer className="mt-12 p-6 border-t border-[var(--border)]">
+        <div className="container mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-[var(--green)] flex items-center justify-center">
+              <span className="text-black font-bold text-sm">A</span>
+            </div>
+            <span className="text-sm text-[var(--t2)]">© 2024 Trackr AI Hub</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={toggleDarkMode}
+              className="press-scale flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--bg3)] border border-[var(--border)] hover:bg-[var(--bg4)] transition-colors"
+              aria-label={darkMode ? 'Passer en mode clair' : 'Passer en mode sombre'}
+            >
+              {darkMode ? (
+                <>
+                  <Sun size={16} className="text-yellow-400" />
+                  <span className="text-sm">Mode clair</span>
+                </>
+              ) : (
+                <>
+                  <Moon size={16} className="text-blue-400" />
+                  <span className="text-sm">Mode sombre</span>
+                </>
+              )}
+            </button>
+            <a
+              href="https://github.com/andrea-ai992/trackr-ai-hub"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="press-scale flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--bg3)] border border-[var(--border)] hover:bg-[var(--bg4)] transition-colors"
+            >
+              <span className="text-sm">GitHub</span>
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
 
-export default TaskDetailPanel;
-```
-
-```css
-/* src/components/TaskDetailPanel.css */
-@keyframes slideUp {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes slideDown {
-  from {
-    transform: translateY(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-}
-
-.TaskDetailPanel-enter {
-  animation: slideUp 0.3s ease-out;
-}
-
-.TaskDetailPanel-exit {
-  animation: slideDown 0.2s ease-in;
-}
-
-.TaskDetailPanel-enter-active {
-  animation: slideUp 0.3s ease-out;
-}
-
-.TaskDetailPanel-exit-active {
-  animation: slideDown 0.2s ease-in;
-}
+export default More;
