@@ -340,11 +340,20 @@ async function generateRaw(prompt, maxTokens = 4096, hint = 'smart') {
       if (text) return text
     }
 
-    // 3. GitHub Models — GITHUB_TOKEN existant, gpt-4o-mini gratuit
+    // 3. GitHub Models — GITHUB_TOKEN existant, gpt-4o-mini gratuit (endpoint sans /v1)
     if (GITHUB_TOKEN && providerAvailable('github')) {
-      const text = await tryProvider('github',
-        () => callOpenAI('https://models.inference.ai.azure.com', GITHUB_TOKEN, 'gpt-4o-mini', prompt, Math.min(maxTokens, 4096),
-          { 'X-GitHub-Api-Version': '2022-11-28' }))
+      const text = await tryProvider('github', async () => {
+        const r = await fetch('https://models.inference.ai.azure.com/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GITHUB_TOKEN}` },
+          body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: prompt }], max_tokens: Math.min(maxTokens, 4096), temperature: 0.4 }),
+          signal: AbortSignal.timeout(45000),
+        }).catch(e => { throw new Error(`Réseau: ${e.message}`) })
+        if (r.status === 429) { const s = parseInt(r.headers?.get?.('retry-after') || '30') || 30; throw new Error(`429:${s}`) }
+        if (!r.ok) { const b = await r.json().catch(() => ({})); throw new Error(`API ${r.status}: ${(b?.error?.message || '').slice(0,100)}`) }
+        const d = await r.json().catch(() => null)
+        return d?.choices?.[0]?.message?.content?.trim() || null
+      })
       if (text) return text
     }
 
@@ -357,7 +366,7 @@ async function generateRaw(prompt, maxTokens = 4096, hint = 'smart') {
     // 5. Together AI — Llama-3.3-70b gratuit
     if (TOGETHER_KEY && providerAvailable('together')) {
       const text = await tryProvider('together',
-        () => callOpenAI('https://api.together.xyz/v1', TOGETHER_KEY,
+        () => callOpenAI('https://api.together.xyz', TOGETHER_KEY,
           'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free', prompt, maxTokens))
       if (text) return text
     }
@@ -371,10 +380,10 @@ async function generateRaw(prompt, maxTokens = 4096, hint = 'smart') {
       if (text) return text
     }
 
-    // 7. Mistral — gratuit (500K tok/mois)
+    // 7. Mistral — abonnement (mistral-small-latest)
     if (MISTRAL_KEY && providerAvailable('mistral')) {
       const text = await tryProvider('mistral',
-        () => callOpenAI('https://api.mistral.ai/v1', MISTRAL_KEY, 'mistral-small-latest', prompt, maxTokens))
+        () => callOpenAI('https://api.mistral.ai', MISTRAL_KEY, 'mistral-small-latest', prompt, maxTokens))
       if (text) return text
     }
 

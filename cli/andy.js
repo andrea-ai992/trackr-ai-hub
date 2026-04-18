@@ -351,10 +351,17 @@ async function generateRaw(prompt, maxTokens = 4096) {
     const t = await _oaiCall('https://api.groq.com/openai', GROQ_KEY, 'llama-3.3-70b-versatile', prompt, maxTokens)
     if (t) return t
   }
-  // 3) GitHub Models (GITHUB_TOKEN existant)
+  // 3) GitHub Models (endpoint sans /v1)
   if (GH_TOKEN) {
-    const t = await _oaiCall('https://models.inference.ai.azure.com', GH_TOKEN, 'gpt-4o-mini', prompt, maxTokens, { 'X-GitHub-Api-Version': '2022-11-28' })
-    if (t) return t
+    try {
+      const r = await fetch('https://models.inference.ai.azure.com/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GH_TOKEN}` },
+        body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: prompt }], max_tokens: Math.min(maxTokens, 4096), temperature: 0.4 }),
+        signal: AbortSignal.timeout(45000),
+      }).catch(() => null)
+      if (r?.ok) { const d = await r.json().catch(() => null); const t = d?.choices?.[0]?.message?.content?.trim(); if (t) return t }
+    } catch {}
   }
   // 4) Gemini 2.0 Flash
   if (GEMINI_KEY) {
@@ -369,7 +376,7 @@ async function generateRaw(prompt, maxTokens = 4096) {
   }
   // 5) Together AI — Llama-3.3-70b gratuit
   if (TOGETHER_KEY) {
-    const t = await _oaiCall('https://api.together.xyz/v1', TOGETHER_KEY, 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free', prompt, maxTokens)
+    const t = await _oaiCall('https://api.together.xyz', TOGETHER_KEY, 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free', prompt, maxTokens)
     if (t) return t
   }
   // 6) OpenRouter free
@@ -377,9 +384,9 @@ async function generateRaw(prompt, maxTokens = 4096) {
     const t = await _oaiCall('https://openrouter.ai/api', OPENROUTER_KEY, 'nvidia/nemotron-3-super-120b-a12b:free', prompt, maxTokens, { 'HTTP-Referer': APP_URL })
     if (t) return t
   }
-  // 7) Mistral gratuit
+  // 7) Mistral abonnement
   if (MISTRAL_KEY) {
-    const t = await _oaiCall('https://api.mistral.ai/v1', MISTRAL_KEY, 'mistral-small-latest', prompt, maxTokens)
+    const t = await _oaiCall('https://api.mistral.ai', MISTRAL_KEY, 'mistral-small-latest', prompt, maxTokens)
     if (t) return t
   }
   // 8) Anthropic fallback
