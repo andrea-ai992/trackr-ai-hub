@@ -1,7 +1,4 @@
-Voici le code modifié pour la page Markets :
-
-```jsx
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 
@@ -165,14 +162,6 @@ const Markets = () => {
   const sortedStocks = sortAssets(filteredStocks);
   const sortedCrypto = sortAssets(filteredCrypto);
 
-  const topGainers = (tab === 'stocks' ? sortedStocks : sortedCrypto)
-    .filter(asset => asset.change > 0)
-    .slice(0, 5);
-
-  const topLosers = (tab === 'stocks' ? sortedStocks : sortedCrypto)
-    .filter(asset => asset.change < 0)
-    .slice(0, 5);
-
   const tabIndicatorStyle = {
     transform: `translateX(${tab === 'stocks' ? '0' : '100%'})`,
     width: '50%'
@@ -263,19 +252,6 @@ const Markets = () => {
       </div>
 
       <div className="px-4 pt-4 pb-24">
-        <div className="sticky top-0 z-50 bg-var(--bg2) border-b border-var(--border) py-3">
-          <div className="relative mb-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-var(--t3)" size={18} />
-            <input
-              type="text"
-              placeholder="Search assets..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-var(--bg2) border border-var(--border) rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-var(--green)/50"
-            />
-          </div>
-        </div>
-
         {loading ? (
           <div className="space-y-3">
             {[...Array(10)].map((_, i) => (
@@ -326,78 +302,6 @@ const Markets = () => {
                 </div>
               ))}
             </div>
-
-            <div className="space-y-2">
-              <div className="text-var(--t3) uppercase font-bold mb-2">Top Gainers</div>
-              {topGainers.map((asset, index) => (
-                <div key={asset.id || index} className="flex items-center justify-between p-3 rounded-lg hover:bg-var(--bg2)/50 transition-colors cursor-pointer">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-8 h-8 rounded-full bg-var(--bg) flex items-center justify-center text-xs font-bold text-var(--t1) flex-shrink-0">
-                      {asset.image ? (
-                        <img src={asset.image} alt={asset.name} className="w-full h-full rounded-full object-cover" />
-                      ) : (
-                        <span className="text-color">{asset.symbol.substring(0, 2).toUpperCase()}</span>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-sm truncate">{asset.name}</h3>
-                      <p className="text-xs text-var(--t3) truncate">{asset.symbol}</p>
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <div className="font-mono font-bold tabular-nums text-sm">
-                      {asset.price.toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </div>
-                    <div className="flex items-center gap-1 text-xs" style={{ color: getChangeColor(asset.change) }}>
-                      {getArrow(asset.change)}
-                      {Math.abs(asset.change).toFixed(2)}%
-                    </div>
-                  </div>
-                  <div className="ml-4 flex-shrink-0">
-                    {renderSparkline(asset.sparkline)}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="space-y-2">
-              <div className="text-var(--t3) uppercase font-bold mb-2">Top Losers</div>
-              {topLosers.map((asset, index) => (
-                <div key={asset.id || index} className="flex items-center justify-between p-3 rounded-lg hover:bg-var(--bg2)/50 transition-colors cursor-pointer">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-8 h-8 rounded-full bg-var(--bg) flex items-center justify-center text-xs font-bold text-var(--t1) flex-shrink-0">
-                      {asset.image ? (
-                        <img src={asset.image} alt={asset.name} className="w-full h-full rounded-full object-cover" />
-                      ) : (
-                        <span className="text-color">{asset.symbol.substring(0, 2).toUpperCase()}</span>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-sm truncate">{asset.name}</h3>
-                      <p className="text-xs text-var(--t3) truncate">{asset.symbol}</p>
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <div className="font-mono font-bold tabular-nums text-sm">
-                      {asset.price.toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </div>
-                    <div className="flex items-center gap-1 text-xs" style={{ color: getChangeColor(asset.change) }}>
-                      {getArrow(asset.change)}
-                      {Math.abs(asset.change).toFixed(2)}%
-                    </div>
-                  </div>
-                  <div className="ml-4 flex-shrink-0">
-                    {renderSparkline(asset.sparkline)}
-                  </div>
-                </div>
-              ))}
-            </div>
           </>
         )}
       </div>
@@ -406,6 +310,3 @@ const Markets = () => {
 };
 
 export default Markets;
-```
-
-Ce code modifie la page Markets pour qu'elle ressemble à la page Bloomberg. Il ajoute un header sticky avec des tabs pour les stocks et les crypto, une barre de recherche sticky, et une liste d'assets avec des informations sur chaque asset. Il utilise des CSS variables pour les couleurs et les polices, et il est écrit en utilisant les règles de codage que vous avez fournies.
