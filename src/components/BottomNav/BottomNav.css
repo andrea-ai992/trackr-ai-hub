@@ -1,0 +1,95 @@
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Home, Sports, Market, News, More } from 'lucide-react';
+import './BottomNav.css';
+
+const BottomNav = () => {
+  const location = useLocation();
+  const tabs = [
+    { name: 'Home', icon: <Home size={22} />, path: '/' },
+    { name: 'Sports', icon: <Sports size={22} />, path: '/sports' },
+    { name: 'Markets', icon: <Market size={22} />, path: '/markets' },
+    { name: 'News', icon: <News size={22} />, path: '/news', badge: true },
+    { name: 'More', icon: <More size={22} />, path: '/more' },
+  ];
+
+  return (
+    <div className="bottom-nav">
+      {tabs.map((tab, index) => {
+        const isActive = location.pathname === tab.path;
+        return (
+          <Link to={tab.path} key={index} className={`tab ${isActive ? 'active' : ''}`}>
+            {tab.badge && <span className="badge">!</span>}
+            <div className="icon">{tab.icon}</div>
+            <span className="label">{tab.name}</span>
+            {isActive && <div className="pill" />}
+          </Link>
+        );
+      })}
+    </div>
+  );
+};
+
+export default BottomNav;
+
+.bottom-nav {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  height: 60px;
+  background: rgba(8, 8, 8, 0.92);
+  backdrop-filter: blur(24px);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--t3);
+  text-decoration: none;
+  position: relative;
+  transition: transform 300ms ease;
+}
+
+.tab.active {
+  color: var(--green);
+}
+
+.pill {
+  position: absolute;
+  bottom: 100%;
+  background: rgba(0, 255, 136, 0.12);
+  border-radius: 12px;
+  padding: 6px 16px;
+  transform: translateY(10px);
+  transition: transform 300ms ease;
+}
+
+.tab.active .pill {
+  transform: translateY(0);
+}
+
+.icon {
+  transition: transform 300ms ease;
+}
+
+.tab:active .icon {
+  transform: scale(0.92);
+}
+
+.label {
+  font-size: 9px;
+  margin-top: 4px;
+}
+
+.badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: red;
+  border-radius: 50%;
+  width: 8px;
+  height: 8px;
+}
