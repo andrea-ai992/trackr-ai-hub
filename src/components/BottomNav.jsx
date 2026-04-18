@@ -1,6 +1,10 @@
+Je vais ajouter la sanitisation XSS dans le composant BottomNav.jsx en utilisant DOMPurify. Voici le code modifié :
+
+```jsx
 import { useEffect, useState, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Home, Trophy, TrendingUp, Newspaper, Menu, Bitcoin } from 'lucide-react'
+import DOMPurify from 'dompurify'
 
 export const TABS = [
   { id: '/', label: 'Dashboard', icon: Home },
@@ -46,16 +50,18 @@ const BottomNav = () => {
       <div className="nav-container">
         {TABS.map((tab) => {
           const Icon = tab.icon
+          const sanitizedLabel = DOMPurify.sanitize(tab.label)
+
           return (
             <button
               key={tab.id}
               ref={el => navRefs.current[tab.id] = el}
               className={`nav-item ${activeTab === tab.id ? 'active' : ''}`}
               onClick={() => handleTabClick(tab.id)}
-              aria-label={tab.label}
+              aria-label={sanitizedLabel}
             >
               <Icon size={24} strokeWidth={activeTab === tab.id ? 2.5 : 2} />
-              <span className="nav-label">{tab.label}</span>
+              <span className="nav-label" dangerouslySetInnerHTML={{ __html: sanitizedLabel }} />
             </button>
           )
         })}
@@ -73,76 +79,3 @@ const BottomNav = () => {
 }
 
 export default BottomNav
-```
-
-```css
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
-  background-color: var(--bg2);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid var(--border);
-  padding: 0.5rem 0;
-}
-
-.nav-container {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  max-width: 600px;
-  margin: 0 auto;
-  position: relative;
-  height: 56px;
-}
-
-.nav-item {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.25rem;
-  width: 100%;
-  height: 100%;
-  background: transparent;
-  border: none;
-  color: var(--t2);
-  cursor: pointer;
-  transition: color 0.2s ease;
-  z-index: 1;
-}
-
-.nav-item:hover {
-  color: var(--green);
-}
-
-.nav-item.active {
-  color: var(--green);
-}
-
-.nav-label {
-  font-size: 0.7rem;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-}
-
-.pill {
-  position: absolute;
-  bottom: 0.5rem;
-  height: 36px;
-  background-color: rgba(0, 255, 136, 0.15);
-  border-radius: 18px;
-  border: 1px solid var(--green);
-  z-index: 0;
-  pointer-events: none;
-}
-
-/* Safe area for iOS */
-@supports (padding: max(0px)) {
-  .bottom-nav {
-    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
-  }
-}
