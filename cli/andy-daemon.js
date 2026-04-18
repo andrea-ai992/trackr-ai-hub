@@ -548,7 +548,19 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
 
     checkInterrupt()
     const newCode = await generateRaw(codePrompt, 4000, 'smart')
-    let clean = newCode.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim()
+    // Extract code: if response contains a fenced block, take the largest one
+    let clean
+    const fenceMatch = newCode.match(/```[\w]*\n([\s\S]+?)```/)
+    if (fenceMatch) {
+      clean = fenceMatch[1].trim()
+    } else {
+      clean = newCode.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim()
+    }
+    // Reject if output is prose (doesn't start like code)
+    const ext = op.path.split('.').pop()
+    const looksLikeCode = /^(import |export |const |let |var |function |\/\/|<!|{|\()/.test(clean)
+    const looksLikeCSS = /^[.#@a-zA-Z:*]/.test(clean) && clean.includes('{')
+    if (!looksLikeCode && !looksLikeCSS) throw new Error(`Réponse IA invalide pour ${op.path} — commence par: ${clean.slice(0,50)}`)
     if (clean.length < 50) throw new Error('Code trop court')
 
     stage('safe')
