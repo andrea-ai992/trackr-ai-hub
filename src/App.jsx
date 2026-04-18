@@ -11,32 +11,33 @@ import Markets from './pages/Markets'
 import StockDetail from './pages/StockDetail'
 import CryptoDetail from './pages/CryptoDetail'
 import News from './pages/News'
-import FlightTracker from './pages/FlightTracker'
 import More from './pages/More'
 import Translator from './pages/Translator'
 import Settings from './pages/Settings'
 import CategoryPage from './pages/CategoryPage'
-import Sneakers from './pages/Sneakers'
-import Watches from './pages/Watches'
-import RealEstate from './pages/RealEstate'
-import BusinessPlan from './pages/BusinessPlan'
-import Portfolio from './pages/Portfolio'
-import Widget from './pages/Widget'
 import Sports from './pages/Sports'
 import Andy from './pages/Andy'
 import Agents from './pages/Agents'
 import BrainStatus from './pages/BrainStatus'
 import Login from './pages/Login'
-import ChartAnalysis from './pages/ChartAnalysis'
-import Admin from './pages/Admin'
-import Patterns from './pages/Patterns'
-import CryptoTrader from './pages/CryptoTrader'
-import Signals from './pages/Signals'
-import BrainExplorer from './pages/BrainExplorer'
+import Portfolio from './pages/Portfolio'
+import Widget from './pages/Widget'
 import { useAlerts } from './hooks/useAlerts'
 import { useNewsAlerts } from './hooks/useNewsAlerts'
 import { Search } from 'lucide-react'
 import VoiceAssistant from './components/VoiceAssistant'
+
+const FlightTracker = React.lazy(() => import('./pages/FlightTracker'))
+const ChartAnalysis = React.lazy(() => import('./pages/ChartAnalysis'))
+const Patterns = React.lazy(() => import('./pages/Patterns'))
+const CryptoTrader = React.lazy(() => import('./pages/CryptoTrader'))
+const Signals = React.lazy(() => import('./pages/Signals'))
+const RealEstate = React.lazy(() => import('./pages/RealEstate'))
+const BusinessPlan = React.lazy(() => import('./pages/BusinessPlan'))
+const Admin = React.lazy(() => import('./pages/Admin'))
+const Sneakers = React.lazy(() => import('./pages/Sneakers'))
+const Watches = React.lazy(() => import('./pages/Watches'))
+const BrainExplorer = React.lazy(() => import('./pages/BrainExplorer'))
 
 function AlertWatcher() {
   useAlerts()
@@ -44,7 +45,6 @@ function AlertWatcher() {
   return null
 }
 
-// ── Determine animation direction ────────────────────────────────────────────
 function getTabIndex(path) {
   if (path === '/') return 0
   if (path.startsWith('/sports')) return 1
@@ -62,7 +62,6 @@ function getTabIndex(path) {
 
 const DETAIL_PREFIXES = ['/stocks/', '/crypto/', '/translator', '/settings', '/sneakers', '/watches', '/real-estate', '/business', '/portfolio', '/category/', '/flights', '/andy', '/agents', '/brain', '/admin', '/patterns']
 
-// Module-level so it persists across PageTransition renders without remounting
 let _prevPath = '/'
 
 function PageTransition({ children }) {
@@ -77,13 +76,10 @@ function PageTransition({ children }) {
     const prevTabIdx   = getTabIndex(_prevPath)
 
     if (isDetail && !wasDetail) {
-      // Drilling into a detail page — slide up
       animClass = 'page-enter-up'
     } else if (!isDetail && wasDetail) {
-      // Returning to a tab — fade scale in
       animClass = 'page-enter-fade'
     } else if (currTabIdx !== -1 && prevTabIdx !== -1 && currTabIdx !== prevTabIdx) {
-      // Switching between main tabs — slide directionally
       animClass = currTabIdx > prevTabIdx ? 'page-enter-right' : 'page-enter-left'
     } else {
       animClass = 'page-enter-fade'
@@ -99,7 +95,6 @@ function PageTransition({ children }) {
   )
 }
 
-// ── Global search button (hidden on /flights which has its own search) ────────
 function GlobalSearchButton({ onOpen }) {
   const location = useLocation()
   if (location.pathname.startsWith('/flights')) return null
@@ -135,17 +130,14 @@ function GlobalSearchButton({ onOpen }) {
   )
 }
 
-// ── Protected route — bypasses auth if Supabase not configured ───────────────
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
-  // If Supabase not set up yet, let everyone through
   if (!import.meta.env.VITE_SUPABASE_URL) return children
   if (loading) return null
   if (!user) return <Navigate to="/login" replace />
   return children
 }
 
-// ── Admin-only route ──────────────────────────────────────────────────────────
 function AdminRoute({ children }) {
   const { user, isAdmin, loading } = useAuth()
   if (!import.meta.env.VITE_SUPABASE_URL) return children
@@ -155,7 +147,6 @@ function AdminRoute({ children }) {
   return children
 }
 
-// ── Inner app (needs Router context) ─────────────────────────────────────────
 function AppInner() {
   const [searchOpen, setSearchOpen] = useState(false)
 
@@ -166,16 +157,23 @@ function AppInner() {
       <GlobalSearchButton onOpen={() => setSearchOpen(true)} />
       <VoiceAssistant />
       {searchOpen && <SearchOverlay onClose={() => setSearchOpen(false)} />}
-      <div style={{ minHeight: '100dvh', background: '#000', color: '#c0c0c0' }}>
+      <div style={{ minHeight: '100dvh', background: 'var(--bg)', color: 'var(--t1)' }}>
         <main style={{ paddingBottom: 'calc(88px + env(safe-area-inset-bottom, 0px) + 8px)', position: 'relative', zIndex: 1 }}>
           <PageTransition>
             <Routes>
-              {/* Public */}
               <Route path="/login" element={<Login />} />
 
-              {/* App routes — open if Supabase not configured, protected otherwise */}
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/flights" element={<ProtectedRoute><FlightTracker /></ProtectedRoute>} />
+              <Route
+                path="/flights"
+                element={
+                  <React.Suspense fallback={
+                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
+                  }>
+                    <ProtectedRoute><FlightTracker /></ProtectedRoute>
+                  </React.Suspense>
+                }
+              />
               <Route path="/markets" element={<ProtectedRoute><Markets /></ProtectedRoute>} />
               <Route path="/stocks/:id" element={<ProtectedRoute><StockDetail /></ProtectedRoute>} />
               <Route path="/crypto/:id" element={<ProtectedRoute><CryptoDetail /></ProtectedRoute>} />
@@ -183,25 +181,114 @@ function AppInner() {
               <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
               <Route path="/translator" element={<ProtectedRoute><Translator /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/sneakers" element={<ProtectedRoute><Sneakers /></ProtectedRoute>} />
-              <Route path="/watches" element={<ProtectedRoute><Watches /></ProtectedRoute>} />
-              <Route path="/real-estate" element={<ProtectedRoute><RealEstate /></ProtectedRoute>} />
-              <Route path="/business" element={<ProtectedRoute><BusinessPlan /></ProtectedRoute>} />
+              <Route
+                path="/sneakers"
+                element={
+                  <React.Suspense fallback={
+                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
+                  }>
+                    <ProtectedRoute><Sneakers /></ProtectedRoute>
+                  </React.Suspense>
+                }
+              />
+              <Route
+                path="/watches"
+                element={
+                  <React.Suspense fallback={
+                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
+                  }>
+                    <ProtectedRoute><Watches /></ProtectedRoute>
+                  </React.Suspense>
+                }
+              />
+              <Route
+                path="/real-estate"
+                element={
+                  <React.Suspense fallback={
+                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
+                  }>
+                    <ProtectedRoute><RealEstate /></ProtectedRoute>
+                  </React.Suspense>
+                }
+              />
+              <Route
+                path="/business"
+                element={
+                  <React.Suspense fallback={
+                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
+                  }>
+                    <ProtectedRoute><BusinessPlan /></ProtectedRoute>
+                  </React.Suspense>
+                }
+              />
               <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
               <Route path="/category/:id" element={<ProtectedRoute><CategoryPage /></ProtectedRoute>} />
               <Route path="/sports" element={<ProtectedRoute><Sports /></ProtectedRoute>} />
               <Route path="/widget" element={<ProtectedRoute><Widget /></ProtectedRoute>} />
               <Route path="/andy" element={<ProtectedRoute><Andy /></ProtectedRoute>} />
-              <Route path="/charts" element={<ProtectedRoute><ChartAnalysis /></ProtectedRoute>} />
+              <Route
+                path="/charts"
+                element={
+                  <React.Suspense fallback={
+                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
+                  }>
+                    <ProtectedRoute><ChartAnalysis /></ProtectedRoute>
+                  </React.Suspense>
+                }
+              />
               <Route path="/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
-              <Route path="/patterns" element={<ProtectedRoute><Patterns /></ProtectedRoute>} />
+              <Route
+                path="/patterns"
+                element={
+                  <React.Suspense fallback={
+                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
+                  }>
+                    <ProtectedRoute><Patterns /></ProtectedRoute>
+                  </React.Suspense>
+                }
+              />
               <Route path="/brain" element={<ProtectedRoute><BrainStatus /></ProtectedRoute>} />
-              <Route path="/crypto-trader" element={<ProtectedRoute><CryptoTrader /></ProtectedRoute>} />
-              <Route path="/signals" element={<ProtectedRoute><Signals /></ProtectedRoute>} />
-              <Route path="/brain-explorer" element={<ProtectedRoute><BrainExplorer /></ProtectedRoute>} />
+              <Route
+                path="/crypto-trader"
+                element={
+                  <React.Suspense fallback={
+                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
+                  }>
+                    <ProtectedRoute><CryptoTrader /></ProtectedRoute>
+                  </React.Suspense>
+                }
+              />
+              <Route
+                path="/signals"
+                element={
+                  <React.Suspense fallback={
+                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
+                  }>
+                    <ProtectedRoute><Signals /></ProtectedRoute>
+                  </React.Suspense>
+                }
+              />
+              <Route
+                path="/brain-explorer"
+                element={
+                  <React.Suspense fallback={
+                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
+                  }>
+                    <ProtectedRoute><BrainExplorer /></ProtectedRoute>
+                  </React.Suspense>
+                }
+              />
 
-              {/* Admin only */}
-              <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+              <Route
+                path="/admin"
+                element={
+                  <React.Suspense fallback={
+                    <div style={{ height: 200, background: 'var(--bg2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', animation: 'shimmer 2s infinite' }} />
+                  }>
+                    <AdminRoute><Admin /></AdminRoute>
+                  </React.Suspense>
+                }
+              />
             </Routes>
           </PageTransition>
         </main>
