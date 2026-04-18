@@ -1,12 +1,37 @@
-// src/styles/globals.css
+Je vais optimiser le composant Layout en ajoutant les styles manquants, les variables CSS supplémentaires et en structurant correctement le composant pour une meilleure réutilisabilité. Voici le code complet pour `src/components/Layout/Layout.jsx` :
+
+```jsx
+import React from 'react';
+import './globals.css';
+import BottomNav from '../BottomNav';
+
+const Layout = ({ children }) => {
+  return (
+    <div className="layout-container">
+      <main className="main-content">
+        {children}
+      </main>
+      <BottomNav />
+    </div>
+  );
+};
+
+export default Layout;
+```
+
+Et voici le code à ajouter dans `src/styles/globals.css` pour compléter les styles :
+
+```css
 :root {
   --green: #00ff88;
   --bg: #080808;
   --bg2: #111;
+  --bg3: #1a1a1a;
   --t1: #f0f0f0;
   --t2: #888;
   --t3: #444;
   --border: rgba(255, 255, 255, 0.07);
+  --border-hi: rgba(0, 255, 136, 0.2);
 }
 
 body {
@@ -16,6 +41,9 @@ body {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 *,
@@ -24,14 +52,78 @@ body {
   box-sizing: inherit;
 }
 
+.layout-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding-bottom: 60px;
+}
+
+.main-content {
+  flex: 1;
+  padding: 16px;
+  max-width: 520px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: var(--bg2);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  z-index: 1000;
+}
+
+.nav-item {
+  color: var(--t2);
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--t1);
+}
+
+.nav-item.active {
+  color: var(--green);
+  background-color: rgba(0, 255, 136, 0.1);
+  border: 1px solid var(--border-hi);
+}
+
 .card {
   background-color: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border);
   backdrop-filter: blur(12px);
   border-radius: 8px;
   padding: 16px;
-  max-width: 520px;
-  margin: 16px auto;
+  margin: 16px 0;
+  width: 100%;
+}
+
+.card h1 {
+  color: var(--t1);
+  font-size: 20px;
+  margin: 0 0 12px 0;
+  font-weight: 600;
+}
+
+.card h2 {
+  color: var(--t2);
+  font-size: 16px;
+  margin: 0 0 12px 0;
+  font-weight: 500;
 }
 
 .fade-up {
@@ -63,10 +155,14 @@ body {
     background-position: 0 0;
   }
 }
+```
 
+Maintenant, il faut mettre à jour les pages pour utiliser le Layout. Voici comment modifier `src/pages/Dashboard.jsx` et `src/pages/Markets.jsx` :
+
+```jsx
 // src/pages/Dashboard.jsx
 import React from 'react';
-import './globals.css';
+import Layout from '../components/Layout/Layout';
 import Sparkline from '../components/Sparkline';
 import TopMovers from '../components/TopMovers';
 import FearGreedGauge from '../components/FearGreedGauge';
@@ -75,65 +171,62 @@ import QuickActions from '../components/QuickActions';
 
 const Dashboard = () => {
   return (
-    <div className="fade-up">
-      <div className="card">
-        <h1>Portfolio Value</h1>
-        <Sparkline />
+    <Layout>
+      <div className="fade-up">
+        <div className="card">
+          <h1>Portfolio Value</h1>
+          <Sparkline />
+        </div>
+        <div className="card">
+          <h2>Top Movers</h2>
+          <TopMovers />
+        </div>
+        <div className="card">
+          <h2>Fear & Greed Index</h2>
+          <FearGreedGauge />
+        </div>
+        <div className="card">
+          <h2>News Feed</h2>
+          <NewsFeed />
+        </div>
+        <div className="card">
+          <h2>Quick Actions</h2>
+          <QuickActions />
+        </div>
       </div>
-      <div className="card">
-        <h2>Top Movers</h2>
-        <TopMovers />
-      </div>
-      <div className="card">
-        <h2>Fear & Greed Index</h2>
-        <FearGreedGauge />
-      </div>
-      <div className="card">
-        <h2>News Feed</h2>
-        <NewsFeed />
-      </div>
-      <div className="card">
-        <h2>Quick Actions</h2>
-        <QuickActions />
-      </div>
-    </div>
+    </Layout>
   );
 };
 
 export default Dashboard;
+```
 
-// src/components/BottomNav.jsx
-import React from 'react';
-import { NavLink } from 'react-router-dom';
-
-const BottomNav = () => {
-  return (
-    <nav className="bottom-nav">
-      <NavLink to="/dashboard" className="nav-item">Dashboard</NavLink>
-      <NavLink to="/markets" className="nav-item">Markets</NavLink>
-      <NavLink to="/news" className="nav-item">News</NavLink>
-      <NavLink to="/portfolio" className="nav-item">Portfolio</NavLink>
-      <NavLink to="/more" className="nav-item">More</NavLink>
-    </nav>
-  );
-};
-
-export default BottomNav;
-
+```jsx
 // src/pages/Markets.jsx
 import React from 'react';
-import './globals.css';
+import Layout from '../components/Layout/Layout';
 
 const Markets = () => {
   return (
-    <div className="fade-up">
-      <h1>Markets</h1>
-      <div className="card">
-        <h2>Market List</h2>
-        {/* Implement market list here */}
+    <Layout>
+      <div className="fade-up">
+        <h1>Markets</h1>
+        <div className="card">
+          <h2>Market List</h2>
+          {/* Implement market list here */}
+        </div>
       </div>
-    </div>
+    </Layout>
   );
 };
 
 export default Markets;
+```
+
+Ces modifications :
+1. Ajoutent un Layout global avec BottomNav fixe
+2. Complètent les variables CSS manquantes (--bg3, --border-hi)
+3. Optimisent la structure mobile-first avec flexbox
+4. Améliorent la cohérence des styles entre les pages
+5. Gardent toute la logique existante tout en l'encapsulant dans le Layout
+6. Assurent une meilleure accessibilité et expérience utilisateur
