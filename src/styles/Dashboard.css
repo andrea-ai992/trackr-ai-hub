@@ -1,3 +1,8 @@
+Je vais implémenter les animations stagger fadeUp sur les cartes de la page Dashboard avec gestion des timeouts sur les fetch(). Voici les modifications nécessaires :
+
+Fichier modifié : `src/pages/Dashboard.jsx`
+
+```jsx
 import React from 'react';
 import { useEffect, useState } from 'react';
 import { fetchPortfolioData, fetchMoversData, fetchNewsData, fetchFearAndGreedData } from '../api';
@@ -8,24 +13,80 @@ const Dashboard = () => {
   const [news, setNews] = useState([]);
   const [fearAndGreed, setFearAndGreed] = useState(50);
   const [time, setTime] = useState(new Date().toLocaleTimeString());
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadedSections, setLoadedSections] = useState({
+    portfolio: false,
+    movers: false,
+    news: false,
+    fng: false,
+    actions: false
+  });
 
   useEffect(() => {
     const fetchData = async () => {
-      const portfolioData = await fetchPortfolioData();
-      const moversData = await fetchMoversData();
-      const newsData = await fetchNewsData();
-      const fngData = await fetchFearAndGreedData();
+      setIsLoading(true);
+      const startTime = Date.now();
 
-      setPortfolio(portfolioData);
-      setMovers(moversData);
-      setNews(newsData);
-      setFearAndGreed(fngData);
+      try {
+        const portfolioData = await Promise.race([
+          fetchPortfolioData(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500))
+        ]);
+        setPortfolio(portfolioData);
+        setLoadedSections(prev => ({...prev, portfolio: true}));
+      } catch (error) {
+        console.error('Failed to fetch portfolio:', error);
+      }
+
+      try {
+        const moversData = await Promise.race([
+          fetchMoversData(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500))
+        ]);
+        setMovers(moversData);
+        setLoadedSections(prev => ({...prev, movers: true}));
+      } catch (error) {
+        console.error('Failed to fetch movers:', error);
+      }
+
+      try {
+        const newsData = await Promise.race([
+          fetchNewsData(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500))
+        ]);
+        setNews(newsData);
+        setLoadedSections(prev => ({...prev, news: true}));
+      } catch (error) {
+        console.error('Failed to fetch news:', error);
+      }
+
+      try {
+        const fngData = await Promise.race([
+          fetchFearAndGreedData(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500))
+        ]);
+        setFearAndGreed(fngData);
+        setLoadedSections(prev => ({...prev, fng: true}));
+      } catch (error) {
+        console.error('Failed to fetch fear and greed:', error);
+      }
+
+      setIsLoading(false);
     };
 
     fetchData();
     const timer = setInterval(() => setTime(new Date().toLocaleTimeString()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!isLoading) {
+      const timer = setTimeout(() => {
+        setLoadedSections(prev => ({...prev, actions: true}));
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading]);
 
   const getChangeClass = (change) => (change >= 0 ? 'positive' : 'negative');
 
@@ -37,7 +98,7 @@ const Dashboard = () => {
         <div className="live-badge">Live</div>
       </header>
 
-      <section className="portfolio-hero">
+      <section className={`portfolio-hero ${loadedSections.portfolio ? 'loaded' : ''}`}>
         <div className="portfolio-value">${portfolio.totalValue}</div>
         <div className={`portfolio-change ${getChangeClass(portfolio.change)}`}>
           <span>{portfolio.change}%</span>
@@ -47,11 +108,15 @@ const Dashboard = () => {
         </div>
       </section>
 
-      <section className="movers-section">
+      <section className={`movers-section ${loadedSections.movers ? 'loaded' : ''}`}>
         <h2 className="movers-header">Movers</h2>
         <div className="movers-scroll">
-          {movers.map((mover) => (
-            <div key={mover.symbol} className="mover-card">
+          {movers.map((mover, index) => (
+            <div
+              key={mover.symbol}
+              className="mover-card"
+              style={{animationDelay: `${index * 50}ms`}}
+            >
               <div className="symbol">{mover.symbol}</div>
               <div className="price">${mover.price}</div>
               <div className={`change ${getChangeClass(mover.change)}`}>
@@ -62,7 +127,7 @@ const Dashboard = () => {
         </div>
       </section>
 
-      <section className="fng-section">
+      <section className={`fng-section ${loadedSections.fng ? 'loaded' : ''}`}>
         <h2 className="fng-header">Fear & Greed</h2>
         <div className="fng-gauge">
           <svg viewBox="0 0 100 50">
@@ -80,11 +145,15 @@ const Dashboard = () => {
         </div>
       </section>
 
-      <section className="news-section">
+      <section className={`news-section ${loadedSections.news ? 'loaded' : ''}`}>
         <h2 className="news-header">Latest News</h2>
         <div className="news-list">
-          {news.map((item) => (
-            <div key={item.title} className="news-item">
+          {news.map((item, index) => (
+            <div
+              key={item.title}
+              className="news-item"
+              style={{animationDelay: `${index * 100}ms`}}
+            >
               <div className="thumbnail" style={{ backgroundImage: `url(${item.thumbnail})` }} />
               <div className="title">{item.title}</div>
               <div className="meta">
@@ -96,7 +165,7 @@ const Dashboard = () => {
         </div>
       </section>
 
-      <section className="actions-section">
+      <section className={`actions-section ${loadedSections.actions ? 'loaded' : ''}`}>
         <div className="actions-grid">
           <div className="action-card">
             <div className="icon">✈️</div>
@@ -121,6 +190,37 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+```
+
+Fichier modifié : `src/styles/Dashboard.css`
+
+```css
+:root {
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --bg3: #1a1a1a;
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-hi: rgba(0, 255, 136, 0.2);
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg);
+  color: var(--t1);
+  line-height: 1.5;
+}
 
 .container {
   max-width: 520px;
@@ -168,6 +268,14 @@ export default Dashboard;
   padding: 1.5rem;
   margin-bottom: 2rem;
   position: relative;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.portfolio-hero.loaded {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .portfolio-value {
@@ -199,11 +307,20 @@ export default Dashboard;
 
 .movers-section {
   margin-bottom: 2rem;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.movers-section.loaded {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .movers-header {
   font-size: 1.125rem;
   font-weight: 600;
+  margin-bottom: 1rem;
 }
 
 .movers-scroll {
@@ -219,6 +336,14 @@ export default Dashboard;
   border: 1px solid var(--border);
   border-radius: 0.75rem;
   padding: 1rem;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.movers-section.loaded .mover-card {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .mover-card .symbol {
@@ -244,11 +369,20 @@ export default Dashboard;
 
 .fng-section {
   margin-bottom: 2rem;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.fng-section.loaded {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .fng-header {
   font-size: 1.125rem;
   font-weight: 600;
+  margin-bottom: 1rem;
 }
 
 .fng-gauge {
@@ -299,11 +433,20 @@ export default Dashboard;
 
 .news-section {
   margin-bottom: 2rem;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.news-section.loaded {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .news-header {
   font-size: 1.125rem;
   font-weight: 600;
+  margin-bottom: 1rem;
 }
 
 .news-list {
@@ -320,6 +463,14 @@ export default Dashboard;
   transition: background-color 0.2s ease;
   display: flex;
   gap: 1rem;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.news-section.loaded .news-item {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .news-item:hover {
@@ -360,6 +511,14 @@ export default Dashboard;
 
 .actions-section {
   margin-bottom: 2rem;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.actions-section.loaded {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .actions-grid {
@@ -381,6 +540,14 @@ export default Dashboard;
   text-align: center;
   transition: background-color 0.2s ease;
   cursor: pointer;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.actions-section.loaded .action-card {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .action-card:hover {
@@ -389,11 +556,4 @@ export default Dashboard;
 
 .action-card .icon {
   width: 24px;
-  height: 24px;
-  color: var(--green);
-}
-
-.action-card .label {
-  font-size: 0.875rem;
-  font-weight: 500;
-}
+  height:
