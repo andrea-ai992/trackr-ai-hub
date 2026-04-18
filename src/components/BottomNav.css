@@ -1,92 +1,144 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Home, Sports, Market, News, More } from 'lucide-react';
-import './BottomNav.css';
+Création de src/components/BottomNav.css
+```css
+/* BottomNav.css */
 
-const BottomNav = () => {
-    const location = useLocation();
-    const tabs = [
-        { name: 'Home', icon: <Home size={22} />, path: '/' },
-        { name: 'Sports', icon: <Sports size={22} />, path: '/sports' },
-        { name: 'Markets', icon: <Market size={22} />, path: '/markets' },
-        { name: 'News', icon: <News size={22} />, path: '/news', badge: true },
-        { name: 'More', icon: <More size={22} />, path: '/more' },
-    ];
+/* Variables */
+:root {
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --border: rgba(255, 255, 255, 0.07);
+  --pill-indicator: rgba(0, 255, 136, 0.12);
+}
 
-    return (
-        <div className="bottom-nav">
-            {tabs.map((tab, index) => {
-                const isActive = location.pathname === tab.path;
-                return (
-                    <Link to={tab.path} key={index} className={`tab ${isActive ? 'active' : ''}`}>
-                        {tab.badge && <span className="badge" />}
-                        <div className="icon">{tab.icon}</div>
-                        <span className="label">{tab.name}</span>
-                        {isActive && <div className="pill" />}
-                    </Link>
-                );
-            })}
-        </div>
-    );
-};
-
-export default BottomNav;
+/* Styles */
 
 .bottom-nav {
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    height: 60px;
-    background: rgba(8, 8, 8, 0.92);
-    backdrop-filter: blur(24px);
-    border-top: 1px solid var(--border);
-    padding-bottom: env(safe-area-inset-bottom);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 24px;
+  background-color: var(--bg);
+  backdrop-filter: blur(24px);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-sizing: border-box;
+  transition: transform 300ms ease;
+  height: 60px;
+  z-index: 1000;
 }
 
-.tab {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    color: var(--t3);
-    text-decoration: none;
-    position: relative;
-    transition: transform 300ms ease;
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
-.tab:hover {
-    transform: scale(1.05);
+.bottom-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  cursor: pointer;
 }
 
-.label {
-    font-size: 9px;
+.bottom-nav-item-active {
+  color: var(--green);
 }
 
-.icon {
-    transition: color 300ms ease;
+.bottom-nav-item-icon {
+  font-size: 22px;
+  margin-right: 6px;
+  color: var(--t3);
 }
 
-.active .label,
-.active .icon {
-    color: var(--green);
+.bottom-nav-item-label {
+  font-size: 9px;
+  color: var(--t3);
 }
 
-.pill {
-    position: absolute;
-    bottom: -6px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 255, 136, 0.12);
-    border-radius: 12px;
-    padding: 6px 16px;
-    transition: transform 300ms ease;
+.bottom-nav-item-pill {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background-color: var(--pill-indicator);
+  border-radius: 12px;
+  padding: 6px 16px;
+  transform: translateX(0);
+  transition: transform 300ms ease;
+}
+
+.bottom-nav-item-active .bottom-nav-item-pill {
+  transform: translateX(100%);
 }
 
 .badge {
-    position: absolute;
-    top: -4px;
-    right: -4px;
-    width: 8px;
-    height: 8px;
-    background: red;
-    border-radius: 50%;
+  position: absolute;
+  top: 0;
+  right: -12px;
+  background-color: #f00;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 50%;
+  font-size: 12px;
 }
+```
+
+Création de src/components/BottomNav.jsx
+```jsx
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { FaHome, FaFootball, FaChartLine, FaNewspaper, FaEllipsis } from 'lucide-react';
+
+const BottomNav = () => {
+  return (
+    <div className="bottom-nav">
+      <div className="safe-area-inset-bottom">
+        <div className="bottom-nav-item">
+          <Link to="/dashboard" className="bottom-nav-item-active">
+            <FaHome className="bottom-nav-item-icon" />
+            <span className="bottom-nav-item-label">Home</span>
+            <div className="bottom-nav-item-pill" />
+          </Link>
+        </div>
+        <div className="bottom-nav-item">
+          <Link to="/sports">
+            <FaFootball className="bottom-nav-item-icon" />
+            <span className="bottom-nav-item-label">Sports</span>
+            <div className="bottom-nav-item-pill" />
+          </Link>
+        </div>
+        <div className="bottom-nav-item">
+          <Link to="/markets">
+            <FaChartLine className="bottom-nav-item-icon" />
+            <span className="bottom-nav-item-label">Markets</span>
+            <div className="bottom-nav-item-pill" />
+          </Link>
+        </div>
+        <div className="bottom-nav-item">
+          <Link to="/news">
+            <FaNewspaper className="bottom-nav-item-icon" />
+            <span className="bottom-nav-item-label">News</span>
+            <div className="bottom-nav-item-pill" />
+            <div className="badge">5</div>
+          </Link>
+        </div>
+        <div className="bottom-nav-item">
+          <Link to="/more">
+            <FaEllipsis className="bottom-nav-item-icon" />
+            <span className="bottom-nav-item-label">More</span>
+            <div className="bottom-nav-item-pill" />
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default BottomNav;
+```
+Assurez-vous d'ajouter les imports nécessaires dans votre fichier src/index.js ou src/App.js.
