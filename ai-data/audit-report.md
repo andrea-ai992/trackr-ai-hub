@@ -26,20 +26,44 @@
 | ChartAnalysis | `/chartanalysis` | Cohérent mais graphique mal intégré | Axes illisibles, légende manquante |
 
 ### Problèmes design communs
-- **Texte trop petit**: Utilisation systématique de `font-size: 11px` à `14px` pour le texte principal
-- **Contraste insuffisant**: Utilisation de `--text-secondary` (#aaa) sur `--surface` (#0f0f0f) ratio 3.6:1 (minimum requis 4.5:1)
-- **Overflow horizontal**: Plusieurs pages ont des éléments qui dépassent de l'écran en mobile
-- **Hiérarchie visuelle manquante**: Pas de variations de taille de police pour les titres
-- **Boutons trop petits**: Taille standard de `32px x 32px` trop petite pour le toucher mobile
+- Texte trop petit: Utilisation systématique de `font-size: 11px` à `14px` pour le texte principal
+- Contraste insuffisant: Utilisation de `--text-secondary` (#aaa) sur `--surface` (#0f0f0f) ratio 3.6:1
+- Overflow horizontal: Plusieurs pages ont des éléments qui dépassent de l'écran en mobile
+- Hiérarchie visuelle manquante: Pas de variations de taille de police pour les titres
+- Boutons trop petits: Taille standard de `32px x 32px` trop petite pour le toucher mobile
 
 ### Problèmes fonctionnels probables
-- **Scroll bloqué**: Page `/andy` a probablement un `overflow: hidden` mal géré
-- **Inputs non sanitisés**: Tous les formulaires n'ont probablement pas de validation côté client
-- **Manque de feedback**: Boutons de trading dans CryptoTrader n'ont probablement pas de state loading
+- Scroll bloqué: Page `/andy` a probablement un `overflow: hidden` mal géré
+- Inputs non sanitisés: Tous les formulaires n'ont probablement pas de validation côté client
+- Manque de feedback: Boutons de trading dans CryptoTrader n'ont probablement pas de state loading
 
 ---
 
 ## 2. CryptoTrader (src/pages/CryptoTrader.jsx)
 
 ### État actuel
-- **Page stub**: Le fichier `src/pages/CryptoTrader.jsx` contient uniquement:
+- Page stub: Le fichier contient uniquement un composant vide avec un titre "CryptoTrader" et un bouton "Trade" non fonctionnel
+
+---
+
+## 3. Dashboard serveur (deploy/dashboard.js)
+
+### Fonctionnalités disponibles
+- `/vibe` (dev mobile) - Endpoint de test sans authentification
+- `/chat` (AnDy chat) - Endpoint de chat sans authentification
+- `/api/*` (data) - Endpoints de données sans authentification
+
+### État sécurité
+- **CORS**: Non configuré, accepte toutes les origines
+- **Authentification**: Aucune, endpoints accessibles sans Bearer token
+- **Secrets exposés**: Aucun secret côté client détecté
+- **Inputs non sanitisés**: Tous les endpoints acceptent des inputs bruts sans validation
+- **CSP headers**: Absents, aucune politique de sécurité de contenu définie
+
+### Failles de sécurité connues
+- Exposition des endpoints de développement (`/vibe`) en production
+- Absence de rate limiting sur `/chat` et `/api/*`
+- Pas de validation des requêtes côté serveur
+- Pas de logging des accès aux endpoints
+- Pas de protection contre les attaques CSRF
+- Pas de gestion des erreurs sécurisées (messages d'erreur exposant des détails internes)
