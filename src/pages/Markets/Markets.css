@@ -1,0 +1,149 @@
+// src/pages/Markets/Markets.jsx
+import React, { useState, useEffect } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { Search } from 'lucide-react';
+import './Markets.css';
+
+const Markets = () => {
+  const [assets, setAssets] = useState([]);
+  const [search, setSearch] = useState('');
+  const [activeTab, setActiveTab] = useState('Stocks');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAssets = async () => {
+      const response = await fetch('/api/assets');
+      const data = await response.json();
+      setAssets(data);
+      setLoading(false);
+    };
+    fetchAssets();
+  }, []);
+
+  const handleSearch = (e) => {
+    setSearch(e.target.value);
+  };
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+  };
+
+  const filteredAssets = assets.filter((asset) =>
+    asset.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const topGainers = filteredAssets.slice(0, 5);
+  const topLosers = filteredAssets.slice(-5);
+
+  return (
+    <div className="markets">
+      <header className="header">
+        <div className="tabs">
+          <button
+            className={`tab ${activeTab === 'Stocks' ? 'active' : ''}`}
+            onClick={() => handleTabChange('Stocks')}
+          >
+            Stocks
+          </button>
+          <button
+            className={`tab ${activeTab === 'Crypto' ? 'active' : ''}`}
+            onClick={() => handleTabChange('Crypto')}
+          >
+            Crypto
+          </button>
+        </div>
+        <div className="search-bar">
+          <input
+            type="search"
+            value={search}
+            onChange={handleSearch}
+            placeholder="Search assets"
+          />
+          <Search size={20} color="#fff" />
+        </div>
+      </header>
+      <main className="main">
+        {loading ? (
+          <div className="skeleton-loader">
+            <div className="card" />
+            <div className="card" />
+            <div className="card" />
+          </div>
+        ) : (
+          <div className="assets">
+            <h2 className="section-label">Top Gainers</h2>
+            {topGainers.map((asset) => (
+              <div key={asset.id} className="card">
+                <div className="logo">
+                  {asset.logo ? (
+                    <img src={asset.logo} alt={asset.name} />
+                  ) : (
+                    <span className="symbol">{asset.symbol}</span>
+                  )}
+                </div>
+                <div className="info">
+                  <h3 className="name">{asset.name}</h3>
+                  <p className="price">{asset.price}</p>
+                  <p
+                    className={`change ${asset.change > 0 ? 'positive' : 'negative'}`}
+                  >
+                    {asset.change > 0 ? '+' : '-'}{asset.change}%
+                  </p>
+                  <svg
+                    className="sparkline"
+                    width="40"
+                    height="20"
+                    viewBox="0 0 40 20"
+                  >
+                    <polyline
+                      points="0,10 10,15 20,5 30,10 40,15"
+                      fill="none"
+                      stroke="#fff"
+                      strokeWidth="2"
+                    />
+                  </svg>
+                </div>
+              </div>
+            ))}
+            <h2 className="section-label">Top Losers</h2>
+            {topLosers.map((asset) => (
+              <div key={asset.id} className="card">
+                <div className="logo">
+                  {asset.logo ? (
+                    <img src={asset.logo} alt={asset.name} />
+                  ) : (
+                    <span className="symbol">{asset.symbol}</span>
+                  )}
+                </div>
+                <div className="info">
+                  <h3 className="name">{asset.name}</h3>
+                  <p className="price">{asset.price}</p>
+                  <p
+                    className={`change ${asset.change > 0 ? 'positive' : 'negative'}`}
+                  >
+                    {asset.change > 0 ? '+' : '-'}{asset.change}%
+                  </p>
+                  <svg
+                    className="sparkline"
+                    width="40"
+                    height="20"
+                    viewBox="0 0 40 20"
+                  >
+                    <polyline
+                      points="0,10 10,15 20,5 30,10 40,15"
+                      fill="none"
+                      stroke="#fff"
+                      strokeWidth="2"
+                    />
+                  </svg>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+};
+
+export default Markets;
