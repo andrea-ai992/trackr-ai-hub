@@ -1,237 +1,133 @@
-Création de src/components/ModuleCard.jsx
-```jsx
-import React from 'react';
-import { styled } from 'styled-components';
-import { ChevronRightIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowRight } from 'lucide-react';
 
-const ModuleCardContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px;
-  border: 1px dashed var(--border);
-  border-radius: 8px;
-  background-color: var(--bg2);
-  min-height: 130px;
-  width: 100%;
-  @media (min-width: 768px) {
-    width: calc(50% - 16px);
-  }
-`;
+const ModuleCard = ({
+  id,
+  title,
+  description,
+  icon: Icon,
+  path,
+  status = 'default',
+  onClick,
+  className = '',
+}) => {
+  const navigate = useNavigate();
 
-const ModuleCardHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  @media (min-width: 768px) {
-    width: 50%;
-  }
-`;
+  const handleClick = () => {
+    if (onClick) {
+      onClick(id);
+    } else if (path) {
+      navigate(path);
+    }
+  };
 
-const ModuleCardIcon = styled.div`
-  font-size: 28px;
-  margin-right: 8px;
-`;
+  const getStatusBadge = () => {
+    switch (status) {
+      case 'new':
+        return <span className="status-badge new">NEW</span>;
+      case 'live':
+        return <span className="status-badge live">LIVE</span>;
+      default:
+        return null;
+    }
+  };
 
-const ModuleCardBadge = styled.div`
-  background-color: var(--green);
-  color: #fff;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: bold;
-`;
-
-const ModuleCardTitle = styled.h2`
-  font-size: 13px;
-  font-weight: bold;
-  color: var(--t1);
-  margin-bottom: 4px;
-`;
-
-const ModuleCardDescription = styled.p`
-  font-size: 11px;
-  color: var(--t3);
-  margin-bottom: 8px;
-`;
-
-const ModuleCardFooter = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  width: 100%;
-  @media (min-width: 768px) {
-    width: 50%;
-  }
-`;
-
-const ModuleCard = ({ title, description, icon, badge, children }) => {
   return (
-    <ModuleCardContainer>
-      <ModuleCardHeader>
-        <ModuleCardIcon>{icon}</ModuleCardIcon>
-        <ModuleCardBadge>{badge}</ModuleCardBadge>
-      </ModuleCardHeader>
-      <ModuleCardTitle>{title}</ModuleCardTitle>
-      <ModuleCardDescription>{description}</ModuleCardDescription>
-      <ModuleCardFooter>
-        <ChevronRightIcon size={16} />
-      </ModuleCardFooter>
-      {children}
-    </ModuleCardContainer>
+    <div className={`module-card ${className}`} onClick={handleClick}>
+      <div className="module-card-header">
+        {Icon && <Icon size={24} className="module-icon" />}
+        {getStatusBadge()}
+      </div>
+      <h3 className="module-title">{title}</h3>
+      <p className="module-description">{description}</p>
+      <div className="module-footer">
+        <ArrowRight size={16} className="arrow-icon" />
+      </div>
+    </div>
   );
 };
 
 export default ModuleCard;
 ```
 
-Création de src/pages/More.jsx
-```jsx
-import React from 'react';
-import { Link } from 'react-router-dom';
-import ModuleCard from '../components/ModuleCard';
-import { styled } from 'styled-components';
-import { ChevronRightIcon } from 'lucide-react';
+```css
+.module-card {
+  --card-bg: var(--bg2);
+  --card-border: var(--border);
 
-const MoreContainer = styled.div`
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
   padding: 16px;
-  background-color: var(--bg);
-`;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+}
 
-const MoreHeader = styled.h1`
-  font-size: 24px;
-  color: var(--t1);
-  margin-bottom: 16px;
-`;
+.module-card:hover {
+  background: color-mix(in srgb, var(--card-bg) 90%, white 10%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 255, 136, 0.1);
+}
 
-const ModuleGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-  @media (min-width: 768px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-`;
-
-const Settings = styled.div`
-  padding: 16px;
-  background-color: var(--bg2);
-  border-radius: 8px;
-  margin-top: 16px;
-`;
-
-const SettingsToggle = styled.div`
+.module-card-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.module-icon {
+  color: var(--green);
+  stroke-width: 2;
+}
+
+.module-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--t1);
+  margin: 0 0 8px 0;
+}
+
+.module-description {
   font-size: 14px;
   color: var(--t2);
-  cursor: not-allowed;
-  &:hover {
-    color: var(--t2);
-  }
-`;
+  margin: 0 0 12px 0;
+  flex-grow: 1;
+}
 
-const SettingsVersion = styled.p`
-  font-size: 12px;
-  color: var(--t3);
-  margin-bottom: 8px;
-`;
+.module-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
 
-const SettingsGitHub = styled.a`
-  font-size: 12px;
+.arrow-icon {
   color: var(--green);
-  text-decoration: none;
-  &:hover {
-    color: var(--green);
-  }
-`;
+  stroke-width: 2;
+}
 
-const More = () => {
-  return (
-    <MoreContainer>
-      <MoreHeader>Plus</MoreHeader>
-      <ModuleGrid>
-        <ModuleCard
-          title="FlightTracker"
-          description="Suivi des vols en temps réel"
-          icon="✈️"
-          badge="LIVE"
-          children={<Link to="/flighttracker">Voir plus</Link>}
-        />
-        <ModuleCard
-          title="CryptoTrader"
-          description="Analyse et trading de cryptomonnaies"
-          icon="📈"
-          badge="NEW"
-          children={<Link to="/cryptotrader">Voir plus</Link>}
-        />
-        <ModuleCard
-          title="Signals IA"
-          description="Signaux de trading générés par l'IA"
-          icon="⚡"
-          badge="NEW"
-          children={<Link to="/signals">Voir plus</Link>}
-        />
-        <ModuleCard
-          title="Portfolio"
-          description="Gestion de votre portefeuille"
-          icon="💼"
-          children={<Link to="/portfolio">Voir plus</Link>}
-        />
-        <ModuleCard
-          title="Patterns"
-          description="Analyse de tendances et de modèles"
-          icon="📊"
-          children={<Link to="/patterns">Voir plus</Link>}
-        />
-        <ModuleCard
-          title="Translator"
-          description="Traduction instantanée"
-          icon="🌐"
-          children={<Link to="/translator">Voir plus</Link>}
-        />
-        <ModuleCard
-          title="RealEstate"
-          description="Analyse de marché immobilier"
-          icon="🏠"
-          badge="PRO"
-          children={<Link to="/realestate">Voir plus</Link>}
-        />
-        <ModuleCard
-          title="Sneakers"
-          description="Analyse de marché des sneakers"
-          icon="👟"
-          children={<Link to="/sneakers">Voir plus</Link>}
-        />
-        <ModuleCard
-          title="Watches"
-          description="Analyse de marché des montres"
-          icon="⌚"
-          badge="PRO"
-          children={<Link to="/watches">Voir plus</Link>}
-        />
-        <ModuleCard
-          title="BusinessPlan"
-          description="Création de plans d'affaires"
-          icon="📋"
-          children={<Link to="/businessplan">Voir plus</Link>}
-        />
-      </ModuleGrid>
-      <Settings>
-        <SettingsToggle>
-          <span>Mode sombre</span>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8 0L16 8L8 16L0 8" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </SettingsToggle>
-        <SettingsVersion>v3.0</SettingsVersion>
-        <SettingsGitHub href="https://github.com/andrea-ai992/trackr-ai-hub" target="_blank">GitHub</SettingsGitHub>
-      </Settings>
-    </MoreContainer>
-  );
-};
+.status-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
 
-export default More;
+.status-badge.new {
+  background: rgba(0, 255, 136, 0.2);
+  color: var(--green);
+  border: 1px solid var(--green);
+}
+
+.status-badge.live {
+  background: rgba(255, 0, 0, 0.2);
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
