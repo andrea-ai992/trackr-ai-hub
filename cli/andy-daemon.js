@@ -161,40 +161,44 @@ async function flushSyncQueue() {
   saveSyncQueue(remaining)
 }
 
-// ── Providers LLM — priorité: Groq (gratuit) > Anthropic (payant) > Ollama (local) ──
+// ── Providers LLM — chaîne multi-provider avec cooldown par provider ──────────
 //
-//  Groq  : GRATUIT — console.groq.com (compte gratuit, pas de CB)
-//          Llama 3.3 70B · 6000 req/jour · 500K tokens/jour
-//  Anthropic: PAYANT — fallback si Groq indisponible/épuisé
-//  Ollama: LOCAL/GRATUIT — si OLLAMA_URL défini (ex: http://localhost:11434)
-//          Installation: curl -fsSL https://ollama.ai/install.sh | sh
-//          Modèle code: ollama pull qwen2.5-coder:7b
+//  1. Groq        GRATUIT — console.groq.com        — llama-3.3-70b · 6000 req/jour
+//  2. Gemini      GRATUIT — aistudio.google.com     — 1.5-flash · 1M tokens/jour
+//  3. OpenRouter  GRATUIT — openrouter.ai           — models :free (llama-3.1-70b)
+//  4. Anthropic   PAYANT  — anthropic.com           — fallback si crédits dispo
+//  5. Ollama      LOCAL   — si OLLAMA_URL défini    — qwen2.5-coder ou autre
+//
+//  Pour activer un provider, ajouter la clé dans .env :
+//    GROQ_API_KEY=gsk_...      (console.groq.com — gratuit, pas de CB)
+//    GEMINI_API_KEY=AIza...    (aistudio.google.com — gratuit, pas de CB)
+//    OPENROUTER_API_KEY=sk-... (openrouter.ai — gratuit, modèles :free)
 
-const GROQ_KEY    = process.env.GROQ_API_KEY    || ''
-const OLLAMA_URL  = process.env.OLLAMA_URL       || ''
-const OLLAMA_MODEL= process.env.OLLAMA_MODEL     || 'qwen2.5-coder:7b'
+const GROQ_KEY       = process.env.GROQ_API_KEY       || ''
+const GEMINI_KEY     = process.env.GEMINI_API_KEY      || ''
+const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY  || ''
+const OLLAMA_URL     = process.env.OLLAMA_URL          || ''
+const OLLAMA_MODEL   = process.env.OLLAMA_MODEL        || 'qwen2.5-coder:7b'
 
-// Modèles Anthropic (fallback)
-const MODEL_SMART = 'claude-3-5-sonnet-20241022'
-const MODEL_FAST  = 'claude-3-5-haiku-20241022'
-// Modèles Groq (gratuit)
-const GROQ_SMART  = 'llama-3.3-70b-versatile'   // meilleur qualité gratuit
-const GROQ_FAST   = 'llama-3.1-8b-instant'       // ultra rapide, gratuit
+// Modèles
+const MODEL_SMART  = 'claude-3-5-sonnet-20241022'
+const MODEL_FAST   = 'claude-3-5-haiku-20241022'
+const GROQ_SMART   = 'llama-3.3-70b-versatile'
+const GROQ_FAST    = 'llama-3.1-8b-instant'
 
-// Semaphore global — évite burst API
+// Semaphore global
 const API_SEMAPHORE_LIMIT = 3
 let   apiConcurrent = 0
-let   globalRateLimitUntil = 0
 
-// Détecte le provider disponible au démarrage
-function detectProvider() {
-  if (GROQ_KEY)   return 'groq'
-  if (API_KEY)    return 'anthropic'
-  if (OLLAMA_URL) return 'ollama'
-  return null
+// Cooldown par provider — évite retry inutile quand daily limit ou crédits épuisés
+const providerCooldown = { groq: 0, gemini: 0, openrouter: 0, anthropic: 0, ollama: 0 }
+
+function providerAvailable(name) { return Date.now() >= (providerCooldown[name] || 0) }
+
+function setCooldown(name, seconds) {
+  providerCooldown[name] = Date.now() + seconds * 1000
+  log(`[LLM] ${name} cooldown: ${seconds >= 3600 ? Math.round(seconds/3600) + 'h' : Math.round(seconds/60) + 'min'}`)
 }
-
-const PROVIDER = detectProvider()
 
 // ── System prompt ─────────────────────────────────────────────────────────────
 const SYSTEM = `Tu es AnDy, l'IA autonome d'Andrea Matlega.
@@ -215,55 +219,109 @@ Règles ABSOLUES:
 - Pas de librairies externes non installées (recharts, framer-motion, etc. ne sont pas disponibles)
 - Librairies disponibles: react, react-router-dom, lucide-react, @supabase/supabase-js`
 
-// ── OpenAI-compatible call (Groq + Ollama) ────────────────────────────────────
-async function callOpenAI(baseUrl, apiKey, model, prompt, maxTokens) {
+// ── OpenAI-compatible call (Groq, OpenRouter, Ollama) ────────────────────────
+async function callOpenAI(baseUrl, apiKey, model, prompt, maxTokens, extraHeaders = {}) {
   const res = await fetch(`${baseUrl}/v1/chat/completions`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}) },
+    headers: { 'Content-Type': 'application/json', ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}), ...extraHeaders },
     body: JSON.stringify({ model, messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: prompt }], max_tokens: maxTokens, temperature: 0.4 }),
     signal: AbortSignal.timeout(60000),
   }).catch(err => { throw new Error(`Réseau: ${err.message}`) })
-  if (res.status === 429) { const s = parseInt(res.headers?.get?.('retry-after') || '30') || 30; throw new Error(`429:${s}`) }
-  if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(`API ${res.status}: ${b?.error?.message || ''}`) }
+  if (res.status === 429) {
+    const s = parseInt(res.headers?.get?.('retry-after') || '30') || 30
+    throw new Error(`429:${s}`)
+  }
+  if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(`API ${res.status}: ${(b?.error?.message || '').slice(0,100)}`) }
   const d = await res.json().catch(() => null)
   return d?.choices?.[0]?.message?.content?.trim() || null
 }
 
-// ── Multi-provider LLM ────────────────────────────────────────────────────────
+// ── Gemini REST call (gratuit — aistudio.google.com) ─────────────────────────
+async function callGemini(prompt, maxTokens) {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM }] },
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: Math.min(maxTokens, 8192), temperature: 0.4 },
+      }),
+      signal: AbortSignal.timeout(60000),
+    }
+  ).catch(err => { throw new Error(`Réseau: ${err.message}`) })
+  if (res.status === 429) {
+    const d = await res.json().catch(() => ({}))
+    const retryMs = d?.error?.details?.find(x => x.retryDelay)?.retryDelay
+    const s = retryMs ? Math.ceil(parseInt(retryMs) / 1000) || 60 : 60
+    throw new Error(`429:${s}`)
+  }
+  if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(`Gemini ${res.status}: ${(b?.error?.message || '').slice(0,80)}`) }
+  const d = await res.json().catch(() => null)
+  return d?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || null
+}
+
+// ── Multi-provider LLM — chaîne de fallback intelligente ─────────────────────
 async function generateRaw(prompt, maxTokens = 4096, hint = 'smart') {
   while (apiConcurrent >= API_SEMAPHORE_LIMIT) await sl(500)
   apiConcurrent++
   try {
-    if (GROQ_KEY) {
-      const model = hint === 'fast' ? GROQ_FAST : GROQ_SMART
-      for (let i = 0; i < 5; i++) {
-        // Respecte le rate limit global
-        if (globalRateLimitUntil > Date.now()) {
-          await sl(globalRateLimitUntil - Date.now())
-          globalRateLimitUntil = 0
-        }
+    // Helper: appelle un provider avec retries sur 429 transient
+    async function tryProvider(name, callFn, maxRetries = 3) {
+      if (!providerAvailable(name)) return null
+      for (let i = 0; i < maxRetries; i++) {
         try {
-          const text = await callOpenAI('https://api.groq.com/openai', GROQ_KEY, model, prompt, maxTokens)
-          if (text) return text
+          const text = await callFn()
+          if (text) { log(`[LLM] ✓ ${name}`); return text }
         } catch (e) {
           if (e.message.startsWith('429:')) {
             const raw = parseInt(e.message.split(':')[1]) || 30
-            const s = Math.min(raw, 45)  // max 45s — si daily limit, on skip Groq
-            log(`Groq 429 — wait ${s}s (raw: ${raw}s)`)
-            if (raw > 300) { log('Groq daily limit — skip Groq ce cycle'); break }
-            globalRateLimitUntil = Date.now() + s * 1000
-            await sl(s * 1000)
-            globalRateLimitUntil = 0
+            if (raw > 300) {
+              setCooldown(name, Math.min(raw, 8 * 3600))  // daily limit — cooldown jusqu'à reset
+              return null
+            }
+            const wait = Math.min(raw, 60) + 3
+            log(`[LLM] ${name} 429 — wait ${wait}s`)
+            await sl(wait * 1000)
             continue
           }
-          log(`Groq tentative ${i+1}/5: ${e.message}`)
-          if (i < 4) await sl(3000)
+          if (/credit|billing|quota|insufficient_quota/i.test(e.message)) {
+            setCooldown(name, 24 * 3600)
+            log(`[LLM] ${name} crédits épuisés — cooldown 24h`)
+            return null
+          }
+          log(`[LLM] ${name} tentative ${i+1}/${maxRetries}: ${e.message.slice(0,80)}`)
+          if (i < maxRetries - 1) await sl(3000)
         }
       }
-      log(`Groq échec après 5 tentatives`)
+      return null
     }
-    // Anthropic fallback — 1 tentative, skip si crédits épuisés
-    if (API_KEY) {
+
+    // 1. Groq — primary (meilleur qualité gratuit)
+    if (GROQ_KEY && providerAvailable('groq')) {
+      const model = hint === 'fast' ? GROQ_FAST : GROQ_SMART
+      const text = await tryProvider('groq', () => callOpenAI('https://api.groq.com/openai', GROQ_KEY, model, prompt, maxTokens))
+      if (text) return text
+    }
+
+    // 2. Gemini 1.5 Flash — gratuit, 1M tokens/jour (aistudio.google.com)
+    if (GEMINI_KEY && providerAvailable('gemini')) {
+      const text = await tryProvider('gemini', () => callGemini(prompt, maxTokens), 2)
+      if (text) return text
+    }
+
+    // 3. OpenRouter — modèles :free (openrouter.ai — compte gratuit)
+    if (OPENROUTER_KEY && providerAvailable('openrouter')) {
+      const model = hint === 'fast' ? 'meta-llama/llama-3.1-8b-instruct:free' : 'meta-llama/llama-3.1-70b-instruct:free'
+      const text = await tryProvider('openrouter',
+        () => callOpenAI('https://openrouter.ai/api', OPENROUTER_KEY, model, prompt, maxTokens,
+          { 'HTTP-Referer': APP_URL, 'X-Title': 'AnDy-Daemon' }), 2)
+      if (text) return text
+    }
+
+    // 4. Anthropic — payant, fallback
+    if (API_KEY && providerAvailable('anthropic')) {
       try {
         const model = hint === 'fast' ? MODEL_FAST : MODEL_SMART
         const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -272,18 +330,26 @@ async function generateRaw(prompt, maxTokens = 4096, hint = 'smart') {
           body: JSON.stringify({ model, max_tokens: maxTokens, system: SYSTEM, stream: false, messages: [{ role: 'user', content: prompt }] }),
           signal: AbortSignal.timeout(60000),
         })
-        if (res.status === 400) {
+        if (res.status === 429) {
+          setCooldown('anthropic', 60)
+        } else if (res.status === 400 || res.status === 402) {
           const b = await res.json().catch(() => ({}))
-          if ((b?.error?.message || '').toLowerCase().includes('credit')) {
-            log('Crédits Anthropic épuisés — Groq only')
-          } else throw new Error(`API 400: ${b?.error?.message}`)
+          if (/credit|billing|quota/i.test(b?.error?.message || '')) setCooldown('anthropic', 24 * 3600)
+          else throw new Error(`Anthropic ${res.status}: ${(b?.error?.message || '').slice(0,80)}`)
         } else if (res.ok) {
           const d = await res.json().catch(() => null)
           const text = d?.content?.[0]?.text?.trim()
           if (text) return text
         }
-      } catch (e) { log(`Anthropic: ${e.message}`) }
+      } catch (e) { log(`[LLM] Anthropic: ${e.message.slice(0,80)}`) }
     }
+
+    // 5. Ollama — local (si installé sur le VPS)
+    if (OLLAMA_URL && providerAvailable('ollama')) {
+      const text = await tryProvider('ollama', () => callOpenAI(OLLAMA_URL, '', OLLAMA_MODEL, prompt, maxTokens), 2)
+      if (text) return text
+    }
+
     throw new Error('LLM indisponible')
   } finally {
     apiConcurrent--
@@ -997,8 +1063,14 @@ async function supervisor() {
 async function main() {
   log('=== AnDy Daemon v3 démarré ===')
   log(`Repo: ${GITHUB_REPO} | App: ${APP_URL}`)
-  log(`API Key: ${API_KEY ? API_KEY.slice(0,20)+'...' : 'MANQUANTE ⚠'}`)
-  log(`Discord: BOT=${BOT_TOKEN ? 'ok' : 'MANQUANT'} | CH_MORNING=${CH_MORNING || 'MANQUANT'} | CH_UPDATES=${CH_UPDATES || 'MANQUANT'}`)
+  log(`Providers: ${[
+    GROQ_KEY       && `Groq(${GROQ_KEY.slice(0,8)}…)`,
+    GEMINI_KEY     && `Gemini(${GEMINI_KEY.slice(0,8)}…)`,
+    OPENROUTER_KEY && `OpenRouter(${OPENROUTER_KEY.slice(0,8)}…)`,
+    API_KEY        && `Anthropic(${API_KEY.slice(0,16)}…)`,
+    OLLAMA_URL     && `Ollama(${OLLAMA_URL})`,
+  ].filter(Boolean).join(' | ') || 'AUCUN ⚠ — ajouter GROQ_API_KEY ou GEMINI_API_KEY dans .env'}`)
+  log(`Discord: BOT=${BOT_TOKEN ? 'ok' : 'MANQUANT'} | CH_UPDATES=${CH_UPDATES || 'MANQUANT'}`)
   log(`Workers: ${WORKER_COUNT} | Semaphore API: ${API_SEMAPHORE_LIMIT}`)
 
   mkdirSync(TASKS_DIR, { recursive: true })
