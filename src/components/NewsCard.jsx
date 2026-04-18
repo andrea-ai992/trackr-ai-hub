@@ -1,5 +1,3 @@
-Je vais redesigner les fichiers News.jsx et NewsCard.jsx selon les spécifications. Voici les modifications :
-
 Fichier src/components/NewsCard.jsx :
 ```jsx
 import { useRef, useState } from "react";
@@ -7,12 +5,12 @@ import { useIntersectionObserver } from "../hooks/useIntersectionObserver";
 import styles from "../styles/news.module.css";
 
 const CATEGORY_COLORS = {
-  BBC: { bg: "#e60026", border: "transparent" },
-  Bloomberg: { bg: "#1a1a1a", border: "var(--green)" },
-  CoinDesk: { bg: "#f7931a", border: "transparent" },
-  "Le Monde": { bg: "#003189", border: "transparent" },
-  Reuters: { bg: "#ff8000", border: "transparent" },
-  Default: { bg: "var(--t3)", border: "transparent" },
+  BBC: { bg: "#e60026", border: "transparent", accent: "#e60026" },
+  Bloomberg: { bg: "#1a1a1a", border: "var(--green)", accent: "#00ff88" },
+  CoinDesk: { bg: "#f7931a", border: "transparent", accent: "#f7931a" },
+  "Le Monde": { bg: "#003189", border: "transparent", accent: "#003189" },
+  Reuters: { bg: "#ff8000", border: "transparent", accent: "#ff8000" },
+  Default: { bg: "var(--t3)", border: "transparent", accent: "var(--t3)" },
 };
 
 function getRelativeTime(dateString) {
@@ -92,6 +90,7 @@ export function NewsCard({ article, index = 0 }) {
               style={{
                 backgroundColor: catStyle.bg,
                 borderLeft: `3px solid ${catStyle.border}`,
+                color: catStyle.accent,
               }}
             >
               {catKey}
