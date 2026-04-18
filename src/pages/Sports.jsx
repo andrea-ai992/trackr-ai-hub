@@ -1,6 +1,3 @@
-Je vais créer le fichier `SportsTabs.jsx` avec des tabs horizontaux scrollables et un indicateur actif (underline neon).
-
-```jsx
 import React from 'react';
 import './SportsTabs.css';
 
@@ -31,7 +28,8 @@ const SportsTabs = ({ activeTab, setActiveTab }) => {
         <div
           className="active-indicator"
           style={{
-            transform: `translateX(${tabs.findIndex(t => t.id === activeTab) * 100}%)`
+            transform: `translateX(${tabs.findIndex(t => t.id === activeTab) * 100}%)`,
+            width: `calc(100% / ${tabs.length})`
           }}
         />
       </div>
@@ -48,6 +46,7 @@ export default SportsTabs;
   overflow-x: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  font-family: 'Inter', sans-serif;
 }
 
 .sports-tabs-container::-webkit-scrollbar {
@@ -92,7 +91,6 @@ export default SportsTabs;
   bottom: 0;
   left: 0;
   height: 2px;
-  width: 60px;
   background-color: var(--green);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s ease;
   z-index: 0;
@@ -109,6 +107,6 @@ export default SportsTabs;
   }
 
   .active-indicator {
-    width: 50px;
+    height: 1.5px;
   }
 }
