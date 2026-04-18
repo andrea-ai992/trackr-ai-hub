@@ -1,26 +1,18 @@
-Je vais créer le hook `useAbortableFetch` pour gérer les timeouts sur les appels API dans ChartAnalysis. Voici le code complet et fonctionnel :
-
-```javascript
+// src/hooks/useAbortableFetch.js
 import { useState, useEffect, useCallback } from 'react';
 
 export const useAbortableFetch = () => {
-  const [data, setData] = useState(null);
-  const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [abortController, setAbortController] = useState(null);
+  const [error, setError] = useState(null);
+  const [data, setData] = useState(null);
 
-  const fetchData = useCallback(async (url, options = {}) => {
-    // Abort previous request if it exists
-    if (abortController) {
-      abortController.abort();
-    }
-
-    // Create new abort controller
-    const controller = new AbortController();
-    setAbortController(controller);
-
+  const fetchData = useCallback(async (url, options = {}, timeout = 10000) => {
     setIsLoading(true);
     setError(null);
+    setData(null);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
       const response = await fetch(url, {
@@ -37,37 +29,16 @@ export const useAbortableFetch = () => {
       return result;
     } catch (err) {
       if (err.name === 'AbortError') {
-        setError('Request aborted');
+        setError('Request timed out');
       } else {
         setError(err.message);
       }
-      return null;
+      throw err;
     } finally {
+      clearTimeout(timeoutId);
       setIsLoading(false);
     }
-  }, [abortController]);
+  }, []);
 
-  const abortRequest = useCallback(() => {
-    if (abortController) {
-      abortController.abort();
-      setError('Request aborted by user');
-    }
-  }, [abortController]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (abortController) {
-        abortController.abort();
-      }
-    };
-  }, [abortController]);
-
-  return {
-    data,
-    error,
-    isLoading,
-    fetchData,
-    abortRequest,
-  };
+  return { fetchData, isLoading, error, data };
 };
