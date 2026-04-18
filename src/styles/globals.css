@@ -1,0 +1,139 @@
+// src/styles/globals.css
+:root {
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --border: rgba(255, 255, 255, 0.07);
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--t1);
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+.card {
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+  border-radius: 8px;
+  padding: 16px;
+  max-width: 520px;
+  margin: 16px auto;
+}
+
+.fade-up {
+  animation: fadeUp 0.6s ease-out forwards;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 25%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.1) 75%);
+  background-size: 400% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+
+// src/pages/Dashboard.jsx
+import React from 'react';
+import './globals.css';
+import Sparkline from '../components/Sparkline';
+import TopMovers from '../components/TopMovers';
+import FearGreedGauge from '../components/FearGreedGauge';
+import NewsFeed from '../components/NewsFeed';
+import QuickActions from '../components/QuickActions';
+
+const Dashboard = () => {
+  return (
+    <div className="fade-up">
+      <div className="card">
+        <h1>Portfolio Value</h1>
+        <Sparkline />
+      </div>
+      <div className="card">
+        <h2>Top Movers</h2>
+        <TopMovers />
+      </div>
+      <div className="card">
+        <h2>Fear & Greed Index</h2>
+        <FearGreedGauge />
+      </div>
+      <div className="card">
+        <h2>News Feed</h2>
+        <NewsFeed />
+      </div>
+      <div className="card">
+        <h2>Quick Actions</h2>
+        <QuickActions />
+      </div>
+    </div>
+  );
+};
+
+export default Dashboard;
+
+// src/components/BottomNav.jsx
+import React from 'react';
+import { NavLink } from 'react-router-dom';
+
+const BottomNav = () => {
+  return (
+    <nav className="bottom-nav">
+      <NavLink to="/dashboard" className="nav-item">Dashboard</NavLink>
+      <NavLink to="/markets" className="nav-item">Markets</NavLink>
+      <NavLink to="/news" className="nav-item">News</NavLink>
+      <NavLink to="/portfolio" className="nav-item">Portfolio</NavLink>
+      <NavLink to="/more" className="nav-item">More</NavLink>
+    </nav>
+  );
+};
+
+export default BottomNav;
+
+// src/pages/Markets.jsx
+import React from 'react';
+import './globals.css';
+
+const Markets = () => {
+  return (
+    <div className="fade-up">
+      <h1>Markets</h1>
+      <div className="card">
+        <h2>Market List</h2>
+        {/* Implement market list here */}
+      </div>
+    </div>
+  );
+};
+
+export default Markets;
