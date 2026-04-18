@@ -1,7 +1,7 @@
 {
   "short_name": "Trackr",
-  "name": "Trackr",
-  "description": "Dashboard intelligent personnel",
+  "name": "Trackr - Dashboard Intelligent",
+  "description": "Suivez vos marchés financiers, sports, actualités et interagissez avec votre assistant IA AnDy en temps réel. Une interface minimaliste et ultra-rapide pour tout centraliser.",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -49,7 +49,7 @@
       "form_factor": "narrow"
     }
   ],
-  "categories": ["finance", "sports", "news", "productivity"],
+  "categories": ["finance", "sports", "news", "productivity", "ai", "dashboard"],
   "related_applications": [
     {
       "platform": "play",
@@ -69,9 +69,22 @@
   },
   "shortcuts": [
     {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Accéder à votre tableau de bord principal",
+      "url": "/",
+      "icons": [
+        {
+          "src": "/icons/shortcut-dashboard-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
       "name": "Markets",
       "short_name": "Markets",
-      "description": "Suivre les marchés financiers et crypto",
+      "description": "Suivre les marchés financiers et crypto en temps réel",
       "url": "/markets",
       "icons": [
         {
@@ -97,24 +110,11 @@
     {
       "name": "AnDy",
       "short_name": "AnDy",
-      "description": "Discuter avec votre assistant IA",
+      "description": "Discuter avec votre assistant IA intelligent",
       "url": "/andy",
       "icons": [
         {
           "src": "/icons/shortcut-andy-96x96.png",
-          "sizes": "96x96",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
-      "name": "News",
-      "short_name": "News",
-      "description": "Lire les actualités en temps réel",
-      "url": "/news",
-      "icons": [
-        {
-          "src": "/icons/shortcut-news-96x96.png",
           "sizes": "96x96",
           "type": "image/png"
         }
