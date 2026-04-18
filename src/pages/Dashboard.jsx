@@ -1,6 +1,3 @@
-Voici le code complet et fonctionnel pour la page de dashboard :
-
-```jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
@@ -37,7 +34,7 @@ function Movers({ data }) {
             </div>
             <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--t2)' }}>{item.name}</span>
           </div>
-          <span style={{ fontSize: 14, fontWeight: 700, color: item.pct >= 0 ? 'var(--green)' : '#ff4d4d' }}>{fmt(item.pct)}</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: item.pct >= 0 ? 'var(--green)' : '#ff4d4d' }}>{fmtPct(item.pct)}</span>
         </div>
       ))}
     </div>
@@ -96,7 +93,7 @@ function HeroCard({ value, pct, sparkline }) {
 }
 
 function FearGreedGauge({ value }) {
-  const angle = (value / 100) * 3.14;
+  const angle = (value / 100) * Math.PI;
   return (
     <svg width="100%" height="100%" viewBox="0 0 100 100">
       <circle cx="50" cy="50" r="40" fill="none" stroke="var(--t2)" strokeWidth="2" />
@@ -150,16 +147,14 @@ function Dashboard() {
         <Movers data={movers} />
         <FearGreedGauge value={fearGreed} />
         <News data={news} />
-        <QuickActions actions={[]} />
+        <QuickActions actions={[{ name: 'Flights' }, { name: 'Markets' }, { name: 'Sports' }, { name: 'AnDy' }]} />
       </main>
     </div>
   );
 }
 
 export default Dashboard;
-```
 
-```css
 .dashboard {
   display: flex;
   flex-direction: column;
@@ -316,21 +311,4 @@ export default Dashboard;
 
 .fear-greed-gauge > svg > path {
   fill: var(--green);
-}
-```
-
-```json
-{
-  "name": "trackr",
-  "version": "1.0.0",
-  "scripts": {
-    "start": "vite"
-  },
-  "dependencies": {
-    "react": "^18.2.0",
-    "react-router-dom": "^6.3.0",
-    "lucide-react": "^1.0.0",
-    "@fontsource/inter": "^4.3.1",
-    "@supabase/supabase-js": "^1.23.0"
-  }
 }
