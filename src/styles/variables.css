@@ -2,40 +2,80 @@ src/styles/variables.css
 :root {
   --green: #00ff88;
   --bg: #080808;
-  --bg2: #111;
-  --t1: #f0f0f0;
-  --t2: #888;
-  --t3: #444;
+  --bg1: #0c0c0c;
+  --bg2: #111111;
+  --bg3: #161616;
+  --bg4: #1c1c1c;
   --border: rgba(255, 255, 255, 0.07);
+  --border-hi: rgba(0, 255, 136, 0.20);
+  --green-dim: #00cc66;
+  --green-bg: rgba(0, 255, 136, 0.06);
+  --red: #ff4d4d;
+  --amber: #fbbf24;
+  --blue: #38bdf8;
+  --t1: #f0f0f0;
+  --t2: #888888;
+  --t3: #444444;
+  --radius-sm: 12px;
+  --radius: 16px;
+  --radius-lg: 22px;
 }
 
-src/pages/Dashboard.jsx
-import React from 'react';
-import './Dashboard.css';
-import Sparkline from '../components/Sparkline';
-import TopMovers from '../components/TopMovers';
-import FearGreedGauge from '../components/FearGreedGauge';
-import NewsFeed from '../components/NewsFeed';
-import QuickActions from '../components/QuickActions';
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-const Dashboard = () => {
-  return (
-    <div className="dashboard">
-      <div className="hero-portfolio">
-        {/* Hero Portfolio Component */}
-      </div>
-      <Sparkline />
-      <TopMovers />
-      <FearGreedGauge />
-      <NewsFeed />
-      <QuickActions />
-    </div>
-  );
-};
+.src/styles/index.css
+:root {
+  --green: var(--green);
+  --bg: var(--bg);
+  --bg1: var(--bg1);
+  --bg2: var(--bg2);
+  --bg3: var(--bg3);
+  --bg4: var(--bg4);
+  --border: var(--border);
+  --border-hi: var(--border-hi);
+  --green-dim: #00cc66;
+  --green-bg: var(--green-bg);
+  --red: #ff4d4d;
+  --amber: #fbbf24;
+  --blue: #38bdf8;
+  --t1: var(--t1);
+  --t2: var(--t2);
+  --t3: var(--t3);
+  --radius-sm: var(--radius-sm);
+  --radius: var(--radius);
+  --radius-lg: var(--radius-lg);
+}
 
-export default Dashboard;
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg);
+  color: var(--t1);
+  max-width: 100vw;
+  overflow-x: hidden;
+}
 
-src/pages/Dashboard.css
+.num {
+  font-feature-settings: "tnum";
+}
+
+.section-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+.scroll-row {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  display: flex;
+  gap: 16px;
+}
+
+.scroll-row::-webkit-scrollbar {
+  display: none;
+}
+
 .dashboard {
   background-color: var(--bg);
   color: var(--t1);
@@ -53,51 +93,6 @@ src/pages/Dashboard.css
   margin-bottom: 16px;
 }
 
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.fade-up {
-  animation: fadeUp 0.6s ease-out forwards;
-}
-
-src/components/BottomNav.jsx
-import React from 'react';
-import { NavLink } from 'react-router-dom';
-import './BottomNav.css';
-
-const BottomNav = () => {
-  return (
-    <nav className="bottom-nav">
-      <NavLink to="/dashboard" activeClassName="active">
-        Dashboard
-      </NavLink>
-      <NavLink to="/markets" activeClassName="active">
-        Markets
-      </NavLink>
-      <NavLink to="/news" activeClassName="active">
-        News
-      </NavLink>
-      <NavLink to="/more" activeClassName="active">
-        More
-      </NavLink>
-      <NavLink to="/andy" activeClassName="active">
-        AnDy
-      </NavLink>
-    </nav>
-  );
-};
-
-export default BottomNav;
-
-src/components/BottomNav.css
 .bottom-nav {
   display: flex;
   justify-content: space-around;
@@ -118,21 +113,6 @@ src/components/BottomNav.css
   color: var(--green);
 }
 
-src/pages/Markets.jsx
-import React from 'react';
-import './Markets.css';
-
-const Markets = () => {
-  return (
-    <div className="markets">
-      {/* Market List Component */}
-    </div>
-  );
-};
-
-export default Markets;
-
-src/pages/Markets.css
 .markets {
   background-color: var(--bg);
   color: var(--t1);
@@ -157,21 +137,6 @@ src/pages/Markets.css
   }
 }
 
-src/vibe/dashboard.js
-import React from 'react';
-import './Vibe.css';
-
-const Vibe = () => {
-  return (
-    <div className="vibe">
-      {/* Vibe Tabs Component */}
-    </div>
-  );
-};
-
-export default Vibe;
-
-src/vibe/Vibe.css
 .vibe {
   background-color: var(--bg);
   color: var(--t1);
