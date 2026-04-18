@@ -1,9 +1,66 @@
-Je vais implémenter un système de pulsation neon pour les prix live dans le fichier Markets.jsx. Voici le code complet avec les modifications nécessaires :
+Je vais créer un composant Sparkline optimisé et l'intégrer dans Markets.jsx. Voici les fichiers modifiés :
 
 ```jsx
+// src/components/Sparkline.jsx
+import { useMemo } from 'react';
+
+const Sparkline = ({ data, width = 40, height = 20, color, pulse = false }) => {
+  const pathData = useMemo(() => {
+    if (!data || data.length === 0) return null;
+
+    const max = Math.max(...data);
+    const min = Math.min(...data);
+    const range = max - min || 1;
+
+    return data.map((point, i) =>
+      `${i * (width / (data.length - 1))},${height - ((point - min) / range) * height}`
+    ).join(' ');
+  }, [data, width, height]);
+
+  const shouldPulse = pulse && data && data.length > 0;
+  const currentColor = color || (data && data.length > 0 && data[data.length - 1] > data[0] ? 'var(--green)' : 'var(--red)');
+
+  if (!pathData) {
+    return <div className="w-[40px] h-[20px]" />;
+  }
+
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      className={shouldPulse ? 'sparkline-pulse' : ''}
+      style={{ '--sparkline-color': currentColor } as React.CSSProperties}
+    >
+      <style jsx>{`
+        @keyframes sparklinePulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
+        }
+        .sparkline-pulse {
+          animation: sparklinePulse 1.5s ease-in-out infinite;
+        }
+      `}</style>
+      <polyline
+        fill="none"
+        stroke="var(--sparkline-color)"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        points={pathData}
+      />
+    </svg>
+  );
+};
+
+export default Sparkline;
+```
+
+```jsx
+// src/pages/Markets.jsx
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import Sparkline from '../components/Sparkline';
 
 const Markets = () => {
   const [params, setParams] = useSearchParams();
@@ -109,31 +166,6 @@ const Markets = () => {
 
   const getArrow = (change) => {
     return change > 0 ? <ChevronUp size={16} /> : <ChevronDown size={16} />;
-  };
-
-  const renderSparkline = (points) => {
-    if (!points || points.length === 0) return null;
-
-    const width = 40;
-    const height = 20;
-    const max = Math.max(...points);
-    const min = Math.min(...points);
-    const range = max - min || 1;
-
-    const pathData = points.map((point, i) =>
-      `${i * (width / (points.length - 1))},${height - ((point - min) / range) * height}`
-    ).join(' ');
-
-    return (
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-        <polyline
-          fill="none"
-          stroke={getChangeColor((points[points.length - 1] - points[0]) / points[0] * 100)}
-          strokeWidth="1.5"
-          points={pathData}
-        />
-      </svg>
-    );
   };
 
   const filterAssets = (assets) => {
@@ -319,7 +351,13 @@ const Markets = () => {
                     </div>
                   </div>
                   <div className="ml-4 flex-shrink-0">
-                    {renderSparkline(asset.sparkline)}
+                    <Sparkline
+                      data={asset.sparkline}
+                      width={40}
+                      height={20}
+                      color={asset.change > 0 ? 'var(--green)' : 'var(--red)'}
+                      pulse={true}
+                    />
                   </div>
                 </div>
               ))}
@@ -332,29 +370,3 @@ const Markets = () => {
 };
 
 export default Markets;
-```
-
-J'ai apporté les modifications suivantes :
-
-1. Ajout d'un style global avec les keyframes pour les animations de pulsation verte et rouge
-2. Modification de la fonction `getChangeColor` pour utiliser les variables CSS vars
-3. Ajout des classes conditionnelles `pulse-green` ou `pulse-red` sur le prix en fonction de la variation (change > 0 ou change < 0)
-4. Les animations utilisent les variables CSS `--green` et `--red` qui doivent être définies dans votre fichier CSS global
-
-Assurez-vous que votre fichier CSS global (ou le fichier où sont définies vos variables CSS) contient bien les variables suivantes :
-
-```css
-:root {
-  --green: #00ff88;
-  --red: #ff4444;
-  --bg: #080808;
-  --bg2: #111;
-  --t1: #f0f0f0;
-  --t2: #888;
-  --t3: #444;
-  --border: rgba(255, 255, 255, 0.07);
-  --border-hi: rgba(0, 255, 136, 0.3);
-}
-```
-
-Les prix qui ont une variation positive pulsent en vert et ceux qui ont une variation négative pulsent en rouge, avec un effet de glow néon comme demandé.
