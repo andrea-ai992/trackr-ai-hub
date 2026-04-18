@@ -1,7 +1,442 @@
-Voici les modifications pour le Dashboard Trackr :
+**1. Dashboard Trackr (src/pages/Dashboard.jsx)**
 
-**src/styles/global.css**
+```jsx
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { fetchPortfolio } from '../api';
+import { useUser } from '../hooks';
+import { Inter } from 'next/font/google';
+import styles from '../styles/global.css';
+
+const inter = Inter({ subsets: ['latin'] });
+
+const Dashboard = () => {
+  const { data, error, isLoading } = useQuery(['portfolio'], fetchPortfolio);
+  const user = useUser();
+  const [heroPortfolio, setHeroPortfolio] = useState(null);
+  const [sparklineData, setSparklineData] = useState(null);
+
+  useEffect(() => {
+    if (data) {
+      const heroPortfolio = data.find((item) => item.id === 'hero');
+      setHeroPortfolio(heroPortfolio);
+      const sparklineData = data.slice(0, 7).map((item) => item.value);
+      setSparklineData(sparklineData);
+    }
+  }, [data]);
+
+  if (isLoading) {
+    return (
+      <div className="skeleton-loader">
+        <div className="skeleton-loader__item" />
+        <div className="skeleton-loader__item" />
+        <div className="skeleton-loader__item" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div>Error: {error.message}</div>;
+  }
+
+  return (
+    <div className="dashboard">
+      <header className="dashboard__hero">
+        <h1 className="dashboard__hero-title">
+          {heroPortfolio && heroPortfolio.name}
+        </h1>
+        <p className="dashboard__hero-value">
+          {heroPortfolio && heroPortfolio.value}
+        </p>
+      </header>
+      <section className="dashboard__sparkline">
+        <svg
+          width="100%"
+          height="50"
+          viewBox="0 0 100 50"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M0 0H100V50H0V0Z"
+            fill="#00ff88"
+            fillOpacity="0.2"
+          />
+          {sparklineData.map((value, index) => (
+            <rect
+              key={index}
+              x={index * 10}
+              y={50 - value}
+              width={10}
+              height={value}
+              fill="#00ff88"
+            />
+          ))}
+        </svg>
+      </section>
+      <section className="dashboard__top-movers">
+        <h2 className="dashboard__top-movers-title">Top Movers</h2>
+        <ul className="dashboard__top-movers-list">
+          {data.slice(0, 5).map((item) => (
+            <li key={item.id}>
+              <span className="dashboard__top-movers-name">{item.name}</span>
+              <span className="dashboard__top-movers-value">{item.value}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section className="dashboard__fear-and-greed">
+        <h2 className="dashboard__fear-and-greed-title">Fear & Greed</h2>
+        <svg
+          width="100"
+          height="100"
+          viewBox="0 0 100 100"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle
+            cx="50"
+            cy="50"
+            r="45"
+            fill="#00ff88"
+            fillOpacity="0.2"
+          />
+          <path
+            d="M50 50L75 25L25 75"
+            stroke="#00ff88"
+            strokeWidth="10"
+          />
+        </svg>
+      </section>
+      <section className="dashboard__news-feed">
+        <h2 className="dashboard__news-feed-title">News Feed</h2>
+        <ul className="dashboard__news-feed-list">
+          {data.slice(0, 5).map((item) => (
+            <li key={item.id}>
+              <span className="dashboard__news-feed-title">{item.title}</span>
+              <span className="dashboard__news-feed-date">
+                {item.date}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section className="dashboard__quick-actions">
+        <h2 className="dashboard__quick-actions-title">Quick Actions</h2>
+        <ul className="dashboard__quick-actions-list">
+          {data.slice(0, 4).map((item) => (
+            <li key={item.id}>
+              <Link to={`/actions/${item.id}`}>
+                <span className="dashboard__quick-actions-name">
+                  {item.name}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+};
+
+export default Dashboard;
+```
+
+**2. BottomNav (src/components/BottomNav.jsx)**
+
+```jsx
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { useUser } from '../hooks';
+import { Inter } from 'next/font/google';
+import styles from '../styles/global.css';
+
+const inter = Inter({ subsets: ['latin'] });
+
+const BottomNav = () => {
+  const user = useUser();
+
+  return (
+    <nav className="bottom-nav">
+      <ul className="bottom-nav__list">
+        <li className="bottom-nav__item">
+          <Link to="/dashboard" className="bottom-nav__link">
+            <span className="bottom-nav__icon">📈</span>
+            <span className="bottom-nav__label">Dashboard</span>
+          </Link>
+        </li>
+        <li className="bottom-nav__item">
+          <Link to="/markets" className="bottom-nav__link">
+            <span className="bottom-nav__icon">📊</span>
+            <span className="bottom-nav__label">Markets</span>
+          </Link>
+        </li>
+        <li className="bottom-nav__item">
+          <Link to="/news" className="bottom-nav__link">
+            <span className="bottom-nav__icon">📰</span>
+            <span className="bottom-nav__label">News</span>
+          </Link>
+        </li>
+        <li className="bottom-nav__item">
+          <Link to="/profile" className="bottom-nav__link">
+            <span className="bottom-nav__icon">👥</span>
+            <span className="bottom-nav__label">Profile</span>
+          </Link>
+        </li>
+      </ul>
+    </nav>
+  );
+};
+
+export default BottomNav;
+```
+
+**3. Markets (src/pages/Markets.jsx)**
+
+```jsx
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { fetchMarkets } from '../api';
+import { useUser } from '../hooks';
+import { Inter } from 'next/font/google';
+import styles from '../styles/global.css';
+
+const inter = Inter({ subsets: ['latin'] });
+
+const Markets = () => {
+  const { data, error, isLoading } = useQuery(['markets'], fetchMarkets);
+  const user = useUser();
+  const [filteredMarkets, setFilteredMarkets] = useState([]);
+
+  useEffect(() => {
+    if (data) {
+      const filteredMarkets = data.filter((market) => market.price > 0);
+      setFilteredMarkets(filteredMarkets);
+    }
+  }, [data]);
+
+  if (isLoading) {
+    return (
+      <div className="skeleton-loader">
+        <div className="skeleton-loader__item" />
+        <div className="skeleton-loader__item" />
+        <div className="skeleton-loader__item" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div>Error: {error.message}</div>;
+  }
+
+  return (
+    <div className="markets">
+      <h1 className="markets__title">Markets</h1>
+      <ul className="markets__list">
+        {filteredMarkets.map((market) => (
+          <li key={market.id}>
+            <span className="markets__name">{market.name}</span>
+            <span className="markets__price">
+              {market.price} ({market.change}%)
+            </span>
+          </li>
+        ))}
+      </ul>
+      <button className="markets__filter-button">
+        Filter
+      </button>
+      <ul className="markets__filter-list">
+        <li>
+          <Link to="/markets/filtered">
+            <span className="markets__filter-label">Filtered</span>
+          </Link>
+        </li>
+        <li>
+          <Link to="/markets/unfiltered">
+            <span className="markets__filter-label">Unfiltered</span>
+          </Link>
+        </li>
+      </ul>
+    </div>
+  );
+};
+
+export default Markets;
+```
+
+**4. /vibe (deploy/dashboard.js)**
+
+```jsx
+import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchVibeData } from '../api';
+import { useUser } from '../hooks';
+import { Inter } from 'next/font/google';
+import styles from '../styles/global.css';
+
+const inter = Inter({ subsets: ['latin'] });
+
+const Vibe = () => {
+  const { data, error, isLoading } = useQuery(['vibe'], fetchVibeData);
+  const user = useUser();
+  const [activeTab, setActiveTab] = useState('live');
+
+  useEffect(() => {
+    if (data) {
+      const activeTab = data.tabs.find((tab) => tab.id === 'live');
+      setActiveTab(activeTab.id);
+    }
+  }, [data]);
+
+  if (isLoading) {
+    return (
+      <div className="skeleton-loader">
+        <div className="skeleton-loader__item" />
+        <div className="skeleton-loader__item" />
+        <div className="skeleton-loader__item" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div>Error: {error.message}</div>;
+  }
+
+  return (
+    <div className="vibe">
+      <nav className="vibe__nav">
+        <ul className="vibe__nav-list">
+          <li className="vibe__nav-item">
+            <button
+              className={`vibe__nav-button ${activeTab === 'live' ? 'active' : ''}`}
+              onClick={() => setActiveTab('live')}
+            >
+              Live
+            </button>
+          </li>
+          <li className="vibe__nav-item">
+            <button
+              className={`vibe__nav-button ${activeTab === 'commits' ? 'active' : ''}`}
+              onClick={() => setActiveTab('commits')}
+            >
+              Commits
+            </button>
+          </li>
+          <li className="vibe__nav-item">
+            <button
+              className={`vibe__nav-button ${activeTab === 'tasks' ? 'active' : ''}`}
+              onClick={() => setActiveTab('tasks')}
+            >
+              Tasks
+            </button>
+          </li>
+          <li className="vibe__nav-item">
+            <button
+              className={`vibe__nav-button ${activeTab === 'logs' ? 'active' : ''}`}
+              onClick={() => setActiveTab('logs')}
+            >
+              Logs
+            </button>
+          </li>
+          <li className="vibe__nav-item">
+            <button
+              className={`vibe__nav-button ${activeTab === 'brain' ? 'active' : ''}`}
+              onClick={() => setActiveTab('brain')}
+            >
+              Brain
+            </button>
+          </li>
+        </ul>
+      </nav>
+      <main className="vibe__main">
+        {activeTab === 'live' && (
+          <div className="vibe__live">
+            <h1 className="vibe__live-title">Live</h1>
+            <ul className="vibe__live-list">
+              {data.live.map((item) => (
+                <li key={item.id}>
+                  <span className="vibe__live-name">{item.name}</span>
+                  <span className="vibe__live-status">{item.status}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {activeTab === 'commits' && (
+          <div className="vibe__commits">
+            <h1 className="vibe__commits-title">Commits</h1>
+            <ul className="vibe__commits-list">
+              {data.commits.map((item) => (
+                <li key={item.id}>
+                  <span className="vibe__commits-sha">{item.sha}</span>
+                  <span className="vibe__commits-message">{item.message}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {activeTab === 'tasks' && (
+          <div className="vibe__tasks">
+            <h1 className="vibe__tasks-title">Tasks</h1>
+            <form className="vibe__tasks-form">
+              <input
+                type="text"
+                placeholder="Task name"
+                className="vibe__tasks-input"
+              />
+              <button className="vibe__tasks-button">Create Task</button>
+            </form>
+            <ul className="vibe__tasks-list">
+              {data.tasks.map((item) => (
+                <li key={item.id}>
+                  <span className="vibe__tasks-name">{item.name}</span>
+                  <span className="vibe__tasks-status">{item.status}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {activeTab === 'logs' && (
+          <div className="vibe__logs">
+            <h1 className="vibe__logs-title">Logs</h1>
+            <ul className="vibe__logs-list">
+              {data.logs.map((item) => (
+                <li key={item.id}>
+                  <span className="vibe__logs-type">{item.type}</span>
+                  <span className="vibe__logs-message">{item.message}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {activeTab === 'brain' && (
+          <div className="vibe__brain">
+            <h1 className="vibe__brain-title">Brain</h1>
+            <ul className="vibe__brain-list">
+              {data.brain.map((item) => (
+                <li key={item.id}>
+                  <span className="vibe__brain-name">{item.name}</span>
+                  <span className="vibe__brain-status">{item.status}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+};
+
+export default Vibe;
+```
+
+**5. src/styles/global.css**
+
 ```css
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
   --green: #00ff88;
   --bg: #080808;
@@ -14,730 +449,120 @@ Voici les modifications pour le Dashboard Trackr :
 
 body {
   font-family: 'Inter', sans-serif;
-  max-width: 520px;
-  margin: 0 auto;
-  padding: 0 20px;
   background-color: var(--bg);
   color: var(--t1);
+  padding: 20px;
+  box-sizing: border-box;
 }
 
-.card {
-  background-color: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border);
+.skeleton-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+.skeleton-loader__item {
+  width: 100px;
+  height: 20px;
+  background-color: var(--t1);
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.dashboard {
+  max-width: 520px;
+  margin: 40px auto;
+  padding: 20px;
+  background-color: var(--bg);
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+.dashboard__hero {
+  background-color: var(--bg2);
   padding: 20px;
   border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 }
 
-.card-header {
+.dashboard__hero-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--green);
+}
+
+.dashboard__hero-value {
+  font-size: 36px;
+  font-weight: bold;
+  color: var(--green);
+}
+
+.dashboard__sparkline {
   background-color: var(--bg2);
-  padding: 10px;
-  border-bottom: 1px solid var(--border);
-}
-
-.card-body {
   padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 }
 
-.sparkline {
+.dashboard__sparkline svg {
   width: 100%;
   height: 50px;
-  margin-bottom: 20px;
 }
 
-.sparkline svg {
-  width: 100%;
-  height: 100%;
-}
-
-.top-movers {
-  overflow-x: auto;
+.dashboard__top-movers {
+  background-color: var(--bg2);
   padding: 20px;
-}
-
-.top-movers::-webkit-scrollbar {
-  display: none;
-}
-
-.top-movers .item {
-  display: inline-block;
-  margin-right: 20px;
-  padding: 10px;
-  border: 1px solid var(--border);
   border-radius: 10px;
-  background-color: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 }
 
-.fear-and-greed {
-  margin-bottom: 20px;
+.dashboard__top-movers-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--green);
 }
 
-.fear-and-greed svg {
-  width: 100%;
-  height: 100%;
+.dashboard__top-movers-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.news-feed {
-  margin-bottom: 20px;
-}
-
-.news-feed .item {
+.dashboard__top-movers-list li {
   padding: 10px;
   border-bottom: 1px solid var(--border);
 }
 
-.news-feed .item:last-child {
+.dashboard__top-movers-list li:last-child {
   border-bottom: none;
 }
 
-.quick-actions {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
-.quick-actions .item {
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background-color: rgba(255, 255, 255, 0.04);
-}
-
-.quick-actions .item:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-```
-
-**src/pages/Dashboard.jsx**
-```jsx
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Card, CardHeader, CardBody, Sparkline, TopMovers, FearAndGreed, NewsFeed, QuickActions } from './components';
-
-const Dashboard = () => {
-  const [data, setData] = useState({
-    portfolio: 10000,
-    topMovers: [],
-    fearAndGreed: 50,
-    news: [],
-    quickActions: []
-  });
-
-  useEffect(() => {
-    // fetch data from API
-    const fetchData = async () => {
-      const response = await fetch('/api/portfolio');
-      const portfolioData = await response.json();
-      setData((prevData) => ({ ...prevData, portfolio: portfolioData }));
-
-      const response2 = await fetch('/api/top-movers');
-      const topMoversData = await response2.json();
-      setData((prevData) => ({ ...prevData, topMovers: topMoversData }));
-
-      const response3 = await fetch('/api/fear-and-greed');
-      const fearAndGreedData = await response3.json();
-      setData((prevData) => ({ ...prevData, fearAndGreed: fearAndGreedData }));
-
-      const response4 = await fetch('/api/news');
-      const newsData = await response4.json();
-      setData((prevData) => ({ ...prevData, news: newsData }));
-
-      const response5 = await fetch('/api/quick-actions');
-      const quickActionsData = await response5.json();
-      setData((prevData) => ({ ...prevData, quickActions: quickActionsData }));
-    };
-    fetchData();
-  }, []);
-
-  const handleQuickActionClick = (index) => {
-    // handle quick action click
-  };
-
-  return (
-    <div className="container">
-      <Card>
-        <CardHeader>
-          <h2>Portfolio</h2>
-          <p>{data.portfolio}</p>
-        </CardHeader>
-        <CardBody>
-          <Sparkline />
-          <TopMovers />
-          <FearAndGreed />
-        </CardBody>
-      </Card>
-      <Card>
-        <CardHeader>
-          <h2>News Feed</h2>
-        </CardHeader>
-        <CardBody>
-          <NewsFeed />
-        </CardBody>
-      </Card>
-      <Card>
-        <CardHeader>
-          <h2>Quick Actions</h2>
-        </CardHeader>
-        <CardBody>
-          <QuickActions onClick={handleQuickActionClick} />
-        </CardBody>
-      </Card>
-    </div>
-  );
-};
-
-export default Dashboard;
-```
-
-**src/components/Card.jsx**
-```jsx
-import React from 'react';
-import { CardHeader, CardBody } from './CardHeader';
-import { CardBody } from './CardBody';
-
-const Card = ({ children }) => {
-  return (
-    <div className="card">
-      <CardHeader>{children}</CardHeader>
-      <CardBody>{children}</CardBody>
-    </div>
-  );
-};
-
-export default Card;
-```
-
-**src/components/CardHeader.jsx**
-```jsx
-import React from 'react';
-
-const CardHeader = ({ children }) => {
-  return (
-    <div className="card-header">
-      <h2>{children}</h2>
-    </div>
-  );
-};
-
-export default CardHeader;
-```
-
-**src/components/CardBody.jsx**
-```jsx
-import React from 'react';
-
-const CardBody = ({ children }) => {
-  return (
-    <div className="card-body">
-      {children}
-    </div>
-  );
-};
-
-export default CardBody;
-```
-
-**src/components/Sparkline.jsx**
-```jsx
-import React from 'react';
-
-const Sparkline = () => {
-  return (
-    <div className="sparkline">
-      <svg width="100%" height="50">
-        <path d="M0 0 L100 50" stroke="#00ff88" strokeWidth="2" />
-      </svg>
-    </div>
-  );
-};
-
-export default Sparkline;
-```
-
-**src/components/TopMovers.jsx**
-```jsx
-import React from 'react';
-
-const TopMovers = () => {
-  return (
-    <div className="top-movers">
-      <div className="item">
-        <p>Item 1</p>
-      </div>
-      <div className="item">
-        <p>Item 2</p>
-      </div>
-      <div className="item">
-        <p>Item 3</p>
-      </div>
-    </div>
-  );
-};
-
-export default TopMovers;
-```
-
-**src/components/FearAndGreed.jsx**
-```jsx
-import React from 'react';
-
-const FearAndGreed = () => {
-  return (
-    <div className="fear-and-greed">
-      <svg width="100%" height="100">
-        <path d="M0 0 L100 100" stroke="#00ff88" strokeWidth="2" />
-      </svg>
-    </div>
-  );
-};
-
-export default FearAndGreed;
-```
-
-**src/components/NewsFeed.jsx**
-```jsx
-import React from 'react';
-
-const NewsFeed = () => {
-  return (
-    <div className="news-feed">
-      <div className="item">
-        <p>News Item 1</p>
-      </div>
-      <div className="item">
-        <p>News Item 2</p>
-      </div>
-      <div className="item">
-        <p>News Item 3</p>
-      </div>
-    </div>
-  );
-};
-
-export default NewsFeed;
-```
-
-**src/components/QuickActions.jsx**
-```jsx
-import React from 'react';
-
-const QuickActions = ({ onClick }) => {
-  return (
-    <div className="quick-actions">
-      <div className="item" onClick={() => onClick(0)}>
-        <p>Quick Action 1</p>
-      </div>
-      <div className="item" onClick={() => onClick(1)}>
-        <p>Quick Action 2</p>
-      </div>
-      <div className="item" onClick={() => onClick(2)}>
-        <p>Quick Action 3</p>
-      </div>
-    </div>
-  );
-};
-
-export default QuickActions;
-```
-
-Maintenant, je vais modifier le BottomNav :
-
-**src/components/BottomNav.jsx**
-```jsx
-import React from 'react';
-
-const BottomNav = () => {
-  return (
-    <div className="bottom-nav">
-      <div className="pill">
-        <p>Home</p>
-      </div>
-      <div className="pill">
-        <p>Markets</p>
-      </div>
-      <div className="pill">
-        <p>News</p>
-      </div>
-      <div className="pill">
-        <p>Settings</p>
-      </div>
-    </div>
-  );
-};
-
-export default BottomNav;
-```
-
-**src/styles/global.css**
-```css
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 10px;
-  background-color: var(--bg);
-  display: flex;
-  justify-content: space-around;
-}
-
-.pill {
-  padding: 10px;
-  border-radius: 50%;
-  background-color: var(--bg2);
+.dashboard__top-movers-name {
+  font-size: 16px;
   color: var(--t1);
-  cursor: pointer;
 }
 
-.pill:hover {
-  background-color: var(--bg3);
-}
-```
-
-Enfin, je vais modifier le Markets :
-
-**src/pages/Markets.jsx**
-```jsx
-import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardBody } from './components';
-
-const Markets = () => {
-  const [data, setData] = useState({
-    markets: []
-  });
-
-  useEffect(() => {
-    // fetch data from API
-    const fetchData = async () => {
-      const response = await fetch('/api/markets');
-      const marketsData = await response.json();
-      setData((prevData) => ({ ...prevData, markets: marketsData }));
-    };
-    fetchData();
-  }, []);
-
-  return (
-    <div className="container">
-      <Card>
-        <CardHeader>
-          <h2>Markets</h2>
-        </CardHeader>
-        <CardBody>
-          <div className="markets">
-            {data.markets.map((market, index) => (
-              <div key={index} className="market">
-                <p>{market.name}</p>
-                <p>{market.price}</p>
-              </div>
-            ))}
-          </div>
-        </CardBody>
-      </Card>
-    </div>
-  );
-};
-
-export default Markets;
-```
-
-**src/components/Market.jsx**
-```jsx
-import React from 'react';
-
-const Market = ({ name, price }) => {
-  return (
-    <div className="market">
-      <p>{name}</p>
-      <p>{price}</p>
-    </div>
-  );
-};
-
-export default Market;
-```
-
-**src/styles/global.css**
-```css
-.markets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
+.dashboard__top-movers-value {
+  font-size: 16px;
+  color: var(--t2);
 }
 
-.market {
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background-color: rgba(255, 255, 255, 0.04);
-}
-
-.market:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-```
-
-Maintenant, je vais modifier le BottomNav pour qu'il soit transparent :
-
-**src/components/BottomNav.jsx**
-```jsx
-import React from 'react';
-
-const BottomNav = () => {
-  return (
-    <div className="bottom-nav">
-      <div className="pill">
-        <p>Home</p>
-      </div>
-      <div className="pill">
-        <p>Markets</p>
-      </div>
-      <div className="pill">
-        <p>News</p>
-      </div>
-      <div className="pill">
-        <p>Settings</p>
-      </div>
-    </div>
-  );
-};
-
-export default BottomNav;
-```
-
-**src/styles/global.css**
-```css
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 10px;
-  background-color: transparent;
-  display: flex;
-  justify-content: space-around;
-}
-
-.pill {
-  padding: 10px;
-  border-radius: 50%;
+.dashboard__fear-and-greed {
   background-color: var(--bg2);
-  color: var(--t1);
-  cursor: pointer;
-}
-
-.pill:hover {
-  background-color: var(--bg3);
-}
-```
-
-Maintenant, je vais modifier le Markets pour qu'il ait un filtre :
-
-**src/pages/Markets.jsx**
-```jsx
-import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardBody } from './components';
-
-const Markets = () => {
-  const [data, setData] = useState({
-    markets: []
-  });
-  const [filter, setFilter] = useState('');
-
-  useEffect(() => {
-    // fetch data from API
-    const fetchData = async () => {
-      const response = await fetch('/api/markets');
-      const marketsData = await response.json();
-      setData((prevData) => ({ ...prevData, markets: marketsData }));
-    };
-    fetchData();
-  }, []);
-
-  const handleFilterChange = (e) => {
-    setFilter(e.target.value);
-  };
-
-  return (
-    <div className="container">
-      <Card>
-        <CardHeader>
-          <h2>Markets</h2>
-          <input type="text" value={filter} onChange={handleFilterChange} placeholder="Filter" />
-        </CardHeader>
-        <CardBody>
-          <div className="markets">
-            {data.markets.filter((market) => market.name.includes(filter)).map((market, index) => (
-              <div key={index} className="market">
-                <p>{market.name}</p>
-                <p>{market.price}</p>
-              </div>
-            ))}
-          </div>
-        </CardBody>
-      </Card>
-    </div>
-  );
-};
-
-export default Markets;
-```
-
-**src/components/Market.jsx**
-```jsx
-import React from 'react';
-
-const Market = ({ name, price }) => {
-  return (
-    <div className="market">
-      <p>{name}</p>
-      <p>{price}</p>
-    </div>
-  );
-};
-
-export default Market;
-```
-
-**src/styles/global.css**
-```css
-.markets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-
-.market {
-  padding: 10px;
-  border: 1px solid var(--border);
+  padding: 20px;
   border-radius: 10px;
-  background-color: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 }
 
-.market:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+.dashboard__fear-and-greed-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--green);
 }
 
-.filter {
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background-color: rgba(255, 255, 255, 0.04);
-}
-```
-
-Maintenant, je vais modifier le BottomNav pour qu'il ait un indicateur d'activité :
-
-**src/components/BottomNav.jsx**
-```jsx
-import React from 'react';
-
-const BottomNav = () => {
-  return (
-    <div className="bottom-nav">
-      <div className="pill active">
-        <p>Home</p>
-      </div>
-      <div className="pill">
-        <p>Markets</p>
-      </div>
-      <div className="pill">
-        <p>News</p>
-      </div>
-      <div className="pill">
-        <p>Settings</p>
-      </div>
-    </div>
-  );
-};
-
-export default BottomNav;
-```
-
-**src/styles/global.css**
-```css
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 10px;
-  background-color: transparent;
-  display: flex;
-  justify-content: space-around;
-}
-
-.pill {
-  padding: 10px;
-  border-radius: 50%;
+.dashboard__news-feed {
   background-color: var(--bg2);
-  color: var(--t1);
-  cursor: pointer;
-}
-
-.pill:hover {
-  background-color: var(--bg3);
-}
-
-.pill.active {
-  background-color: var(--green);
-}
-```
-
-Maintenant, je vais modifier le Markets pour qu'il ait un indicateur de prix en temps réel :
-
-**src/pages/Markets.jsx**
-```jsx
-import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardBody } from './components';
-
-const Markets = () => {
-  const [data, setData] = useState({
-    markets: []
-  });
-
-  useEffect(() => {
-    // fetch data from API
-    const fetchData = async () => {
-      const response = await fetch('/api/markets');
-      const marketsData = await response.json();
-      setData((prevData) => ({ ...prevData, markets: marketsData }));
-    };
-    fetchData();
-  }, []);
-
-  return (
-    <div className="container">
-      <Card>
-        <CardHeader>
-          <h2>Markets</h2>
-        </CardHeader>
-        <CardBody>
-          <div className="markets">
-            {data.markets.map((market, index) => (
-              <div key={index} className="market">
-                <p>{market.name}</p>
-                <p>
-                  <span className="price">{market.price}</span>
-                  <span className="change">{market.change}</span>
-                </p>
-              </div>
-            ))}
-          </div>
-        </CardBody>
-      </Card>
-    </div>
-  );
-};
-
-export default Markets;
-```
-
-**src/components/Market.jsx**
-```jsx
-import React from 'react';
-
-const Market = ({ name, price, change }) => {
-  return (
-    <div className
+  padding: 20px;
+  border-radius: 10px;
