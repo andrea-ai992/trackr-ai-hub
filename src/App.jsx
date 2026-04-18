@@ -1,70 +1,120 @@
-Je vais créer le composant `ModuleCard` réutilisable avec gestion des badges NEW/LIVE et des clics, puis l'intégrer dans les pages existantes.
+// src/utils/auth.js
+import { supabase } from '../lib/supabaseClient'
 
-```jsx
-// src/components/ModuleCard.jsx
-import { useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+let refreshTimeout = null
 
-const ModuleCard = ({
-  title,
-  icon: Icon,
-  path,
-  isNew = false,
-  isLive = false,
-  onClick,
-  className = '',
-  badge = null
-}) => {
-  const navigate = useNavigate()
-  const [isHovered, setIsHovered] = useState(false)
+// Configuration des tokens
+const TOKEN_REFRESH_MARGIN = 30 * 1000 // 30 secondes avant expiration
+const MAX_RETRIES = 3
+const RETRY_DELAY = 1000 // 1 seconde
 
-  const handleClick = () => {
-    if (onClick) {
-      onClick()
-    }
-    if (path) {
-      navigate(path)
-    }
-  }
-
-  return (
-    <div
-      className={`module-card ${className}`}
-      onClick={handleClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <div className="card-content">
-        <div className="card-icon">
-          <Icon size={24} />
-        </div>
-
-        <div className="card-title">{title}</div>
-
-        {(isNew || isLive || badge) && (
-          <div className="card-badge">
-            {badge ? (
-              badge
-            ) : (
-              <>
-                {isNew && <span className="badge-new">NEW</span>}
-                {isLive && <span className="badge-live">LIVE</span>}
-              </>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className={`card-overlay ${isHovered ? 'visible' : ''}`}></div>
-    </div>
-  )
+// Vérifie si le token est expiré
+const isTokenExpired = (session) => {
+  if (!session?.expires_at) return true
+  return Date.now() >= (session.expires_at * 1000) - TOKEN_REFRESH_MARGIN
 }
 
-export default ModuleCard
+// Rafraîchit le token automatiquement
+const refreshSession = async (retries = 0) => {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession()
+
+    if (error || !session) {
+      console.error('Erreur lors de la récupération de la session:', error?.message)
+      return null
+    }
+
+    if (isTokenExpired(session)) {
+      console.log('Token expiré, tentative de rafraîchissement...')
+      const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession()
+
+      if (refreshError) {
+        console.error('Erreur lors du rafraîchissement du token:', refreshError.message)
+        return null
+      }
+
+      console.log('Token rafraîchi avec succès')
+      return refreshedSession
+    }
+
+    return session
+  } catch (err) {
+    console.error('Erreur inattendue lors du rafraîchissement:', err)
+    if (retries < MAX_RETRIES) {
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY))
+      return refreshSession(retries + 1)
+    }
+    return null
+  }
+}
+
+// Démarre l'intervalle de rafraîchissement automatique
+export const startTokenRefreshInterval = () => {
+  if (refreshTimeout) clearTimeout(refreshTimeout)
+
+  refreshSession().then(session => {
+    if (session) {
+      const expiresAt = session.expires_at * 1000
+      const now = Date.now()
+      const delay = Math.max(0, expiresAt - now - TOKEN_REFRESH_MARGIN)
+
+      refreshTimeout = setTimeout(() => {
+        startTokenRefreshInterval()
+      }, delay)
+    }
+  })
+}
+
+// Arrête l'intervalle de rafraîchissement
+export const stopTokenRefreshInterval = () => {
+  if (refreshTimeout) {
+    clearTimeout(refreshTimeout)
+    refreshTimeout = null
+  }
+}
+
+// Vérifie et rafraîchit le token si nécessaire
+export const checkAndRefreshToken = async () => {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) return null
+
+  if (isTokenExpired(session)) {
+    return await refreshSession()
+  }
+
+  return session
+}
+
+// Initialisation automatique
+export const initAuth = () => {
+  startTokenRefreshInterval()
+
+  // Écoute les changements de session
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      startTokenRefreshInterval()
+    } else if (event === 'SIGNED_OUT') {
+      stopTokenRefreshInterval()
+    }
+  })
+}
 ```
 
 ```css
 /* src/styles/ModuleCard.css */
+:root {
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --bg3: #1a1a1a;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-hi: rgba(0, 255, 136, 0.3);
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --transition-speed: 0.3s;
+}
+
 .module-card {
   position: relative;
   width: 100%;
@@ -79,6 +129,7 @@ export default ModuleCard
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .module-card:hover {
