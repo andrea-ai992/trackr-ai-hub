@@ -4,25 +4,40 @@ import React from 'react';
 const SkeletonPage = () => {
   return (
     <div
+      className="skeleton-page"
       style={{
         height: '60vh',
-        backgroundColor: 'var(--surface-low)',
-        borderRadius: 'var(--radius)',
+        backgroundColor: 'var(--bg)',
+        borderRadius: 'var(--radius, 8px)',
         position: 'relative',
         overflow: 'hidden',
       }}
     >
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'linear-gradient(90deg, transparent, rgba(0, 255, 136, 0.1), transparent)',
-          animation: 'shimmer 1.5s infinite',
-        }}
-      />
+      <style jsx>{`
+        .skeleton-page {
+          font-family: 'JetBrains Mono', monospace;
+        }
+        .shimmer {
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(0, 255, 136, 0.1),
+            transparent
+          );
+          animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer {
+          100% {
+            left: 100%;
+          }
+        }
+      `}</style>
+      <div className="shimmer" />
     </div>
   );
 };
