@@ -1,5 +1,3 @@
-src/api/trading-expert.js
-```javascript
 // src/api/trading-expert.js
 // Trading Expert API with AbortController.timeout() pattern for all fetch calls
 // Mobile-first, dark theme, Inter font
