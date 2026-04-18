@@ -1,7 +1,7 @@
-Je vais redesigner le composant `Dashboard.jsx` avec un layout 2x2, intégrer des shimmers neon et optimiser les appels fetch avec `AbortSignal.timeout()`. Voici le code complet et fonctionnel :
+Voici l'implémentation complète avec les animations stagger fadeUp et gestion des timeouts sur les fetch() :
 
 ```jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { fetchMultiplePrices } from '../hooks/useStockPrice';
@@ -30,7 +30,7 @@ function Movers({ data }) {
   return (
     <div className="scroll-row">
       {data.map((item, i) => (
-        <div key={i} className="stagger-item">
+        <div key={i} className="stagger-item" style={{ animationDelay: `${i * 0.1}s` }}>
           <div className="mover-item">
             <div className="mover-icon">
               <TrendingUp size={16} color="white" />
@@ -50,7 +50,7 @@ function News({ data }) {
   return (
     <div className="news-grid">
       {data.map((item, i) => (
-        <div key={i} className="news-item">
+        <div key={i} className="news-item stagger-item" style={{ animationDelay: `${i * 0.15}s` }}>
           <h3 className="news-title">{item.title.length > 40 ? `${item.title.substring(0, 40)}...` : item.title}</h3>
           <div className="news-meta">
             <span className="news-source">{item.source}</span>
@@ -66,7 +66,7 @@ function QuickActions({ actions }) {
   return (
     <div className="quick-actions-grid">
       {actions.map((item, i) => (
-        <button key={i} className="quick-action-button">
+        <button key={i} className="quick-action-button stagger-item" style={{ animationDelay: `${i * 0.1}s` }}>
           <span>{item.name}</span>
         </button>
       ))}
@@ -76,7 +76,7 @@ function QuickActions({ actions }) {
 
 function HeroCard({ value, pct, sparkline }) {
   return (
-    <div className="hero-card">
+    <div className="hero-card stagger-item">
       <div className="hero-header">
         <h2>Total P&L</h2>
         <span className={`hero-value ${pct >= 0 ? 'positive' : 'negative'}`}>{fmt(value)}</span>
@@ -104,7 +104,7 @@ function FearGreedGauge({ value }) {
   const endY = centerY - radius * Math.cos(angle);
 
   return (
-    <div className="gauge-container">
+    <div className="gauge-container stagger-item">
       <div className="gauge-value">{value}</div>
       <svg width="100%" height="100%" viewBox="0 0 100 100">
         <circle
@@ -136,6 +136,8 @@ function Dashboard() {
   const { user, portfolio, news, movers, fearGreed } = useApp();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [visibleCards, setVisibleCards] = useState([]);
+  const cardRefs = useRef([]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -143,9 +145,7 @@ function Dashboard() {
 
     const fetchAll = async () => {
       try {
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Request timeout')), 5000)
-        );
+        const timeoutPromise = AbortSignal.timeout(5000);
 
         const portfolioData = await Promise.race([
           fetchMultiplePrices(portfolio, signal),
@@ -169,7 +169,7 @@ function Dashboard() {
 
         setLoading(false);
       } catch (err) {
-        if (err.name !== 'AbortError') {
+        if (err.name !== 'AbortError' && err.name !== 'TimeoutError') {
           setError(err.message);
         }
         setLoading(false);
@@ -182,6 +182,33 @@ function Dashboard() {
       controller.abort();
     };
   }, []);
+
+  useEffect(() => {
+    if (!loading) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.style.opacity = '1';
+            entry.target.style.transform = 'translateY(0)';
+          }
+        });
+      }, { threshold: 0.1 });
+
+      cardRefs.current.forEach(ref => {
+        if (ref) observer.observe(ref);
+      });
+
+      return () => {
+        cardRefs.current.forEach(ref => {
+          if (ref) observer.unobserve(ref);
+        });
+      };
+    }
+  }, [loading]);
+
+  const handleAnimationEnd = (index) => {
+    setVisibleCards(prev => [...prev, index]);
+  };
 
   if (loading) {
     return (
@@ -261,20 +288,22 @@ function Dashboard() {
         </div>
       </header>
       <main className="dashboard-grid">
-        <HeroCard value={portfolio.totalValue} pct={portfolio.pnl24h} sparkline={portfolio.sparkline} />
-        <div className="movers-container">
+        <div ref={el => cardRefs.current[0] = el} className="stagger-item">
+          <HeroCard value={portfolio.totalValue} pct={portfolio.pnl24h} sparkline={portfolio.sparkline} />
+        </div>
+        <div ref={el => cardRefs.current[1] = el} className="movers-container stagger-item">
           <h3 className="section-title">Top Movers</h3>
           <Movers data={movers} />
         </div>
-        <div className="gauge-container">
+        <div ref={el => cardRefs.current[2] = el} className="gauge-container stagger-item">
           <h3 className="section-title">Fear & Greed</h3>
           <FearGreedGauge value={fearGreed} />
         </div>
-        <div className="news-container">
+        <div ref={el => cardRefs.current[3] = el} className="news-container stagger-item">
           <h3 className="section-title">Actualités</h3>
           <News data={news} />
         </div>
-        <div className="quick-actions-container">
+        <div ref={el => cardRefs.current[4] = el} className="quick-actions-container stagger-item">
           <h3 className="section-title">Actions rapides</h3>
           <QuickActions actions={[{ name: 'Markets' }, { name: 'Sports' }, { name: 'Flights' }, { name: 'AnDy' }]} />
         </div>
@@ -378,6 +407,9 @@ export default Dashboard;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
 .hero-header {
@@ -420,7 +452,9 @@ export default Dashboard;
 }
 
 .stagger-item {
-  flex-shrink: 0;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
 .mover-item {
@@ -480,6 +514,9 @@ export default Dashboard;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
 .gauge-value {
@@ -507,79 +544,6 @@ export default Dashboard;
   padding: 16px;
   border-radius: 12px;
   border: 1px solid var(--border);
-}
-
-.news-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--t1);
-  margin: 0 0 8px 0;
-  line-height: 1.4;
-}
-
-.news-meta {
-  display: flex;
-  gap: 8px;
-}
-
-.news-source, .news-time {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--t2);
-}
-
-.quick-actions-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-
-.quick-action-button {
-  background-color: var(--green);
-  border: none;
-  padding: 12px;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #080808;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
-.quick-action-button:hover {
-  transform: translateY(-2px);
-}
-
-.section-title {
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--t1);
-  margin-bottom: 12px;
-}
-
-/* Skeleton Styles */
-.header-skeleton {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-}
-
-.skeleton-line {
-  height: 20px;
-  background-color: var(--t3);
-  border-radius: 4px;
-  animation: shimmer 1.5s infinite;
-}
-
-.sparkline-skeleton {
-  width: 100%;
-  height: 32px;
-  background-color: var(--t3);
-  border-radius: 4px;
-  animation: shimmer 1.5s infinite;
-}
-
-.hero-card-skeleton {
-  background-color: var(--t3);
-  padding
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5
