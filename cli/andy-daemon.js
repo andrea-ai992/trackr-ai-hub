@@ -202,7 +202,7 @@ async function callOpenAI(baseUrl, apiKey, model, prompt, maxTokens) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}) },
     body: JSON.stringify({ model, messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: prompt }], max_tokens: maxTokens, temperature: 0.4 }),
-    signal: AbortSignal.timeout(120000),
+    signal: AbortSignal.timeout(60000),
   }).catch(err => { throw new Error(`Réseau: ${err.message}`) })
   if (res.status === 429) { const s = parseInt(res.headers?.get?.('retry-after') || '30') || 30; throw new Error(`429:${s}`) }
   if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(`API ${res.status}: ${b?.error?.message || ''}`) }
@@ -238,7 +238,7 @@ async function generateRaw(prompt, maxTokens = 4096, hint = 'smart') {
           method: 'POST',
           headers: { 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
           body: JSON.stringify({ model, max_tokens: maxTokens, system: SYSTEM, stream: false, messages: [{ role: 'user', content: prompt }] }),
-          signal: AbortSignal.timeout(130000),
+          signal: AbortSignal.timeout(60000),
         }).catch(e => { throw new Error(`Réseau: ${e.message}`) })
         if (res.status === 429) { const s = parseInt(res.headers?.get?.('retry-after') || '60') || 60; globalRateLimitUntil = Date.now() + s * 1000; await sl(s * 1000); globalRateLimitUntil = 0; continue }
         if ([500, 503, 529].includes(res.status)) { await sl(30000); continue }
@@ -332,17 +332,17 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
 
   const planPrompt = [
     'TÂCHE: ' + taskContent.slice(0, 600),
-    'Identifie les fichiers à créer ou modifier dans le projet Trackr (React+Vite).',
-    'IMPORTANT: utilise UNIQUEMENT des fichiers qui existent dans le projet ou des nouveaux fichiers JSX/JS.',
+    'Identifie les fichiers à créer ou modifier dans le projet Trackr.',
+    'Fichiers autorisés: src/**/*.jsx, src/**/*.tsx, src/**/*.js, src/**/*.css, api/*.js, deploy/*.js, public/*.json, public/*.js, ai-data/*.md, vercel.json, vite.config.js, index.html',
     'Format — une ligne par fichier:',
-    'CREATE:chemin/fichier.jsx',
-    'MODIFY:chemin/fichier.jsx',
+    'CREATE:chemin/fichier.ext',
+    'MODIFY:chemin/fichier.ext',
     'Max 2 fichiers, chemins relatifs. Rien d\'autre.',
   ].join('\n')
 
   stage('planning')
   checkInterrupt()
-  const plan    = await generateRaw(planPrompt, 300, MODEL_FAST)
+  const plan    = await generateRaw(planPrompt, 300, 'fast')
   const fileOps = plan.split('\n')
     .map(l => l.match(/^(CREATE|MODIFY):(.+\.[\w]+)/i))
     .filter(Boolean)
@@ -381,7 +381,7 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
     ].filter(Boolean).join('\n')
 
     checkInterrupt()
-    const newCode = await generateRaw(codePrompt, 6000, MODEL_SMART)
+    const newCode = await generateRaw(codePrompt, 6000, 'smart')
     let clean = newCode.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim()
 
     // Validation de base
@@ -428,8 +428,8 @@ let totalErrorSession = 0
 // Buffer Discord notifs
 const notifBuffer     = []
 let   lastNotifTime   = Date.now()
-const NOTIF_EVERY_N   = 3
-const NOTIF_EVERY_MS  = 20 * 60 * 1000  // 20min
+const NOTIF_EVERY_N   = 1
+const NOTIF_EVERY_MS  = 5 * 60 * 1000   // 5min
 
 async function flushDiscordNotif(force = false) {
   if (!notifBuffer.length) return
@@ -613,7 +613,7 @@ async function generateNextTasks() {
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const raw   = await generateRaw(prompt, 800, MODEL_FAST)
+      const raw   = await generateRaw(prompt, 800, 'fast')
       const tasks = raw.split('\n').map(l => l.match(/^TASK:\s*(.+)/i)?.[1]?.trim()).filter(Boolean)
       if (!tasks.length) throw new Error('Aucune ligne TASK')
       tasks.slice(0, 3).forEach((desc, i) => {
