@@ -1,44 +1,31 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Clock, Badge } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { Clock, Live } from 'lucide-react';
+import { useDate } from '../hooks/useDate';
+import { useTheme } from '../hooks/useTheme';
 
-function Header() {
+const Header = () => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const [heure, setHeure] = useState(new Date().toLocaleTimeString());
-  const [isLive, setIsLive] = useState(false);
+  const { date } = useDate();
+  const { theme } = useTheme();
 
-  useEffect(() => {
-    setInterval(() => {
-      setHeure(new Date().toLocaleTimeString());
-    }, 1000);
-  }, []);
-
-  useEffect(() => {
-    if (location.pathname === '/') {
-      setIsLive(true);
-    } else {
-      setIsLive(false);
-    }
-  }, [location]);
+  const heureLocale = new Date(date).toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
   return (
-    <header className="flex justify-between items-center p-4">
+    <header className="flex justify-between items-center py-4">
       <div className="flex items-center">
-        <h1 className="text-2xl font-bold text-text-primary">Bonjour Andrea</h1>
-        <span className="ml-2 text-text-secondary">{heure}</span>
+        <h1 className="text-lg font-bold text--text-primary">Bonjour Andrea</h1>
+        <span className="text-sm text--text-secondary ml-2">{heureLocale}</span>
       </div>
       <div className="flex items-center">
-        <Badge
-          className={`ml-2 ${isLive ? 'bg-neon' : ''}`}
-          size={24}
-          onClick={() => navigate('/')}
-        />
+        <Live className="text-lg text--neon mr-2 animate-pulse" />
+        <span className="text-lg text--text-primary">LIVE</span>
       </div>
     </header>
   );
-}
+};
 
 export default Header;
