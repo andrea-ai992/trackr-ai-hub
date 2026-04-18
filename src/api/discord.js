@@ -1,20 +1,23 @@
-Voici la version corrigée de `src/api/discord.js` avec une lecture directe du stream SSE utilisant `ReadableStream` et `TextDecoderStream` :
-
-```javascript
 // src/api/discord.js
 import { SUPABASE_URL, SUPABASE_KEY } from '../config';
 
 const DISCORD_API_URL = 'https://discord.com/api/v10';
 const DISCORD_BOT_TOKEN = import.meta.env.VITE_DISCORD_BOT_TOKEN;
 
-export const getDiscordMessages = async (channelId) => {
+export const getDiscordMessages = async (channelId, timeoutMs = 10000) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
   try {
     const response = await fetch(`${DISCORD_API_URL}/channels/${channelId}/messages`, {
       headers: {
         'Authorization': `Bot ${DISCORD_BOT_TOKEN}`,
         'Content-Type': 'application/json',
       },
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`Discord API error: ${response.status}`);
@@ -24,17 +27,17 @@ export const getDiscordMessages = async (channelId) => {
       throw new Error('No response body');
     }
 
-    // Lecture directe du stream avec ReadableStream et TextDecoderStream
     const reader = response.body
       .pipeThrough(new TextDecoderStream())
       .getReader();
 
     let result = '';
+    let isDone = false;
 
-    while (true) {
+    while (!isDone) {
       const { done, value } = await reader.read();
-      if (done) break;
-      result += value;
+      isDone = done;
+      if (value) result += value;
     }
 
     try {
@@ -44,12 +47,19 @@ export const getDiscordMessages = async (channelId) => {
       return [];
     }
   } catch (error) {
-    console.error('Error fetching Discord messages:', error);
+    if (error.name === 'AbortError') {
+      console.error('Discord API request timed out');
+    } else {
+      console.error('Error fetching Discord messages:', error);
+    }
     return [];
   }
 };
 
-export const sendDiscordMessage = async (channelId, content) => {
+export const sendDiscordMessage = async (channelId, content, timeoutMs = 10000) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
   try {
     const response = await fetch(`${DISCORD_API_URL}/channels/${channelId}/messages`, {
       method: 'POST',
@@ -58,7 +68,10 @@ export const sendDiscordMessage = async (channelId, content) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ content }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`Discord API error: ${response.status}`);
@@ -66,10 +79,11 @@ export const sendDiscordMessage = async (channelId, content) => {
 
     return await response.json();
   } catch (error) {
-    console.error('Error sending Discord message:', error);
+    if (error.name === 'AbortError') {
+      console.error('Discord message send request timed out');
+    } else {
+      console.error('Error sending Discord message:', error);
+    }
     return null;
   }
 };
-```
-
-Le fichier `src/api/discord.css` reste inchangé car il est déjà conforme aux règles demandées.
