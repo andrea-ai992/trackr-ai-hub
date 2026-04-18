@@ -113,8 +113,8 @@ const Markets = () => {
       <div className="sticky top-0 z-50 bg-var(--bg2) border-b border-var(--border)">
         <div className="px-4 py-3">
           <div className="flex items-center gap-4 mb-3">
-            <h1 className="text-xl font-bold">Markets</h1>
-            <div className="flex-1 flex gap-2 overflow-x-auto scrollbar-hide">
+            <h1 className="text-xl font-bold tracking-tight">Markets</h1>
+            <div className="flex-1 flex gap-1 overflow-x-auto scrollbar-hide">
               {[
                 { id: 'stocks', label: 'Stocks' },
                 { id: 'crypto', label: 'Crypto' },
@@ -123,7 +123,7 @@ const Markets = () => {
                   key={t.id}
                   onClick={() => switchTab(t.id)}
                   className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
-                    tab === t.id ? 'bg-var(--green)/20 text-var(--green)' : 'text-var(--t2) hover:bg-var(--bg)/50'
+                    tab === t.id ? 'text-var(--green) border-b-2 border-var(--green)' : 'text-var(--t2) hover:text-var(--t1)'
                   }`}
                 >
                   {t.label}
@@ -139,7 +139,7 @@ const Markets = () => {
               placeholder="Search assets..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-var(--bg) border border-var(--border) rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-var(--green)/50"
+              className="w-full pl-10 pr-4 py-2.5 bg-var(--bg2) border border-var(--border) rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-var(--green)/50"
             />
           </div>
         </div>
@@ -163,24 +163,24 @@ const Markets = () => {
         ) : (
           <>
             {tab === 'stocks' ? (
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {filteredStocks.map((asset, index) => (
                   <div key={index} className="flex items-center justify-between p-3 rounded-lg hover:bg-var(--bg2)/50 transition-colors cursor-pointer">
-                    <div className="flex items-center gap-3 flex-1">
-                      <div className="w-8 h-8 rounded-full bg-var(--bg) flex items-center justify-center text-xs font-bold">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-var(--bg) flex items-center justify-center text-xs font-bold text-var(--t1) flex-shrink-0">
                         {asset.image ? (
                           <img src={asset.image} alt={asset.name} className="w-full h-full rounded-full object-cover" />
                         ) : (
                           asset.symbol.substring(0, 2).toUpperCase()
                         )}
                       </div>
-                      <div>
-                        <h3 className="font-semibold">{asset.name}</h3>
-                        <p className="text-xs text-var(--t3)">{asset.symbol}</p>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-sm truncate">{asset.name}</h3>
+                        <p className="text-xs text-var(--t3) truncate">{asset.symbol}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-mono font-bold tabular-nums">
+                    <div className="text-right flex-shrink-0">
+                      <div className="font-mono font-bold tabular-nums text-sm">
                         {asset.price.toLocaleString('en-US', {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
@@ -191,31 +191,31 @@ const Markets = () => {
                         {Math.abs(asset.change).toFixed(2)}%
                       </div>
                     </div>
-                    <div className="ml-4">
+                    <div className="ml-4 flex-shrink-0">
                       {renderSparkline(asset.sparkline)}
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {filteredCrypto.map((asset, index) => (
                   <div key={index} className="flex items-center justify-between p-3 rounded-lg hover:bg-var(--bg2)/50 transition-colors cursor-pointer">
-                    <div className="flex items-center gap-3 flex-1">
-                      <div className="w-8 h-8 rounded-full bg-var(--bg) flex items-center justify-center text-xs font-bold">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-var(--bg) flex items-center justify-center text-xs font-bold text-var(--t1) flex-shrink-0">
                         {asset.image ? (
                           <img src={asset.image} alt={asset.name} className="w-full h-full rounded-full object-cover" />
                         ) : (
                           asset.symbol.substring(0, 2).toUpperCase()
                         )}
                       </div>
-                      <div>
-                        <h3 className="font-semibold">{asset.name}</h3>
-                        <p className="text-xs text-var(--t3)">{asset.symbol}</p>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-sm truncate">{asset.name}</h3>
+                        <p className="text-xs text-var(--t3) truncate">{asset.symbol}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-mono font-bold tabular-nums">
+                    <div className="text-right flex-shrink-0">
+                      <div className="font-mono font-bold tabular-nums text-sm">
                         {asset.price.toLocaleString('en-US', {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
@@ -225,6 +225,9 @@ const Markets = () => {
                         {getArrow(asset.change)}
                         {Math.abs(asset.change).toFixed(2)}%
                       </div>
+                    </div>
+                    <div className="ml-4 flex-shrink-0">
+                      {renderSparkline(asset.sparkline)}
                     </div>
                   </div>
                 ))}
@@ -232,7 +235,7 @@ const Markets = () => {
             )}
 
             <div className="mt-8">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-var(--t3) mb-3 px-1">
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-var(--t3) mb-3 px-1">
                 Top Gainers
               </h2>
               <div className="space-y-2">
@@ -241,21 +244,21 @@ const Markets = () => {
                     key={`gainer-${index}`}
                     className="flex items-center justify-between p-3 rounded-lg hover:bg-var(--bg2)/50 transition-colors cursor-pointer"
                   >
-                    <div className="flex items-center gap-3 flex-1">
-                      <div className="w-8 h-8 rounded-full bg-var(--bg) flex items-center justify-center text-xs font-bold">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-var(--bg) flex items-center justify-center text-xs font-bold text-var(--t1) flex-shrink-0">
                         {asset.image ? (
                           <img src={asset.image} alt={asset.name} className="w-full h-full rounded-full object-cover" />
                         ) : (
                           asset.symbol.substring(0, 2).toUpperCase()
                         )}
                       </div>
-                      <div>
-                        <h3 className="font-semibold">{asset.name}</h3>
-                        <p className="text-xs text-var(--t3)">{asset.symbol}</p>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-sm truncate">{asset.name}</h3>
+                        <p className="text-xs text-var(--t3) truncate">{asset.symbol}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-mono font-bold tabular-nums">
+                    <div className="text-right flex-shrink-0">
+                      <div className="font-mono font-bold tabular-nums text-sm">
                         {asset.price.toLocaleString('en-US', {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
@@ -266,7 +269,7 @@ const Markets = () => {
                         {Math.abs(asset.change).toFixed(2)}%
                       </div>
                     </div>
-                    <div className="ml-4">
+                    <div className="ml-4 flex-shrink-0">
                       {renderSparkline(asset.sparkline)}
                     </div>
                   </div>
@@ -275,7 +278,7 @@ const Markets = () => {
             </div>
 
             <div className="mt-6">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-var(--t3) mb-3 px-1">
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-var(--t3) mb-3 px-1">
                 Top Losers
               </h2>
               <div className="space-y-2">
@@ -284,21 +287,21 @@ const Markets = () => {
                     key={`loser-${index}`}
                     className="flex items-center justify-between p-3 rounded-lg hover:bg-var(--bg2)/50 transition-colors cursor-pointer"
                   >
-                    <div className="flex items-center gap-3 flex-1">
-                      <div className="w-8 h-8 rounded-full bg-var(--bg) flex items-center justify-center text-xs font-bold">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-var(--bg) flex items-center justify-center text-xs font-bold text-var(--t1) flex-shrink-0">
                         {asset.image ? (
                           <img src={asset.image} alt={asset.name} className="w-full h-full rounded-full object-cover" />
                         ) : (
                           asset.symbol.substring(0, 2).toUpperCase()
                         )}
                       </div>
-                      <div>
-                        <h3 className="font-semibold">{asset.name}</h3>
-                        <p className="text-xs text-var(--t3)">{asset.symbol}</p>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-sm truncate">{asset.name}</h3>
+                        <p className="text-xs text-var(--t3) truncate">{asset.symbol}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-mono font-bold tabular-nums">
+                    <div className="text-right flex-shrink-0">
+                      <div className="font-mono font-bold tabular-nums text-sm">
                         {asset.price.toLocaleString('en-US', {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
@@ -309,7 +312,7 @@ const Markets = () => {
                         {Math.abs(asset.change).toFixed(2)}%
                       </div>
                     </div>
-                    <div className="ml-4">
+                    <div className="ml-4 flex-shrink-0">
                       {renderSparkline(asset.sparkline)}
                     </div>
                   </div>
@@ -319,20 +322,6 @@ const Markets = () => {
           </>
         )}
       </div>
-
-      {refreshing && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-var(--green)"></div>
-        </div>
-      )}
-
-      <button
-        onClick={handleRefresh}
-        className="fixed bottom-6 right-6 z-30 w-12 h-12 rounded-full bg-var(--bg2) border border-var(--border) flex items-center justify-center shadow-lg hover:bg-var(--bg)/50 transition-all"
-        aria-label="Refresh data"
-      >
-        <Search size={18} className={refreshing ? 'animate-spin' : ''} />
-      </button>
     </div>
   );
 };
