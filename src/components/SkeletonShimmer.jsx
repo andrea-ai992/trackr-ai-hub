@@ -1,46 +1,41 @@
-src/components/SkeletonShimmer.jsx
+Je vais créer un composant `SkeletonShimmer.jsx` complet et fonctionnel avec un effet de pulse pour les placeholders des patterns, puis l'intégrer dans `Pattern.jsx`.
+
 ```jsx
+// src/components/SkeletonShimmer.jsx
 import React from 'react';
 
-const SkeletonShimmer = ({ width = '100%', height = '1.5rem', className = '' }) => {
+const SkeletonShimmer = ({ width = '100%', height = '1.5rem', borderRadius = '0.25rem' }) => {
   return (
     <div
-      className={`skeleton-shimmer ${className}`}
-      style={{ width, height }}
-      aria-busy="true"
-      aria-live="polite"
+      className="skeleton-shimmer"
+      style={{
+        width,
+        height,
+        borderRadius,
+        backgroundColor: 'var(--bg2)',
+        position: 'relative',
+        overflow: 'hidden',
+        display: 'inline-block'
+      }}
     >
       <style jsx>{`
         .skeleton-shimmer {
-          position: relative;
-          overflow: hidden;
-          background-color: var(--bg2);
-          border-radius: 0.25rem;
-          border: 1px solid var(--border);
-        }
-
-        .skeleton-shimmer::after {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: -100%;
-          width: 100%;
-          height: 100%;
+          animation: pulse 1.5s ease-in-out 0.5s infinite;
           background: linear-gradient(
             90deg,
-            transparent,
-            rgba(0, 255, 136, 0.2),
-            transparent
+            var(--bg2) 25%,
+            var(--border) 50%,
+            var(--bg2) 75%
           );
-          animation: shimmer 1.5s infinite ease-in-out;
+          background-size: 200% 100%;
         }
 
-        @keyframes shimmer {
-          0% {
-            left: -100%;
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 0.6;
           }
-          100% {
-            left: 100%;
+          50% {
+            opacity: 1;
           }
         }
       `}</style>
@@ -51,199 +46,200 @@ const SkeletonShimmer = ({ width = '100%', height = '1.5rem', className = '' }) 
 export default SkeletonShimmer;
 ```
 
-src/pages/ChartAnalysis/ChartAnalysis.jsx
 ```jsx
+// src/pages/Patterns.jsx
 import React, { useState, useEffect } from 'react';
-import SkeletonShimmer from '../../components/SkeletonShimmer';
+import SkeletonShimmer from '../components/SkeletonShimmer';
 
-const ChartAnalysis = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [chartData, setChartData] = useState(null);
-  const [iaContext, setIaContext] = useState(null);
+const Patterns = () => {
+  const [patterns, setPatterns] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Simuler chargement données
-        await new Promise(resolve => setTimeout(resolve, 2000));
+    // Simulation de chargement des données
+    const timer = setTimeout(() => {
+      setPatterns(Array(16).fill({
+        id: '',
+        name: '',
+        description: '',
+        image: '',
+        category: ''
+      }));
+      setLoading(false);
+    }, 1500);
 
-        // Données mock TradingView
-        setChartData({
-          symbol: 'BTCUSD',
-          price: 68523.45,
-          change: 2.45,
-          volume: 1254321,
-          chart: 'tradingview-embed-url'
-        });
-
-        // Données mock IA contextuelles
-        setIaContext({
-          sentiment: 'bullish',
-          keyLevels: [68000, 69000, 70000],
-          patterns: ['Higher Highs', 'Ascending Triangle'],
-          recommendations: ['Hold', 'Take Profit at 70000']
-        });
-      } catch (error) {
-        console.error('Erreur chargement données:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
+    return () => clearTimeout(timer);
   }, []);
 
-  return (
-    <div className="chart-analysis">
-      <style jsx>{`
-        .chart-analysis {
-          min-height: 100vh;
-          background-color: var(--bg);
-          color: var(--t1);
-          font-family: 'Inter', sans-serif;
-          padding: 1rem;
-        }
+  if (loading) {
+    return (
+      <div className="patterns-page">
+        <header className="patterns-header">
+          <h1>Patterns <span className="subtitle">16 designs</span></h1>
+        </header>
 
-        .header {
-          margin-bottom: 1.5rem;
-        }
-
-        .chart-container {
-          width: 100%;
-          height: 300px;
-          margin-bottom: 1.5rem;
-          background-color: var(--bg2);
-          border-radius: 0.5rem;
-          border: 1px solid var(--border);
-          overflow: hidden;
-        }
-
-        .tradingview-widget-container {
-          width: 100%;
-          height: 100%;
-        }
-
-        .ia-context-container {
-          background-color: var(--bg2);
-          border-radius: 0.5rem;
-          padding: 1rem;
-          border: 1px solid var(--border);
-        }
-
-        .context-section {
-          margin-bottom: 1rem;
-        }
-
-        .context-title {
-          font-size: 1rem;
-          font-weight: 600;
-          color: var(--green);
-          margin-bottom: 0.5rem;
-        }
-
-        .context-content {
-          font-size: 0.9rem;
-          color: var(--t2);
-          line-height: 1.5;
-        }
-
-        .price-info {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 1rem;
-        }
-
-        .price-value {
-          font-size: 1.5rem;
-          font-weight: 700;
-          color: var(--t1);
-        }
-
-        .price-change {
-          font-size: 1rem;
-          font-weight: 600;
-          color: var(--green);
-        }
-
-        .positive {
-          color: var(--green);
-        }
-
-        .negative {
-          color: #ff4444;
-        }
-      `}</style>
-
-      <div className="header">
-        <h1 className="text-2xl font-bold">Analyse Chart</h1>
-        <p className="text-t2 text-sm">Analyse technique et contexte IA en temps réel</p>
-      </div>
-
-      {isLoading ? (
-        <>
-          <div className="chart-container">
-            <SkeletonShimmer width="100%" height="100%" />
-          </div>
-
-          <div className="ia-context-container">
-            <div className="context-section">
-              <SkeletonShimmer width="60%" height="1.25rem" />
-            </div>
-            <div className="context-section">
-              <SkeletonShimmer width="80%" height="1rem" />
-              <SkeletonShimmer width="70%" height="1rem" className="mt-2" />
-            </div>
-            <div className="context-section">
-              <SkeletonShimmer width="50%" height="1.25rem" />
-            </div>
-            <div className="context-section">
-              <SkeletonShimmer width="90%" height="1rem" />
-              <SkeletonShimmer width="85%" height="1rem" className="mt-2" />
-            </div>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="chart-container">
-            <div className="tradingview-widget-container">
-              <iframe
-                src={`https://www.tradingview-widget.com/embed-widget/symbol-overview/?symbol=COINBASE:BTCUSD&interval=1D&hidesidetoolbar=1&hidetoptoolbar=1&theme=dark&style=1`}
-                width="100%"
-                height="100%"
-                frameBorder="0"
-                allowFullScreen
-              ></iframe>
-            </div>
-          </div>
-
-          <div className="ia-context-container">
-            <div className="price-info">
-              <div>
-                <div className="price-value">{chartData.price.toFixed(2)} USD</div>
-                <div className={`price-change ${chartData.change >= 0 ? 'positive' : 'negative'}`}>
-                  {chartData.change >= 0 ? '+' : ''}{chartData.change.toFixed(2)}%
+        <div className="patterns-grid">
+          {Array(16).fill(0).map((_, index) => (
+            <div key={`skeleton-${index}`} className="pattern-card skeleton">
+              <div className="pattern-image">
+                <SkeletonShimmer width="100%" height="12rem" borderRadius="0.5rem" />
+              </div>
+              <div className="pattern-info">
+                <div className="pattern-name">
+                  <SkeletonShimmer width="80%" height="1.25rem" borderRadius="0.25rem" />
+                </div>
+                <div className="pattern-category">
+                  <SkeletonShimmer width="60%" height="1rem" borderRadius="0.25rem" />
+                </div>
+                <div className="pattern-description">
+                  <SkeletonShimmer width="100%" height="1rem" borderRadius="0.25rem" />
+                  <SkeletonShimmer width="90%" height="1rem" borderRadius="0.25rem" />
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-t2 text-sm">Volume: {chartData.volume.toLocaleString()}</div>
-                <div className="text-t2 text-sm">Symbole: {chartData.symbol}</div>
-              </div>
             </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
-            <div className="context-section">
-              <div className="context-title">📊 Contexte IA</div>
-              <div className="context-content">
-                <p><strong>Sentiment:</strong> {iaContext.sentiment}</p>
-                <p><strong>Niveaux clés:</strong> {iaContext.keyLevels.join(', ')}</p>
-                <p><strong>Patterns:</strong> {iaContext.patterns.join(', ')}</p>
-                <p><strong>Recommandations:</strong> {iaContext.recommendations.join(', ')}</p>
-              </div>
+  return (
+    <div className="patterns-page">
+      <header className="patterns-header">
+        <h1>Patterns <span className="subtitle">16 designs</span></h1>
+      </header>
+
+      <div className="patterns-grid">
+        {patterns.map((pattern) => (
+          <div key={pattern.id} className="pattern-card">
+            <div className="pattern-image">
+              <img
+                src={pattern.image || '/placeholder-pattern.png'}
+                alt={pattern.name || 'Pattern'}
+                loading="lazy"
+              />
+            </div>
+            <div className="pattern-info">
+              <h3 className="pattern-name">{pattern.name}</h3>
+              <span className="pattern-category">{pattern.category}</span>
+              <p className="pattern-description">{pattern.description}</p>
             </div>
           </div>
-        </>
-      )}
+        ))}
+      </div>
     </div>
   );
 };
 
-export default ChartAnalysis;
+export default Patterns;
+```
+
+```css
+/* src/pages/Patterns.css */
+.patterns-page {
+  min-height: 100vh;
+  background-color: var(--bg);
+  color: var(--t1);
+  font-family: 'Inter', sans-serif;
+  padding: 1rem;
+}
+
+.patterns-header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.patterns-header h1 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--green);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 1rem;
+  color: var(--t2);
+  margin-left: 0.5rem;
+}
+
+.patterns-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.pattern-card {
+  background-color: var(--bg2);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid var(--border);
+}
+
+.pattern-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 255, 136, 0.1);
+}
+
+.pattern-image {
+  width: 100%;
+  height: 12rem;
+  background-color: var(--bg3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.pattern-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pattern-info {
+  padding: 1rem;
+}
+
+.pattern-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--t1);
+  margin: 0 0 0.25rem 0;
+}
+
+.pattern-category {
+  display: inline-block;
+  font-size: 0.75rem;
+  color: var(--green);
+  background-color: rgba(0, 255, 136, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.pattern-description {
+  font-size: 0.875rem;
+  color: var(--t2);
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* Skeleton specific styles */
+.pattern-card.skeleton {
+  background-color: var(--bg2);
+  border: 1px solid var(--border);
+}
+
+.pattern-card.skeleton .pattern-image {
+  background-color: var(--bg3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pattern-card.skeleton .pattern-info {
+  padding: 1rem;
+}
