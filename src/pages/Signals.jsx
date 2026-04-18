@@ -1,118 +1,214 @@
-// src/pages/Signals.jsx
+Création de src/pages/Signals.jsx
 
+```jsx
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import { Container, Row, Col } from 'lucide-react';
-import { supabase } from '../supabaseClient';
+import { BrowserRouter, Route, Routes, Link } from 'react-router-dom';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowUp, faArrowDown, faCircle } from '@fortawesome/free-solid-svg-icons';
+import Lucide from 'lucide-react';
+
+const supabase = new SupabaseClient('https://trackr-app-nu.vercel.app/.supabase', {
+  key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
+});
+
+const assets = [
+  { ticker: 'BTC', name: 'Bitcoin', price: 45000 },
+  { ticker: 'ETH', name: 'Ethereum', price: 2500 },
+  { ticker: 'NVDA', name: 'NVIDIA', price: 550 },
+  { ticker: 'SOL', name: 'Solana', price: 120 },
+  { ticker: 'AAPL', name: 'Apple', price: 150 },
+  { ticker: 'SPY', name: 'S&P 500', price: 450 },
+  { ticker: 'TSLA', name: 'Tesla', price: 1000 },
+  { ticker: 'LINK', name: 'Chainlink', price: 20 },
+];
 
 const Signals = () => {
-  const [signals, setSignals] = useState([
-    { ticker: 'BTC', name: 'Bitcoin', score: 80, indicators: { rsi: 90, macd: 20, volume: 100 }, signal: 'BUY' },
-    { ticker: 'ETH', name: 'Ethereum', score: 60, indicators: { rsi: 50, macd: 10, volume: 50 }, signal: 'HOLD' },
-    { ticker: 'NVDA', name: 'NVIDIA', score: 40, indicators: { rsi: 30, macd: 5, volume: 20 }, signal: 'SELL' },
-    { ticker: 'SOL', name: 'Solana', score: 90, indicators: { rsi: 95, macd: 25, volume: 150 }, signal: 'BUY' },
-    { ticker: 'AAPL', name: 'Apple', score: 70, indicators: { rsi: 80, macd: 15, volume: 70 }, signal: 'HOLD' },
-    { ticker: 'SPY', name: 'S&P 500', score: 50, indicators: { rsi: 40, macd: 10, volume: 40 }, signal: 'SELL' },
-  ]);
-
+  const [signals, setSignals] = useState([]);
   const [filter, setFilter] = useState('Tous');
+  const [lastUpdated, setLastUpdated] = useState('');
 
   useEffect(() => {
-    const getSignals = async () => {
+    const fetchSignals = async () => {
       const { data, error } = await supabase
         .from('signals')
         .select('*')
         .order('created_at', { ascending: false });
-      if (error) console.error(error);
-      setSignals(data);
+      if (error) {
+        console.error(error);
+      } else {
+        setSignals(data);
+      }
     };
-    getSignals();
+    fetchSignals();
   }, []);
 
-  const handleFilterChange = (event) => {
-    setFilter(event.target.value);
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      const fetchSignals = async () => {
+        const { data, error } = await supabase
+          .from('signals')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (error) {
+          console.error(error);
+        } else {
+          setSignals(data);
+          setLastUpdated(new Date().toLocaleTimeString());
+        }
+      };
+      fetchSignals();
+    }, 60000);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  const rsi = (price, period = 14) => {
+    const gains = [];
+    for (let i = 0; i < period; i++) {
+      const gain = price[i] - price[i - 1];
+      gains.push(gain > 0 ? gain : 0);
+    }
+    const averageGain = gains.reduce((a, b) => a + b, 0) / gains.length;
+    const losses = [];
+    for (let i = 0; i < period; i++) {
+      const loss = price[i - 1] - price[i];
+      losses.push(loss > 0 ? 0 : loss);
+    }
+    const averageLoss = losses.reduce((a, b) => a + b, 0) / losses.length;
+    const rs = averageGain / averageLoss;
+    return 100 - (100 / (1 + rs));
+  };
+
+  const macd = (price, period = 12) => {
+    const ema12 = [];
+    const ema26 = [];
+    for (let i = 0; i < price.length; i++) {
+      if (i < period) {
+        ema12.push(price[i]);
+        ema26.push(price[i]);
+      } else {
+        const ema12Last = ema12[i - 1];
+        const ema26Last = ema26[i - 1];
+        const ema12New = (price[i] + (period - 1) * ema12Last) / period;
+        const ema26New = (price[i] + (period - 1) * ema26Last) / period;
+        ema12.push(ema12New);
+        ema26.push(ema26New);
+      }
+    }
+    const macdLine = ema12[ema12.length - 1] - ema26[ema26.length - 1];
+    const signalLine = ema12[ema12.length - 1];
+    return macdLine > signalLine ? 'Bullish' : macdLine < signalLine ? 'Bearish' : 'Neutral';
+  };
+
+  const calculateSignal = (price, rsiValue, macdValue) => {
+    if (rsiValue < 30 && macdValue === 'Bullish') {
+      return 'BUY';
+    } else if (rsiValue > 70 && macdValue === 'Bearish') {
+      return 'SELL';
+    } else {
+      return 'HOLD';
+    }
   };
 
   const filteredSignals = signals.filter((signal) => {
-    if (filter === 'Tous') return true;
-    if (filter === 'BUY' && signal.signal === 'BUY') return true;
-    if (filter === 'SELL' && signal.signal === 'SELL') return true;
-    if (filter === 'HOLD' && signal.signal === 'HOLD') return true;
-    return false;
+    if (filter === 'Tous') {
+      return true;
+    } else if (filter === 'BUY') {
+      return signal.signal === 'BUY';
+    } else if (filter === 'SELL') {
+      return signal.signal === 'SELL';
+    } else {
+      return signal.signal === 'HOLD';
+    }
   });
 
-  const handleRefresh = () => {
-    const getSignals = async () => {
-      const { data, error } = await supabase
-        .from('signals')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) console.error(error);
-      setSignals(data);
-    };
-    getSignals();
-  };
-
   return (
-    <BrowserRouter>
-      <Container className="max-w-7xl mx-auto p-4">
-        <Row className="flex justify-between mb-4">
-          <Col xs={12} md={6} className="text-lg font-bold text--t1">
-            Signaux IA Trading
-          </Col>
-          <Col xs={12} md={6} className="flex justify-end">
-            <select value={filter} onChange={handleFilterChange} className="bg--bg2 p-2 text--t1 border--border">
-              <option value="Tous">Tous</option>
-              <option value="BUY">BUY</option>
-              <option value="SELL">SELL</option>
-              <option value="HOLD">HOLD</option>
-            </select>
-            <button onClick={handleRefresh} className="bg--green p-2 text--t1 border--border">
-              Rafraîchir
-            </button>
-          </Col>
-        </Row>
-        <Row className="flex flex-wrap -mx-4">
-          {filteredSignals.map((signal, index) => (
-            <Col key={index} xs={12} sm={6} md={4} lg={3} className="mb-4">
-              <div className="bg--bg p-4 rounded-lg shadow-md">
-                <Row className="flex justify-between mb-2">
-                  <Col xs={12} md={6} className="text-lg font-bold text--t1">
-                    {signal.ticker} - {signal.name}
-                  </Col>
-                  <Col xs={12} md={6} className="text-lg font-bold text--t1 text-right">
-                    Score : {signal.score}%
-                  </Col>
-                </Row>
-                <Row className="flex justify-between mb-2">
-                  <Col xs={12} md={6} className="text-lg font-bold text--t1 text-right">
-                    RSI : {signal.indicators.rsi}%
-                  </Col>
-                  <Col xs={12} md={6} className="text-lg font-bold text--t1 text-right">
-                    MACD : {signal.indicators.macd}%
-                  </Col>
-                  <Col xs={12} md={6} className="text-lg font-bold text--t1 text-right">
-                    Volume : {signal.indicators.volume}%
-                  </Col>
-                </Row>
-                <Row className="flex justify-between mb-2">
-                  <Col xs={12} md={6} className="text-lg font-bold text--t1 text-right">
-                    <span className={`bg--green p-2 text--t1 rounded-lg ${signal.score > 50 ? 'bg--green' : 'bg--red'}`}>
-                      {signal.score > 50 ? 'Bullish' : 'Bearish'}
-                    </span>
-                  </Col>
-                  <Col xs={12} md={6} className="text-lg font-bold text--t1 text-right">
-                    <span className={`bg--green p-2 text--t1 rounded-lg ${signal.signal === 'BUY' ? 'bg--green' : signal.signal === 'SELL' ? 'bg--red' : 'bg--yellow'}`}>
-                      {signal.signal}
-                    </span>
-                  </Col>
-                </Row>
+    <div className="container">
+      <header>
+        <div className="filter">
+          <button
+            className={filter === 'Tous' ? 'active' : ''}
+            onClick={() => setFilter('Tous')}
+          >
+            Tous
+          </button>
+          <button
+            className={filter === 'BUY' ? 'active' : ''}
+            onClick={() => setFilter('BUY')}
+          >
+            BUY
+          </button>
+          <button
+            className={filter === 'SELL' ? 'active' : ''}
+            onClick={() => setFilter('SELL')}
+          >
+            SELL
+          </button>
+          <button
+            className={filter === 'HOLD' ? 'active' : ''}
+            onClick={() => setFilter('HOLD')}
+          >
+            HOLD
+          </button>
+        </div>
+        <button className="refresh" onClick={() => window.location.reload()}>
+          <FontAwesomeIcon icon={faArrowUp} />
+          <span>Refresh</span>
+          <span>{lastUpdated}</span>
+        </button>
+      </header>
+      <main>
+        {filteredSignals.map((signal, index) => (
+          <div key={index} className="card">
+            <h2>
+              {signal.asset.ticker} - {signal.asset.name}
+            </h2>
+            <p>
+              Prix simulé : {signal.price}
+            </p>
+            <div className="score">
+              <div className="bar">
+                <div
+                  className="fill"
+                  style={{
+                    width: `${signal.score}%`,
+                    backgroundColor: signal.score < 50 ? '#ff0000' : '#00ff00',
+                  }}
+                />
               </div>
-            </Col>
-          ))}
-        </Row>
-      </Container>
-    </BrowserRouter>
+              <span>{signal.score}%</span>
+            </div>
+            <div className="badges">
+              <div className="badge">
+                <span>RSI</span>
+                <span style={{ color: signal.rsi < 30 ? '#ff0000' : signal.rsi > 70 ? '#00ff00' : '#000' }}>
+                  {signal.rsi}
+                </span>
+              </div>
+              <div className="badge">
+                <span>MACD</span>
+                <span style={{ color: signal.macd === 'Bullish' ? '#00ff00' : signal.macd === 'Bearish' ? '#ff0000' : '#000' }}>
+                  {signal.macd}
+                </span>
+              </div>
+              <div className="badge">
+                <span>Volumen</span>
+                <span style={{ color: signal.volume === 'High' ? '#00ff00' : signal.volume === 'Normal' ? '#000' : '#ff0000' }}>
+                  {signal.volume}
+                </span>
+              </div>
+            </div>
+            <div className="signal">
+              <span>{signal.signal}</span>
+              <FontAwesomeIcon
+                icon={signal.signal === 'BUY' ? faArrowUp : signal.signal === 'SELL' ? faArrowDown : faCircle}
+                style={{ color: signal.signal === 'BUY' ? '#00ff00' : signal.signal === 'SELL' ? '#ff0000' : '#000' }}
+              />
+            </div>
+          </div>
+        ))}
+      </main>
+    </div>
   );
 };
 
@@ -120,1003 +216,129 @@ export default Signals;
 ```
 
 ```css
-/* src/pages/Signals.css */
-
-.bg--green {
-  background-color: var(--green);
-}
-
-.bg--red {
-  background-color: #ff0000;
-}
-
-.bg--yellow {
-  background-color: #ffff00;
-}
-
-.bg--bg {
+.container {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 20px;
   background-color: var(--bg);
-}
-
-.bg--bg2 {
-  background-color: var(--bg2);
-}
-
-.text--t1 {
   color: var(--t1);
 }
 
-.text--t2 {
-  color: var(--t2);
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background-color: var(--bg2);
+  border-bottom: 1px solid var(--border);
 }
 
-.text--t3 {
-  color: var(--t3);
+.filter {
+  display: flex;
+  gap: 10px;
 }
 
-.border--border {
+.filter button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  background-color: var(--bg2);
+  color: var(--t1);
+  cursor: pointer;
+}
+
+.filter button.active {
+  background-color: var(--green);
+  color: var(--bg);
+}
+
+.refresh {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  background-color: var(--bg2);
+  color: var(--t1);
+  cursor: pointer;
+}
+
+.refresh span {
+  margin-left: 10px;
+}
+
+.main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.card {
+  padding: 20px;
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.card h2 {
+  margin-top: 0;
+}
+
+.score {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  background-color: var(--bg2);
+  border-radius: 5px;
   border: 1px solid var(--border);
 }
 
-.border--border-hi {
-  border: 2px solid var(--border-hi);
+.bar {
+  width: 100%;
+  height: 10px;
+  background-color: var(--bg);
+  border-radius: 5px;
+  overflow: hidden;
 }
 
-.rounded-lg {
-  border-radius: 10px;
+.fill {
+  height: 100%;
+  background-color: var(--t1);
 }
 
-.shadow-md {
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.max-w-7xl {
-  max-width: 1400px;
-}
-
-.mx-auto {
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.p-4 {
-  padding: 1rem;
-}
-
-.p-2 {
-  padding: 0.5rem;
-}
-
-.text-lg {
-  font-size: 1.125rem;
-}
-
-.font-bold {
-  font-weight: bold;
-}
-
-.text-right {
-  text-align: right;
-}
-
-.flex {
+.badges {
   display: flex;
+  gap: 10px;
 }
 
-.flex-wrap {
-  flex-wrap: wrap;
+.badge {
+  padding: 10px;
+  background-color: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
 }
 
-.justify-between {
-  justify-content: space-between;
+.badge span {
+  margin-bottom: 5px;
 }
 
-.mb-4 {
-  margin-bottom: 1rem;
+.signal {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  background-color: var(--bg2);
+  border-radius: 5px;
+  border: 1px solid var(--border);
 }
 
-.mb-2 {
-  margin-bottom: 0.5rem;
+.signal span {
+  margin-right: 10px;
 }
+```
 
-.mt-4 {
-  margin-top: 1rem;
+```json
+"dependencies": {
+  "react": "^18.2.0",
+  "react-router-dom": "^6.4.3",
+  "lucide-react": "^0.1.0",
+  "supabase-js": "^1.32.0"
 }
-
-.mt-2 {
-  margin-top: 0.5rem;
-}
-
-.mr-4 {
-  margin-right: 1rem;
-}
-
-.mr-2 {
-  margin-right: 0.5rem;
-}
-
-.ml-4 {
-  margin-left: 1rem;
-}
-
-.ml-2 {
-  margin-left: 0.5rem;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-0 {
-  margin-left: 0;
-}
-
-.ml-1 {
-  margin-left: 0.25rem;
-}
-
-.ml-2 {
-  margin-left: 0.5rem;
-}
-
-.ml-3 {
-  margin-left: 0.75rem;
-}
-
-.ml-4 {
-  margin-left: 1rem;
-}
-
-.ml-5 {
-  margin-left: 1.25rem;
-}
-
-.ml-6 {
-  margin-left: 1.5rem;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto {
-  margin-left: auto;
-}
-
-.ml-auto
