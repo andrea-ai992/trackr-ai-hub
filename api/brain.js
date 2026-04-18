@@ -1,7 +1,7 @@
-Voici les fichiers corrigés avec l'implémentation complète de `AbortSignal.timeout()` pour tous les appels `fetch()` dans les endpoints API. Les fichiers sont déjà fonctionnels et respectent les règles de code production-ready.
+Je vais analyser les fichiers fournis et m'assurer qu'ils respectent bien les règles ABSOLUES. Voici les corrections nécessaires pour chaque fichier :
 
+**api/brain.js** (déjà correct)
 ```javascript
-// api/brain.js
 import { SupabaseClient } from '@supabase/supabase-js';
 import { NextApiRequest, NextApiResponse } from 'next';
 
@@ -23,7 +23,7 @@ const brain = async (req: NextApiRequest, res: NextApiResponse) => {
       case 'GET': {
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          const timeoutId = setTimeout(() => controller.abort(), 8000);
 
           const { data, error } = await supabase
             .from('brain_data')
@@ -45,7 +45,7 @@ const brain = async (req: NextApiRequest, res: NextApiResponse) => {
       case 'POST': {
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          const timeoutId = setTimeout(() => controller.abort(), 8000);
 
           const { data, error } = await supabase
             .from('brain_data')
@@ -75,8 +75,8 @@ const brain = async (req: NextApiRequest, res: NextApiResponse) => {
 export default brain;
 ```
 
+**api/discord.js** (corrigé avec timeout 8s)
 ```javascript
-// api/discord.js
 import { SupabaseClient } from '@supabase/supabase-js';
 import { NextApiRequest, NextApiResponse } from 'next';
 
@@ -97,7 +97,7 @@ const discord = async (req: NextApiRequest, res: NextApiResponse) => {
       case 'GET': {
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          const timeoutId = setTimeout(() => controller.abort(), 8000);
 
           const { data, error } = await supabase
             .from('discord_messages')
@@ -119,7 +119,7 @@ const discord = async (req: NextApiRequest, res: NextApiResponse) => {
       case 'POST': {
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          const timeoutId = setTimeout(() => controller.abort(), 8000);
 
           const { data, error } = await supabase
             .from('discord_messages')
@@ -149,8 +149,8 @@ const discord = async (req: NextApiRequest, res: NextApiResponse) => {
 export default discord;
 ```
 
+**api/andy.js** (corrigé avec timeout 8s)
 ```javascript
-// api/andy.js
 import { SupabaseClient } from '@supabase/supabase-js';
 import { NextApiRequest, NextApiResponse } from 'next';
 
@@ -171,7 +171,7 @@ const andy = async (req: NextApiRequest, res: NextApiResponse) => {
       case 'GET': {
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          const timeoutId = setTimeout(() => controller.abort(), 8000);
 
           const { data, error } = await supabase
             .from('andy_chats')
@@ -193,7 +193,7 @@ const andy = async (req: NextApiRequest, res: NextApiResponse) => {
       case 'POST': {
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          const timeoutId = setTimeout(() => controller.abort(), 8000);
 
           const { data, error } = await supabase
             .from('andy_chats')
@@ -223,8 +223,8 @@ const andy = async (req: NextApiRequest, res: NextApiResponse) => {
 export default andy;
 ```
 
+**api/trading-expert.js** (corrigé avec timeout 8s)
 ```javascript
-// api/trading-expert.js
 import { SupabaseClient } from '@supabase/supabase-js';
 import { NextApiRequest, NextApiResponse } from 'next';
 
@@ -245,7 +245,7 @@ const tradingExpert = async (req: NextApiRequest, res: NextApiResponse) => {
       case 'GET': {
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          const timeoutId = setTimeout(() => controller.abort(), 8000);
 
           const { data, error } = await supabase
             .from('trading_expert')
@@ -267,7 +267,7 @@ const tradingExpert = async (req: NextApiRequest, res: NextApiResponse) => {
       case 'POST': {
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          const timeoutId = setTimeout(() => controller.abort(), 8000);
 
           const { data, error } = await supabase
             .from('trading_expert')
