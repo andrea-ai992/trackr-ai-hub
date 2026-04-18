@@ -1,138 +1,194 @@
+src/components/FearGreedGauge.jsx
+```jsx
 import { useState, useEffect } from 'react';
+import './FearGreedGauge.css';
 
-const FearGreedGauge = ({ value = 50, size = 200 }) => {
-  const [displayValue, setDisplayValue] = useState(value);
+const FearGreedGauge = () => {
+  const [value, setValue] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const startValue = displayValue;
-    const endValue = Math.min(Math.max(value, 0), 100);
-    const duration = 1000;
-    const startTime = performance.now();
-
-    const animate = (currentTime) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const easeProgress = 1 - Math.pow(1 - progress, 3);
-
-      const newValue = startValue + (endValue - startValue) * easeProgress;
-      setDisplayValue(Math.round(newValue));
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
+    const fetchFearGreedIndex = async () => {
+      try {
+        const response = await fetch('https://api.alternative.me/fng/?limit=1');
+        if (!response.ok) throw new Error('Failed to fetch');
+        const data = await response.json();
+        const newValue = parseInt(data.data[0].value, 10);
+        setValue(newValue);
+      } catch (error) {
+        console.error('Error fetching Fear & Greed Index:', error);
+        setValue(50); // Fallback value
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    requestAnimationFrame(animate);
-  }, [value]);
+    fetchFearGreedIndex();
+    const interval = setInterval(fetchFearGreedIndex, 300000); // Refresh every 5 minutes
+    return () => clearInterval(interval);
+  }, []);
 
-  const normalizedValue = Math.min(Math.max(displayValue, 0), 100);
-  const angle = (normalizedValue / 100) * 180 - 90;
+  const normalizedValue = Math.min(Math.max(value, 0), 100);
+  const rotation = (normalizedValue / 100) * 180 - 90;
 
   return (
-    <div className="fear-greed-gauge-container" style={{ width: size, height: size }}>
-      <svg
-        className="fear-greed-gauge"
-        viewBox="0 0 200 100"
-        style={{ width: '100%', height: '100%' }}
-      >
-        <defs>
-          <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#ff4757" />
-            <stop offset={`${normalizedValue}%`} stopColor="#ffa502" />
-            <stop offset={`${normalizedValue}%`} stopColor="#2ed573" />
-            <stop offset="100%" stopColor="#2ed573" />
-          </linearGradient>
-        </defs>
-
-        <g transform="translate(0, 50)">
+    <div className="fear-greed-gauge-container">
+      <div className="gauge-header">
+        <h3>Fear & Greed Index</h3>
+        <span className="gauge-value">{isLoading ? 'Loading...' : `${normalizedValue}`}</span>
+      </div>
+      <div className="gauge-wrapper">
+        <svg viewBox="0 0 200 100" className="gauge-svg">
+          <defs>
+            <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#ff0000" />
+              <stop offset="50%" stopColor="#ffff00" />
+              <stop offset="100%" stopColor="#00ff00" />
+            </linearGradient>
+          </defs>
           <path
-            d="M 20 0 A 80 80 0 0 1 180 0"
+            d="M 20 80 A 80 80 0 0 1 180 80"
             fill="none"
             stroke="var(--border)"
             strokeWidth="2"
           />
           <path
-            d="M 20 0 A 80 80 0 0 1 180 0"
+            d="M 20 80 A 80 80 0 0 1 180 80"
             fill="none"
             stroke="url(#gaugeGradient)"
-            strokeWidth="4"
-            strokeDasharray="4,4"
-            strokeDashoffset={80 - (normalizedValue / 100) * 160}
-            transform="rotate(-90 100 0)"
+            strokeWidth="6"
+            strokeDasharray="251.2"
+            strokeDashoffset={251.2 - (251.2 * normalizedValue) / 100}
+            strokeLinecap="round"
+            transform={`rotate(${rotation} 100 80)`}
+            className="gauge-needle"
           />
-          <path
-            d="M 100 0 L 100 -10 L 110 -10 L 100 0 Z"
-            fill="var(--green)"
-            transform={`rotate(${angle} 100 0)`}
-          />
-        </g>
-      </svg>
-
-      <div className="gauge-value">
-        {displayValue}
+          <circle cx="100" cy="80" r="4" fill="var(--green)" />
+        </svg>
+        <div className="gauge-labels">
+          <span className="label extreme-fear">Extreme Fear</span>
+          <span className="label fear">Fear</span>
+          <span className="label neutral">Neutral</span>
+          <span className="label greed">Greed</span>
+          <span className="label extreme-greed">Extreme Greed</span>
+        </div>
       </div>
-
-      <div className="gauge-labels">
-        <span className="label-extreme">0</span>
-        <span className="label-extreme">100</span>
+      <div className="gauge-description">
+        <p>{isLoading ? 'Fetching market sentiment...' : getSentimentDescription(normalizedValue)}</p>
       </div>
-
-      <div className="gauge-title">Fear & Greed Index</div>
     </div>
   );
+};
+
+const getSentimentDescription = (value) => {
+  if (value <= 20) return "Extreme Fear. Investors are very worried. Consider buying opportunities.";
+  if (value <= 40) return "Fear. Selling pressure is high. Market may be oversold.";
+  if (value <= 60) return "Neutral. Market sentiment is balanced.";
+  if (value <= 80) return "Greed. Investors are optimistic. Market may be overbought.";
+  return "Extreme Greed. Market is highly optimistic. Consider taking profits.";
 };
 
 export default FearGreedGauge;
 ```
 
+src/styles/FearGreedGauge.css
 ```css
 .fear-greed-gauge-container {
+  --gauge-size: 200px;
+  --label-font-size: 10px;
+  --value-font-size: 24px;
+
   font-family: 'Inter', sans-serif;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  color: var(--t1);
-  position: relative;
+  width: 100%;
+  max-width: 350px;
+  background: var(--bg2);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-.fear-greed-gauge {
-  transition: transform 0.3s ease;
+.gauge-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.gauge-header h3 {
+  color: var(--t1);
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
 }
 
 .gauge-value {
-  font-size: 2rem;
-  font-weight: 700;
   color: var(--green);
-  text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+  font-size: var(--value-font-size);
+  font-weight: 700;
+  min-width: 60px;
+  text-align: right;
+}
+
+.gauge-wrapper {
+  position: relative;
+  width: var(--gauge-size);
+  height: calc(var(--gauge-size) * 0.6);
+  margin: 0 auto 12px;
+}
+
+.gauge-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.gauge-needle {
+  transition: stroke-dashoffset 0.8s ease-out;
 }
 
 .gauge-labels {
   display: flex;
   justify-content: space-between;
-  width: 100%;
-  font-size: 0.8rem;
+  margin-top: 8px;
+  font-size: var(--label-font-size);
   color: var(--t3);
-  padding: 0 20px;
-  box-sizing: border-box;
 }
 
-.gauge-title {
-  font-size: 0.9rem;
+.label {
+  text-align: center;
+  flex: 1;
+}
+
+.extreme-fear { color: #ff0000; }
+.fear { color: #ff6600; }
+.neutral { color: var(--t2); }
+.greed { color: #ccff00; }
+.extreme-greed { color: var(--green); }
+
+.gauge-description {
   color: var(--t2);
+  font-size: 13px;
+  line-height: 1.4;
   text-align: center;
 }
 
-@media (max-width: 600px) {
+/* Responsive adjustments */
+@media (min-width: 768px) {
+  .fear-greed-gauge-container {
+    max-width: 400px;
+    padding: 20px;
+  }
+
+  .gauge-header h3 {
+    font-size: 18px;
+  }
+
   .gauge-value {
-    font-size: 1.5rem;
+    font-size: 28px;
   }
 
   .gauge-labels {
-    font-size: 0.7rem;
-  }
-
-  .gauge-title {
-    font-size: 0.8rem;
+    font-size: 12px;
   }
 }
