@@ -124,8 +124,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
 .hdr-badge{background:rgba(0,255,136,.12);border:1px solid rgba(0,255,136,.2);color:var(--green);font-size:10px;padding:3px 8px;border-radius:20px;font-weight:600;letter-spacing:.04em}
 
 /* ── Scrollable content ── */
-.view{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;scroll-padding-bottom:24px}
-.view.on{display:block}
+.view{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;scroll-padding-bottom:24px;min-height:0}
+.view.on{display:flex;flex-direction:column}
 .pad{padding:16px 16px 24px}
 
 /* ── Cards ── */
@@ -456,8 +456,6 @@ setInterval(()=>{
   else if(curTab==='task'){ loadTaskStatus(); loadTaskLogs() }
 }, 6000)
 
-// Charge le statut quand on ouvre l'onglet tâche
-const _origTab = tab
 function tab(name) {
   curTab = name
   document.querySelectorAll('.btab').forEach(b => b.classList.remove('on'))
