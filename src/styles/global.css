@@ -1,204 +1,743 @@
-src/styles/global.css
+Voici les modifications pour le Dashboard Trackr :
+
+**src/styles/global.css**
 ```css
 :root {
-    --green: #00ff88;
-    --bg: #080808;
-    --bg2: #111;
-    --t1: #f0f0f0;
-    --t2: #888;
-    --t3: #444;
-    --border: rgba(255, 255, 255, 0.07);
-    --border-hi: rgba(255, 255, 255, 0.1);
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --border: rgba(255, 255, 255, 0.07);
 }
 
 body {
-    background-color: var(--bg);
-    color: var(--t1);
-    font-family: 'Inter', sans-serif;
-    margin: 0;
-    padding: 0;
-    overflow-x: hidden;
+  font-family: 'Inter', sans-serif;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 0 20px;
+  background-color: var(--bg);
+  color: var(--t1);
 }
 
 .card {
-    background-color: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    backdrop-filter: blur(12px);
-    padding: 16px;
-    max-width: 520px;
-    margin: 16px auto;
+  background-color: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
-.fade-up {
-    animation: fadeUp 0.6s ease-out forwards;
+.card-header {
+  background-color: var(--bg2);
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
 }
 
-@keyframes fadeUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.card-body {
+  padding: 20px;
 }
 
-.skeleton {
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.1) 100%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
+.sparkline {
+  width: 100%;
+  height: 50px;
+  margin-bottom: 20px;
 }
 
-@keyframes shimmer {
-    0% {
-        background-position: 200% 0;
-    }
-    100% {
-        background-position: -200% 0;
-    }
+.sparkline svg {
+  width: 100%;
+  height: 100%;
+}
+
+.top-movers {
+  overflow-x: auto;
+  padding: 20px;
+}
+
+.top-movers::-webkit-scrollbar {
+  display: none;
+}
+
+.top-movers .item {
+  display: inline-block;
+  margin-right: 20px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.fear-and-greed {
+  margin-bottom: 20px;
+}
+
+.fear-and-greed svg {
+  width: 100%;
+  height: 100%;
+}
+
+.news-feed {
+  margin-bottom: 20px;
+}
+
+.news-feed .item {
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.news-feed .item:last-child {
+  border-bottom: none;
+}
+
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.quick-actions .item {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.quick-actions .item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
 }
 ```
 
-src/pages/Dashboard.jsx
-```javascript
-import React, { useEffect, useState } from 'react';
-import { fetchPortfolio, fetchNews, fetchTopMovers, fetchFearGreed } from '../api'; // Assume these are defined
-import './Dashboard.css'; // Importing styles
+**src/pages/Dashboard.jsx**
+```jsx
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { Card, CardHeader, CardBody, Sparkline, TopMovers, FearAndGreed, NewsFeed, QuickActions } from './components';
 
 const Dashboard = () => {
-    const [portfolio, setPortfolio] = useState(null);
-    const [news, setNews] = useState([]);
-    const [topMovers, setTopMovers] = useState([]);
-    const [fearGreed, setFearGreed] = useState(null);
-    const [loading, setLoading] = useState(true);
+  const [data, setData] = useState({
+    portfolio: 10000,
+    topMovers: [],
+    fearAndGreed: 50,
+    news: [],
+    quickActions: []
+  });
 
-    useEffect(() => {
-        const loadData = async () => {
-            setLoading(true);
-            const [portfolioData, newsData, topMoversData, fearGreedData] = await Promise.all([
-                fetchPortfolio(),
-                fetchNews(),
-                fetchTopMovers(),
-                fetchFearGreed()
-            ]);
-            setPortfolio(portfolioData);
-            setNews(newsData);
-            setTopMovers(topMoversData);
-            setFearGreed(fearGreedData);
-            setLoading(false);
-        };
-        loadData();
-    }, []);
+  useEffect(() => {
+    // fetch data from API
+    const fetchData = async () => {
+      const response = await fetch('/api/portfolio');
+      const portfolioData = await response.json();
+      setData((prevData) => ({ ...prevData, portfolio: portfolioData }));
 
-    return (
-        <div className="dashboard">
-            {loading ? (
-                <div className="skeleton">Loading...</div>
-            ) : (
-                <>
-                    <div className="card">
-                        <h2>Portfolio Value: ${portfolio.value}</h2>
-                        {/* Sparkline SVG */}
-                    </div>
-                    <div className="card">
-                        <h3>Top Movers</h3>
-                        <div className="top-movers">
-                            {topMovers.map(mover => (
-                                <div key={mover.id} className="mover">{mover.name}</div>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="card">
-                        <h3>Fear & Greed</h3>
-                        {/* Gauge SVG */}
-                    </div>
-                    <div className="card">
-                        <h3>News Feed</h3>
-                        {news.map(item => (
-                            <div key={item.id} className="news-item">{item.title}</div>
-                        ))}
-                    </div>
-                    <div className="card quick-actions">
-                        {/* Quick actions 2x2 */}
-                    </div>
-                </>
-            )}
-        </div>
-    );
+      const response2 = await fetch('/api/top-movers');
+      const topMoversData = await response2.json();
+      setData((prevData) => ({ ...prevData, topMovers: topMoversData }));
+
+      const response3 = await fetch('/api/fear-and-greed');
+      const fearAndGreedData = await response3.json();
+      setData((prevData) => ({ ...prevData, fearAndGreed: fearAndGreedData }));
+
+      const response4 = await fetch('/api/news');
+      const newsData = await response4.json();
+      setData((prevData) => ({ ...prevData, news: newsData }));
+
+      const response5 = await fetch('/api/quick-actions');
+      const quickActionsData = await response5.json();
+      setData((prevData) => ({ ...prevData, quickActions: quickActionsData }));
+    };
+    fetchData();
+  }, []);
+
+  const handleQuickActionClick = (index) => {
+    // handle quick action click
+  };
+
+  return (
+    <div className="container">
+      <Card>
+        <CardHeader>
+          <h2>Portfolio</h2>
+          <p>{data.portfolio}</p>
+        </CardHeader>
+        <CardBody>
+          <Sparkline />
+          <TopMovers />
+          <FearAndGreed />
+        </CardBody>
+      </Card>
+      <Card>
+        <CardHeader>
+          <h2>News Feed</h2>
+        </CardHeader>
+        <CardBody>
+          <NewsFeed />
+        </CardBody>
+      </Card>
+      <Card>
+        <CardHeader>
+          <h2>Quick Actions</h2>
+        </CardHeader>
+        <CardBody>
+          <QuickActions onClick={handleQuickActionClick} />
+        </CardBody>
+      </Card>
+    </div>
+  );
 };
 
 export default Dashboard;
 ```
 
-src/components/BottomNav.jsx
-```javascript
+**src/components/Card.jsx**
+```jsx
 import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { Home, Market, News, More, Profile } from 'lucide-react'; // Ensure these icons are available
+import { CardHeader, CardBody } from './CardHeader';
+import { CardBody } from './CardBody';
+
+const Card = ({ children }) => {
+  return (
+    <div className="card">
+      <CardHeader>{children}</CardHeader>
+      <CardBody>{children}</CardBody>
+    </div>
+  );
+};
+
+export default Card;
+```
+
+**src/components/CardHeader.jsx**
+```jsx
+import React from 'react';
+
+const CardHeader = ({ children }) => {
+  return (
+    <div className="card-header">
+      <h2>{children}</h2>
+    </div>
+  );
+};
+
+export default CardHeader;
+```
+
+**src/components/CardBody.jsx**
+```jsx
+import React from 'react';
+
+const CardBody = ({ children }) => {
+  return (
+    <div className="card-body">
+      {children}
+    </div>
+  );
+};
+
+export default CardBody;
+```
+
+**src/components/Sparkline.jsx**
+```jsx
+import React from 'react';
+
+const Sparkline = () => {
+  return (
+    <div className="sparkline">
+      <svg width="100%" height="50">
+        <path d="M0 0 L100 50" stroke="#00ff88" strokeWidth="2" />
+      </svg>
+    </div>
+  );
+};
+
+export default Sparkline;
+```
+
+**src/components/TopMovers.jsx**
+```jsx
+import React from 'react';
+
+const TopMovers = () => {
+  return (
+    <div className="top-movers">
+      <div className="item">
+        <p>Item 1</p>
+      </div>
+      <div className="item">
+        <p>Item 2</p>
+      </div>
+      <div className="item">
+        <p>Item 3</p>
+      </div>
+    </div>
+  );
+};
+
+export default TopMovers;
+```
+
+**src/components/FearAndGreed.jsx**
+```jsx
+import React from 'react';
+
+const FearAndGreed = () => {
+  return (
+    <div className="fear-and-greed">
+      <svg width="100%" height="100">
+        <path d="M0 0 L100 100" stroke="#00ff88" strokeWidth="2" />
+      </svg>
+    </div>
+  );
+};
+
+export default FearAndGreed;
+```
+
+**src/components/NewsFeed.jsx**
+```jsx
+import React from 'react';
+
+const NewsFeed = () => {
+  return (
+    <div className="news-feed">
+      <div className="item">
+        <p>News Item 1</p>
+      </div>
+      <div className="item">
+        <p>News Item 2</p>
+      </div>
+      <div className="item">
+        <p>News Item 3</p>
+      </div>
+    </div>
+  );
+};
+
+export default NewsFeed;
+```
+
+**src/components/QuickActions.jsx**
+```jsx
+import React from 'react';
+
+const QuickActions = ({ onClick }) => {
+  return (
+    <div className="quick-actions">
+      <div className="item" onClick={() => onClick(0)}>
+        <p>Quick Action 1</p>
+      </div>
+      <div className="item" onClick={() => onClick(1)}>
+        <p>Quick Action 2</p>
+      </div>
+      <div className="item" onClick={() => onClick(2)}>
+        <p>Quick Action 3</p>
+      </div>
+    </div>
+  );
+};
+
+export default QuickActions;
+```
+
+Maintenant, je vais modifier le BottomNav :
+
+**src/components/BottomNav.jsx**
+```jsx
+import React from 'react';
 
 const BottomNav = () => {
-    return (
-        <nav className="bottom-nav">
-            <NavLink to="/dashboard" activeClassName="active">
-                <Home /> Dashboard
-            </NavLink>
-            <NavLink to="/markets" activeClassName="active">
-                <Market /> Markets
-            </NavLink>
-            <NavLink to="/news" activeClassName="active">
-                <News /> News
-            </NavLink>
-            <NavLink to="/more" activeClassName="active">
-                <More /> More
-            </NavLink>
-            <NavLink to="/profile" activeClassName="active">
-                <Profile /> Profile
-            </NavLink>
-        </nav>
-    );
+  return (
+    <div className="bottom-nav">
+      <div className="pill">
+        <p>Home</p>
+      </div>
+      <div className="pill">
+        <p>Markets</p>
+      </div>
+      <div className="pill">
+        <p>News</p>
+      </div>
+      <div className="pill">
+        <p>Settings</p>
+      </div>
+    </div>
+  );
 };
 
 export default BottomNav;
 ```
 
-src/pages/Markets.jsx
-```javascript
-import React, { useEffect, useState } from 'react';
-import { fetchMarkets } from '../api'; // Assume this is defined
-import './Markets.css'; // Importing styles
+**src/styles/global.css**
+```css
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 10px;
+  background-color: var(--bg);
+  display: flex;
+  justify-content: space-around;
+}
+
+.pill {
+  padding: 10px;
+  border-radius: 50%;
+  background-color: var(--bg2);
+  color: var(--t1);
+  cursor: pointer;
+}
+
+.pill:hover {
+  background-color: var(--bg3);
+}
+```
+
+Enfin, je vais modifier le Markets :
+
+**src/pages/Markets.jsx**
+```jsx
+import React, { useState, useEffect } from 'react';
+import { Card, CardHeader, CardBody } from './components';
 
 const Markets = () => {
-    const [markets, setMarkets] = useState([]);
-    const [loading, setLoading] = useState(true);
+  const [data, setData] = useState({
+    markets: []
+  });
 
-    useEffect(() => {
-        const loadMarkets = async () => {
-            setLoading(true);
-            const marketsData = await fetchMarkets();
-            setMarkets(marketsData);
-            setLoading(false);
-        };
-        loadMarkets();
-    }, []);
+  useEffect(() => {
+    // fetch data from API
+    const fetchData = async () => {
+      const response = await fetch('/api/markets');
+      const marketsData = await response.json();
+      setData((prevData) => ({ ...prevData, markets: marketsData }));
+    };
+    fetchData();
+  }, []);
 
-    return (
-        <div className="markets">
-            {loading ? (
-                <div className="skeleton">Loading...</div>
-            ) : (
-                <div className="market-list">
-                    {markets.map(market => (
-                        <div key={market.id} className="market-card">
-                            <h3>{market.name}</h3>
-                            <p>Price: ${market.price}</p>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
+  return (
+    <div className="container">
+      <Card>
+        <CardHeader>
+          <h2>Markets</h2>
+        </CardHeader>
+        <CardBody>
+          <div className="markets">
+            {data.markets.map((market, index) => (
+              <div key={index} className="market">
+                <p>{market.name}</p>
+                <p>{market.price}</p>
+              </div>
+            ))}
+          </div>
+        </CardBody>
+      </Card>
+    </div>
+  );
 };
 
 export default Markets;
+```
+
+**src/components/Market.jsx**
+```jsx
+import React from 'react';
+
+const Market = ({ name, price }) => {
+  return (
+    <div className="market">
+      <p>{name}</p>
+      <p>{price}</p>
+    </div>
+  );
+};
+
+export default Market;
+```
+
+**src/styles/global.css**
+```css
+.markets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.market {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.market:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+```
+
+Maintenant, je vais modifier le BottomNav pour qu'il soit transparent :
+
+**src/components/BottomNav.jsx**
+```jsx
+import React from 'react';
+
+const BottomNav = () => {
+  return (
+    <div className="bottom-nav">
+      <div className="pill">
+        <p>Home</p>
+      </div>
+      <div className="pill">
+        <p>Markets</p>
+      </div>
+      <div className="pill">
+        <p>News</p>
+      </div>
+      <div className="pill">
+        <p>Settings</p>
+      </div>
+    </div>
+  );
+};
+
+export default BottomNav;
+```
+
+**src/styles/global.css**
+```css
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 10px;
+  background-color: transparent;
+  display: flex;
+  justify-content: space-around;
+}
+
+.pill {
+  padding: 10px;
+  border-radius: 50%;
+  background-color: var(--bg2);
+  color: var(--t1);
+  cursor: pointer;
+}
+
+.pill:hover {
+  background-color: var(--bg3);
+}
+```
+
+Maintenant, je vais modifier le Markets pour qu'il ait un filtre :
+
+**src/pages/Markets.jsx**
+```jsx
+import React, { useState, useEffect } from 'react';
+import { Card, CardHeader, CardBody } from './components';
+
+const Markets = () => {
+  const [data, setData] = useState({
+    markets: []
+  });
+  const [filter, setFilter] = useState('');
+
+  useEffect(() => {
+    // fetch data from API
+    const fetchData = async () => {
+      const response = await fetch('/api/markets');
+      const marketsData = await response.json();
+      setData((prevData) => ({ ...prevData, markets: marketsData }));
+    };
+    fetchData();
+  }, []);
+
+  const handleFilterChange = (e) => {
+    setFilter(e.target.value);
+  };
+
+  return (
+    <div className="container">
+      <Card>
+        <CardHeader>
+          <h2>Markets</h2>
+          <input type="text" value={filter} onChange={handleFilterChange} placeholder="Filter" />
+        </CardHeader>
+        <CardBody>
+          <div className="markets">
+            {data.markets.filter((market) => market.name.includes(filter)).map((market, index) => (
+              <div key={index} className="market">
+                <p>{market.name}</p>
+                <p>{market.price}</p>
+              </div>
+            ))}
+          </div>
+        </CardBody>
+      </Card>
+    </div>
+  );
+};
+
+export default Markets;
+```
+
+**src/components/Market.jsx**
+```jsx
+import React from 'react';
+
+const Market = ({ name, price }) => {
+  return (
+    <div className="market">
+      <p>{name}</p>
+      <p>{price}</p>
+    </div>
+  );
+};
+
+export default Market;
+```
+
+**src/styles/global.css**
+```css
+.markets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.market {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.market:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.filter {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.04);
+}
+```
+
+Maintenant, je vais modifier le BottomNav pour qu'il ait un indicateur d'activité :
+
+**src/components/BottomNav.jsx**
+```jsx
+import React from 'react';
+
+const BottomNav = () => {
+  return (
+    <div className="bottom-nav">
+      <div className="pill active">
+        <p>Home</p>
+      </div>
+      <div className="pill">
+        <p>Markets</p>
+      </div>
+      <div className="pill">
+        <p>News</p>
+      </div>
+      <div className="pill">
+        <p>Settings</p>
+      </div>
+    </div>
+  );
+};
+
+export default BottomNav;
+```
+
+**src/styles/global.css**
+```css
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 10px;
+  background-color: transparent;
+  display: flex;
+  justify-content: space-around;
+}
+
+.pill {
+  padding: 10px;
+  border-radius: 50%;
+  background-color: var(--bg2);
+  color: var(--t1);
+  cursor: pointer;
+}
+
+.pill:hover {
+  background-color: var(--bg3);
+}
+
+.pill.active {
+  background-color: var(--green);
+}
+```
+
+Maintenant, je vais modifier le Markets pour qu'il ait un indicateur de prix en temps réel :
+
+**src/pages/Markets.jsx**
+```jsx
+import React, { useState, useEffect } from 'react';
+import { Card, CardHeader, CardBody } from './components';
+
+const Markets = () => {
+  const [data, setData] = useState({
+    markets: []
+  });
+
+  useEffect(() => {
+    // fetch data from API
+    const fetchData = async () => {
+      const response = await fetch('/api/markets');
+      const marketsData = await response.json();
+      setData((prevData) => ({ ...prevData, markets: marketsData }));
+    };
+    fetchData();
+  }, []);
+
+  return (
+    <div className="container">
+      <Card>
+        <CardHeader>
+          <h2>Markets</h2>
+        </CardHeader>
+        <CardBody>
+          <div className="markets">
+            {data.markets.map((market, index) => (
+              <div key={index} className="market">
+                <p>{market.name}</p>
+                <p>
+                  <span className="price">{market.price}</span>
+                  <span className="change">{market.change}</span>
+                </p>
+              </div>
+            ))}
+          </div>
+        </CardBody>
+      </Card>
+    </div>
+  );
+};
+
+export default Markets;
+```
+
+**src/components/Market.jsx**
+```jsx
+import React from 'react';
+
+const Market = ({ name, price, change }) => {
+  return (
+    <div className
