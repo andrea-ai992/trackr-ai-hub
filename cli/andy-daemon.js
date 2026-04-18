@@ -571,7 +571,7 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
     ].filter(Boolean).join('\n')
 
     checkInterrupt()
-    const newCode = await generateRaw(codePrompt, 4000, 'smart')
+    const newCode = await generateRaw(codePrompt, 6000, 'smart')
     // Extract code: if response contains a fenced block, take the largest one
     let clean
     const fenceMatch = newCode.match(/```[\w]*\n([\s\S]+?)```/)
@@ -581,7 +581,6 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
       clean = newCode.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim()
     }
     // Reject if output is prose (doesn't start like code)
-    const ext = op.path.split('.').pop()
     const ext = op.path.split('.').pop().toLowerCase()
     const looksLikeCode = /^(import |export |const |let |var |function |\/\/|<!|{|\(|'use )/.test(clean)
     const looksLikeCSS  = (ext === 'css' || ext === 'scss') && /^[.#@:*a-zA-Z\[]/.test(clean) && clean.includes('{')
@@ -591,16 +590,19 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
       throw new Error(`Réponse IA invalide pour ${op.path} — commence par: ${clean.slice(0,50)}`)
     if (clean.length < 50) throw new Error('Code trop court')
 
-    // Interdire imports de libs non installées (cause builds cassés)
-    const BANNED_IMPORTS = ['recharts', 'framer-motion', 'chart.js', 'styled-components', 'emotion', 'antd', 'material-ui', '@mui', 'bootstrap', 'sass', 'node-sass', 'BrowserRouter', 'Container, Row, Col']
+    // Interdire imports de libs non installées
+    const BANNED_IMPORTS = ['recharts', 'framer-motion', 'chart.js', 'styled-components', 'emotion', 'antd', '@mui', 'bootstrap', 'sass', 'node-sass']
     const bannedFound = BANNED_IMPORTS.filter(b => clean.includes(`from '${b}'`) || clean.includes(`from "${b}"`))
-    if (bannedFound.length) throw new Error(`Import interdit détecté: ${bannedFound.join(', ')} — lib non installée`)
+    if (bannedFound.length) throw new Error(`Import interdit: ${bannedFound.join(', ')}`)
 
-    // Interdire code tronqué (JSX sans export default)
-    if ((ext === 'jsx' || ext === 'tsx' || ext === 'js' || ext === 'ts') && clean.length > 200) {
-      if (!clean.includes('export default') && !clean.includes('export {') && !clean.includes('module.exports')) {
+    // Validation fichiers JS/JSX — must end properly (not truncated mid-JSX)
+    if (['jsx','tsx','js','ts'].includes(ext) && clean.length > 100) {
+      if (!clean.includes('export default') && !clean.includes('export {') && !clean.includes('module.exports'))
         throw new Error(`Code tronqué — pas d'export dans ${op.path}`)
-      }
+      // Détecter JSX tronqué: dernière ligne ne doit pas finir par virgule, opérateur, ou ouvrir une balise
+      const lastLine = clean.split('\n').filter(l => l.trim()).pop() || ''
+      if (/[,({+\-*/&|=<]$/.test(lastLine.trim()))
+        throw new Error(`JSX tronqué — termine par: "${lastLine.trim().slice(-30)}"`)
     }
 
     stage('safe')

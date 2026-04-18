@@ -1,198 +1,217 @@
-import { useState, useEffect } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { useState, Suspense, lazy } from 'react'
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
+import { AppProvider } from './context/AppContext'
+import { SettingsProvider } from './context/SettingsContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
+import BottomNav from './components/BottomNav'
+import Toast from './components/Toast'
+import SearchOverlay from './components/SearchOverlay'
+import Dashboard from './pages/Dashboard'
+import Markets from './pages/Markets'
+import StockDetail from './pages/StockDetail'
+import CryptoDetail from './pages/CryptoDetail'
+import News from './pages/News'
+import More from './pages/More'
+import Sports from './pages/Sports'
+import Andy from './pages/Andy'
+import Portfolio from './pages/Portfolio'
+import Widget from './pages/Widget'
+import Agents from './pages/Agents'
+import BrainStatus from './pages/BrainStatus'
+import Login from './pages/Login'
+import SkeletonPage from './components/SkeletonPage'
+import { useAlerts } from './hooks/useAlerts'
+import { useNewsAlerts } from './hooks/useNewsAlerts'
+import { Search } from 'lucide-react'
+import VoiceAssistant from './components/VoiceAssistant'
 
-const SIGNALS = [
-  { ticker: 'BTC', name: 'Bitcoin', symbol: 'bitcoin' },
-  { ticker: 'ETH', name: 'Ethereum', symbol: 'ethereum' },
-  { ticker: 'NVDA', name: 'NVIDIA', symbol: 'nvidia' },
-  { ticker: 'SOL', name: 'Solana', symbol: 'solana' },
-  { ticker: 'AAPL', name: 'Apple', symbol: 'apple' },
-  { ticker: 'SPY', name: 'S&P 500', symbol: 'spy' }
-]
+const FlightTracker = lazy(() => import('./pages/FlightTracker'))
+const ChartAnalysis = lazy(() => import('./pages/ChartAnalysis'))
+const Patterns = lazy(() => import('./pages/Patterns'))
+const CryptoTrader = lazy(() => import('./pages/CryptoTrader'))
+const Signals = lazy(() => import('./pages/Signals'))
+const RealEstate = lazy(() => import('./pages/RealEstate'))
+const BusinessPlan = lazy(() => import('./pages/BusinessPlan'))
+const Admin = lazy(() => import('./pages/Admin'))
+const Sneakers = lazy(() => import('./pages/Sneakers'))
+const Watches = lazy(() => import('./pages/Watches'))
+const Translator = lazy(() => import('./pages/Translator'))
+const BrainExplorer = lazy(() => import('./pages/BrainExplorer'))
 
-const generateSignalData = () => {
-  const now = Date.now()
-  return SIGNALS.map(signal => {
-    const rsi = Math.floor(Math.random() * 100)
-    const macd = (Math.random() * 20 - 10).toFixed(2)
-    const volume = Math.floor(Math.random() * 50000000 + 1000000)
-
-    let signal
-    let signalColor
-    let bullishScore = 0
-    let bearishScore = 0
-
-    if (rsi > 70) {
-      signal = 'SELL'
-      signalColor = 'text-red-500'
-      bearishScore = Math.min(100, rsi - 30)
-      bullishScore = 0
-    } else if (rsi < 30) {
-      signal = 'BUY'
-      signalColor = 'text-green-500'
-      bullishScore = Math.min(100, 70 - rsi)
-      bearishScore = 0
-    } else {
-      signal = 'HOLD'
-      signalColor = 'text-yellow-500'
-      bullishScore = Math.min(100, 70 - rsi)
-      bearishScore = Math.min(100, rsi - 30)
-    }
-
-    const priceChange = (Math.random() * 20 - 10).toFixed(2)
-    const price = (Math.random() * 50000 + 1000).toFixed(2)
-
-    return {
-      ...signal,
-      rsi,
-      macd,
-      volume,
-      signal,
-      signalColor,
-      bullishScore,
-      bearishScore,
-      priceChange: parseFloat(priceChange),
-      price: parseFloat(price),
-      lastUpdated: now
-    }
-  })
+function AlertWatcher() {
+  useAlerts()
+  useNewsAlerts()
+  return null
 }
 
-export default function Signals() {
-  const [signals, setSignals] = useState(generateSignalData())
-  const [filter, setFilter] = useState('Tous')
-  const [loading, setLoading] = useState(true)
+function getTabIndex(path) {
+  if (path === '/') return 0
+  if (path.startsWith('/sports')) return 1
+  if (path.startsWith('/markets')) return 2
+  if (path.startsWith('/news')) return 3
+  if (
+    path.startsWith('/more') || path.startsWith('/translator') ||
+    path.startsWith('/settings') || path.startsWith('/sneakers') || path.startsWith('/watches') ||
+    path.startsWith('/real-estate') || path.startsWith('/business') ||
+    path.startsWith('/portfolio') || path.startsWith('/category') ||
+    path.startsWith('/flights') || path.startsWith('/patterns')
+  ) return 4
+  return -1
+}
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setSignals(prev => prev.map(signal => ({
-        ...signal,
-        ...generateSignalData().find(s => s.ticker === signal.ticker)
-      })))
-    }, 15000)
+const DETAIL_PREFIXES = ['/stocks/', '/crypto/', '/translator', '/settings', '/sneakers', '/watches', '/real-estate', '/business', '/portfolio', '/category/', '/flights', '/andy', '/agents', '/brain', '/admin', '/patterns']
 
-    return () => clearInterval(interval)
-  }, [])
+let _prevPath = '/'
+let _prevTabIdx = 0
 
-  useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 500)
-    return () => clearTimeout(timer)
-  }, [])
+function PageTransition({ children }) {
+  const location = useLocation()
 
-  const filteredSignals = filter === 'Tous'
-    ? signals
-    : signals.filter(signal => signal.signal === filter)
+  let animClass = 'page-enter-fade'
 
-  const refreshSignals = () => {
-    setLoading(true)
-    setSignals(generateSignalData())
-    setTimeout(() => setLoading(false), 300)
+  if (location.pathname !== _prevPath) {
+    const isDetail     = DETAIL_PREFIXES.some(p => location.pathname.startsWith(p))
+    const wasDetail    = DETAIL_PREFIXES.some(p => _prevPath.startsWith(p))
+    const currTabIdx   = getTabIndex(location.pathname)
+    const prevTabIdx   = getTabIndex(_prevPath)
+
+    if (isDetail && !wasDetail) {
+      animClass = 'page-enter-up'
+    } else if (!isDetail && wasDetail) {
+      animClass = 'page-enter-fade'
+    } else if (currTabIdx !== -1 && prevTabIdx !== -1 && currTabIdx !== prevTabIdx) {
+      animClass = currTabIdx > prevTabIdx ? 'page-enter-right' : 'page-enter-left'
+    } else {
+      animClass = 'page-enter-fade'
+    }
+
+    _prevPath    = location.pathname
+    _prevTabIdx  = currTabIdx
   }
 
   return (
-    <div className="w-full min-h-screen flex flex-col" style={{ fontFamily: 'JetBrains Mono, monospace', backgroundColor: 'var(--bg)', color: 'var(--text-primary)' }}>
-      <div className="w-full p-4 border-b border-var(--border-bright)">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-bold">Signaux IA Trading</h1>
-          <button
-            onClick={refreshSignals}
-            disabled={loading}
-            className="flex items-center gap-2 px-3 py-1 rounded bg-surface-high hover:bg-surface text-sm press-scale"
-          >
-            <RefreshCw size={16} className={`${loading ? 'animate-spin' : ''}`} />
-            {loading ? 'Rafraîchissement...' : 'Rafraîchir'}
-          </button>
-        </div>
-
-        <div className="flex gap-2 mb-4 overflow-x-auto">
-          {['Tous', 'BUY', 'SELL', 'HOLD'].map(type => (
-            <button
-              key={type}
-              onClick={() => setFilter(type)}
-              className={`px-3 py-1 rounded text-xs whitespace-nowrap ${
-                filter === type
-                  ? 'bg-surface-high text-neon border border-neon'
-                  : 'bg-surface text-text-secondary hover:text-text-primary'
-              }`}
-            >
-              {type}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4">
-        {filteredSignals.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-text-muted">
-            Aucun signal correspondant
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4">
-            {filteredSignals.map((signal, index) => (
-              <div
-                key={signal.ticker}
-                className="w-full p-4 rounded-lg bg-surface border border-var(--border) hover:border-neon/30 transition-colors"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-surface-high flex items-center justify-center">
-                      <span className="text-sm font-bold">{signal.ticker}</span>
-                    </div>
-                    <div>
-                      <div className="font-bold">{signal.name}</div>
-                      <div className="text-xs text-text-secondary">
-                        {signal.symbol.toUpperCase()} • {new Date(signal.lastUpdated).toLocaleTimeString()}
-                      </div>
-                    </div>
-                  </div>
-                  <div className={`text-lg font-bold ${signal.signalColor}`}>
-                    {signal.signal}
-                  </div>
-                </div>
-
-                <div className="w-full h-1 bg-surface-low rounded-full mb-3 overflow-hidden">
-                  <div
-                    className="h-full transition-all duration-500"
-                    style={{
-                      width: `${signal.bullishScore}%`,
-                      background: `linear-gradient(90deg, var(--neon), rgba(0,255,136,0.3))`,
-                      transform: signal.signal === 'SELL' ? 'scaleX(-1)' : 'scaleX(1)'
-                    }}
-                  />
-                </div>
-
-                <div className="flex gap-2 flex-wrap">
-                  <div className={`px-2 py-1 rounded text-xs bg-surface-high border border-var(--border) ${
-                    signal.rsi > 70 ? 'text-red-500 border-red-500/30' :
-                    signal.rsi < 30 ? 'text-green-500 border-green-500/30' : 'text-text-primary'
-                  }`}>
-                    RSI: {signal.rsi}
-                  </div>
-                  <div className={`px-2 py-1 rounded text-xs bg-surface-high border border-var(--border) ${
-                    parseFloat(signal.macd) > 0 ? 'text-green-500 border-green-500/30' :
-                    parseFloat(signal.macd) < 0 ? 'text-red-500 border-red-500/30' : 'text-text-primary'
-                  }`}>
-                    MACD: {signal.macd}
-                  </div>
-                  <div className="px-2 py-1 rounded text-xs bg-surface-high border border-var(--border) text-text-primary">
-                    Volume: {signal.volume.toLocaleString()}
-                  </div>
-                </div>
-
-                <div className="mt-3 pt-3 border-t border-var(--border) flex items-center justify-between">
-                  <div className="text-sm">
-                    <div className="text-text-secondary">Prix</div>
-                    <div className="font-bold">${signal.price.toFixed(2)}</div>
-                  </div>
-                  <div className={`text-sm ${signal.priceChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    {signal.priceChange >= 0 ? '▲' : '▼'} {Math.abs(signal.priceChange).toFixed(2)}%
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+    <div key={location.key} className={animClass} style={{ willChange: 'transform, opacity' }}>
+      {children}
     </div>
+  )
+}
+
+function GlobalSearchButton({ onOpen }) {
+  const location = useLocation()
+  if (location.pathname.startsWith('/flights')) return null
+  if (location.pathname.startsWith('/widget')) return null
+  if (location.pathname.startsWith('/andy')) return null
+
+  return (
+    <button
+      onClick={onOpen}
+      className="press-scale"
+      style={{
+        position: 'fixed',
+        top: 'max(12px, env(safe-area-inset-top, 0px))',
+        right: 16,
+        zIndex: 900,
+        width: 40,
+        height: 40,
+        borderRadius: 14,
+        background: 'rgba(11,19,35,0.85)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255,255,255,0.1)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        color: '#9ca3af',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+      }}
+    >
+      <Search size={16} />
+    </button>
+  )
+}
+
+function ProtectedRoute({ children }) {
+  const { user, loading } = useAuth()
+  if (!import.meta.env.VITE_SUPABASE_URL) return children
+  if (loading) return null
+  if (!user) return <Navigate to="/login" replace />
+  return children
+}
+
+function AdminRoute({ children }) {
+  const { user, isAdmin, loading } = useAuth()
+  if (!import.meta.env.VITE_SUPABASE_URL) return children
+  if (loading) return null
+  if (!user) return <Navigate to="/login" replace />
+  if (!isAdmin) return <Navigate to="/" replace />
+  return children
+}
+
+function AppInner() {
+  const [searchOpen, setSearchOpen] = useState(false)
+
+  return (
+    <>
+      <AlertWatcher />
+      <Toast />
+      <GlobalSearchButton onOpen={() => setSearchOpen(true)} />
+      <VoiceAssistant />
+      {searchOpen && <SearchOverlay onClose={() => setSearchOpen(false)} />}
+      <div style={{ minHeight: '100dvh', background: 'var(--bg)', color: 'var(--text-primary)', fontFamily: 'JetBrains Mono, monospace' }}>
+        <main style={{ paddingBottom: 'calc(88px + env(safe-area-inset-bottom, 0px) + 8px)', position: 'relative', zIndex: 1 }}>
+          <PageTransition>
+            <Suspense fallback={<SkeletonPage />}>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                <Route path="/markets" element={<ProtectedRoute><Markets /></ProtectedRoute>} />
+                <Route path="/stocks/:id" element={<ProtectedRoute><StockDetail /></ProtectedRoute>} />
+                <Route path="/crypto/:id" element={<ProtectedRoute><CryptoDetail /></ProtectedRoute>} />
+                <Route path="/news" element={<ProtectedRoute><News /></ProtectedRoute>} />
+                <Route path="/sports" element={<ProtectedRoute><Sports /></ProtectedRoute>} />
+                <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
+                <Route path="/andy" element={<ProtectedRoute><Andy /></ProtectedRoute>} />
+                <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
+                <Route path="/widget" element={<ProtectedRoute><Widget /></ProtectedRoute>} />
+                <Route path="/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
+                <Route path="/brain" element={<ProtectedRoute><BrainStatus /></ProtectedRoute>} />
+
+                <Route path="/flights" element={<ProtectedRoute><Suspense fallback={<SkeletonPage />}><FlightTracker /></Suspense></ProtectedRoute>} />
+                <Route path="/charts" element={<ProtectedRoute><Suspense fallback={<SkeletonPage />}><ChartAnalysis /></Suspense></ProtectedRoute>} />
+                <Route path="/patterns" element={<ProtectedRoute><Suspense fallback={<SkeletonPage />}><Patterns /></Suspense></ProtectedRoute>} />
+                <Route path="/translator" element={<ProtectedRoute><Suspense fallback={<SkeletonPage />}><Translator /></Suspense></ProtectedRoute>} />
+                <Route path="/sneakers" element={<ProtectedRoute><Suspense fallback={<SkeletonPage />}><Sneakers /></Suspense></ProtectedRoute>} />
+                <Route path="/watches" element={<ProtectedRoute><Suspense fallback={<SkeletonPage />}><Watches /></Suspense></ProtectedRoute>} />
+                <Route path="/real-estate" element={<ProtectedRoute><Suspense fallback={<SkeletonPage />}><RealEstate /></Suspense></ProtectedRoute>} />
+                <Route path="/business" element={<ProtectedRoute><Suspense fallback={<SkeletonPage />}><BusinessPlan /></Suspense></ProtectedRoute>} />
+                <Route path="/crypto-trader" element={<ProtectedRoute><Suspense fallback={<SkeletonPage />}><CryptoTrader /></Suspense></ProtectedRoute>} />
+                <Route path="/signals" element={<ProtectedRoute><Suspense fallback={<SkeletonPage />}><Signals /></Suspense></ProtectedRoute>} />
+                <Route path="/brain-explorer" element={<ProtectedRoute><Suspense fallback={<SkeletonPage />}><BrainExplorer /></Suspense></ProtectedRoute>} />
+
+                <Route path="/admin" element={<AdminRoute><Suspense fallback={<SkeletonPage />}><Admin /></Suspense></AdminRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/category/:id" element={<ProtectedRoute><CategoryPage /></ProtectedRoute>} />
+              </Routes>
+            </Suspense>
+          </PageTransition>
+        </main>
+        <BottomNav />
+      </div>
+    </>
+  )
+}
+
+export default function App() {
+  return (
+    <SettingsProvider>
+      <AppProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <AppInner />
+          </AuthProvider>
+        </BrowserRouter>
+      </AppProvider>
+    </SettingsProvider>
   )
 }

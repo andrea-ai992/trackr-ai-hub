@@ -62,205 +62,6 @@ function Donut({ segments, size = 120 }) {
   )
 }
 
-/* ─── Performance Chart SVG ───────────────────────────────────────────────── */
-function PerformanceChart({ data }) {
-  const width = 340
-  const height = 120
-  const padding = { top: 12, right: 20, bottom: 20, left: 30 }
-  const innerWidth = width - padding.left - padding.right
-  const innerHeight = height - padding.top - padding.bottom
-
-  const maxValue = Math.max(...data, 0) * 1.1
-  const minValue = Math.min(...data.filter(v => v < 0), 0) * 1.1
-
-  const yScale = (value) => {
-    return innerHeight - ((value - minValue) / (maxValue - minValue)) * innerHeight
-  }
-
-  const xScale = (index) => {
-    return (index / (data.length - 1)) * innerWidth
-  }
-
-  const points = data.map((value, index) => ({
-    x: xScale(index),
-    y: yScale(value),
-    value
-  }))
-
-  const pathData = points.map((p, i) =>
-    `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`
-  ).join(' ')
-
-  const gradientId = 'perfGradient'
-
-  return (
-    <svg
-      width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      style={{ marginBottom: 24 }}
-    >
-      <defs>
-        <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#00ff88" stopOpacity="0.2" />
-          <stop offset="100%" stopColor="#00ff88" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-
-      {/* Y Axis */}
-      <g transform={`translate(${padding.left}, ${padding.top})`}>
-        {/* Grid lines */}
-        {Array.from({ length: 5 }).map((_, i) => {
-          const y = (i / 4) * innerHeight
-          const value = minValue + ((maxValue - minValue) * (4 - i) / 4)
-          return (
-            <g key={i} transform={`translate(0, ${y})`}>
-              <line
-                x1={0}
-                x2={innerWidth}
-                stroke="rgba(0,255,136,0.08)"
-                strokeWidth={1}
-              />
-              <text
-                x={-4}
-                y={4}
-                textAnchor="end"
-                fill="var(--text-secondary)"
-                fontSize={10}
-                fontFamily="JetBrains Mono"
-              >
-                {value >= 0 ? '+' : ''}{value.toFixed(0)}k
-              </text>
-            </g>
-          )
-        })}
-
-        {/* X Axis */}
-        {data.map((_, i) => {
-          const x = xScale(i)
-          return (
-            <g key={i} transform={`translate(${x}, ${innerHeight + 4})`}>
-              <text
-                x={0}
-                y={12}
-                textAnchor="middle"
-                fill="var(--text-secondary)"
-                fontSize={9}
-                fontFamily="JetBrains Mono"
-              >
-                {i % 5 === 0 ? `J${i/5+1}` : ''}
-              </text>
-            </g>
-          )
-        })}
-
-        {/* Chart */}
-        <path
-          d={pathData}
-          fill="none"
-          stroke="var(--neon)"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          style={{ strokeDasharray: '0 1000', animation: 'draw 1s ease-in-out forwards' }}
-        />
-
-        {/* Fill */}
-        <path
-          d={`${pathData} L ${innerWidth} ${innerHeight} L 0 ${innerHeight} Z`}
-          fill="url(#perfGradient)"
-          opacity={0.8}
-        />
-
-        {/* Points */}
-        {points.map((p, i) => (
-          <circle
-            key={i}
-            cx={p.x}
-            cy={p.y}
-            r={3}
-            fill="var(--neon)"
-            style={{ animation: `fadeIn 0.5s ease-in forwards`, animationDelay: `${i * 0.05}s` }}
-          />
-        ))}
-      </g>
-    </svg>
-  )
-}
-
-/* ─── Allocation Chart SVG ────────────────────────────────────────────────--- */
-function AllocationChart({ segments }) {
-  const size = 160
-  const center = size / 2
-  const radius = 60
-  const strokeWidth = 20
-
-  const total = segments.reduce((s, g) => s + g.value, 0)
-  if (total === 0) return null
-
-  let offset = 0
-  const circ = 2 * Math.PI * radius
-
-  return (
-    <div style={{ marginBottom: 24 }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ marginBottom: 16 }}>
-        <circle
-          cx={center}
-          cy={center}
-          r={radius}
-          fill="none"
-          stroke="rgba(255,255,255,0.05)"
-          strokeWidth={strokeWidth}
-        />
-        {segments.map((seg, i) => {
-          if (!seg.value) return null
-          const frac = seg.value / total
-          const dashArray = `${frac * circ} ${circ}`
-          const dashOffset = -offset * circ
-          offset += frac
-          return (
-            <circle
-              key={i}
-              cx={center}
-              cy={center}
-              r={radius}
-              fill="none"
-              stroke={seg.color}
-              strokeWidth={strokeWidth}
-              strokeDasharray={dashArray}
-              strokeDashoffset={dashOffset}
-              strokeLinecap="butt"
-              style={{ transform: 'rotate(-90deg)', transformOrigin: `${center}px ${center}px` }}
-            />
-          )
-        })}
-      </svg>
-
-      {/* Legend */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
-        {segments.map((seg, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{
-              width: 10,
-              height: 10,
-              borderRadius: 2,
-              background: seg.color
-            }} />
-            <span style={{
-              fontSize: 12,
-              fontFamily: 'JetBrains Mono',
-              color: 'var(--text-primary)',
-              fontWeight: 500
-            }}>
-              {seg.label} ({((seg.value / total) * 100).toFixed(1)}%)
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 /* ─── Category Card ───────────────────────────────────────────────────────── */
 function CatCard({ cat, items, to, sold, profit, invested, spark, unrealized }) {
   const hasPnl = profit !== 0 || unrealized !== 0
@@ -287,8 +88,8 @@ function CatCard({ cat, items, to, sold, profit, invested, spark, unrealized }) 
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 16, fontWeight: 800, color: 'white', marginBottom: 3 }}>{cat.name}</div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{items.length} article{items.length !== 1 ? 's' : ''}</span>
-              {sold.length > 0 && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>· {sold.length} vendu{sold.length !== 1 ? 's' : ''}</span>}
+              <span style={{ fontSize: 12, color: '#6b7280' }}>{items.length} article{items.length !== 1 ? 's' : ''}</span>
+              {sold.length > 0 && <span style={{ fontSize: 12, color: '#4b5563' }}>· {sold.length} vendu{sold.length !== 1 ? 's' : ''}</span>}
             </div>
           </div>
           {spark.length > 1 && (
@@ -296,14 +97,14 @@ function CatCard({ cat, items, to, sold, profit, invested, spark, unrealized }) 
               <SparkChart data={spark} color={totalPnl >= 0 ? cat.color : '#ef4444'} height={36} />
             </div>
           )}
-          <ChevronRight size={16} color="var(--text-muted)" />
+          <ChevronRight size={16} color="#374151" />
         </div>
 
         {/* Stats row */}
-        <div style={{ display: 'flex', borderTop: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
           {[
-            { label: 'Investi', value: invested > 0 ? fmtFull(invested) : '—', color: 'var(--text-secondary)' },
-            { label: 'P&L réalisé', value: sold.length ? (profit >= 0 ? '+' : '') + fmtFull(profit) : '—', color: profit > 0 ? '#10b981' : profit < 0 ? '#ef4444' : 'var(--text-secondary)' },
+            { label: 'Investi', value: invested > 0 ? fmtFull(invested) : '—', color: '#6b7280' },
+            { label: 'P&L réalisé', value: sold.length ? (profit >= 0 ? '+' : '') + fmtFull(profit) : '—', color: profit > 0 ? '#10b981' : profit < 0 ? '#ef4444' : '#6b7280' },
             unrealized
               ? { label: 'Potentiel', value: (unrealized >= 0 ? '+' : '') + fmtFull(unrealized), color: unrealized >= 0 ? '#6366f1' : '#ef4444' }
               : p ? { label: 'Rend.', value: `${p >= 0 ? '+' : ''}${p}%`, color: +p >= 0 ? '#10b981' : '#ef4444' }
@@ -311,10 +112,10 @@ function CatCard({ cat, items, to, sold, profit, invested, spark, unrealized }) 
           ].filter(Boolean).map((stat, i, arr) => (
             <div key={i} style={{
               flex: 1, padding: '10px 14px',
-              borderRight: i < arr.length - 1 ? '1px solid var(--border)' : 'none',
+              borderRight: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
             }}>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4, fontFamily: 'JetBrains Mono' }}>{stat.label}</div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: stat.color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'JetBrains Mono' }}>{stat.value}</div>
+              <div style={{ fontSize: 10, color: '#4b5563', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{stat.label}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: stat.color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{stat.value}</div>
             </div>
           ))}
         </div>
@@ -363,4 +164,161 @@ export default function Portfolio() {
   // Donut segments (by invested amount)
   const segments = allCats
     .filter(c => c.invested > 0)
-    .map(c => ({
+    .map(c => ({ label: c.cat.name, value: c.invested, color: c.cat.color }))
+
+  // Recent sales across all cats
+  const recentSales = allCats
+    .flatMap(c => c.sold.map(s => ({
+      ...s,
+      profit: (s.salePrice - s.buyPrice) * (s.quantity || 1),
+      catColor: c.cat.color,
+      catName: c.cat.name,
+    })))
+    .sort((a, b) => (b.saleDate || '').localeCompare(a.saleDate || ''))
+    .slice(0, 5)
+
+  return (
+    <div style={{ maxWidth: 560, margin: '0 auto', paddingBottom: 32 }}>
+      {/* ── Header ── */}
+      <div style={{
+        position: 'sticky', top: 0, zIndex: 40,
+        background: 'rgba(7,7,15,0.92)', backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        paddingTop: 'max(52px, env(safe-area-inset-top, 0px))',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px 12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Wallet size={20} color="#6366f1" />
+            <span style={{ fontSize: 22, fontWeight: 800, color: 'white' }}>Portfolio</span>
+          </div>
+          <Link to="/settings" style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '7px 12px', borderRadius: 12,
+            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+            color: '#6b7280', fontSize: 12, fontWeight: 600, textDecoration: 'none',
+          }}>
+            <Plus size={13} /> Catégorie
+          </Link>
+        </div>
+      </div>
+
+      <div style={{ padding: '16px 16px 0' }}>
+        {/* ── Global Summary ── */}
+        {globalInvested > 0 && (
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.08))',
+            border: '1px solid rgba(99,102,241,0.2)',
+            borderRadius: 24, padding: '20px', marginBottom: 16,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+              {/* Donut */}
+              {segments.length > 1 && <Donut segments={segments} size={110} />}
+
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, color: '#818cf8', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  Portfolio global
+                </div>
+                <div style={{ fontSize: 28, fontWeight: 900, color: 'white', marginBottom: 4 }}>
+                  {fmt(globalInvested)}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    fontSize: 16, fontWeight: 800,
+                    color: isUp ? '#10b981' : '#ef4444',
+                  }}>
+                    {isUp ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
+                    {isUp ? '+' : ''}{fmt(globalProfit)}
+                  </span>
+                  {globalPct && (
+                    <span style={{
+                      fontSize: 13, fontWeight: 700,
+                      padding: '3px 8px', borderRadius: 8,
+                      background: isUp ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
+                      color: isUp ? '#10b981' : '#ef4444',
+                    }}>
+                      {isUp ? '+' : ''}{globalPct}%
+                    </span>
+                  )}
+                </div>
+                {/* Legend */}
+                {segments.length > 1 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 12px', marginTop: 10 }}>
+                    {segments.map(seg => (
+                      <div key={seg.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: seg.color, flexShrink: 0 }} />
+                        <span style={{ fontSize: 11, color: '#9ca3af' }}>{seg.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Category Cards ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+          {allCats.map(c => (
+            <CatCard key={c.cat.id} {...c} />
+          ))}
+        </div>
+
+        {/* ── Recent Sales ── */}
+        {recentSales.length > 0 && (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <BarChart3 size={15} color="#6b7280" />
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Dernières ventes
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {recentSales.map((s, i) => (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '12px 14px',
+                  background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)',
+                  borderRadius: 16, position: 'relative', overflow: 'hidden',
+                }}>
+                  {/* Left accent */}
+                  <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: s.catColor, borderRadius: '16px 0 0 16px' }} />
+                  <div style={{ paddingLeft: 8, flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {s.name}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
+                      {s.catName} · {s.saleDate}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: s.profit >= 0 ? '#10b981' : '#ef4444' }}>
+                      {s.profit >= 0 ? '+' : ''}{fmt(s.profit)}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#4b5563' }}>{fmt(s.salePrice)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {globalInvested === 0 && (
+          <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+            <div style={{
+              width: 70, height: 70, borderRadius: 22, margin: '0 auto 16px',
+              background: 'rgba(99,102,241,0.1)', border: '1.5px dashed rgba(99,102,241,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Wallet size={28} color="#6366f1" />
+            </div>
+            <p style={{ fontSize: 16, fontWeight: 700, color: '#9ca3af', marginBottom: 8 }}>Portfolio vide</p>
+            <p style={{ fontSize: 13, color: '#4b5563' }}>Ajoute des sneakers, actions ou autres actifs pour voir ton résumé ici.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
