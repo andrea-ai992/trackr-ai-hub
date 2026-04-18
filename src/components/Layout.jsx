@@ -1,358 +1,187 @@
-src/styles/index.css
-```css
-:root {
-  --green: #00ff88;
-  --bg: #080808;
-  --bg2: #111;
-  --bg3: #1a1a1a;
-  --border: rgba(255, 255, 255, 0.07);
-  --border-hi: rgba(0, 255, 136, 0.2);
-  --t1: #f0f0f0;
-  --t2: #888;
-  --t3: #444;
-}
+Je vais mettre à jour le système d'authentification pour gérer l'expiration des sessions Supabase et implémenter le refresh token automatique. Voici le code pour `src/utils/auth.js` :
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+```javascript
+import { supabase } from '../config/supabaseClient';
 
-body {
-  font-family: 'Inter', sans-serif;
-  background-color: var(--bg);
-  color: var(--t1);
-  min-height: 100vh;
-}
+let refreshInterval = null;
 
-.layout {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-.main-content {
-  flex: 1;
-  padding: 1rem;
-  padding-bottom: 60px;
-  max-width: 100%;
-  width: 100%;
-  overflow-x: hidden;
-}
-
-@media (min-width: 768px) {
-  .main-content {
-    padding: 1.5rem;
-    padding-bottom: 70px;
+export const checkSession = async () => {
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error) {
+    console.error('Error checking session:', error);
+    return null;
   }
-}
+  return session;
+};
 
-/* Card component */
-.card {
-  background-color: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  padding: 1rem;
-  transition: all 0.2s ease;
-}
+export const refreshSession = async () => {
+  const { data: { session }, error } = await supabase.auth.refreshSession();
+  if (error) {
+    console.error('Error refreshing session:', error);
+    return null;
+  }
+  return session;
+};
 
-.card:hover {
-  border-color: var(--border-hi);
-  transform: translateY(-2px);
-}
-
-/* Button component */
-.btn {
-  padding: 0.5rem 1rem;
-  background-color: var(--bg3);
-  color: var(--t1);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn:hover {
-  background-color: var(--border);
-  color: var(--t1);
-}
-
-.btn.active {
-  background-color: var(--green);
-  color: #000;
-  border-color: var(--green);
-  font-weight: 600;
-}
-
-/* Layout header sticky */
-.layout-header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background-color: var(--bg2);
-  backdrop-filter: blur(10px);
-  padding: 0.75rem 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.layout-header h1 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin-bottom: 0.75rem;
-  padding: 0 1rem;
-}
-
-/* Categories navigation */
-.categories-nav {
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.categories-nav::-webkit-scrollbar {
-  display: none;
-}
-
-.categories-list {
-  display: flex;
-  gap: 0.5rem;
-  padding: 0 1rem;
-  list-style: none;
-}
-
-.category-item {
-  flex-shrink: 0;
-}
-
-.category-btn {
-  padding: 0.5rem 1rem;
-  background-color: var(--bg3);
-  color: var(--t2);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.category-btn:hover {
-  background-color: var(--border);
-  color: var(--t1);
-}
-
-.category-btn.active {
-  background-color: var(--green);
-  color: #000;
-  border-color: var(--green);
-  font-weight: 600;
-}
-
-/* News content */
-.news-content {
-  flex: 1;
-  padding-top: 1rem;
-}
-
-.loading-indicator,
-.no-articles {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--t2);
-  font-size: 1rem;
-}
-
-.articles-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-}
-
-.article-card {
-  background-color: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  padding: 1rem;
-  transition: transform 0.2s ease;
-}
-
-.article-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--border-hi);
-}
-
-.article-title {
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  color: var(--t1);
-}
-
-.article-description {
-  font-size: 0.875rem;
-  color: var(--t2);
-  margin-bottom: 0.75rem;
-  line-height: 1.4;
-}
-
-.article-meta {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.75rem;
-  color: var(--t3);
-}
-
-.source {
-  color: var(--green);
-}
-
-@media (min-width: 768px) {
-  .layout-header h1 {
-    font-size: 1.5rem;
-    margin-bottom: 1rem;
+export const setupSessionRefresh = (onSessionExpired) => {
+  if (refreshInterval) {
+    clearInterval(refreshInterval);
   }
 
-  .categories-list {
-    gap: 0.75rem;
-  }
+  refreshInterval = setInterval(async () => {
+    const session = await checkSession();
+    if (!session) {
+      clearInterval(refreshInterval);
+      onSessionExpired?.();
+      return;
+    }
 
-  .category-btn {
-    padding: 0.75rem 1.5rem;
-    font-size: 1rem;
-  }
+    const expiresAt = new Date(session.expires_at * 1000);
+    const now = new Date();
+    const timeUntilExpiry = expiresAt - now;
 
-  .articles-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
-  }
+    // Refresh 5 minutes avant l'expiration
+    if (timeUntilExpiry <= 5 * 60 * 1000) {
+      await refreshSession();
+    }
+  }, 30 * 1000); // Vérification toutes les 30 secondes
+};
 
-  .article-card {
-    padding: 1.25rem;
+export const clearSessionRefresh = () => {
+  if (refreshInterval) {
+    clearInterval(refreshInterval);
+    refreshInterval = null;
   }
+};
 
-  .article-title {
-    font-size: 1.125rem;
+export const logout = async () => {
+  clearSessionRefresh();
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    console.error('Error signing out:', error);
+    return false;
   }
-}
+  return true;
+};
 
-@media (min-width: 1024px) {
-  .articles-grid {
-    grid-template-columns: repeat(3, 1fr);
+export const getCurrentUser = async () => {
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error) {
+    console.error('Error getting user:', error);
+    return null;
   }
-}
+  return user;
+};
 ```
 
-src/components/Layout.jsx
+Maintenant, je vais mettre à jour le fichier `src/components/Layout.jsx` pour intégrer le système d'authentification et gérer les sessions :
+
 ```jsx
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { checkSession, setupSessionRefresh, clearSessionRefresh, logout } from '../utils/auth';
+import { LogOut } from 'lucide-react';
 
 export function Layout() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const verifySession = async () => {
+      const session = await checkSession();
+      setIsAuthenticated(!!session);
+
+      if (session) {
+        setupSessionRefresh(() => {
+          setIsAuthenticated(false);
+          navigate('/login', { replace: true });
+        });
+      }
+    };
+
+    verifySession();
+
+    return () => {
+      clearSessionRefresh();
+    };
+  }, [navigate]);
+
+  const handleLogout = async () => {
+    const success = await logout();
+    if (success) {
+      setIsAuthenticated(false);
+      navigate('/login', { replace: true });
+    }
+  };
+
   return (
     <div className="layout">
       <header className="layout-header">
-        <h1>Trackr</h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h1>Trackr</h1>
+          {isAuthenticated && (
+            <button
+              onClick={handleLogout}
+              className="btn active"
+              style={{ padding: '0.5rem 0.75rem', fontSize: '0.875rem' }}
+              aria-label="Déconnexion"
+            >
+              <LogOut size={16} style={{ marginRight: '0.25rem' }} />
+              Déconnexion
+            </button>
+          )}
+        </div>
       </header>
       <main className="main-content">
-        <Outlet />
+        <Outlet context={{ isAuthenticated, setIsAuthenticated }} />
       </main>
     </div>
   );
 }
 ```
 
-src/pages/News.jsx
-```jsx
-import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+Enfin, je vais créer un hook personnalisé `src/hooks/useAuth.js` pour simplifier l'utilisation de l'authentification dans les composants :
 
-const CATEGORIES = [
-  { id: 'general', label: 'Général' },
-  { id: 'business', label: 'Business' },
-  { id: 'technology', label: 'Technologie' },
-  { id: 'sports', label: 'Sports' },
-  { id: 'entertainment', label: 'Divertissement' },
-  { id: 'science', label: 'Science' },
-  { id: 'health', label: 'Santé' },
-];
+```javascript
+import { useEffect, useState } from 'react';
+import { checkSession, getCurrentUser } from '../utils/auth';
 
-export function News() {
-  const [activeCategory, setActiveCategory] = useState('general');
-  const [articles, setArticles] = useState([]);
+export const useAuth = () => {
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-  const location = useLocation();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    const fetchNews = async () => {
-      setLoading(true);
+    const verifyAuth = async () => {
       try {
-        const category = location.pathname.split('/').pop() || 'general';
-        setActiveCategory(category);
+        const session = await checkSession();
+        setIsAuthenticated(!!session);
 
-        const response = await fetch(
-          `https://newsapi.org/v2/top-headlines?country=us&category=${category}&apiKey=${import.meta.env.VITE_NEWS_API_KEY}`
-        );
-        const data = await response.json();
-        setArticles(data.articles || []);
+        if (session) {
+          const currentUser = await getCurrentUser();
+          setUser(currentUser);
+        } else {
+          setUser(null);
+        }
       } catch (error) {
-        console.error('Error fetching news:', error);
-        setArticles([]);
+        console.error('Auth verification error:', error);
+        setUser(null);
+        setIsAuthenticated(false);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchNews();
-  }, [location.pathname]);
+    verifyAuth();
+  }, []);
 
-  const handleCategoryChange = (category) => {
-    navigate(`/news/${category}`);
-  };
+  return { user, isAuthenticated, loading };
+};
+```
 
-  return (
-    <div className="news-page">
-      <header className="layout-header">
-        <h1 className="page-title">Actualités</h1>
-        <nav className="categories-nav">
-          <ul className="categories-list">
-            {CATEGORIES.map((category) => (
-              <li key={category.id} className="category-item">
-                <button
-                  className={`category-btn ${activeCategory === category.id ? 'active' : ''}`}
-                  onClick={() => handleCategoryChange(category.id)}
-                >
-                  {category.label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </header>
-
-      <div className="news-content">
-        {loading ? (
-          <div className="loading-indicator">Chargement...</div>
-        ) : articles.length === 0 ? (
-          <div className="no-articles">Aucun article trouvé</div>
-        ) : (
-          <div className="articles-grid">
-            {articles.map((article, index) => (
-              <article key={index} className="article-card">
-                <h3 className="article-title">{article.title}</h3>
-                <p className="article-description">{article.description}</p>
-                <div className="article-meta">
-                  <span className="source">{article.source?.name}</span>
-                  <span className="published-at">
-                    {new Date(article.publishedAt).toLocaleDateString('fr-FR')}
-                  </span>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+Ces modifications permettent de :
+1. Gérer l'expiration des sessions Supabase (1h par défaut)
+2. Rafraîchir automatiquement le token 5 minutes avant l'expiration
+3. Déconnecter automatiquement l'utilisateur lorsque la session expire
+4. Nettoyer correctement les intervalles lors du logout
+5. Fournir un hook personnalisé pour une utilisation simplifiée de l'authentification dans les composants
