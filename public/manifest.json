@@ -1,12 +1,14 @@
+**public/manifest.json**
+```json
 {
   "name": "Trackr",
   "short_name": "Trackr",
-  "description": "Suivi portefeuille — actions, crypto, sneakers",
+  "description": "Dashboard intelligent personnel",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f0f13",
-  "theme_color": "#6366f1",
-  "orientation": "portrait-primary",
+  "background_color": "#080808",
+  "theme_color": "#00ff88",
+  "orientation": "portrait",
   "categories": ["finance", "productivity"],
   "icons": [
     {
@@ -32,5 +34,167 @@
       "sizes": "180x180",
       "type": "image/png"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Markets",
+      "url": "/markets",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png",
+          "purpose": "any"
+        }
+      ]
+    },
+    {
+      "name": "Sports",
+      "url": "/sports"
+    },
+    {
+      "name": "AnDy",
+      "url": "/andy"
+    },
+    {
+      "name": "News",
+      "url": "/news"
+    }
   ]
 }
+```
+
+**public/sw.js**
+```javascript
+import { CacheFirst, NetworkFirst, StaleWhileRevalidate } from 'workbox-strategies';
+import { precacheAndRoute } from 'workbox-precaching';
+import { registerRoute } from 'workbox-routing';
+import { CacheableResponsePlugin } from 'workbox-cacheable-response';
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open('trackr-v3').then((cache) => {
+      return cache.addAll([
+        '/index.html',
+        '/manifest.json',
+        '/icon-192.png',
+        '/icon-512.png',
+        '/apple-touch-icon.png',
+        '/styles.css',
+        '/script.js',
+        '/fonts.css'
+      ]);
+    })
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  if (event.request.method === 'GET' && event.request.url.startsWith(self.location.origin)) {
+    event.respondWith(
+      caches.match(event.request).then((response) => {
+        return response || fetch(event.request).then((response) => {
+          return response;
+        });
+      })
+    );
+  }
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.filter((cacheName) => cacheName !== 'trackr-v3').map((cacheName) => {
+          return caches.delete(cacheName);
+        })
+      );
+    })
+  );
+});
+
+precacheAndRoute(self.__WB_MANIFEST);
+
+registerRoute(
+  ({ url }) => url.startsWith(self.location.origin + '/api/'),
+  new NetworkFirst({
+    cacheName: 'api-cache',
+    plugins: [
+      new CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+    ],
+  })
+);
+
+registerRoute(
+  ({ url }) => url.startsWith(self.location.origin + '/'),
+  new StaleWhileRevalidate({
+    cacheName: 'pages-cache',
+    plugins: [
+      new CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+    ],
+  })
+);
+```
+
+**public/index.html**
+```html
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trackr</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#00ff88">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="apple-mobile-web-app-capable" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <script type="module" src="/script.js"></script>
+</body>
+</html>
+```
+
+**styles.css**
+```css
+:root {
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --border: rgba(255, 255, 255, 0.07);
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg);
+  color: var(--t1);
+}
+
+a {
+  color: var(--green);
+}
+
+a:hover {
+  color: var(--t2);
+}
+```
+
+**script.js**
+```javascript
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter as Router } from 'react-router-dom';
+import App from './App';
+
+const root = createRoot(document.getElementById('root'));
+root.render(
+  <Router>
+    <App />
+  </Router>
+);
