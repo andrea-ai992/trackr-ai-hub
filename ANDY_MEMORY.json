@@ -1,14 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776536695235",
-      "timestamp": "2026-04-18T18:24:55.235Z",
-      "type": "error",
-      "focus": "bugs",
-      "error": "Anthropic API → 400",
-      "applied": false
-    },
-    {
       "id": "mem_1776536894064",
       "timestamp": "2026-04-18T18:28:14.064Z",
       "type": "pattern_scan",
@@ -2642,6 +2634,23 @@
       "errors": 0,
       "appHealthy": true,
       "duration": 2
+    },
+    {
+      "id": "mem_1776541696652",
+      "timestamp": "2026-04-18T19:48:16.652Z",
+      "type": "pattern_scan",
+      "focus": "bugs",
+      "findings": [
+        {
+          "id": "sse_json_parse",
+          "file": "api/discord.js",
+          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
+          "severity": "critical"
+        }
+      ],
+      "count": 1,
+      "applied": false,
+      "note": "Patterns detected before Claude analysis — guiding fix priority"
     }
   ]
 }
