@@ -1,141 +1,6 @@
-// src/components/SignalCard.jsx
-import { TrendingUp, Info, Zap, Target, BarChart3 } from 'lucide-react'
-
-export function SignalCard({ signal }) {
-  if (!signal) return null
-
-  const {
-    id,
-    name,
-    type,
-    desc,
-    points,
-    support,
-    resistance,
-    neckline,
-    pole,
-    breakout,
-    color = '#3b82f6'
-  } = signal
-
-  const getTypeIcon = (type) => {
-    const typeLower = type.toLowerCase()
-    if (typeLower.includes('bullish')) return <TrendingUp className="w-4 h-4" style={{ color: '#00ff88' }} />
-    if (typeLower.includes('bearish')) return <TrendingUp className="w-4 h-4" style={{ color: '#ff4444' }} />
-    if (typeLower.includes('continuation')) return <Zap className="w-4 h-4" style={{ color: '#ffcc00' }} />
-    if (typeLower.includes('reversal')) return <Target className="w-4 h-4" style={{ color: '#8b5cf6' }} />
-    return <BarChart3 className="w-4 h-4" style={{ color: '#3b82f6' }} />
-  }
-
-  return (
-    <div
-      className="w-full p-4 rounded-lg border border-[--border-hi] bg-[--bg2] hover:bg-[--bg3] transition-all duration-300 group"
-      style={{ borderColor: 'rgba(255,255,255,0.12)' }}
-    >
-      <div className="flex items-start justify-between w-full">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
-            <div
-              className="w-6 h-6 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: color + '20' }}
-            >
-              {getTypeIcon(type)}
-            </div>
-            <h3 className="text-[--t1] font-semibold text-sm" style={{ color: '#f0f0f0' }}>
-              {name}
-            </h3>
-            <span
-              className="px-2 py-0.5 rounded-full text-xs font-medium"
-              style={{
-                backgroundColor: color + '30',
-                color: color
-              }}
-            >
-              {type}
-            </span>
-          </div>
-
-          <p className="text-[--t2] text-xs mb-3 leading-relaxed" style={{ color: '#888' }}>
-            {desc}
-          </p>
-
-          <div className="flex gap-4 text-xs">
-            {support && (
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#00ff88' }} />
-                <span style={{ color: '#888' }}>Support</span>
-              </div>
-            )}
-            {resistance && (
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#ff4444' }} />
-                <span style={{ color: '#888' }}>Résistance</span>
-              </div>
-            )}
-            {neckline && (
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#8b5cf6' }} />
-                <span style={{ color: '#888' }}>Ligne de cou</span>
-              </div>
-            )}
-            {pole && (
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#ffcc00' }} />
-                <span style={{ color: '#888' }}>Mât</span>
-              </div>
-            )}
-            {breakout && (
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#06b6d4' }} />
-                <span style={{ color: '#888' }}>Cassure</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="w-24 h-16 ml-4 flex-shrink-0">
-          <svg viewBox="0 0 100 60" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
-            <defs>
-              <filter id={`glow-${id}`} x="-30%" y="-30%" width="160%" height="160%">
-                <feGaussianBlur stdDeviation="1" result="blur" />
-                <feComposite in="SourceGraphic" in2="blur" operator="over" />
-              </filter>
-            </defs>
-
-            {/* Grid Lines */}
-            <line x1="0" y1="15" x2="100" y2="15" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
-            <line x1="0" y1="30" x2="100" y2="30" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
-            <line x1="0" y1="45" x2="100" y2="45" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
-
-            {/* Pattern Lines */}
-            {pole && <line x1={pole[0][0]} y1={pole[0][1]} x2={pole[1][0]} y2={pole[1][1]} stroke={color} strokeWidth="1" strokeDasharray="2 1" />}
-            {resistance && <line x1={resistance[0][0]} y1={resistance[0][1]} x2={resistance[1][0]} y2={resistance[1][1]} stroke={color} strokeWidth="1" />}
-            {support && <line x1={support[0][0]} y1={support[0][1]} x2={support[1][0]} y2={support[1][1]} stroke={color} strokeWidth="1" />}
-            {neckline && <line x1={neckline[0][0]} y1={neckline[0][1]} x2={neckline[1][0]} y2={neckline[1][1]} stroke={color} strokeWidth="1" strokeDasharray="1 1" />}
-
-            {/* Price Action */}
-            <polyline
-              points={points.map(p => `${p[0]},${p[1]}`).join(' ')}
-              fill="none"
-              stroke={color}
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
-      </div>
-    </div>
-  )
-}
-```
-
-```jsx
-// src/pages/Patterns.jsx
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, TrendingUp, Info, Zap, ChevronRight, BarChart3, LineChart, Target, HelpCircle } from 'lucide-react'
-import { SignalCard } from '../components/SignalCard'
 
 // ─── Pattern Data ─────────────────────────────────────────────────────────────
 const PATTERNS = [
@@ -148,7 +13,7 @@ const PATTERNS = [
     support: [[10, 80], [130, 80]],
     resistance: [[30, 20], [110, 20]],
     breakout: [130, 110],
-    color: '#ff4444'
+    color: '#ef4444'
   },
   {
     id: 'triple-bottom',
@@ -159,7 +24,7 @@ const PATTERNS = [
     support: [[30, 80], [110, 80]],
     resistance: [[10, 20], [130, 20]],
     breakout: [130, -10],
-    color: '#00ff88'
+    color: '#10b981'
   },
   {
     id: 'downward-flag',
@@ -170,7 +35,7 @@ const PATTERNS = [
     pole: [[10, 100], [40, 20]],
     resistance: [[40, 20], [100, 20]],
     support: [[60, 40], [120, 40]],
-    color: '#00ff88'
+    color: '#10b981'
   },
   {
     id: 'upward-flag',
@@ -181,7 +46,7 @@ const PATTERNS = [
     pole: [[10, 20], [40, 100]],
     resistance: [[60, 80], [120, 80]],
     support: [[40, 100], [100, 100]],
-    color: '#ff4444'
+    color: '#ef4444'
   },
   {
     id: 'double-top',
@@ -191,7 +56,7 @@ const PATTERNS = [
     points: [[10, 90], [40, 20], [70, 90], [100, 20], [130, 120]],
     neckline: [[10, 90], [130, 90]],
     resistance: [[40, 20], [100, 20]],
-    color: '#ff4444'
+    color: '#ef4444'
   },
   {
     id: 'double-bottom',
@@ -201,7 +66,7 @@ const PATTERNS = [
     points: [[10, 20], [40, 90], [70, 20], [100, 90], [130, -10]],
     neckline: [[10, 20], [130, 20]],
     support: [[40, 90], [100, 90]],
-    color: '#00ff88'
+    color: '#10b981'
   },
   {
     id: 'falling-wedge',
@@ -211,7 +76,7 @@ const PATTERNS = [
     points: [[10, 10], [130, 90], [40, 30], [110, 80], [60, 45], [100, 65], [140, 20]],
     resistance: [[10, 10], [140, 70]],
     support: [[130, 90], [140, 85]],
-    color: '#00ff88'
+    color: '#10b981'
   },
   {
     id: 'rising-wedge',
@@ -221,7 +86,7 @@ const PATTERNS = [
     points: [[10, 110], [130, 30], [40, 90], [110, 40], [60, 75], [100, 55], [140, 100]],
     resistance: [[10, 110], [140, 50]],
     support: [[130, 30], [140, 35]],
-    color: '#ff4444'
+    color: '#ef4444'
   },
   {
     id: 'head-shoulders',
@@ -230,7 +95,7 @@ const PATTERNS = [
     desc: 'Épaule-Tête-Épaule. Le signal de retournement baissier le plus célèbre.',
     points: [[10, 70], [30, 40], [50, 70], [75, 10], [100, 70], [120, 40], [140, 110]],
     neckline: [[10, 70], [140, 70]],
-    color: '#ff4444'
+    color: '#ef4444'
   },
   {
     id: 'inv-head-shoulders',
@@ -239,7 +104,7 @@ const PATTERNS = [
     desc: 'Épaule-Tête-Épaule inversée. Signal puissant de retournement à la hausse.',
     points: [[10, 40], [30, 70], [50, 40], [75, 100], [100, 40], [120, 70], [140, 0]],
     neckline: [[10, 40], [140, 40]],
-    color: '#00ff88'
+    color: '#10b981'
   },
   {
     id: 'cup-handle',
@@ -248,7 +113,7 @@ const PATTERNS = [
     desc: 'Une forme de "tasse" suivie d\'une petite "anse". Signal de cassure haussière.',
     points: [[10, 10], [20, 40], [40, 70], [70, 80], [100, 70], [120, 40], [130, 15], [140, 30], [150, 20], [170, -20]],
     resistance: [[130, 15], [150, 15]],
-    color: '#00ff88'
+    color: '#10b981'
   },
   {
     id: 'sym-triangle',
@@ -268,11 +133,255 @@ const PATTERNS = [
     points: [[10, 110], [130, 20], [40, 80], [130, 20], [80, 50], [130, 20], [160, -20]],
     resistance: [[10, 20], [160, 20]],
     support: [[10, 110], [130, 20]],
-    color: '#00ff88'
+    color: '#10b981'
   },
   {
     id: 'desc-triangle',
     name: 'Descending Triangle',
     type: 'Continuation (Bearish)',
-    desc: 'Une ligne de support plate et une résistance descendante. Souvent résolu par le bas.',
-    points: [[10, 20
+    desc: 'Un support plat et une résistance descendante. Annonce généralement une chute.',
+    points: [[10, 10], [130, 100], [40, 40], [130, 100], [80, 70], [130, 100], [160, 140]],
+    support: [[10, 100], [160, 100]],
+    resistance: [[10, 10], [130, 100]],
+    color: '#ef4444'
+  },
+  {
+    id: 'bull-pennant',
+    name: 'Bullish Pennant',
+    type: 'Continuation (Bullish)',
+    desc: 'Petit triangle qui se forme après un mât vertical. Indique un saut imminent.',
+    pole: [[10, 120], [30, 30]],
+    points: [[30, 30], [60, 80], [80, 40], [100, 70], [120, 55], [150, 0]],
+    resistance: [[30, 30], [120, 55]],
+    support: [[60, 80], [120, 55]],
+    color: '#10b981'
+  },
+  {
+    id: 'bear-pennant',
+    name: 'Bearish Pennant',
+    type: 'Continuation (Bearish)',
+    desc: 'Forme symétrique se créant après une chute libre. Prélude à plus de baisse.',
+    pole: [[10, 10], [30, 100]],
+    points: [[30, 100], [60, 50], [80, 90], [100, 60], [120, 75], [150, 130]],
+    resistance: [[60, 50], [120, 75]],
+    support: [[30, 100], [120, 75]],
+    color: '#ef4444'
+  }
+]
+
+// ─── Pattern SVG Component ────────────────────────────────────────────────────
+function PatternSVG({ pattern, isHovered }) {
+  const { points, support, resistance, neckline, pole, color } = pattern
+  
+  const toPoints = (pts) => pts.map(p => `${p[0]},${p[1]}`).join(' ')
+  
+  return (
+    <svg viewBox="0 0 160 120" style={{ width: '100%', height: 'auto', overflow: 'visible' }}>
+      <defs>
+        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="2" result="blur" />
+          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+        <linearGradient id={`grad-${pattern.id}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.2" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.8" />
+        </linearGradient>
+      </defs>
+
+      {/* Grid Lines (Subtle) */}
+      <line x1="0" y1="20" x2="160" y2="20" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
+      <line x1="0" y1="60" x2="160" y2="60" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
+      <line x1="0" y1="100" x2="160" y2="100" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
+
+      {/* Pattern Lines (Support/Resistance/Neckline) */}
+      {pole && <line x1={pole[0][0]} y1={pole[0][1]} x2={pole[1][0]} y2={pole[1][1]} stroke="rgba(255,255,255,0.2)" strokeWidth="2" strokeDasharray="4 2" />}
+      {resistance && <line x1={resistance[0][0]} y1={resistance[0][1]} x2={resistance[1][0]} y2={resistance[1][1]} stroke={isHovered ? color : "rgba(255,255,255,0.15)"} strokeWidth="1.5" style={{ transition: 'all 300ms' }} />}
+      {support && <line x1={support[0][0]} y1={support[0][1]} x2={support[1][0]} y2={support[1][1]} stroke={isHovered ? color : "rgba(255,255,255,0.15)"} strokeWidth="1.5" style={{ transition: 'all 300ms' }} />}
+      {neckline && <line x1={neckline[0][0]} y1={neckline[0][1]} x2={neckline[1][0]} y2={neckline[1][1]} stroke={isHovered ? color : "rgba(255,255,255,0.15)"} strokeWidth="1.5" strokeDasharray="3 3" style={{ transition: 'all 300ms' }} />}
+
+      {/* Price Action Line */}
+      <polyline
+        points={toPoints(points)}
+        fill="none"
+        stroke={isHovered ? color : "white"}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{
+          transition: 'all 400ms',
+          strokeDasharray: '300',
+          strokeDashoffset: isHovered ? '0' : '300',
+          animation: isHovered ? 'dash 1.5s ease-out forwards' : 'none',
+          filter: isHovered ? 'url(#glow)' : 'none'
+        }}
+      />
+
+      {/* Breakout Pulse */}
+      {isHovered && points.length > 0 && (
+        <circle
+          cx={points[points.length - 1][0]}
+          cy={points[points.length - 1][1]}
+          r="4"
+          fill={color}
+        >
+          <animate attributeName="r" values="4;8;4" dur="1s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="1;0;1" dur="1s" repeatCount="indefinite" />
+        </circle>
+      )}
+
+      <style>{`
+        @keyframes dash {
+          to { stroke-dashoffset: 0; }
+        }
+      `}</style>
+    </svg>
+  )
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+export default function Patterns() {
+  const navigate = useNavigate()
+  const [hoveredId, setHoveredId] = useState(null)
+  const [selectedType, setSelectedType] = useState('All')
+
+  const types = ['All', 'Reversal', 'Continuation', 'Bilateral']
+  
+  const filteredPatterns = selectedType === 'All' 
+    ? PATTERNS 
+    : PATTERNS.filter(p => p.type.includes(selectedType))
+
+  return (
+    <div style={{ 
+      maxWidth: 600, 
+      margin: '0 auto', 
+      paddingBottom: 40,
+      minHeight: '100dvh',
+      background: '#0b1323',
+      color: '#dbe2f8'
+    }}>
+      {/* Header */}
+      <div style={{ 
+        position: 'sticky', 
+        top: 0, 
+        zIndex: 100, 
+        background: 'rgba(11,19,35,0.85)', 
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        padding: 'max(52px, env(safe-area-inset-top, 0px)) 16px 16px',
+        borderBottom: '1px solid rgba(255,255,255,0.06)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button 
+            onClick={() => navigate(-1)}
+            className="press-scale"
+            style={{ 
+              width: 40, height: 40, borderRadius: 12, 
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', cursor: 'pointer'
+            }}
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <div style={{ flex: 1 }}>
+            <h1 style={{ fontSize: 24, fontWeight: 900, color: 'white', letterSpacing: '-0.02em' }}>Patterns Academy</h1>
+            <p style={{ fontSize: 13, color: '#64748b' }}>Apprenez les signaux du marché</p>
+          </div>
+          <div style={{ 
+            width: 42, height: 42, borderRadius: 14, 
+            background: 'linear-gradient(135deg, #00daf3, #00a3ff)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', 
+            boxShadow: '0 0 20px rgba(0,218,243,0.3)' 
+          }}>
+            <LineChart size={22} color="white" />
+          </div>
+        </div>
+
+        {/* Filter Tabs */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+          {types.map(t => (
+            <button
+              key={t}
+              onClick={() => setSelectedType(t)}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 12,
+                fontSize: 13,
+                fontWeight: 700,
+                border: 'none',
+                cursor: 'pointer',
+                background: selectedType === t ? 'rgba(0,218,243,0.15)' : 'rgba(255,255,255,0.05)',
+                color: selectedType === t ? '#00daf3' : '#64748b',
+                transition: 'all 200ms'
+              }}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Grid */}
+      <div style={{ padding: '24px 16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        {filteredPatterns.map(pattern => (
+          <div 
+            key={pattern.id}
+            onMouseEnter={() => setHoveredId(pattern.id)}
+            onMouseLeave={() => setHoveredId(null)}
+            onTouchStart={() => setHoveredId(pattern.id)}
+            style={{
+              padding: '16px',
+              borderRadius: 24,
+              background: 'rgba(255,255,255,0.02)',
+              border: `1px solid ${hoveredId === pattern.id ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)'}`,
+              transition: 'all 300ms cubic-bezier(0.22, 1, 0.36, 1)',
+              transform: hoveredId === pattern.id ? 'translateY(-4px)' : 'none',
+              boxShadow: hoveredId === pattern.id ? '0 12px 30px rgba(0,0,0,0.3)' : 'none'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+              <p style={{ 
+                fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em',
+                color: pattern.type.includes('Bullish') ? '#10b981' : pattern.type.includes('Bearish') ? '#ef4444' : '#3b82f6'
+              }}>
+                {pattern.type}
+              </p>
+              {hoveredId === pattern.id && <Zap size={10} color={pattern.color} fill={pattern.color} />}
+            </div>
+            
+            <div style={{ position: 'relative', marginBottom: 14, padding: '10px 0' }}>
+               <PatternSVG pattern={pattern} isHovered={hoveredId === pattern.id} />
+            </div>
+
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: 'white', marginBottom: 4 }}>{pattern.name}</h3>
+            <p style={{ fontSize: 12, color: '#4b5563', lineHeight: 1.4, minHeight: 48 }}>{pattern.desc}</p>
+            
+            <button style={{ 
+              marginTop: 12, width: '100%', padding: '10px', borderRadius: 12,
+              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+              color: 'white', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+            }}>
+              Détails <ChevronRight size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Info Card */}
+      <div style={{ margin: '0 16px', padding: 20, borderRadius: 24, background: 'rgba(0,218,243,0.05)', border: '1px solid rgba(0,218,243,0.15)', display: 'flex', gap: 14 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 14, background: 'rgba(0,218,243,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Info size={20} color="#00daf3" />
+        </div>
+        <div>
+          <h4 style={{ fontSize: 15, fontWeight: 800, color: '#00daf3', marginBottom: 4 }}>Conseil de pro</h4>
+          <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>
+            Les patterns sont plus fiables lorsqu'ils sont confirmés par le <strong>volume</strong> et surviennent sur des unités de temps élevées (D1, H4).
+          </p>
+        </div>
+      </div>
+
+      <style>{`
+        .press-scale:active { transform: scale(0.95); }
+      `}</style>
+    </div>
+  )
+}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
-import Lucide from 'lucide-react';
+import { supabase } from '../lib/supabaseClient';
+import * as Lucide from 'lucide-react';
 
 const BrainStatus = () => {
   const params = useParams();

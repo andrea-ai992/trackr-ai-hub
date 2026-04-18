@@ -1,189 +1,201 @@
-Je vais créer le hook personnalisé `useBottomNav.js` pour centraliser la logique d'animation et de suivi de l'onglet actif, puis mettre à jour le composant `BottomNav.jsx` pour utiliser ce hook.
-
-D'abord, le fichier du hook:
-
-```javascript
-import { useEffect, useState, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import DOMPurify from 'dompurify'
+import { useEffect, useState, useRef } from 'react'
+import { Home, Trophy, TrendingUp, Newspaper, Grid2X2 } from 'lucide-react'
 
-export const TABS = [
-  { id: '/', label: 'Dashboard', icon: 'Home' },
-  { id: '/sports', label: 'Sports', icon: 'Trophy' },
-  { id: '/markets/crypto', label: 'Crypto', icon: 'Bitcoin' },
-  { id: '/news', label: 'News', icon: 'Newspaper' },
-  { id: '/more', label: 'More', icon: 'Menu' },
+const TABS = [
+  { to: '/',        icon: Home,        label: 'Hub',     matches: ['^/$'] },
+  { to: '/sports',  icon: Trophy,      label: 'Sports',  matches: ['^/sports'] },
+  { to: '/markets', icon: TrendingUp,  label: 'Markets', matches: ['^/markets', '^/stocks'] },
+  { to: '/news',    icon: Newspaper,   label: 'Pulse',   matches: ['^/news'] },
+  { to: '/more',    icon: Grid2X2,     label: 'More',    matches: ['^/more', '^/translator', '^/settings', '^/sneakers', '^/portfolio', '^/category', '^/flights'] },
 ]
 
-export const useBottomNav = () => {
-  const location = useLocation()
-  const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState('/')
-  const [pillPosition, setPillPosition] = useState({ left: 0, width: 0 })
-  const navRefs = useRef({})
+export { TABS }
+
+export default function BottomNav() {
+  const location  = useLocation()
+  const navigate  = useNavigate()
+  const [newsBadge, setNewsBadge] = useState(0)
+  const [pillStyle, setPillStyle] = useState({})
+  const tabRefs   = useRef([])
+  const navRef    = useRef(null)
+
+  if (location.pathname.startsWith('/widget')) return null
+
+  // News badge events
+  useEffect(() => {
+    const handler = e => {
+      if (e.detail?.increment) setNewsBadge(prev => prev + (e.detail.count ?? 1))
+      else setNewsBadge(e.detail?.count ?? 0)
+    }
+    window.addEventListener('trackr:newsbadge', handler)
+    return () => window.removeEventListener('trackr:newsbadge', handler)
+  }, [])
 
   useEffect(() => {
-    const currentPath = location.pathname
-    const matchedTab = TABS.find(tab => currentPath.startsWith(tab.id)) || TABS[0]
-    setActiveTab(matchedTab.id)
-
-    const updatePillPosition = () => {
-      if (navRefs.current[matchedTab.id]) {
-        const tabElement = navRefs.current[matchedTab.id]
-        setPillPosition({
-          left: tabElement.offsetLeft,
-          width: tabElement.offsetWidth
-        })
-      }
-    }
-
-    updatePillPosition()
-    window.addEventListener('resize', updatePillPosition)
-    return () => window.removeEventListener('resize', updatePillPosition)
+    if (location.pathname.startsWith('/news')) setNewsBadge(0)
   }, [location.pathname])
 
-  const handleTabClick = (path) => {
-    navigate(path)
+  // Animate the sliding pill to the active tab
+  useEffect(() => {
+    const activeIdx = TABS.findIndex(tab =>
+      tab.matches.some(pattern => new RegExp(pattern).test(location.pathname))
+    )
+    if (activeIdx === -1) return
+    const el = tabRefs.current[activeIdx]
+    const nav = navRef.current
+    if (!el || !nav) return
+
+    const navRect = nav.getBoundingClientRect()
+    const elRect  = el.getBoundingClientRect()
+    setPillStyle({
+      left:  elRect.left - navRect.left,
+      width: elRect.width,
+    })
+  }, [location.pathname])
+
+  function isActive(tab) {
+    return tab.matches.some(pattern => new RegExp(pattern).test(location.pathname))
   }
 
-  return {
-    activeTab,
-    pillPosition,
-    navRefs,
-    handleTabClick,
-    TABS
-  }
-}
-```
-
-Maintenant, le fichier BottomNav.jsx mis à jour:
-
-```jsx
-import { useEffect, useRef } from 'react'
-import { Home, Trophy, TrendingUp, Newspaper, Menu, Bitcoin } from 'lucide-react'
-import DOMPurify from 'dompurify'
-import { useBottomNav } from '../hooks/useBottomNav'
-
-const BottomNav = () => {
-  const { activeTab, pillPosition, navRefs, handleTabClick, TABS } = useBottomNav()
-  const iconMap = {
-    Home: Home,
-    Trophy: Trophy,
-    Bitcoin: Bitcoin,
-    Newspaper: Newspaper,
-    Menu: Menu
+  function handleTab(tab) {
+    navigator.vibrate?.(8)
+    navigate(tab.to)
   }
 
   return (
-    <nav className="bottom-nav">
-      <div className="nav-container">
-        {TABS.map((tab) => {
-          const Icon = iconMap[tab.icon]
-          const sanitizedLabel = DOMPurify.sanitize(tab.label)
+    <div style={{
+      position: 'fixed',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      zIndex: 1000,
+      display: 'flex',
+      justifyContent: 'center',
+      paddingBottom: 'max(20px, env(safe-area-inset-bottom, 0px))',
+      paddingLeft: 20,
+      paddingRight: 20,
+      pointerEvents: 'none',
+    }}>
+      <nav
+        ref={navRef}
+        style={{
+          pointerEvents: 'auto',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          width: '100%',
+          maxWidth: 380,
+          background: 'rgba(8,8,8,0.92)',
+          backdropFilter: 'blur(28px)',
+          WebkitBackdropFilter: 'blur(28px)',
+          border: '1px solid rgba(0,255,136,0.10)',
+          borderRadius: 999,
+          padding: '5px 6px',
+          boxShadow: '0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,255,136,0.04) inset',
+          position: 'relative',
+        }}
+      >
+        {/* Animated sliding pill background */}
+        {pillStyle.width > 0 && (
+          <div
+            aria-hidden
+            style={{
+              position: 'absolute',
+              top: 5,
+              bottom: 5,
+              left: pillStyle.left,
+              width: pillStyle.width,
+              background: 'rgba(0,255,136,0.08)',
+              border: '1px solid rgba(0,255,136,0.22)',
+              borderRadius: 999,
+              boxShadow: '0 0 16px rgba(0,255,136,0.12)',
+              transition: 'left 320ms cubic-bezier(0.32,0.72,0,1), width 320ms cubic-bezier(0.32,0.72,0,1)',
+              pointerEvents: 'none',
+            }}
+          />
+        )}
+
+        {TABS.map((tab, i) => {
+          const active = isActive(tab)
+          const Icon   = tab.icon
+          const badge  = tab.to === '/news' ? newsBadge : 0
 
           return (
             <button
-              key={tab.id}
-              ref={el => navRefs.current[tab.id] = el}
-              className={`nav-item ${activeTab === tab.id ? 'active' : ''}`}
-              onClick={() => handleTabClick(tab.id)}
-              aria-label={sanitizedLabel}
+              key={tab.to}
+              ref={el => { tabRefs.current[i] = el }}
+              onClick={() => handleTab(tab)}
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 3,
+                minHeight: 54,
+                padding: '8px 4px',
+                position: 'relative',
+                background: 'transparent',
+                border: 'none',
+                borderRadius: 999,
+                cursor: 'pointer',
+                WebkitTapHighlightColor: 'transparent',
+                zIndex: 1,
+              }}
             >
-              <Icon size={24} strokeWidth={activeTab === tab.id ? 2.5 : 2} />
-              <span className="nav-label" dangerouslySetInnerHTML={{ __html: sanitizedLabel }} />
+              {/* Icon + badge */}
+              <div style={{ position: 'relative', display: 'inline-flex' }}>
+                <Icon
+                  size={22}
+                  strokeWidth={active ? 2.2 : 1.6}
+                  style={{
+                    color: active ? '#00ff88' : '#333333',
+                    transition: 'color 250ms cubic-bezier(0.32,0.72,0,1), filter 250ms ease',
+                    filter: active ? 'drop-shadow(0 0 5px rgba(0,255,136,0.7))' : 'none',
+                    transform: active ? 'scale(1.08)' : 'scale(1)',
+                    transitionProperty: 'color, filter, transform',
+                    transitionDuration: '250ms',
+                    transitionTimingFunction: 'cubic-bezier(0.32,0.72,0,1)',
+                  }}
+                />
+                {badge > 0 && (
+                  <span style={{
+                    position: 'absolute', top: -4, right: -6,
+                    minWidth: 15, height: 15,
+                    borderRadius: 8,
+                    background: '#ef4444',
+                    color: 'white',
+                    fontSize: 8,
+                    fontWeight: 800,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0 3px',
+                    boxShadow: '0 0 6px rgba(239,68,68,0.6)',
+                    border: '1.5px solid #0b1323',
+                    animation: 'itemFadeUp 300ms cubic-bezier(0.32,0.72,0,1) both',
+                  }}>
+                    {badge > 99 ? '99+' : badge}
+                  </span>
+                )}
+              </div>
+
+              <span style={{
+                fontSize: 9,
+                fontWeight: active ? 700 : 500,
+                color: active ? '#00ff88' : '#333333',
+                transition: 'color 250ms ease, font-weight 250ms ease',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                fontFamily: "'Space Grotesk', system-ui, sans-serif",
+              }}>
+                {tab.label}
+              </span>
             </button>
           )
         })}
-        <div
-          className="pill"
-          style={{
-            left: `${pillPosition.left}px`,
-            width: `${pillPosition.width}px`,
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-          }}
-        />
-      </div>
-    </nav>
+      </nav>
+    </div>
   )
-}
-
-export default BottomNav
-```
-
-Et enfin, le CSS pour BottomNav (à ajouter dans le fichier CSS global ou dans un module CSS):
-
-```css
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: var(--bg2);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid var(--border);
-  z-index: 1000;
-  padding: 0.75rem 0;
-}
-
-.nav-container {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  max-width: 100%;
-  overflow-x: auto;
-  padding: 0 1rem;
-}
-
-.nav-item {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.25rem;
-  padding: 0.5rem;
-  background: transparent;
-  border: none;
-  color: var(--t2);
-  cursor: pointer;
-  transition: color 0.2s ease;
-  min-width: 60px;
-  z-index: 1;
-}
-
-.nav-item:hover {
-  color: var(--green);
-}
-
-.nav-item.active {
-  color: var(--green);
-}
-
-.nav-label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-align: center;
-}
-
-.pill {
-  position: absolute;
-  bottom: 0.75rem;
-  height: 36px;
-  background: rgba(0, 255, 136, 0.1);
-  border-radius: 999px;
-  border: 1px solid var(--green);
-  z-index: 0;
-  pointer-events: none;
-}
-
-/* Responsive adjustments */
-@media (min-width: 768px) {
-  .nav-container {
-    max-width: 400px;
-    margin: 0 auto;
-  }
-
-  .nav-item {
-    min-width: 80px;
-  }
 }

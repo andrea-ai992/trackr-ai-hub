@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, RefreshCw, ChevronRight, ChevronDown, Activity, CheckCircle, XCircle, Clock, Zap, Cpu, GitCommit } from 'lucide-react'
 
@@ -139,119 +139,25 @@ export default function BrainExplorer() {
   const [tasks,   setTasks]   = useState(null)
   const [loading, setLoading] = useState(true)
   const [tab,     setTab]     = useState('workers')
-  const [newTask, setNewTask] = useState('')
-  const [feedback, setFeedback] = useState('')
-  const [timeoutErrors, setTimeoutErrors] = useState({ live: false, tasks: false })
-  const abortControllersRef = useRef({ live: null, tasks: null, task: null })
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
-    setTimeoutErrors({ live: false, tasks: false })
-
     try {
-      // Abort previous requests
-      if (abortControllersRef.current.live) abortControllersRef.current.live.abort()
-      if (abortControllersRef.current.tasks) abortControllersRef.current.tasks.abort()
-
-      const liveController = new AbortController()
-      const tasksController = new AbortController()
-
-      abortControllersRef.current.live = liveController
-      abortControllersRef.current.tasks = tasksController
-
       const [liveR, tasksR] = await Promise.all([
-        fetch(`${SERVER}/api/live`,  {
-          headers: HEADERS,
-          signal: AbortSignal.timeout(5000)
-        }),
-        fetch(`${SERVER}/api/tasks`, {
-          headers: HEADERS,
-          signal: AbortSignal.timeout(5000)
-        }),
+        fetch(`${SERVER}/api/live`,  { headers: HEADERS, signal: AbortSignal.timeout(5000) }),
+        fetch(`${SERVER}/api/tasks`, { headers: HEADERS, signal: AbortSignal.timeout(5000) }),
       ])
-
-      if (liveR.ok) {
-        setLive(await liveR.json())
-        setTimeoutErrors(prev => ({ ...prev, live: false }))
-      } else {
-        setTimeoutErrors(prev => ({ ...prev, live: true }))
-      }
-
-      if (tasksR.ok) {
-        setTasks(await tasksR.json())
-        setTimeoutErrors(prev => ({ ...prev, tasks: false }))
-      } else {
-        setTimeoutErrors(prev => ({ ...prev, tasks: true }))
-      }
-    } catch (err) {
-      if (err.name === 'TimeoutError') {
-        console.warn('Timeout during API call')
-        if (err.message.includes('/api/live')) {
-          setTimeoutErrors(prev => ({ ...prev, live: true }))
-        }
-        if (err.message.includes('/api/tasks')) {
-          setTimeoutErrors(prev => ({ ...prev, tasks: true }))
-        }
-      } else if (err.name !== 'AbortError') {
-        console.error('Error fetching data:', err)
-      }
-    } finally {
-      setLoading(false)
-    }
+      if (liveR.ok)  setLive(await liveR.json())
+      if (tasksR.ok) setTasks(await tasksR.json())
+    } catch {}
+    setLoading(false)
   }, [])
 
+  useEffect(() => { load() }, [load])
   useEffect(() => {
-    load()
     const id = setInterval(() => load(true), 4000)
-    return () => {
-      clearInterval(id)
-      if (abortControllersRef.current.live) abortControllersRef.current.live.abort()
-      if (abortControllersRef.current.tasks) abortControllersRef.current.tasks.abort()
-    }
+    return () => clearInterval(id)
   }, [load])
-
-  const submitTask = async () => {
-    if (!newTask) return
-    try {
-      if (abortControllersRef.current.task) abortControllersRef.current.task.abort()
-
-      const controller = new AbortController()
-      abortControllersRef.current.task = controller
-
-      const response = await fetch(`${SERVER}/api/task`, {
-        method: 'POST',
-        headers: { ...HEADERS, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task: newTask }),
-        signal: AbortSignal.timeout(8000)
-      })
-
-      if (response.ok) {
-        setFeedback('Tâche ajoutée à la queue')
-        setNewTask('')
-        setTimeout(() => {
-          setFeedback('')
-          load()
-        }, 2000)
-      } else {
-        setFeedback('Erreur lors de l\'ajout de la tâche')
-        setTimeout(() => setFeedback(''), 3000)
-      }
-    } catch (error) {
-      console.error('Erreur lors de l\'ajout de la tâche:', error)
-      setFeedback(error.name === 'TimeoutError'
-        ? 'Timeout lors de l\'ajout de la tâche'
-        : 'Erreur réseau lors de l\'ajout de la tâche')
-      setTimeout(() => setFeedback(''), 3000)
-    } finally {
-      abortControllersRef.current.task = null
-    }
-  }
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      submitTask()
-    }
-  }
 
   const st      = live?.stats || {}
   const workers = live?.workers || {}
@@ -283,7 +189,134 @@ export default function BrainExplorer() {
             <ArrowLeft size={16} />
           </button>
           <div style={{ flex: 1 }}>
-            <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--t1)' }}>Brain Explorer</h1>
-            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-              <span style={{ fontSize: 10, color: isLive ? 'var(--green)' : 'var(--t3)' }}>
-                {isLive ?
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--t1)' }}>AnDy Explorer</span>
+              {isLive && <span className="live-dot" />}
+            </div>
+            <p style={{ fontSize: 10, color: isLive ? 'var(--green-dim)' : 'var(--red)', marginTop: 1 }}>
+              {isLive ? `live · ${age}s` : 'daemon hors ligne'}
+            </p>
+          </div>
+          <button onClick={() => load()} style={{ width: 34, height: 34, borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: loading ? 'var(--t3)' : 'var(--t2)' }}>
+            <RefreshCw size={15} className={loading ? 'spin' : ''} />
+          </button>
+        </div>
+
+        {/* Stats strip */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6, padding: '0 16px 10px' }}>
+          {[
+            { label: 'DONE',    v: st.done    ?? '—', color: 'var(--green)' },
+            { label: 'ERRORS',  v: st.errors  ?? '—', color: 'var(--red)'   },
+            { label: 'QUEUE',   v: st.queue   ?? '—', color: 'var(--amber)' },
+            { label: 'RUNNING', v: st.running ?? '—', color: 'var(--blue)'  },
+          ].map(s => (
+            <div key={s.label} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 0', textAlign: 'center' }}>
+              <div className="num" style={{ fontSize: 18, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.v}</div>
+              <div style={{ fontSize: 8, color: 'var(--t3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 3 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: 4, padding: '0 16px 10px', overflowX: 'auto' }}>
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)} className="tab-btn"
+              style={{ fontSize: 10, whiteSpace: 'nowrap', color: tab === t.id ? 'var(--green)' : 'var(--t3)', background: tab === t.id ? 'var(--green-bg)' : 'transparent', borderColor: tab === t.id ? 'var(--border-hi)' : 'var(--border)' }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ padding: '12px 16px 0' }}>
+
+        {/* Workers tab */}
+        {tab === 'workers' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {wIds.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--t3)' }}>
+                <Cpu size={32} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
+                <p style={{ fontSize: 13 }}>Daemon pas encore connecté</p>
+                <p style={{ fontSize: 11, marginTop: 6, opacity: 0.6 }}>Serveur: {SERVER}</p>
+              </div>
+            ) : wIds.map(id => (
+              <WorkerCard key={id} id={id} worker={workers[id]} />
+            ))}
+            {running.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <p style={{ fontSize: 9, color: 'var(--t3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Tâches actives</p>
+                {running.map(t => <TaskNode key={t.name} task={t} />)}
+              </div>
+            )}
+            <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center', padding: '10px 12px', background: 'var(--bg2)', borderRadius: 10, border: '1px solid var(--border)' }}>
+              <Zap size={12} color="var(--amber)" />
+              <span style={{ fontSize: 10, color: 'var(--t3)' }}>Coût estimé: </span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--green)' }}>${st.cost || '0.00'}</span>
+              <span style={{ fontSize: 10, color: 'var(--t3)', marginLeft: 'auto' }}>Cycle #{st.cycles || 0}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Log tab */}
+        {tab === 'log' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {log.length === 0 ? (
+              <p style={{ textAlign: 'center', color: 'var(--t3)', padding: '40px 0', fontSize: 13 }}>Aucun log</p>
+            ) : log.map((e, i) => <LogLine key={i} entry={e} />)}
+          </div>
+        )}
+
+        {/* Done tab */}
+        {tab === 'done' && (
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {done.length === 0 ? (
+              <p style={{ textAlign: 'center', color: 'var(--t3)', padding: '40px 0', fontSize: 13 }}>Aucune tâche terminée</p>
+            ) : done.slice().reverse().map(t => <TaskNode key={t.name + t.startedAt} task={t} />)}
+          </div>
+        )}
+
+        {/* Errors tab */}
+        {tab === 'errors' && (
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {errors.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                <CheckCircle size={32} color="var(--green)" style={{ margin: '0 auto 12px' }} />
+                <p style={{ fontSize: 13, color: 'var(--t2)' }}>Aucune erreur</p>
+              </div>
+            ) : errors.map(t => <TaskNode key={t.name} task={t} />)}
+          </div>
+        )}
+
+        {/* Tree tab — infinite folder explorer */}
+        {tab === 'tree' && (
+          <div>
+            <Folder label="En cours" icon="⚡" count={running.length} accent="var(--blue)" defaultOpen>
+              {running.length === 0
+                ? <p style={{ fontSize: 11, color: 'var(--t3)', padding: '8px 12px' }}>Aucune tâche en cours</p>
+                : running.map(t => <TaskNode key={t.name} task={t} depth={0} />)
+              }
+            </Folder>
+            <Folder label="Queue" icon="⏳" count={st.queue || 0} accent="var(--amber)" defaultOpen={false}>
+              {(tasks?.files?.queue || []).slice(0, 20).map(name => (
+                <div key={name} style={{ display: 'flex', gap: 7, padding: '6px 10px' }}>
+                  <span style={{ fontSize: 10, color: 'var(--t3)' }}>○</span>
+                  <span style={{ fontSize: 11, color: 'var(--t2)' }}>{name.replace(/^(auto|manual|chat)-[\d]+-?/, '').replace(/-/g, ' ').slice(0, 60)}</span>
+                </div>
+              ))}
+            </Folder>
+            <Folder label="Terminées" icon="✅" count={done.length} accent="var(--green-dim)" defaultOpen={false}>
+              {done.slice(-30).reverse().map(t => <TaskNode key={t.name} task={t} depth={0} />)}
+            </Folder>
+            <Folder label="Erreurs" icon="⚠️" count={errors.length} accent="var(--red)" defaultOpen={false}>
+              {errors.slice(-20).map(t => <TaskNode key={t.name} task={t} depth={0} />)}
+            </Folder>
+            <Folder label="Mémoire AnDy" icon="🧠" count="∞" accent="#a78bfa" defaultOpen={false}>
+              <p style={{ fontSize: 11, color: 'var(--t3)', padding: '8px 12px' }}>Ouvre <a href={`${SERVER}/brain`} target="_blank" rel="noreferrer" style={{ color: 'var(--green-dim)' }}>le dashboard live</a> pour voir la mémoire complète.</p>
+            </Folder>
+          </div>
+        )}
+
+      </div>
+    </div>
+  )
+}
