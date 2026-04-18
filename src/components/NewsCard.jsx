@@ -1,155 +1,208 @@
-// src/components/NewsCard.jsx
-import { useRef, useState } from "react";
-import { useIntersectionObserver } from "../hooks/useIntersectionObserver";
-import styles from "../styles/news.module.css";
+// src/pages/Dashboard.jsx
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { ArrowUpRight, TrendingUp, TrendingDown, Clock, Newspaper, Plane, TrendingUpDown, Bot } from "lucide-react";
+import { NewsCard } from "../components/NewsCard";
 
 const SOURCE_COLORS = {
   BBC: "#e60026",
-  Bloomberg: "#1a1a1a",
+  Bloomberg: "#00ff88",
   CoinDesk: "#f7931a",
   "Le Monde": "#003189",
   Reuters: "#ff8000",
 };
 
-const SOURCE_BORDER = {
-  BBC: "2px solid #e60026",
-  Bloomberg: "2px solid #00ff88",
-  CoinDesk: "2px solid #f7931a",
-  "Le Monde": "2px solid #003189",
-  Reuters: "2px solid #ff8000",
+const CRYPTO_MOVERS = [
+  { name: "BTC", symbol: "₿", change: 2.45, color: "#f7931a" },
+  { name: "ETH", symbol: "Ξ", change: -1.23, color: "#627eea" },
+  { name: "SOL", symbol: "◎", change: 3.78, color: "#00d4ff" },
+];
+
+const NEWS_ITEMS = [
+  {
+    title: "Bitcoin ETFs See Record Inflows as Market Recovers",
+    description: "Institutional investors are pouring money into Bitcoin ETFs, signaling renewed confidence in the cryptocurrency market.",
+    url: "#",
+    urlToImage: "https://picsum.photos/seed/bitcoin-etf/120/80",
+    publishedAt: new Date(Date.now() - 3600000).toISOString(),
+    source: { name: "CoinDesk" },
+    category: "Crypto"
+  },
+  {
+    title: "Federal Reserve Holds Interest Rates Steady",
+    description: "The Federal Reserve has decided to keep interest rates unchanged, citing stable economic conditions.",
+    url: "#",
+    urlToImage: "https://picsum.photos/seed/fed/120/80",
+    publishedAt: new Date(Date.now() - 7200000).toISOString(),
+    source: { name: "Bloomberg" },
+    category: "Finance"
+  },
+  {
+    title: "PSG Signs New Star Striker for Record Fee",
+    description: "Paris Saint-Germain has completed the signing of a world-class striker for a transfer fee of over €100 million.",
+    url: "#",
+    urlToImage: "https://picsum.photos/seed/psg/120/80",
+    publishedAt: new Date(Date.now() - 14400000).toISOString(),
+    source: { name: "BBC" },
+    category: "Sports"
+  }
+];
+
+const FEAR_GREED_DATA = {
+  value: 72,
+  status: "Greed",
+  color: "#00ff88"
 };
 
-function getRelativeTime(dateString) {
-  const now = new Date();
-  const date = new Date(dateString);
-  const diffMs = now - date;
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHour = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHour / 24);
+export default function Dashboard() {
+  const [portfolioValue, setPortfolioValue] = useState(12456.78);
+  const [dailyChange, setDailyChange] = useState(2.45);
+  const [isPositive, setIsPositive] = useState(true);
 
-  if (diffMin < 30) return { time: diffMin, unit: "min", type: "BREAKING" };
-  if (diffHour < 2) return { time: diffHour, unit: "hour", type: "NEW" };
-  if (diffDay < 1) return { time: diffHour, unit: "hour", type: "OLD" };
-  return { time: diffDay, unit: "day", type: "OLD" };
-}
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPortfolioValue(prev => {
+        const change = (Math.random() * 4 - 2).toFixed(2);
+        setDailyChange(parseFloat(change));
+        setIsPositive(parseFloat(change) >= 0);
+        return parseFloat((prev + parseFloat(change)).toFixed(2));
+      });
+    }, 5000);
 
-function LazyImage({ src, alt, className }) {
-  const imgRef = useRef(null);
-  const [loaded, setLoaded] = useState(false);
-  const [error, setError] = useState(false);
-  const isVisible = useIntersectionObserver(imgRef, { threshold: 0.1, rootMargin: "100px" });
+    return () => clearInterval(interval);
+  }, []);
 
-  const placeholderUrl = `https://picsum.photos/seed/${encodeURIComponent(alt || "news")}/72/72`;
-  const finalSrc = error || !src ? placeholderUrl : src;
+  const FearGreedGauge = () => {
+    const radius = 40;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (FEAR_GREED_DATA.value / 100) * circumference;
+
+    return (
+      <div className="gauge-container">
+        <svg width="100" height="100" viewBox="0 0 100 100">
+          <circle
+            cx="50"
+            cy="50"
+            r={radius}
+            fill="none"
+            stroke="var(--surface-low)"
+            strokeWidth="8"
+          />
+          <circle
+            cx="50"
+            cy="50"
+            r={radius}
+            fill="none"
+            stroke={FEAR_GREED_DATA.color}
+            strokeWidth="8"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+            transform="rotate(-90 50 50)"
+          />
+          <text x="50" y="55" textAnchor="middle" fill="var(--text-primary)" fontSize="12" fontFamily="JetBrains Mono">
+            {FEAR_GREED_DATA.value}
+          </text>
+          <text x="50" y="70" textAnchor="middle" fill="var(--text-secondary)" fontSize="8" fontFamily="JetBrains Mono">
+            {FEAR_GREED_DATA.status}
+          </text>
+        </svg>
+      </div>
+    );
+  };
 
   return (
-    <div ref={imgRef} className={`${styles.imageWrapper} ${className || ""}`}>
-      {!loaded && (
-        <div className={styles.imageSkeleton} aria-hidden="true">
-          <div className={styles.shimmer} />
+    <div className="dashboard-page">
+      <div className="hero-section">
+        <div className="portfolio-card">
+          <div className="portfolio-header">
+            <h2>Portfolio</h2>
+            <div className="portfolio-value">
+              <span className="value">${portfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className={`change ${isPositive ? 'positive' : 'negative'}`}>
+                {isPositive ? <ArrowUpRight size={16} /> : <ArrowUpRight size={16} style={{ transform: 'rotate(180deg)' }} />}
+                {dailyChange}%
+              </span>
+            </div>
+          </div>
+          <div className="portfolio-details">
+            <div className="portfolio-chart">
+              <svg width="100" height="40" viewBox="0 0 100 40">
+                <polyline
+                  points="0,30 10,25 20,28 30,20 40,22 50,18 60,15 70,10 80,12 90,8 100,5"
+                  fill="none"
+                  stroke="var(--neon)"
+                  strokeWidth="2"
+                />
+              </svg>
+            </div>
+          </div>
         </div>
-      )}
-      {isVisible && (
-        <img
-          src={finalSrc}
-          alt={alt}
-          className={`${styles.coverImage} ${loaded ? styles.imageLoaded : styles.imageHidden}`}
-          onLoad={() => setLoaded(true)}
-          onError={() => {
-            setError(true);
-            setLoaded(true);
-          }}
-          loading="lazy"
-          decoding="async"
-        />
-      )}
+      </div>
+
+      <div className="crypto-movers">
+        <div className="movers-header">
+          <h3>Crypto Movers</h3>
+          <Link to="/markets" className="view-all">View All</Link>
+        </div>
+        <div className="movers-list">
+          {CRYPTO_MOVERS.map((crypto, index) => (
+            <div key={index} className="mover-item">
+              <div className="mover-name">
+                <span className="symbol">{crypto.symbol}</span>
+                <span className="name">{crypto.name}</span>
+              </div>
+              <div className={`mover-change ${crypto.change >= 0 ? 'positive' : 'negative'}`}>
+                {crypto.change >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                {Math.abs(crypto.change)}%
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="fear-greed">
+        <div className="fear-greed-header">
+          <h3>Fear & Greed Index</h3>
+          <div className="fear-greed-value">
+            <FearGreedGauge />
+          </div>
+        </div>
+      </div>
+
+      <div className="news-section">
+        <div className="news-header">
+          <h3>Latest News</h3>
+          <Link to="/news" className="view-all">View All</Link>
+        </div>
+        <div className="news-list">
+          {NEWS_ITEMS.map((article, index) => (
+            <NewsCard key={index} article={article} />
+          ))}
+        </div>
+      </div>
+
+      <div className="quick-actions">
+        <h3>Quick Actions</h3>
+        <div className="actions-grid">
+          <Link to="/flights" className="action-card">
+            <Plane size={24} />
+            <span>Flights</span>
+          </Link>
+          <Link to="/markets" className="action-card">
+            <TrendingUpDown size={24} />
+            <span>Markets</span>
+          </Link>
+          <Link to="/sports" className="action-card">
+            <TrendingUp size={24} />
+            <span>Sports</span>
+          </Link>
+          <Link to="/andy" className="action-card">
+            <Bot size={24} />
+            <span>AnDy</span>
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
-
-export function NewsCard({ article, index = 0 }) {
-  const {
-    title,
-    description,
-    url,
-    urlToImage,
-    publishedAt,
-    source,
-    category,
-  } = article;
-
-  const sourceName = source?.name || "Unknown";
-  const sourceColor = SOURCE_COLORS[sourceName] || "var(--text-secondary)";
-  const sourceBorder = SOURCE_BORDER[sourceName] || "none";
-  const timeInfo = getRelativeTime(publishedAt);
-  const timeText = timeInfo.unit === "min" ? `${timeInfo.time}m ago` :
-                   timeInfo.unit === "hour" ? `${timeInfo.time}h ago` :
-                   `${timeInfo.time}d ago`;
-
-  const excerpt = description
-    ? description.length > 120
-      ? description.slice(0, 117) + "…"
-      : description
-    : null;
-
-  return (
-    <article className={styles.card}>
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={styles.cardLink}
-        aria-label={`Read article: ${title}`}
-      >
-        <div className={styles.cardHeader}>
-          <div className={styles.cardSource} style={{ color: sourceColor }}>
-            {sourceName}
-          </div>
-          <div className={styles.cardTime}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-            {timeText}
-          </div>
-        </div>
-
-        <div className={styles.cardContent}>
-          <div className={styles.cardTitleContainer}>
-            <h3 className={styles.cardTitle}>{title}</h3>
-          </div>
-
-          {excerpt && (
-            <p className={styles.cardExcerpt}>{excerpt}</p>
-          )}
-        </div>
-
-        <div className={styles.cardFooter}>
-          {urlToImage && (
-            <div className={styles.cardThumbnail}>
-              <LazyImage src={urlToImage} alt={title} />
-            </div>
-          )}
-          <div className={styles.cardMeta}>
-            {timeInfo.type === "BREAKING" && (
-              <span className={styles.breakingBadge}>BREAKING</span>
-            )}
-            {timeInfo.type === "NEW" && (
-              <span className={styles.newBadge}>NEW</span>
-            )}
-            <span className={styles.readMore}>
-              Read more
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--neon)" strokeWidth="2.5">
-                <line x1="5" y1="12" x2="19" y2="12" />
-                <polyline points="12 5 19 12 12 19" />
-              </svg>
-            </span>
-          </div>
-        </div>
-      </a>
-    </article>
-  );
-}
-
-export default NewsCard;
