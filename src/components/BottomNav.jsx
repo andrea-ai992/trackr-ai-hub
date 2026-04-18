@@ -86,13 +86,13 @@ export default function BottomNav() {
           gap: 2,
           width: '100%',
           maxWidth: 380,
-          background: 'rgba(8,8,8,0.92)',
+          background: 'var(--bg2)',
           backdropFilter: 'blur(28px)',
           WebkitBackdropFilter: 'blur(28px)',
-          border: '1px solid rgba(0,255,136,0.10)',
+          border: '1px solid var(--border)',
           borderRadius: 999,
           padding: '5px 6px',
-          boxShadow: '0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,255,136,0.04) inset',
+          boxShadow: '0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px var(--green) inset',
           position: 'relative',
         }}
       >
@@ -106,11 +106,11 @@ export default function BottomNav() {
               bottom: 5,
               left: pillStyle.left,
               width: pillStyle.width,
-              background: 'rgba(0,255,136,0.08)',
-              border: '1px solid rgba(0,255,136,0.22)',
+              background: 'var(--green)',
+              border: '1px solid var(--border-hi)',
               borderRadius: 999,
-              boxShadow: '0 0 16px rgba(0,255,136,0.12)',
-              transition: 'left 320ms cubic-bezier(0.32,0.72,0,1), width 320ms cubic-bezier(0.32,0.72,0,1)',
+              boxShadow: '0 0 16px var(--green)',
+              transition: 'left 200ms ease, width 200ms ease',
               pointerEvents: 'none',
             }}
           />
@@ -150,9 +150,9 @@ export default function BottomNav() {
                   size={22}
                   strokeWidth={active ? 2.2 : 1.6}
                   style={{
-                    color: active ? '#00ff88' : '#333333',
+                    color: active ? 'var(--green)' : 'var(--t2)',
                     transition: 'color 250ms cubic-bezier(0.32,0.72,0,1), filter 250ms ease',
-                    filter: active ? 'drop-shadow(0 0 5px rgba(0,255,136,0.7))' : 'none',
+                    filter: active ? 'drop-shadow(0 0 5px var(--green))' : 'none',
                     transform: active ? 'scale(1.08)' : 'scale(1)',
                     transitionProperty: 'color, filter, transform',
                     transitionDuration: '250ms',
@@ -184,9 +184,9 @@ export default function BottomNav() {
               <span style={{
                 fontSize: 9,
                 fontWeight: active ? 700 : 500,
-                color: active ? '#00ff88' : '#333333',
+                color: active ? 'var(--green)' : 'var(--t2)',
                 transition: 'color 250ms ease, font-weight 250ms ease',
-                letterSpacing: '0.1em',
+                letterSpacing: '0.08em',
                 textTransform: 'uppercase',
                 fontFamily: "'Space Grotesk', system-ui, sans-serif",
               }}>
