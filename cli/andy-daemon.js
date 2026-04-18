@@ -32,7 +32,10 @@ const GITHUB_API   = 'https://api.github.com'
 const BOT_TOKEN    = process.env.DISCORD_BOT_TOKEN || ''
 const CH_MORNING   = process.env.DISCORD_CH_MORNING || process.env.DISCORD_CH_BRAIN || ''
 const CH_UPDATES   = process.env.DISCORD_CH_UPDATES || CH_MORNING
-const CH_NOISE     = process.env.DISCORD_CH_NOISE   || CH_UPDATES  // channel secondaire pour les notifs peu importantes
+const CH_NOISE     = process.env.DISCORD_CH_NOISE   || CH_UPDATES
+const CH_DONE      = process.env.DISCORD_CH_DONE    || CH_UPDATES   // ✅ tâches réussies
+const CH_FAILED    = process.env.DISCORD_CH_FAILED  || CH_UPDATES   // ❌ tâches échouées
+const CH_RUNNING   = process.env.DISCORD_CH_RUNNING || CH_UPDATES   // ⚡ tâches en cours
 const DISCORD_API  = 'https://discord.com/api/v10'
 
 // Juge si une notif mérite le channel principal ou le channel secondaire
@@ -647,7 +650,7 @@ async function runTask(filePath) {
   renameSync(filePath, runningPath)
 
   const isManual = name.startsWith('manual-') || name.startsWith('urgent-')
-  if (isManual) discordPost(CH_UPDATES, `⚡ **Tâche prioritaire démarrée**\n\`${name}\`\n> ${content.slice(0, 120)}`)
+  if (CH_RUNNING) discordPost(CH_RUNNING, `⚡ **IN PROGRESS** — \`${name}\`\n> ${content.slice(0, 120)}\n${isManual ? '🚨 **Priorité manuelle**' : ''}`)
 
   try {
     // Timeout dur — skip si trop long, retry à la fin
@@ -663,6 +666,15 @@ async function runTask(filePath) {
     totalDoneSession++
     log(`TASK DONE: ${name} (${dur}s) [session: ${totalDoneSession}]`)
     notifBuffer.push({ name, files: taskStatus?.files || [], dur })
+    // Notif immédiate dans #task-done
+    if (CH_DONE) {
+      const files = (taskStatus?.files || []).map(f => `\`${f.split('/').pop()}\``).join(' ') || `\`${name}\``
+      discordPost(CH_DONE, [
+        `✅ **DONE** — ${files}`,
+        `⏱ ${dur}s · session #${totalDoneSession}`,
+        `🔗 ${APP_URL}`,
+      ].join('\n'))
+    }
     await flushDiscordNotif()
 
   } catch (err) {
@@ -690,6 +702,13 @@ async function runTask(filePath) {
     renameSync(runningPath, runningPath.replace(/\.running$/, '.error'))
     totalErrorSession++
     log(`TASK ERROR: ${name} — ${err.message}`)
+    if (CH_FAILED) {
+      discordPost(CH_FAILED, [
+        `❌ **FAILED** — \`${name}\``,
+        `💬 ${err.message.slice(0, 200)}`,
+        `⏱ ${dur}s`,
+      ].join('\n'))
+    }
   }
 }
 
@@ -1152,7 +1171,7 @@ async function main() {
     API_KEY        && `Anthropic(${API_KEY.slice(0,16)}…)`,
     OLLAMA_URL     && `Ollama(${OLLAMA_URL})`,
   ].filter(Boolean).join(' | ') || 'AUCUN ⚠ — ajouter GROQ_API_KEY ou GEMINI_API_KEY dans .env'}`)
-  log(`Discord: BOT=${BOT_TOKEN ? 'ok' : 'MANQUANT'} | CH_UPDATES=${CH_UPDATES || 'MANQUANT'}`)
+  log(`Discord: BOT=${BOT_TOKEN ? 'ok' : 'MANQUANT'} | done=${CH_DONE||'?'} failed=${CH_FAILED||'?'} running=${CH_RUNNING||'?'}`)
   log(`Workers: ${WORKER_COUNT} | Semaphore API: ${API_SEMAPHORE_LIMIT}`)
 
   mkdirSync(TASKS_DIR, { recursive: true })
