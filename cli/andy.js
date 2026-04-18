@@ -122,7 +122,7 @@ const _  = {
 
 // ── Output helpers ─────────────────────────────────────────────────────────
 const out  = s => process.stdout.write(s)
-const line = s => process.stdout.write(BG + (s || '') + '\x1b[K\n')
+const line = s => process.stdout.write(BG + (s || '') + '\x1b[0m' + BG + '\x1b[K\n')
 const clr  = () => out('\x1b[2J\x1b[H' + BG)
 const sl   = ms => new Promise(r => setTimeout(r, ms))
 
