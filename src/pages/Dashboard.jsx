@@ -327,71 +327,61 @@ export default function Dashboard() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginTop: 12
         }}>
           <Sparkline data={sparkData} />
         </div>
       </button>
 
-      {/* Top Movers */}
+      {/* Movers Section */}
       <div className="stagger-item" style={{ marginBottom: 24 }}>
-        <h2 className="section-label">Top Movers</h2>
+        <h2 className="section-label">Movers</h2>
         <div className="scroll-row">
-          {crypto.map((c) => {
-            const price = livePrices[c.symbol] || c.current_price
-            const priceChange = c.price_change_percentage_24h
-            const isCryptoUp = priceChange >= 0
-            return (
-              <div key={c.id} className="press-scale" style={{
-                background: 'rgba(255, 255, 255, 0.04)',
-                borderRadius: '12px',
-                padding: '12px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-start',
-                gap: 4,
-                border: `1px solid ${isCryptoUp ? 'rgba(0, 255, 136, 0.2)' : 'rgba(255, 77, 77, 0.2)'}`,
-                backdropFilter: 'blur(12px)',
-                minWidth: 80,
-                flexShrink: 0
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  width: '100%',
-                }}>
-                  <span style={{
-                    fontSize: 14,
-                    fontWeight: 700,
-                    color: isCryptoUp ? 'var(--green)' : '#ff4d4d'
-                  }}>
-                    {c.symbol.toUpperCase()}
-                  </span>
-                  <span className={`pill ${isCryptoUp ? 'pill-up' : 'pill-down'}`}>
-                    {fmt(price)}
-                  </span>
-                </div>
-                <span style={{
-                  fontSize: 12,
-                  color: isCryptoUp ? 'var(--green)' : '#ff4d4d',
-                  fontWeight: 600
-                }}>
-                  {fmtPct(priceChange)}
-                </span>
-              </div>
-            )
-          })}
+          {crypto.map(coin => (
+            <div key={coin.id} style={{
+              background: 'var(--bg2)',
+              borderRadius: '12px',
+              padding: '16px',
+              minWidth: '120px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: 4
+            }}>
+              <span style={{ fontWeight: 700, color: coinColor[coin.id] }}>{coin.symbol.toUpperCase()}</span>
+              <span style={{ color: coin.price_change_percentage_24h >= 0 ? 'var(--green)' : '#ff4d4d' }}>
+                {fmt(coin.current_price)} ({fmtPct(coin.price_change_percentage_24h)})
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Fear & Greed Gauge */}
+      {/* Fear & Greed Section */}
       <div className="stagger-item" style={{ marginBottom: 24 }}>
         <h2 className="section-label">Fear & Greed</h2>
         <FGGauge value={fg} />
       </div>
 
-      {/* News Feed */}
+      {/* News Feed Section */}
       <div className="stagger-item" style={{ marginBottom: 24 }}>
         <h2 className="section-label">Dernières nouvelles</h2>
-        {news.slice(0, 3).
+        {news.slice(0, 3).map(item => (
+          <div key={item.guid} style={{
+            background: 'var(--bg2)',
+            borderRadius: '12px',
+            padding: '16px',
+            marginBottom: 8
+          }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)', margin: 0 }}>{item.title}</h3>
+            <span style={{ fontSize: 12, color: 'var(--t2)' }}>{item.source} - {new Date(item.pubDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Quick Actions Section */}
+      <div className="grid">
+        <button className="action-button press-scale" onClick={() => navigate('/markets')}>
+          <Wallet size={24} color="var(--t1)" />
+          <span>Markets</span>
+        </button>
+        <button className="action-button press-scale" on
