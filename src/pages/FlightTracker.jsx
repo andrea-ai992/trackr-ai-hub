@@ -1,8 +1,8 @@
-Voici l'implémentation du système de gestion des erreurs avec timeout et fallback pour les appels API dans `src/pages/FlightTracker.jsx` :
+Je vais ajouter un système de notifications temps réel pour les perturbations de vol dans `src/pages/FlightTracker.jsx`. Voici l'implémentation complète :
 
 ```jsx
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Search, X, Locate, Loader2, Plane, RefreshCw, Navigation, ArrowUp, Map, List } from 'lucide-react'
+import { Search, X, Locate, Loader2, Plane, RefreshCw, Navigation, ArrowUp, Map, List, Bell, BellOff, AlertTriangle } from 'lucide-react'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -25,8 +25,164 @@ style.textContent = `
   .fade-in { animation: fadeIn 0.4s ease-out; }
   .pulse { animation: pulse 2s ease-in-out infinite; }
   .slide-in { animation: slideIn 0.3s ease-out; }
+
+  /* Notification styles */
+  .notification-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    max-width: 320px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.3s ease-out;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .notification-toast.warning {
+    border-left: 4px solid #ffcc00;
+  }
+
+  .notification-toast.error {
+    border-left: 4px solid #ff4444;
+  }
+
+  .notification-toast.info {
+    border-left: 4px solid var(--green);
+  }
+
+  .notification-close {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--t2);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background 0.2s;
+  }
+
+  .notification-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--t1);
+  }
+
+  .notification-list {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 999;
+    max-width: 340px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .notification-item {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.3s ease-out;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .notification-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .notification-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: none;
+    background: rgba(0, 255, 136, 0.1);
+    color: var(--green);
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .notification-btn:hover {
+    background: rgba(0, 255, 136, 0.2);
+  }
+
+  .notification-btn.secondary {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--t1);
+  }
+
+  .notification-btn.secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
 `
 document.head.appendChild(style)
+
+// ─── Notification Service ─────────────────────────────────────────────────────
+class NotificationService {
+  constructor() {
+    this.notifications = []
+    this.subscribers = []
+    this.toastDuration = 5000
+  }
+
+  subscribe(callback) {
+    this.subscribers.push(callback)
+    return () => {
+      this.subscribers = this.subscribers.filter(cb => cb !== callback)
+    }
+  }
+
+  notify(type, title, message, actions = [], persistent = false) {
+    const id = Date.now().toString()
+    const notification = {
+      id,
+      type,
+      title,
+      message,
+      actions,
+      timestamp: Date.now(),
+      persistent
+    }
+
+    this.notifications.push(notification)
+    this.subscribers.forEach(cb => cb(this.notifications))
+
+    if (!persistent) {
+      setTimeout(() => {
+        this.dismiss(id)
+      }, this.toastDuration)
+    }
+
+    return id
+  }
+
+  dismiss(id) {
+    this.notifications = this.notifications.filter(n => n.id !== id)
+    this.subscribers.forEach(cb => cb(this.notifications))
+  }
+
+  dismissAll() {
+    this.notifications = []
+    this.subscribers.forEach(cb => cb(this.notifications))
+  }
+
+  getNotifications() {
+    return this.notifications
+  }
+}
+
+const notificationService = new NotificationService()
 
 // ─── OpenSky Network API (free, no key) ──────────────────────────────────────
 const OPENSKY = 'https://opensky-network.org/api'
@@ -222,47 +378,4 @@ function MapRecenter({ lat, lon }) {
 
 // ─── Flag emoji ───────────────────────────────────────────────────────────────
 const FLAGS = { 'United States': '🇺🇸', 'France': '🇫🇷', 'United Kingdom': '🇬🇧', 'Germany': '🇩🇪',
-  'Spain': '🇪🇸', 'Italy': '🇮🇹', 'Netherlands': '🇳🇱', 'China': '🇨🇳', 'Japan': '🇯🇵',
-  'United Arab Emirates': '🇦🇪', 'Qatar': '🇶🇦', 'Turkey': '🇹🇷', 'Brazil': '🇧🇷',
-  'Canada': '🇨🇦', 'Australia': '🇦🇺', 'Russia': '🇷🇺', 'India': '🇮🇳', 'Switzerland': '🇨🇭',
-  'Belgium': '🇧🇪', 'Portugal': '🇵🇹', 'Sweden': '🇸🇪', 'Norway': '🇳🇴', 'Finland': '🇫🇮' }
-
-// ─── AircraftCard ─────────────────────────────────────────────────────────────
-function AircraftCard({ ac, userLat, userLon, selected, onSelect }) {
-  const dist = userLat != null ? Math.round(distance(userLat, userLon, ac.lat, ac.lon)) : null
-  const bear = userLat != null ? bearing(userLat, userLon, ac.lat, ac.lon) : null
-  const flag = FLAGS[ac.country] || '✈️'
-  const isSelected = selected?.icao === ac.icao
-  const isClimbing = ac.vertRate != null && ac.vertRate > 100
-  const isDescending = ac.vertRate != null && ac.vertRate < -100
-
-  return (
-    <button
-      onClick={() => onSelect(isSelected ? null : ac)}
-      style={{
-        width: '100%', textAlign: 'left', padding: '16px 16px',
-        borderRadius: 16, cursor: 'pointer',
-        background: isSelected ? 'rgba(0,255,136,0.12)' : 'rgba(255,255,255,0.03)',
-        border: `1px solid ${isSelected ? 'rgba(0,255,136,0.4)' : 'rgba(255,255,255,0.07)'}`,
-        marginBottom: 12, transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        boxShadow: isSelected ? '0 0 20px rgba(0,255,136,0.1)' : 'none',
-        animation: 'slideIn 0.3s ease-out',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: isSelected ? 14 : 0 }}>
-        {/* Icon */}
-        <div style={{
-          width: 48, height: 48, borderRadius: 14, flexShrink: 0,
-          background: ac.onGround ? 'rgba(100,116,139,0.15)' : 'rgba(0,255,136,0.12)',
-          border: `1px solid ${ac.onGround ? 'rgba(100,116,139,0.25)' : 'rgba(0,255,136,0.25)'}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          position: 'relative',
-        }}>
-          {ac.heading != null
-            ? <HeadingArrow deg={ac.heading} color={ac.onGround ? 'var(--t3)' : 'var(--green)'} size={22} />
-            : <Plane size={20} color={ac.onGround ? 'var(--t3)' : 'var(--green)'} />}
-          {isClimbing && (
-            <div style={{
-              position: 'absolute', top: 4, right: 4,
-              width: 12, height: 12, borderRadius: '50%',
-              background: 'rgba(0,255,136,0.8)', animation:
+  'Spain': '
