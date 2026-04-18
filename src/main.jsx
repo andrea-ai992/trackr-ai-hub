@@ -16,6 +16,27 @@ if ('serviceWorker' in navigator) {
   })
 }
 
+const CSP = `
+  default-src 'self';
+  script-src 'self' 'wasm-unsafe-eval';
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' data:;
+  font-src 'self';
+  connect-src 'self' https://trackr-app-nu.vercel.app;
+  frame-src 'none';
+  object-src 'none';
+  base-uri 'self';
+  form-action 'self';
+  frame-ancestors 'none';
+  block-all-mixed-content;
+  upgrade-insecure-requests;
+`
+
+const meta = document.createElement('meta')
+meta.httpEquiv = 'Content-Security-Policy'
+meta.content = CSP
+document.head.appendChild(meta)
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
