@@ -399,6 +399,24 @@ Sinon, réponds normalement.`
     return
   }
 
+  // ── #tâches : tout message = tâche directe ───────────────────────────────────
+  if ((chName === 'tâches' || chName === 'taches' || chName === 'tasks') && mode === 'default') {
+    const isUrgent = /^urgent[:\s]/i.test(cleanContent)
+    const desc = cleanContent.replace(/^urgent[:\s]*/i, '').trim()
+    const priority = isUrgent ? 'urgent' : 'manual'
+    const fname = `${priority}-${Date.now()}.txt`
+    try { writeFileSync(resolve(TASKS_DIR, fname), desc, 'utf8') } catch (e) {
+      await sendReply(msg.channel_id, msg.id, `❌ Erreur: ${e.message}`)
+      return
+    }
+    const emoji = isUrgent ? '🚨' : '✅'
+    const label = isUrgent ? 'URGENT — interrompt tout' : 'reçue — AnDy va l\'exécuter'
+    await sendReply(msg.channel_id, msg.id,
+      `${emoji} **Tâche ${label}**\n> ${desc.slice(0, 120)}\n\`${fname}\``
+    )
+    return
+  }
+
   // Intent routing standard
   const intent = mode === 'default' ? detectIntent(cleanContent) : 'chat'
 
