@@ -19,7 +19,7 @@ for (const f of ['.env', '.env.local']) {
   if (existsSync(fp)) {
     readFileSync(fp, 'utf8').split('\n').forEach(l => {
       const m = l.match(/^([^#=\s][^=]*)=(.*)$/)
-      if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '')
+      if (m) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '').trim()
     })
   }
 }
@@ -861,7 +861,9 @@ function priorityScore(fname) {
 function urgentPending() {
   try {
     return readdirSync(TASKS_DIR).some(f =>
-      (f.startsWith('manual-') || f.startsWith('urgent-')) && f.endsWith('.txt')
+      (f.startsWith('manual-') || f.startsWith('urgent-')) &&
+      f.endsWith('.txt') &&
+      !skipQueue.includes(f)  // skip-retried tasks ne comptent pas
     )
   } catch { return false }
 }
