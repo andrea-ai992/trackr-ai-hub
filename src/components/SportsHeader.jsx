@@ -1,262 +1,268 @@
-**src/pages/Sports.jsx**
-```jsx
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Container, Header, Tab, TabList, TabPanel, TabPanels, Tabs } from '@supabase/ui';
-import { supabaseClient } from '../Dashboard/server';
-import SportsHeader from './SportsHeader';
-import PSG from './PSG';
-import NBA from './NBA';
-import NFL from './NFL';
-import UFC from './UFC';
-
-function Sports() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('PSG');
-
-  useEffect(() => {
-    const currentTab = location.pathname.split('/').pop();
-    setActiveTab(currentTab);
-  }, [location]);
-
-  return (
-    <Container>
-      <SportsHeader activeTab={activeTab} />
-      <Tabs defaultIndex={0} onChange={(index) => setActiveTab(Object.keys(Tabs)[index])}>
-        <TabList>
-          <Tab>PSG</Tab>
-          <Tab>NBA</Tab>
-          <Tab>NFL</Tab>
-          <Tab>UFC</Tab>
-        </TabList>
-        <TabPanels>
-          <TabPanel>
-            <PSG />
-          </TabPanel>
-          <TabPanel>
-            <NBA />
-          </TabPanel>
-          <TabPanel>
-            <NFL />
-          </TabPanel>
-          <TabPanel>
-            <UFC />
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
-    </Container>
-  );
-}
-
-export default Sports;
-```
-
 **src/components/SportsHeader.jsx**
 ```jsx
 import React from 'react';
-import { styled } from 'styled-components';
-import { Container, Header, Tab, TabList, TabPanels, Tabs } from '@supabase/ui';
+import { Link } from 'react-router-dom';
+import { useMediaQuery } from 'react-responsive';
 
-const StyledHeader = styled(Header)`
-  position: sticky;
-  top: 0;
-  background-color: var(--bg);
-  color: var(--t1);
-  z-index: 1;
-`;
+const SportsHeader = () => {
+  const isMobile = useMediaQuery({
+    query: '(max-width: 768px)',
+  });
 
-const StyledTabs = styled(Tabs)`
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  border-bottom: 1px solid var(--border);
-`;
-
-const StyledTab = styled(Tab)`
-  margin: 0 1rem;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  transition: background-color 200ms ease-in-out;
-  background-color: var(--bg2);
-  color: var(--t2);
-  font-size: 1.2rem;
-  font-weight: bold;
-  cursor: pointer;
-
-  &.active {
-    background-color: var(--green);
-    color: var(--t1);
-  }
-`;
-
-function SportsHeader({ activeTab }) {
   return (
-    <StyledHeader>
-      <StyledTabs>
-        <StyledTab active={activeTab === 'PSG'} onClick={() => console.log('PSG')}>PSG</StyledTab>
-        <StyledTab active={activeTab === 'NBA'} onClick={() => console.log('NBA')}>NBA</StyledTab>
-        <StyledTab active={activeTab === 'NFL'} onClick={() => console.log('NFL')}>NFL</StyledTab>
-        <StyledTab active={activeTab === 'UFC'} onClick={() => console.log('UFC')}>UFC</StyledTab>
-      </StyledTabs>
-    </StyledHeader>
+    <header className="sports-header">
+      <div className="container">
+        <div className="tabs">
+          <Link to="/sports/psg" className="tab">
+            PSG
+          </Link>
+          <Link to="/sports/nba" className="tab">
+            NBA
+          </Link>
+          <Link to="/sports/nfl" className="tab">
+            NFL
+          </Link>
+          <Link to="/sports/ufc" className="tab">
+            UFC
+          </Link>
+        </div>
+      </div>
+    </header>
   );
-}
+};
 
 export default SportsHeader;
 ```
 
-**src/components/PSG.jsx**
+**src/pages/Sports.jsx**
 ```jsx
 import React, { useState, useEffect } from 'react';
-import { supabaseClient } from '../Dashboard/server';
-
-function PSG() {
-  const [data, setData] = useState(null);
-
-  useEffect(() => {
-    const fetchNextMatch = async () => {
-      const { data: nextMatch } = await supabaseClient
-        .from('matches')
-        .select('team1, team2, date, competition')
-        .eq('team1', 'PSG')
-        .order('date', { ascending: false })
-        .limit(1);
-      setData(nextMatch);
-    };
-    fetchNextMatch();
-  }, []);
-
-  return (
-    <div>
-      <h2>Prochain match</h2>
-      {data && (
-        <div>
-          <img src={data.team1.logo} alt={data.team1.name} />
-          <span>{data.date}</span>
-          <img src={data.competition.badge} alt={data.competition.name} />
-          <img src={data.team2.logo} alt={data.team2.name} />
-        </div>
-      )}
-      <h2>5 derniers résultats</h2>
-      {/* Ajouter code pour afficher les 5 derniers résultats */}
-    </div>
-  );
-}
-
-export default PSG;
-```
-
-**src/components/NBA.jsx**
-```jsx
-import React, { useState, useEffect } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import SportsHeader from '../components/SportsHeader';
+import Lucide from 'lucide-react';
 import axios from 'axios';
 
-function NBA() {
-  const [scores, setScores] = useState(null);
+const Sports = () => {
+  const params = useParams();
+  const [sportsData, setSportsData] = useState({});
+  const [nextMatch, setNextMatch] = useState({});
+  const [lastResults, setLastResults] = useState([]);
 
   useEffect(() => {
-    const fetchScores = async () => {
-      const response = await axios.get('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard');
-      setScores(response.data);
+    const fetchSportsData = async () => {
+      const response = await axios.get(`https://site.api.espn.com/apis/site/v2/sports/football/france/1/livescore`);
+      setSportsData(response.data);
+      const nextMatchData = response.data.events[0];
+      setNextMatch({
+        team1: nextMatchData.competitions[0].competitors[0].team.name,
+        team2: nextMatchData.competitions[0].competitors[1].team.name,
+        time: nextMatchData.date,
+        competition: nextMatchData.competitions[0].name,
+      });
+      const lastResultsData = response.data.events.slice(1, 6);
+      setLastResults(lastResultsData.map((match) => ({
+        team1: match.competitions[0].competitors[0].team.name,
+        team2: match.competitions[0].competitors[1].team.name,
+        score: match.score.fullTime.score,
+      })));
     };
-    fetchScores();
+    fetchSportsData();
   }, []);
-
-  return (
-    <div>
-      <h2>Scores du jour</h2>
-      {scores && (
-        <ul>
-          {scores.events.map((event) => (
-            <li key={event.id}>
-              <img src={event.participants[0].team.logo} alt={event.participants[0].team.name} />
-              <span>{event.status.short}</span>
-              <img src={event.participants[1].team.logo} alt={event.participants[1].team.name} />
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-export default NBA;
-```
-
-**src/components/NFL.jsx**
-```jsx
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-
-function NFL() {
-  const [scores, setScores] = useState(null);
 
   useEffect(() => {
-    const fetchScores = async () => {
-      const response = await axios.get('https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard');
-      setScores(response.data);
-    };
-    fetchScores();
-  }, []);
+    if (params.sport === 'nba') {
+      const fetchNbaData = async () => {
+        const response = await axios.get('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard');
+        setSportsData(response.data);
+      };
+      fetchNbaData();
+    }
+  }, [params.sport]);
 
   return (
-    <div>
-      <h2>Scores du jour</h2>
-      {scores && (
-        <ul>
-          {scores.events.map((event) => (
-            <li key={event.id}>
-              <img src={event.participants[0].team.logo} alt={event.participants[0].team.name} />
-              <span>{event.status.short}</span>
-              <img src={event.participants[1].team.logo} alt={event.participants[1].team.name} />
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="sports-page">
+      <SportsHeader />
+      <div className="container">
+        {params.sport === 'psg' && (
+          <div className="next-match">
+            <h2>Prochain match</h2>
+            <div className="match-info">
+              <p>
+                {nextMatch.team1} vs {nextMatch.team2} - {nextMatch.competition}
+              </p>
+              <p>
+                {nextMatch.time}
+              </p>
+            </div>
+            <h2>Derniers résultats</h2>
+            <ul>
+              {lastResults.map((result, index) => (
+                <li key={index}>
+                  <p>
+                    {result.team1} vs {result.team2} - {result.score}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {params.sport === 'nba' && (
+          <div className="nba-page">
+            <h2>Standings</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Équipe</th>
+                  <th>Victoires</th>
+                  <th>Défaites</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sportsData.events.map((event, index) => (
+                  <tr key={index}>
+                    <td>{event.competitions[0].competitors[0].team.name}</td>
+                    <td>{event.score.fullTime.score}</td>
+                    <td>{event.score.fullTime.score}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <h2>Score du jour</h2>
+            <ul>
+              {sportsData.events.map((event, index) => (
+                <li key={index}>
+                  <p>
+                    {event.competitions[0].competitors[0].team.name} vs {event.competitions[0].competitors[1].team.name} - {event.score.fullTime.score}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
     </div>
   );
-}
+};
 
-export default NFL;
+export default Sports;
 ```
 
-**src/components/UFC.jsx**
-```jsx
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-
-function UFC() {
-  const [nextEvent, setNextEvent] = useState(null);
-
-  useEffect(() => {
-    const fetchNextEvent = async () => {
-      const response = await axios.get('https://api.sportradar.us/mma2/trial/v7/en/schedules/next.json?api_key=YOUR_API_KEY');
-      setNextEvent(response.data);
-    };
-    fetchNextEvent();
-  }, []);
-
-  return (
-    <div>
-      <h2>Prochain événement</h2>
-      {nextEvent && (
-        <div>
-          <img src={nextEvent.main_card_fights[0].competitors[0].image} alt={nextEvent.main_card_fights[0].competitors[0].name} />
-          <span>{nextEvent.main_card_fights[0].competitors[0].name}</span>
-          <img src={nextEvent.main_card_fights[0].competitors[1].image} alt={nextEvent.main_card_fights[0].competitors[1].name} />
-          <span>{nextEvent.main_card_fights[0].competitors[1].name}</span>
-        </div>
-      )}
-    </div>
-  );
+**src/pages/Sports.css**
+```css
+.sports-page {
+  background-color: var(--bg);
+  color: var(--t1);
+  font-family: 'Inter', sans-serif;
 }
 
-export default UFC;
+.sports-header {
+  background-color: var(--bg2);
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tabs {
+  display: flex;
+  gap: 1rem;
+}
+
+.tab {
+  color: var(--t2);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.tab:hover {
+  color: var(--green);
+}
+
+.next-match {
+  background-color: var(--bg3);
+  padding: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+}
+
+.match-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nba-page {
+  background-color: var(--bg3);
+  padding: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th, td {
+  border: 1px solid var(--border);
+  padding: 1rem;
+  text-align: left;
+}
+
+th {
+  background-color: var(--bg);
+}
+
+@media (max-width: 768px) {
+  .sports-header {
+    flex-direction: column;
+  }
+
+  .tabs {
+    flex-direction: column;
+  }
+
+  .tab {
+    margin-bottom: 1rem;
+  }
+}
 ```
 
-Notez que vous devrez remplacer `YOUR_API_KEY` par votre clé API Sportradar.
+**src/components/SportsHeader.css**
+```css
+.sports-header {
+  background-color: var(--bg2);
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tabs {
+  display: flex;
+  gap: 1rem;
+}
+
+.tab {
+  color: var(--t2);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.tab:hover {
+  color: var(--green);
+}
+
+@media (max-width: 768px) {
+  .sports-header {
+    flex-direction: column;
+  }
+
+  .tabs {
+    flex-direction: column;
+  }
+
+  .tab {
+    margin-bottom: 1rem;
+  }
+}
