@@ -1,6 +1,3 @@
-Voici le code complet et fonctionnel pour la page de dashboard :
-
-```jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
@@ -49,7 +46,7 @@ function News({ data }) {
     <div className="grid">
       {data.map((item, i) => (
         <div key={i} className="stagger-item" style={{ padding: 16 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, color: 'var(--t1)' }}>{item.title}</h2>
+          <h2 style={{ fontSize: 16, fontWeight: 800, color: 'var(--t1)' }}>{item.title.length > 30 ? `${item.title.substring(0, 30)}...` : item.title}</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--t2)' }}>{item.source}</span>
             <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--t2)' }}>{item.time}</span>
@@ -76,15 +73,9 @@ function QuickActions({ actions }) {
 
 function HeroCard({ value, pct, sparkline }) {
   return (
-    <div className="hero-card" style={{
-      padding: 16,
-      borderRadius: 12,
-      border: '2px solid var(--green)',
-      backgroundColor: 'var(--bg2)',
-      marginBottom: 16,
-    }}>
-      <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--t1)' }}>Total P&L</h2>
-      <span style={{ fontSize: 24, fontWeight: 800, color: pct >= 0 ? 'var(--green)' : '#ff4d4d' }}>{fmt(value)}</span>
+    <div className="hero-card">
+      <h2>Total P&L</h2>
+      <span style={{ color: pct >= 0 ? 'var(--green)' : '#ff4d4d' }}>{fmt(value)}</span>
       <svg width="100%" height="24" viewBox="0 0 100 24">
         <path d="M 0 0 L 0 24 L 100 24 Z" fill="#fff" />
         {sparkline.map((point, i) => (
@@ -127,9 +118,9 @@ function Dashboard() {
   if (loading) {
     return (
       <div className="skeleton-loader">
-        <div className="skeleton-loader-item" style={{ height: 100, backgroundColor: 'var(--bg2)' }} />
-        <div className="skeleton-loader-item" style={{ height: 100, backgroundColor: 'var(--bg2)' }} />
-        <div className="skeleton-loader-item" style={{ height: 100, backgroundColor: 'var(--bg2)' }} />
+        <div className="skeleton-loader-item" />
+        <div className="skeleton-loader-item" />
+        <div className="skeleton-loader-item" />
       </div>
     );
   }
@@ -138,8 +129,8 @@ function Dashboard() {
     <div className="dashboard">
       <header className="header">
         <div className="header-content">
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--t1)' }}>{greeting()}</h1>
-          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--t2)' }}>{new Date().toLocaleDateString()}</span>
+          <h1>{greeting()}</h1>
+          <span>{new Date().toLocaleDateString()}</span>
           <button className="refresh-button" onClick={() => navigate('/refresh')}>
             <svg width="20" height="20" viewBox="0 0 20 20">
               <path d="M 0 0 L 0 20 L 20 20 Z" fill="#fff" />
@@ -159,16 +150,14 @@ function Dashboard() {
         <Movers data={movers} />
         <FearGreedGauge value={fearGreed} />
         <News data={news} />
-        <QuickActions actions={[{ name: 'Flights' }, { name: 'Markets' }, { name: 'Sports' }, { name: 'AnDy' }]} />
+        <QuickActions actions={[{ name: 'Markets' }, { name: 'Sports' }, { name: 'Flights' }, { name: 'AnDy' }]} />
       </main>
     </div>
   );
 }
 
 export default Dashboard;
-```
 
-```css
 .dashboard {
   display: flex;
   flex-direction: column;
@@ -358,9 +347,7 @@ export default Dashboard;
     transform: scale(1);
   }
 }
-```
 
-```css
 :root {
   --green: #00ff88;
   --bg: #080808;
@@ -439,6 +426,3 @@ select:focus {
   outline: none;
   border: 2px solid var(--green);
 }
-```
-
-Cela devrait vous donner un design premium et moderne pour votre application financière.
