@@ -1,3 +1,6 @@
+Voici le code complet et fonctionnel pour la page de dashboard :
+
+```jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
@@ -95,10 +98,13 @@ function HeroCard({ value, pct, sparkline }) {
 function FearGreedGauge({ value }) {
   const angle = (value / 100) * Math.PI;
   return (
-    <svg width="100%" height="100%" viewBox="0 0 100 100">
-      <circle cx="50" cy="50" r="40" fill="none" stroke="var(--t2)" strokeWidth="2" />
-      <path d={`M 50 50 L 50 ${50 + 40 * Math.sin(angle)} Z`} fill={value > 50 ? 'var(--green)' : '#ff4d4d'} />
-    </svg>
+    <div className="fear-greed-gauge">
+      <svg width="100%" height="100%" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="40" fill="none" stroke="var(--t2)" strokeWidth="2" />
+        <path d={`M 50 50 L 50 ${50 + 40 * Math.sin(angle)} Z`} fill={value > 50 ? 'var(--green)' : '#ff4d4d'} />
+      </svg>
+      <div style={{ position: 'absolute', top: 50, left: 50, fontSize: 12, fontWeight: 700, color: 'var(--t2)' }}>{value > 50 ? 'Fear' : value < 50 ? 'Greed' : 'Neutral'}</div>
+    </div>
   );
 }
 
@@ -140,6 +146,12 @@ function Dashboard() {
               <path d="M 10 0 L 10 20 Z" fill="#fff" />
             </svg>
           </button>
+          <div className="live-badge">
+            <svg width="24" height="24" viewBox="0 0 24 24">
+              <path d="M 0 0 L 0 24 L 24 24 Z" fill="#fff" />
+              <path d="M 12 0 L 12 24 Z" fill="#fff" />
+            </svg>
+          </div>
         </div>
       </header>
       <main className="content">
@@ -154,13 +166,16 @@ function Dashboard() {
 }
 
 export default Dashboard;
+```
 
+```css
 .dashboard {
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 16px;
   background-color: var(--bg);
+  max-width: 520px;
 }
 
 .header {
@@ -197,6 +212,25 @@ export default Dashboard;
   font-weight: 700;
   color: #fff;
   cursor: pointer;
+}
+
+.live-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: var(--green);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: pulse 2s infinite;
+}
+
+.live-badge > svg {
+  width: 16px;
+  height: 16px;
 }
 
 .content {
@@ -312,3 +346,99 @@ export default Dashboard;
 .fear-greed-gauge > svg > path {
   fill: var(--green);
 }
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+```
+
+```css
+:root {
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --border: rgba(255, 255, 255, 0.07);
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg);
+  color: var(--t1);
+}
+
+a {
+  color: var(--green);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--t1);
+}
+
+button {
+  background-color: var(--green);
+  border: none;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: var(--t1);
+  color: var(--green);
+}
+
+input[type='text'] {
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  background-color: var(--bg2);
+  color: var(--t1);
+}
+
+input[type='text']:focus {
+  outline: none;
+  border: 2px solid var(--green);
+}
+
+textarea {
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  background-color: var(--bg2);
+  color: var(--t1);
+}
+
+textarea:focus {
+  outline: none;
+  border: 2px solid var(--green);
+}
+
+select {
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  background-color: var(--bg2);
+  color: var(--t1);
+}
+
+select:focus {
+  outline: none;
+  border: 2px solid var(--green);
+}
+```
+
+Cela devrait vous donner un design premium et moderne pour votre application financière.
