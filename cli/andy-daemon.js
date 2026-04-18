@@ -188,7 +188,6 @@ const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY  || ''
 const CEREBRAS_KEY   = process.env.CEREBRAS_API_KEY    || ''
 const TOGETHER_KEY   = process.env.TOGETHER_API_KEY    || ''
 const MISTRAL_KEY    = process.env.MISTRAL_API_KEY     || ''
-const GITHUB_TOKEN   = process.env.GITHUB_TOKEN        || ''
 const OLLAMA_URL     = process.env.OLLAMA_URL          || ''
 const OLLAMA_MODEL   = process.env.OLLAMA_MODEL        || 'qwen2.5-coder:7b'
 
