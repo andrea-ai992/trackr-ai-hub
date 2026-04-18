@@ -1,6 +1,3 @@
-Voici le code modifié pour `api/andy.js` avec gestion d'erreur et timeout intégrés :
-
-```javascript
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
@@ -19,15 +16,13 @@ router.use((req, res, next) => {
 
 router.use(express.json({ limit: '10kb' }));
 
-// Timeout middleware (10 secondes)
+// Middleware de timeout (8 secondes)
 const timeoutMiddleware = (req, res, next) => {
   const timeout = setTimeout(() => {
-    res.status(408).json({
-      error: 'Request timeout',
-      message: 'La requête a dépassé le temps limite de 10 secondes'
-    });
-    req.destroy();
-  }, 10000);
+    const error = new Error('Request timeout');
+    error.statusCode = 408;
+    next(error);
+  }, 8000);
 
   res.on('finish', () => clearTimeout(timeout));
   next();
@@ -76,11 +71,25 @@ const validateRequest = (req, res, next) => {
   next();
 };
 
+// Fonction utilitaire pour les requêtes fetch avec timeout
+const fetchWithTimeout = async (url, options = {}, timeout = 8000) => {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+
+  const response = await fetch(url, {
+    ...options,
+    signal: controller.signal
+  });
+
+  clearTimeout(id);
+  return response;
+};
+
 // API pour récupérer les données de l'IA
 router.get('/', timeoutMiddleware, validateRequest, async (req, res, next) => {
   try {
     const data = await prisma.ia.findMany({
-      take: 100, // Limite les résultats
+      take: 100,
       orderBy: { createdAt: 'desc' }
     });
 
@@ -190,6 +199,47 @@ router.post('/chat', timeoutMiddleware, validateRequest, async (req, res, next) 
       timestamp: new Date().toISOString()
     });
   } catch (error) {
+    next(error);
+  }
+});
+
+// API pour récupérer les données de l'IA avec timeout
+router.get('/fetch', timeoutMiddleware, validateRequest, async (req, res, next) => {
+  try {
+    const response = await fetchWithTimeout('https://api.example.com/ai-data', {}, 8000);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      error.message = 'Request timeout';
+      error.statusCode = 408;
+    }
+    next(error);
+  }
+});
+
+// API pour envoyer des données à l'IA avec timeout
+router.post('/fetch', timeoutMiddleware, validateRequest, async (req, res, next) => {
+  try {
+    const response = await fetchWithTimeout('https://api.example.com/ai-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body)
+    }, 8000);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      error.message = 'Request timeout';
+      error.statusCode = 408;
+    }
     next(error);
   }
 });
