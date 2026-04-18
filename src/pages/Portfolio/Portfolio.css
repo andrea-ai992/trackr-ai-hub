@@ -1,0 +1,358 @@
+Je vais créer un pie chart d'allocation d'actifs en SVG pur avec interactions tactiles et légende interactive, ainsi que le fichier CSS associé.
+
+```jsx
+// src/pages/Portfolio/components/AllocationPieChart.jsx
+import { useState, useEffect, useRef } from 'react';
+import './Portfolio.css';
+
+const AllocationPieChart = ({ allocations }) => {
+  const [activeIndex, setActiveIndex] = useState(null);
+  const [touchStart, setTouchStart] = useState(null);
+  const svgRef = useRef(null);
+
+  // Normaliser les données d'allocation
+  const normalizedAllocations = allocations.map(asset => ({
+    ...asset,
+    value: Math.max(0, Math.min(100, asset.value)), // Entre 0 et 100
+    percentage: Math.round((asset.value / 100) * 100)
+  }));
+
+  // Calculer les angles pour chaque segment
+  const total = normalizedAllocations.reduce((sum, asset) => sum + asset.value, 0);
+  let cumulativeAngle = 0;
+
+  const segments = normalizedAllocations.map((asset, index) => {
+    const angle = (asset.value / total) * 360;
+    const startAngle = cumulativeAngle;
+    const endAngle = cumulativeAngle + angle;
+    cumulativeAngle = endAngle;
+
+    return {
+      ...asset,
+      startAngle,
+      endAngle,
+      angle,
+      index
+    };
+  });
+
+  // Convertir les angles en coordonnées SVG
+  const getCoordinates = (angle, radius) => {
+    const radians = (angle - 90) * Math.PI / 180;
+    const x = radius + radius * Math.cos(radians);
+    const y = radius + radius * Math.sin(radians);
+    return { x, y };
+  };
+
+  // Gestion des interactions tactiles
+  const handleTouchStart = (e) => {
+    setTouchStart({
+      clientX: e.touches[0].clientX,
+      clientY: e.touches[0].clientY
+    });
+  };
+
+  const handleTouchMove = (e) => {
+    if (!touchStart) return;
+
+    const dx = e.touches[0].clientX - touchStart.clientX;
+    const dy = e.touches[0].clientY - touchStart.clientY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance > 5) {
+      // Déterminer la direction pour naviguer entre les segments
+      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+      const segmentIndex = segments.findIndex(segment => {
+        const centerAngle = (segment.startAngle + segment.endAngle) / 2;
+        return angle >= centerAngle - 15 && angle <= centerAngle + 15;
+      });
+
+      if (segmentIndex !== -1) {
+        setActiveIndex(segmentIndex);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setTouchStart(null);
+  };
+
+  // Calculer le chemin SVG pour chaque segment
+  const getPath = (segment) => {
+    const radius = 100;
+    const centerX = 100;
+    const centerY = 100;
+
+    const start = getCoordinates(segment.startAngle, radius);
+    const end = getCoordinates(segment.endAngle, radius);
+
+    const largeArcFlag = segment.angle > 180 ? 1 : 0;
+
+    return `M ${centerX} ${centerY}
+            L ${start.x} ${start.y}
+            A ${radius} ${radius} 0 ${largeArcFlag} 1 ${end.x} ${end.y}
+            Z`;
+  };
+
+  // Filtrer les segments visibles (pour éviter les segments trop petits)
+  const visibleSegments = segments.filter(segment => segment.angle > 1);
+
+  return (
+    <div className="allocation-pie-chart-container">
+      <div className="pie-chart-wrapper">
+        <svg
+          ref={svgRef}
+          viewBox="0 0 200 200"
+          className="pie-chart-svg"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          <g transform="translate(100, 100)">
+            {visibleSegments.map((segment) => {
+              const isActive = activeIndex === segment.index;
+              const path = getPath(segment);
+
+              return (
+                <g key={segment.index} className="pie-segment-group">
+                  <path
+                    d={path}
+                    className={`pie-segment ${isActive ? 'active' : ''}`}
+                    fill={segment.color}
+                    stroke="#00ff88"
+                    strokeWidth="0.5"
+                    onMouseEnter={() => setActiveIndex(segment.index)}
+                    onMouseLeave={() => setActiveIndex(null)}
+                  />
+                  {segment.angle > 10 && (
+                    <>
+                      <text
+                        x={getCoordinates((segment.startAngle + segment.endAngle) / 2, 60).x}
+                        y={getCoordinates((segment.startAngle + segment.endAngle) / 2, 60).y}
+                        textAnchor="middle"
+                        fill="#00ff88"
+                        fontSize="8"
+                        fontWeight="bold"
+                      >
+                        {segment.percentage}%
+                      </text>
+                      <text
+                        x={getCoordinates((segment.startAngle + segment.endAngle) / 2, 75).x}
+                        y={getCoordinates((segment.startAngle + segment.endAngle) / 2, 75).y}
+                        textAnchor="middle"
+                        fill="#888"
+                        fontSize="6"
+                      >
+                        {segment.name}
+                      </text>
+                    </>
+                  )}
+                </g>
+              );
+            })}
+            <circle cx="100" cy="100" r="80" fill="transparent" stroke="#00ff88" strokeWidth="0.5" />
+          </g>
+        </svg>
+      </div>
+
+      <div className="pie-legend">
+        {normalizedAllocations.map((asset, index) => (
+          <div
+            key={index}
+            className={`legend-item ${activeIndex === index ? 'active' : ''}`}
+            onMouseEnter={() => setActiveIndex(index)}
+            onMouseLeave={() => setActiveIndex(null)}
+            onClick={() => setActiveIndex(index === activeIndex ? null : index)}
+          >
+            <div className="legend-color" style={{ backgroundColor: asset.color }}></div>
+            <div className="legend-info">
+              <div className="legend-name">{asset.name}</div>
+              <div className="legend-value">{asset.value}%</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default AllocationPieChart;
+```
+
+```css
+/* src/pages/Portfolio/Portfolio.css */
+:root {
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --bg3: #1a1a1a;
+  --border: rgba(255, 255, 255, 0.07);
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: local('Inter'), url('/fonts/Inter-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: local('Inter'), url('/fonts/Inter-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: var(--bg);
+  color: var(--t1);
+  line-height: 1.6;
+}
+
+.portfolio-page {
+  min-height: 100vh;
+  padding: 20px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.portfolio-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.portfolio-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--t1);
+}
+
+.portfolio-subtitle {
+  font-size: 0.9rem;
+  color: var(--t2);
+  margin-top: 5px;
+}
+
+.allocation-pie-chart-container {
+  background-color: var(--bg2);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 30px;
+  border: 1px solid var(--border);
+}
+
+.pie-chart-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.pie-chart-svg {
+  width: 100%;
+  height: auto;
+  max-height: 300px;
+  cursor: pointer;
+}
+
+.pie-segment {
+  transition: all 0.3s ease;
+  opacity: 0.9;
+}
+
+.pie-segment:hover,
+.pie-segment.active {
+  opacity: 1;
+  filter: drop-shadow(0 0 8px var(--green));
+  transform: scale(1.05);
+}
+
+.pie-segment-group text {
+  pointer-events: none;
+  user-select: none;
+}
+
+.pie-legend {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  background-color: var(--bg3);
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.legend-item:hover,
+.legend-item.active {
+  border-color: var(--green);
+  background-color: rgba(0, 255, 136, 0.1);
+}
+
+.legend-color {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.legend-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.legend-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--t1);
+  margin-bottom: 2px;
+}
+
+.legend-value {
+  font-size: 0.8rem;
+  color: var(--t2);
+}
+
+/* Responsive adjustments */
+@media (min-width: 768px) {
+  .pie-legend {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .legend-item {
+    margin-bottom: 8px;
+  }
+}
+
+/* Animation pour les segments */
+@keyframes pulse {
+  0% { opacity: 0.7; }
+  50% { opacity: 1; }
+  100% { opacity: 0.7; }
+}
+
+.pie-segment {
+  animation: pulse 2s infinite;
+}
