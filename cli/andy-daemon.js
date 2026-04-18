@@ -163,20 +163,32 @@ async function flushSyncQueue() {
 
 // ── Providers LLM — chaîne multi-provider avec cooldown par provider ──────────
 //
-//  1. Groq        GRATUIT — console.groq.com        — llama-3.3-70b · 6000 req/jour
-//  2. Gemini      GRATUIT — aistudio.google.com     — 1.5-flash · 1M tokens/jour
-//  3. OpenRouter  GRATUIT — openrouter.ai           — models :free (llama-3.1-70b)
-//  4. Anthropic   PAYANT  — anthropic.com           — fallback si crédits dispo
-//  5. Ollama      LOCAL   — si OLLAMA_URL défini    — qwen2.5-coder ou autre
+//  1. Cerebras    GRATUIT — cloud.cerebras.ai       — llama-3.3-70b · 2000 tok/s 🚀
+//  2. Groq        GRATUIT — console.groq.com        — llama-3.3-70b · 6000 req/jour
+//  3. GitHub      GRATUIT — GITHUB_TOKEN suffit     — gpt-4o-mini · 15 RPM
+//  4. Gemini      GRATUIT — aistudio.google.com     — 2.0-flash · 200 req/jour
+//  5. Together    GRATUIT — together.ai             — Llama-3.3-70b free
+//  6. OpenRouter  GRATUIT — openrouter.ai           — models :free
+//  7. Mistral     GRATUIT — mistral.ai              — mistral-small · 500K tok/mois
+//  8. Anthropic   PAYANT  — anthropic.com           — fallback si crédits dispo
+//  9. Ollama      LOCAL   — si OLLAMA_URL défini    — qwen2.5-coder ou autre
 //
-//  Pour activer un provider, ajouter la clé dans .env :
-//    GROQ_API_KEY=gsk_...      (console.groq.com — gratuit, pas de CB)
-//    GEMINI_API_KEY=AIza...    (aistudio.google.com — gratuit, pas de CB)
-//    OPENROUTER_API_KEY=sk-... (openrouter.ai — gratuit, modèles :free)
+//  Pour activer: ajouter la clé dans .env du VPS
+//    CEREBRAS_API_KEY=...  (cloud.cerebras.ai — gratuit, le plus rapide)
+//    GROQ_API_KEY=gsk_...  (console.groq.com)
+//    GITHUB_TOKEN=...      (déjà présent — GitHub Models gratuit)
+//    GEMINI_API_KEY=AIza.. (aistudio.google.com)
+//    TOGETHER_API_KEY=...  (together.ai — gratuit)
+//    OPENROUTER_API_KEY=.. (openrouter.ai)
+//    MISTRAL_API_KEY=...   (console.mistral.ai — gratuit)
 
 const GROQ_KEY       = process.env.GROQ_API_KEY       || ''
 const GEMINI_KEY     = process.env.GEMINI_API_KEY      || ''
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY  || ''
+const CEREBRAS_KEY   = process.env.CEREBRAS_API_KEY    || ''
+const TOGETHER_KEY   = process.env.TOGETHER_API_KEY    || ''
+const MISTRAL_KEY    = process.env.MISTRAL_API_KEY     || ''
+const GITHUB_TOKEN   = process.env.GITHUB_TOKEN        || ''
 const OLLAMA_URL     = process.env.OLLAMA_URL          || ''
 const OLLAMA_MODEL   = process.env.OLLAMA_MODEL        || 'qwen2.5-coder:7b'
 
@@ -191,13 +203,14 @@ const API_SEMAPHORE_LIMIT = 3  // max absolu
 let   apiConcurrent = 0
 
 function activeSemaphoreLimit() {
-  if (GROQ_KEY && providerAvailable('groq')) return 3
-  if (API_KEY  && providerAvailable('anthropic')) return 2
-  return 1  // Gemini/OpenRouter seuls — sérialiser pour 15 req/min
+  if (CEREBRAS_KEY && providerAvailable('cerebras')) return 3
+  if (GROQ_KEY     && providerAvailable('groq'))     return 3
+  if (API_KEY      && providerAvailable('anthropic')) return 2
+  return 1
 }
 
 // Cooldown par provider — évite retry inutile quand daily limit ou crédits épuisés
-const providerCooldown = { groq: 0, gemini: 0, openrouter: 0, anthropic: 0, ollama: 0 }
+const providerCooldown = { cerebras: 0, groq: 0, github: 0, gemini: 0, together: 0, openrouter: 0, mistral: 0, anthropic: 0, ollama: 0 }
 
 function providerAvailable(name) { return Date.now() >= (providerCooldown[name] || 0) }
 
@@ -314,26 +327,55 @@ async function generateRaw(prompt, maxTokens = 4096, hint = 'smart') {
       return null
     }
 
-    // 1. Groq — primary (meilleur qualité gratuit)
+    // 1. Cerebras — LE PLUS RAPIDE gratuit (~2000 tok/s), 30 RPM
+    if (CEREBRAS_KEY && providerAvailable('cerebras')) {
+      const text = await tryProvider('cerebras',
+        () => callOpenAI('https://api.cerebras.ai/v1', CEREBRAS_KEY, 'llama-3.3-70b', prompt, maxTokens))
+      if (text) return text
+    }
+
+    // 2. Groq — rapide et gratuit, llama-3.3-70b
     if (GROQ_KEY && providerAvailable('groq')) {
       const model = hint === 'fast' ? GROQ_FAST : GROQ_SMART
       const text = await tryProvider('groq', () => callOpenAI('https://api.groq.com/openai', GROQ_KEY, model, prompt, maxTokens))
       if (text) return text
     }
 
-    // 2. Gemini 2.0 Flash — gratuit (aistudio.google.com), 15 req/min
+    // 3. GitHub Models — GITHUB_TOKEN existant, gpt-4o-mini gratuit
+    if (GITHUB_TOKEN && providerAvailable('github')) {
+      const text = await tryProvider('github',
+        () => callOpenAI('https://models.inference.ai.azure.com', GITHUB_TOKEN, 'gpt-4o-mini', prompt, Math.min(maxTokens, 4096),
+          { 'X-GitHub-Api-Version': '2022-11-28' }))
+      if (text) return text
+    }
+
+    // 4. Gemini 2.0 Flash — gratuit (aistudio.google.com), 15 req/min
     if (GEMINI_KEY && providerAvailable('gemini')) {
       const text = await tryProvider('gemini', () => callGemini(prompt, maxTokens), 8)
       if (text) return text
     }
 
-    // 3. OpenRouter — modèles :free (openrouter.ai — compte gratuit)
+    // 5. Together AI — Llama-3.3-70b gratuit
+    if (TOGETHER_KEY && providerAvailable('together')) {
+      const text = await tryProvider('together',
+        () => callOpenAI('https://api.together.xyz/v1', TOGETHER_KEY,
+          'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free', prompt, maxTokens))
+      if (text) return text
+    }
+
+    // 6. OpenRouter — modèles :free
     if (OPENROUTER_KEY && providerAvailable('openrouter')) {
-      // nvidia nemotron 120B = excellent pour le code · gemma-4 26B = rapide
       const model = hint === 'fast' ? 'google/gemma-4-26b-a4b-it:free' : 'nvidia/nemotron-3-super-120b-a12b:free'
       const text = await tryProvider('openrouter',
         () => callOpenAI('https://openrouter.ai/api', OPENROUTER_KEY, model, prompt, maxTokens,
           { 'HTTP-Referer': APP_URL, 'X-Title': 'AnDy-Daemon' }), 3)
+      if (text) return text
+    }
+
+    // 7. Mistral — gratuit (500K tok/mois)
+    if (MISTRAL_KEY && providerAvailable('mistral')) {
+      const text = await tryProvider('mistral',
+        () => callOpenAI('https://api.mistral.ai/v1', MISTRAL_KEY, 'mistral-small-latest', prompt, maxTokens))
       if (text) return text
     }
 
@@ -1092,9 +1134,13 @@ async function main() {
   log('=== AnDy Daemon v3 démarré ===')
   log(`Repo: ${GITHUB_REPO} | App: ${APP_URL}`)
   log(`Providers: ${[
+    CEREBRAS_KEY   && `Cerebras(${CEREBRAS_KEY.slice(0,8)}…)`,
     GROQ_KEY       && `Groq(${GROQ_KEY.slice(0,8)}…)`,
+    GITHUB_TOKEN   && `GitHub(${GITHUB_TOKEN.slice(0,8)}…)`,
     GEMINI_KEY     && `Gemini(${GEMINI_KEY.slice(0,8)}…)`,
+    TOGETHER_KEY   && `Together(${TOGETHER_KEY.slice(0,8)}…)`,
     OPENROUTER_KEY && `OpenRouter(${OPENROUTER_KEY.slice(0,8)}…)`,
+    MISTRAL_KEY    && `Mistral(${MISTRAL_KEY.slice(0,8)}…)`,
     API_KEY        && `Anthropic(${API_KEY.slice(0,16)}…)`,
     OLLAMA_URL     && `Ollama(${OLLAMA_URL})`,
   ].filter(Boolean).join(' | ') || 'AUCUN ⚠ — ajouter GROQ_API_KEY ou GEMINI_API_KEY dans .env'}`)

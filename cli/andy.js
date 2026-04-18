@@ -322,22 +322,41 @@ Règles :
 
 const GEMINI_KEY     = process.env.GEMINI_API_KEY      || ''
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY  || ''
+const CEREBRAS_KEY   = process.env.CEREBRAS_API_KEY    || ''
+const TOGETHER_KEY   = process.env.TOGETHER_API_KEY    || ''
+const MISTRAL_KEY    = process.env.MISTRAL_API_KEY     || ''
+const GH_TOKEN       = process.env.GITHUB_TOKEN        || ''
 
-// ── Generate raw (Groq → Gemini → OpenRouter → Anthropic) ────────────────────
+async function _oaiCall(baseUrl, key, model, prompt, maxTokens, extraHeaders = {}) {
+  const r = await fetch(`${baseUrl}/v1/chat/completions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(key ? { Authorization: `Bearer ${key}` } : {}), ...extraHeaders },
+    body: JSON.stringify({ model, messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: prompt }], max_tokens: Math.min(maxTokens, 4096), temperature: 0.4 }),
+    signal: AbortSignal.timeout(45000),
+  }).catch(() => null)
+  if (!r?.ok) return null
+  const d = await r.json().catch(() => null)
+  return d?.choices?.[0]?.message?.content?.trim() || null
+}
+
+// ── Generate raw — chaîne 8 providers gratuits ───────────────────────────────
 async function generateRaw(prompt, maxTokens = 4096) {
-  // 1) Groq
-  if (GROQ_KEY) {
-    try {
-      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GROQ_KEY}` },
-        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: prompt }], max_tokens: Math.min(maxTokens, 8000), temperature: 0.4 }),
-        signal: AbortSignal.timeout(30000),
-      }).catch(() => null)
-      if (r?.ok) { const d = await r.json().catch(() => null); const t = d?.choices?.[0]?.message?.content?.trim(); if (t) return t }
-    } catch {}
+  // 1) Cerebras — le plus rapide (~2000 tok/s)
+  if (CEREBRAS_KEY) {
+    const t = await _oaiCall('https://api.cerebras.ai/v1', CEREBRAS_KEY, 'llama-3.3-70b', prompt, maxTokens)
+    if (t) return t
   }
-  // 2) Gemini (gratuit)
+  // 2) Groq
+  if (GROQ_KEY) {
+    const t = await _oaiCall('https://api.groq.com/openai', GROQ_KEY, 'llama-3.3-70b-versatile', prompt, maxTokens)
+    if (t) return t
+  }
+  // 3) GitHub Models (GITHUB_TOKEN existant)
+  if (GH_TOKEN) {
+    const t = await _oaiCall('https://models.inference.ai.azure.com', GH_TOKEN, 'gpt-4o-mini', prompt, maxTokens, { 'X-GitHub-Api-Version': '2022-11-28' })
+    if (t) return t
+  }
+  // 4) Gemini 2.0 Flash
   if (GEMINI_KEY) {
     try {
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`, {
@@ -348,18 +367,22 @@ async function generateRaw(prompt, maxTokens = 4096) {
       if (r?.ok) { const d = await r.json().catch(() => null); const t = d?.candidates?.[0]?.content?.parts?.[0]?.text?.trim(); if (t) return t }
     } catch {}
   }
-  // 3) OpenRouter free
-  if (OPENROUTER_KEY) {
-    try {
-      const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENROUTER_KEY}`, 'HTTP-Referer': APP_URL },
-        body: JSON.stringify({ model: 'nvidia/nemotron-3-super-120b-a12b:free', messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: prompt }], max_tokens: Math.min(maxTokens, 4096), temperature: 0.4 }),
-        signal: AbortSignal.timeout(60000),
-      }).catch(() => null)
-      if (r?.ok) { const d = await r.json().catch(() => null); const t = d?.choices?.[0]?.message?.content?.trim(); if (t) return t }
-    } catch {}
+  // 5) Together AI — Llama-3.3-70b gratuit
+  if (TOGETHER_KEY) {
+    const t = await _oaiCall('https://api.together.xyz/v1', TOGETHER_KEY, 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free', prompt, maxTokens)
+    if (t) return t
   }
-  // 4) Anthropic fallback
+  // 6) OpenRouter free
+  if (OPENROUTER_KEY) {
+    const t = await _oaiCall('https://openrouter.ai/api', OPENROUTER_KEY, 'nvidia/nemotron-3-super-120b-a12b:free', prompt, maxTokens, { 'HTTP-Referer': APP_URL })
+    if (t) return t
+  }
+  // 7) Mistral gratuit
+  if (MISTRAL_KEY) {
+    const t = await _oaiCall('https://api.mistral.ai/v1', MISTRAL_KEY, 'mistral-small-latest', prompt, maxTokens)
+    if (t) return t
+  }
+  // 8) Anthropic fallback
   if (!API_KEY) return null
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -376,7 +399,7 @@ async function generateRaw(prompt, maxTokens = 4096) {
 const THINKING_BUDGET = 3000   // tokens de réflexion (0 = désactivé)
 
 async function chat(userMessage) {
-  if (!API_KEY && !GROQ_KEY && !GEMINI_KEY && !OPENROUTER_KEY) {
+  if (!API_KEY && !GROQ_KEY && !GEMINI_KEY && !OPENROUTER_KEY && !CEREBRAS_KEY && !TOGETHER_KEY && !MISTRAL_KEY && !GH_TOKEN) {
     line(`\n  ${_.red}✗ Aucun provider — ajoute GROQ_API_KEY ou GEMINI_API_KEY dans .env${R}`)
     return
   }
