@@ -162,77 +162,40 @@ const Markets = () => {
           </div>
         ) : (
           <>
-            {tab === 'stocks' ? (
-              <div className="space-y-2">
-                {filteredStocks.map((asset, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 rounded-lg hover:bg-var(--bg2)/50 transition-colors cursor-pointer">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="w-8 h-8 rounded-full bg-var(--bg) flex items-center justify-center text-xs font-bold text-var(--t1) flex-shrink-0">
-                        {asset.image ? (
-                          <img src={asset.image} alt={asset.name} className="w-full h-full rounded-full object-cover" />
-                        ) : (
-                          <span className="text-color">{asset.symbol.substring(0, 2).toUpperCase()}</span>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold text-sm truncate">{asset.name}</h3>
-                        <p className="text-xs text-var(--t3) truncate">{asset.symbol}</p>
-                      </div>
+            <div className="space-y-2">
+              {(tab === 'stocks' ? filteredStocks : filteredCrypto).map((asset, index) => (
+                <div key={index} className="flex items-center justify-between p-3 rounded-lg hover:bg-var(--bg2)/50 transition-colors cursor-pointer">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-var(--bg) flex items-center justify-center text-xs font-bold text-var(--t1) flex-shrink-0">
+                      {asset.image ? (
+                        <img src={asset.image} alt={asset.name} className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        <span className="text-color">{asset.symbol.substring(0, 2).toUpperCase()}</span>
+                      )}
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <div className="font-mono font-bold tabular-nums text-sm">
-                        {asset.price.toLocaleString('en-US', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </div>
-                      <div className="flex items-center gap-1 text-xs" style={{ color: getChangeColor(asset.change) }}>
-                        {getArrow(asset.change)}
-                        {Math.abs(asset.change).toFixed(2)}%
-                      </div>
-                    </div>
-                    <div className="ml-4 flex-shrink-0">
-                      {renderSparkline(asset.sparkline)}
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-sm truncate">{asset.name}</h3>
+                      <p className="text-xs text-var(--t3) truncate">{asset.symbol}</p>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {filteredCrypto.map((asset, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 rounded-lg hover:bg-var(--bg2)/50 transition-colors cursor-pointer">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="w-8 h-8 rounded-full bg-var(--bg) flex items-center justify-center text-xs font-bold text-var(--t1) flex-shrink-0">
-                        {asset.image ? (
-                          <img src={asset.image} alt={asset.name} className="w-full h-full rounded-full object-cover" />
-                        ) : (
-                          <span className="text-color">{asset.symbol.substring(0, 2).toUpperCase()}</span>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold text-sm truncate">{asset.name}</h3>
-                        <p className="text-xs text-var(--t3) truncate">{asset.symbol}</p>
-                      </div>
+                  <div className="text-right flex-shrink-0">
+                    <div className="font-mono font-bold tabular-nums text-sm">
+                      {asset.price.toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <div className="font-mono font-bold tabular-nums text-sm">
-                        {asset.price.toLocaleString('en-US', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </div>
-                      <div className="flex items-center gap-1 text-xs" style={{ color: getChangeColor(asset.change) }}>
-                        {getArrow(asset.change)}
-                        {Math.abs(asset.change).toFixed(2)}%
-                      </div>
-                    </div>
-                    <div className="ml-4 flex-shrink-0">
-                      {renderSparkline(asset.sparkline)}
+                    <div className="flex items-center gap-1 text-xs" style={{ color: getChangeColor(asset.change) }}>
+                      {getArrow(asset.change)}
+                      {Math.abs(asset.change).toFixed(2)}%
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                  <div className="ml-4 flex-shrink-0">
+                    {renderSparkline(asset.sparkline)}
+                  </div>
+                </div>
+              ))}
+            </div>
 
             <div className="mt-8">
               <h2 className="text-xs font-semibold uppercase tracking-widest text-var(--t3) mb-3 px-1">
