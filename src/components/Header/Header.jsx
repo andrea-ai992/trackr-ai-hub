@@ -1,136 +1,27 @@
-**src/pages/Dashboard.jsx**
-```jsx
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { supabase } from '../utils/supabase';
-import Header from '../components/Header/Header';
-import HeroCard from '../components/HeroCard/HeroCard';
-import TopMovers from '../components/TopMovers/TopMovers';
-import FearAndGreed from '../components/FearAndGreed/FearAndGreed';
-import NewsFeed from '../components/NewsFeed/NewsFeed';
-import QuickActions from '../components/QuickActions/QuickActions';
-import { getPortfolioValue, getTopMovers, getNewsFeed, getFearAndGreed } from '../utils/api';
-
-const Dashboard = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [portfolioValue, setPortfolioValue] = useState(0);
-  const [topMovers, setTopMovers] = useState([]);
-  const [newsFeed, setNewsFeed] = useState([]);
-  const [fearAndGreed, setFearAndGreed] = useState({ value: 0, label: '' });
-
-  useEffect(() => {
-    const fetchPortfolioValue = async () => {
-      const { data, error } = await getPortfolioValue();
-      if (error) {
-        console.error(error);
-      } else {
-        setPortfolioValue(data.value);
-      }
-    };
-    const fetchTopMovers = async () => {
-      const { data, error } = await getTopMovers();
-      if (error) {
-        console.error(error);
-      } else {
-        setTopMovers(data.topMovers);
-      }
-    };
-    const fetchNewsFeed = async () => {
-      const { data, error } = await getNewsFeed();
-      if (error) {
-        console.error(error);
-      } else {
-        setNewsFeed(data.newsFeed);
-      }
-    };
-    const fetchFearAndGreed = async () => {
-      const { data, error } = await getFearAndGreed();
-      if (error) {
-        console.error(error);
-      } else {
-        setFearAndGreed({ value: data.value, label: data.label });
-      }
-    };
-    fetchPortfolioValue();
-    fetchTopMovers();
-    fetchNewsFeed();
-    fetchFearAndGreed();
-  }, []);
-
-  return (
-    <div className="page-container">
-      <Header />
-      <div className="skeleton-container" style={{ opacity: 0 }}>
-        <HeroCard
-          value={portfolioValue}
-          variation={2.4}
-          sparklineData={[
-            { x: 1, y: 100 },
-            { x: 2, y: 120 },
-            { x: 3, y: 110 },
-            { x: 4, y: 130 },
-            { x: 5, y: 120 },
-            { x: 6, y: 110 },
-            { x: 7, y: 130 },
-          ]}
-        />
-        <TopMovers topMovers={topMovers} />
-        <FearAndGreed fearAndGreed={fearAndGreed} />
-        <NewsFeed newsFeed={newsFeed} />
-        <QuickActions />
-      </div>
-      <div className="content-container">
-        <HeroCard
-          value={portfolioValue}
-          variation={2.4}
-          sparklineData={[
-            { x: 1, y: 100 },
-            { x: 2, y: 120 },
-            { x: 3, y: 110 },
-            { x: 4, y: 130 },
-            { x: 5, y: 120 },
-            { x: 6, y: 110 },
-            { x: 7, y: 130 },
-          ]}
-        />
-        <TopMovers topMovers={topMovers} />
-        <FearAndGreed fearAndGreed={fearAndGreed} />
-        <NewsFeed newsFeed={newsFeed} />
-        <QuickActions />
-      </div>
-    </div>
-  );
-};
-
-export default Dashboard;
-```
-
 **src/components/Header/Header.jsx**
 ```jsx
 import React from 'react';
-import { useLocation } from 'react-router-dom';
-import { supabase } from '../utils/supabase';
+import { useMediaQuery } from 'react-responsive';
+import { FaBell } from 'lucide-react';
+import { useTheme } from './useTheme';
 
 const Header = () => {
-  const location = useLocation();
-  const [currentTime, setCurrentTime] = React.useState(new Date().toLocaleTimeString());
-
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      setCurrentTime(new Date().toLocaleTimeString());
-    }, 1000);
-    return () => clearInterval(intervalId);
-  }, []);
+  const isMobile = useMediaQuery({ maxWidth: 520 });
+  const theme = useTheme();
 
   return (
-    <header className="header">
+    <header className={`header ${isMobile ? 'mobile' : ''}`}>
       <div className="header-content">
-        <h1 className="header-title">Bonjour Andrea</h1>
-        <p className="header-time">{currentTime}</p>
-        <button className="header-badge live-badge">
-          LIVE
-        </button>
+        <h1 className="title">
+          Bonjour Andrea
+          <span className="time">{new Date().toLocaleTimeString()}</span>
+        </h1>
+        <div className="live-badge">
+          <span className="live-icon">
+            <FaBell />
+          </span>
+          <span className="live-text">Live</span>
+        </div>
       </div>
     </header>
   );
@@ -139,423 +30,700 @@ const Header = () => {
 export default Header;
 ```
 
-**src/components/HeroCard/HeroCard.jsx**
+**src/pages/Dashboard.jsx**
 ```jsx
-import React from 'react';
-import { Inter } from 'next/font/google';
+import React, { useState, useEffect } from 'react';
+import { useTheme, useMediaQuery } from './useTheme';
+import Header from '../components/Header/Header';
+import { Link } from 'react-router-dom';
+import { FaArrowUp, FaArrowDown } from 'lucide-react';
+import { SupabaseClient } from '@supabase/supabase-js';
 
-const inter = Inter({ subsets: ['latin'] });
+const Dashboard = () => {
+  const isMobile = useMediaQuery({ maxWidth: 520 });
+  const theme = useTheme();
+  const [data, setData] = useState({});
 
-const HeroCard = ({ value, variation, sparklineData }) => {
+  useEffect(() => {
+    const supabase = new SupabaseClient('https://trackr-app-nu.vercel.app');
+    const query = supabase
+      .from('portfolio')
+      .select('value, variation')
+      .eq('user_id', 'andrea');
+    supabase
+      .query(query)
+      .then((response) => {
+        setData(response.data[0]);
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }, []);
+
   return (
-    <div className="hero-card">
-      <div className="hero-card-content">
-        <h1 className="hero-card-title">
-          {value.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
-        </h1>
-        <p className="hero-card-variation">
-          {variation > 0 ? `+${variation}%` : variation < 0 ? `${variation}%` : '0%'}
+    <div className={`app ${isMobile ? 'mobile' : ''}`}>
+      <Header />
+      <main className="main">
+        <section className="portfolio-hero">
+          <h2 className="title">Portfolio</h2>
+          <p className="value">
+            ${data.value.toLocaleString()}
+            <span className="variation">
+              {data.variation > 0 ? (
+                <FaArrowUp className="icon" />
+              ) : (
+                <FaArrowDown className="icon" />
+              )}
+              {data.variation.toFixed(2)}%
+            </span>
+          </p>
           <svg
-            className="hero-card-variation-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
+            className="sparkline"
+            viewBox="0 0 100 10"
+            preserveAspectRatio="none"
           >
             <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M17 11a7 7 0 1 0-9.3 6.17L5 18l.3-1.8a2 2 0 0 1 2.41-.35L11 13.83l4.57-4.57a2 2 0 0 1 2.6.64l-.94 1.94c-.4.39-.78.73-1.13 1a7 7 0 0 1-9.65 0"
+              d={`M 0 ${data.variation * 10} S 100 ${data.variation * 10} 100`}
+              fill="#00ff88"
             />
           </svg>
-        </p>
-        <svg
-          className="hero-card-sparkline"
-          viewBox="0 0 100 10"
-          fill="none"
-          stroke="#00ff88"
-          strokeWidth="2"
-        >
-          {sparklineData.map((data, index) => (
-            <line
-              key={index}
-              x1={data.x}
-              y1={5}
-              x2={data.x}
-              y2={data.y}
-              stroke="#00ff88"
-              strokeWidth="2"
-            />
-          ))}
-        </svg>
-      </div>
-    </div>
-  );
-};
-
-export default HeroCard;
-```
-
-**src/components/TopMovers/TopMovers.jsx**
-```jsx
-import React from 'react';
-import { Inter } from 'next/font/google';
-
-const inter = Inter({ subsets: ['latin'] });
-
-const TopMovers = ({ topMovers }) => {
-  return (
-    <div className="top-movers">
-      <h2 className="top-movers-title">Top Movers</h2>
-      <div className="top-movers-container">
-        {topMovers.map((topMover, index) => (
-          <div key={index} className="top-movers-card">
-            <div className="top-movers-card-content">
-              <h3 className="top-movers-card-title">{topMover.name}</h3>
-              <p className="top-movers-card-price">
-                {topMover.price.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="top-movers-card-variation">
-                {topMover.variation > 0 ? `+${topMover.variation}%` : topMover.variation < 0 ? `${topMover.variation}%` : '0%'}
-                <svg
-                  className="top-movers-card-variation-icon"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M17 11a7 7 0 1 0-9.3 6.17L5 18l.3-1.8a2 2 0 0 1 2.41-.35L11 13.83l4.57-4.57a2 2 0 0 1 2.6.64l-.94 1.94c-.4.39-.78.73-1.13 1a7 7 0 0 1-9.65 0"
-                  />
-                </svg>
-              </p>
-            </div>
-            <div className="top-movers-card-badge">
-              <svg
-                className="top-movers-card-badge-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M19 11a7 7 0 1 0-14 0a7 7 0 0 0 14 0z"
-                />
-              </svg>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-export default TopMovers;
-```
-
-**src/components/FearAndGreed/FearAndGreed.jsx**
-```jsx
-import React from 'react';
-
-const FearAndGreed = ({ fearAndGreed }) => {
-  return (
-    <div className="fear-and-greed">
-      <h2 className="fear-and-greed-title">Fear & Greed</h2>
-      <div className="fear-and-greed-container">
-        <svg
-          className="fear-and-greed-gauge"
-          viewBox="0 0 100 100"
-          fill="none"
-          stroke="#00ff88"
-          strokeWidth="2"
-        >
-          <circle
-            cx="50"
-            cy="50"
-            r="45"
-            stroke="#00ff88"
-            strokeWidth="2"
-            fill="none"
-          />
-          <path
-            d="M 50 50 L 50 100 L 70 100 L 70 50 L 50 50"
-            stroke="#00ff88"
-            strokeWidth="2"
-          />
-          <text
-            x="50"
-            y="50"
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fontSize="24"
-            fill="#00ff88"
+        </section>
+        <section className="movers">
+          <h2 className="title">Movers</h2>
+          <ul className="list">
+            {data.movers.map((mover, index) => (
+              <li key={index} className="item">
+                <h3 className="symbol">{mover.symbol}</h3>
+                <p className="price">
+                  ${mover.price.toLocaleString()}
+                  <span className="change">
+                    {mover.change > 0 ? (
+                      <FaArrowUp className="icon" />
+                    ) : (
+                      <FaArrowDown className="icon" />
+                    )}
+                    {mover.change.toFixed(2)}%
+                  </span>
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+        <section className="fear-greed">
+          <h2 className="title">Fear & Greed</h2>
+          <svg
+            className="gauge"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
           >
-            {fearAndGreed.value}
-          </text>
-        </svg>
-        <p className="fear-and-greed-label">{fearAndGreed.label}</p>
-      </div>
+            <path
+              d={`M 50 0 A 50 50 0 1 1 50 100`}
+              fill="#00ff88"
+              stroke="#00ff88"
+              strokeWidth="10"
+            />
+            <path
+              d={`M 50 0 A 50 50 0 1 1 50 100`}
+              fill="none"
+              stroke="#00ff88"
+              strokeWidth="10"
+            />
+            <text
+              x="50"
+              y="50"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill="#00ff88"
+            >
+              {data.fearGreed}
+            </text>
+          </svg>
+          <p className="label">
+            {data.fearGreed === 'Fear' ? 'Fear' : data.fearGreed === 'Greed' ? 'Greed' : 'Neutral'}
+          </p>
+        </section>
+        <section className="news-feed">
+          <h2 className="title">News Feed</h2>
+          <ul className="list">
+            {data.news.map((news, index) => (
+              <li key={index} className="item">
+                <h3 className="title">{news.title}</h3>
+                <p className="source">
+                  <span className="badge">{news.source}</span>
+                  <span className="time">{news.time}</span>
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+        <section className="quick-actions">
+          <h2 className="title">Quick Actions</h2>
+          <div className="grid">
+            <Link to="/markets" className="item">
+              <FaChartBar className="icon" />
+              <span className="label">Markets</span>
+            </Link>
+            <Link to="/portfolio" className="item">
+              <FaWallet className="icon" />
+              <span className="label">Portfolio</span>
+            </Link>
+            <Link to="/signals" className="item">
+              <FaBullseye className="icon" />
+              <span className="label">Signals</span>
+            </Link>
+            <Link to="/andy" className="item">
+              <FaRobot className="icon" />
+              <span className="label">AnDy</span>
+            </Link>
+          </div>
+        </section>
+      </main>
     </div>
   );
 };
 
-export default FearAndGreed;
+export default Dashboard;
 ```
 
-**src/components/NewsFeed/NewsFeed.jsx**
-```jsx
-import React from 'react';
-import { Inter } from 'next/font/google';
-
-const inter = Inter({ subsets: ['latin'] });
-
-const NewsFeed = ({ newsFeed }) => {
-  return (
-    <div className="news-feed">
-      <h2 className="news-feed-title">News Feed</h2>
-      <div className="news-feed-container">
-        {newsFeed.map((news, index) => (
-          <div key={index} className="news-feed-card">
-            <div className="news-feed-card-content">
-              <h3 className="news-feed-card-title">{news.title}</h3>
-              <p className="news-feed-card-source">{news.source}</p>
-              <p className="news-feed-card-time">{news.time}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-export default NewsFeed;
-```
-
-**src/components/QuickActions/QuickActions.jsx**
-```jsx
-import React from 'react';
-import { Inter } from 'next/font/google';
-
-const inter = Inter({ subsets: ['latin'] });
-
-const QuickActions = () => {
-  return (
-    <div className="quick-actions">
-      <h2 className="quick-actions-title">Quick Actions</h2>
-      <div className="quick-actions-container">
-        <div className="quick-actions-card">
-          <div className="quick-actions-card-content">
-            <h3 className="quick-actions-card-title">Markets</h3>
-            <p className="quick-actions-card-description">View market data</p>
-          </div>
-        </div>
-        <div className="quick-actions-card">
-          <div className="quick-actions-card-content">
-            <h3 className="quick-actions-card-title">Portfolio</h3>
-            <p className="quick-actions-card-description">View your portfolio</p>
-          </div>
-        </div>
-        <div className="quick-actions-card">
-          <div className="quick-actions-card-content">
-            <h3 className="quick-actions-card-title">Signals</h3>
-            <p className="quick-actions-card-description">View trading signals</p>
-          </div>
-        </div>
-        <div className="quick-actions-card">
-          <div className="quick-actions-card-content">
-            <h3 className="quick-actions-card-title">AnDy</h3>
-            <p className="quick-actions-card-description">Chat with AnDy</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default QuickActions;
-```
-
-**styles.css**
+**src/components/Header/Header.styles.css**
 ```css
-.page-container {
-  max-width: 520px;
-  margin: 0 auto;
-  padding: 20px;
-  background-color: #080808;
-  color: #f0f0f0;
-}
-
 .header {
-  background-color: #080808;
-  color: #f0f0f0;
-  padding: 20px;
-  text-align: center;
+  background-color: var(--bg);
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .header-content {
   display: flex;
-  justify-content: space-between;
   align-items: center;
 }
 
-.header-title {
-  font-size: 24px;
-  font-weight: bold;
-  margin: 0;
+.title {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.5rem;
+  color: var(--t1);
 }
 
-.header-time {
-  font-size: 18px;
-  margin: 0;
+.time {
+  font-size: 1rem;
+  color: var(--t2);
 }
 
-.header-badge {
-  background-color: #00ff88;
-  color: #080808;
-  padding: 10px 20px;
-  border-radius: 10px;
-  font-size: 18px;
-  cursor: pointer;
-}
-
-.hero-card {
-  background-color: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-}
-
-.hero-card-content {
+.live-badge {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  padding: 0.5rem;
+  border-radius: 50%;
+  background-color: var(--green);
+  color: var(--t1);
 }
 
-.hero-card-title {
-  font-size: 24px;
-  font-weight: bold;
-  margin: 0;
+.live-icon {
+  font-size: 1.5rem;
+  margin-right: 0.5rem;
 }
 
-.hero-card-variation {
-  font-size: 18px;
-  margin: 0;
+.live-text {
+  font-size: 1rem;
+}
+```
+
+**src/pages/Dashboard.styles.css**
+```css
+.app {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg);
+  padding: 2rem;
+  max-width: 520px;
+  margin: 0 auto;
 }
 
-.hero-card-variation-icon {
-  width: 20px;
-  height: 20px;
-  margin-left: 10px;
+.main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
 }
 
-.hero-card-sparkline {
+.portfolio-hero {
+  background-color: var(--bg2);
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.portfolio-hero .title {
+  font-size: 2rem;
+  color: var(--t1);
+}
+
+.portfolio-hero .value {
+  font-size: 3rem;
+  color: var(--t1);
+}
+
+.portfolio-hero .variation {
+  font-size: 1.5rem;
+  color: var(--t2);
+}
+
+.portfolio-hero .sparkline {
   width: 100%;
   height: 20px;
-  margin-top: 10px;
+  margin-top: 1rem;
 }
 
-.top-movers {
-  background-color: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+.movers {
+  padding: 2rem;
 }
 
-.top-movers-title {
-  font-size: 24px;
-  font-weight: bold;
-  margin: 0;
+.movers .title {
+  font-size: 2rem;
+  color: var(--t1);
 }
 
-.top-movers-container {
+.movers .list {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
+  justify-content: center;
 }
 
-.top-movers-card {
-  background-color: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  padding: 20px;
-  border-radius: 10px;
-  margin: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+.movers .item {
+  margin: 1rem;
+  padding: 1rem;
+  background-color: var(--bg2);
+  border-radius: 1rem;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
-.top-movers-card-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.movers .symbol {
+  font-size: 2rem;
+  color: var(--t1);
 }
 
-.top-movers-card-title {
-  font-size: 18px;
-  font-weight: bold;
-  margin: 0;
+.movers .price {
+  font-size: 1.5rem;
+  color: var(--t2);
 }
 
-.top-movers-card-price {
-  font-size: 18px;
-  margin: 0;
+.movers .change {
+  font-size: 1rem;
+  color: var(--t3);
 }
 
-.top-movers-card-variation {
-  font-size: 18px;
-  margin: 0;
+.fear-greed {
+  padding: 2rem;
 }
 
-.top-movers-card-variation-icon {
-  width: 20px;
-  height: 20px;
-  margin-left: 10px;
+.fear-greed .title {
+  font-size: 2rem;
+  color: var(--t1);
 }
 
-.top-movers-card-badge {
-  background-color: #00ff88;
-  color: #080808;
-  padding: 10px 20px;
-  border-radius: 10px;
-  font-size: 18px;
-  cursor: pointer;
-}
-
-.top-movers-card-badge-icon {
-  width: 20px;
-  height: 20px;
-}
-
-.fear-and-greed {
-  background-color: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-}
-
-.fear-and-greed-title {
-  font-size: 24px;
-  font-weight: bold;
-  margin: 0;
-}
-
-.fear-and-greed-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.fear-and-greed-gauge {
-  width: 100px;
+.fear-greed .gauge {
+  width: 100%;
   height: 100px;
-  margin-top: 10px;
+  margin-top: 1rem;
 }
 
-.fear-and-greed-label {
-  font-size: 18px;
-  margin: 0
+.fear-greed .label {
+  font-size: 1.5rem;
+  color: var(--t2);
+}
+
+.news-feed {
+  padding: 2rem;
+}
+
+.news-feed .title {
+  font-size: 2rem;
+  color: var(--t1);
+}
+
+.news-feed .list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.news-feed .item {
+  margin: 1rem;
+  padding: 1rem;
+  background-color: var(--bg2);
+  border-radius: 1rem;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.news-feed .title {
+  font-size: 1.5rem;
+  color: var(--t2);
+}
+
+.news-feed .source {
+  font-size: 1rem;
+  color: var(--t3);
+}
+
+.quick-actions {
+  padding: 2rem;
+}
+
+.quick-actions .title {
+  font-size: 2rem;
+  color: var(--t1);
+}
+
+.quick-actions .grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.quick-actions .item {
+  padding: 1rem;
+  background-color: var(--bg2);
+  border-radius: 1rem;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.quick-actions .icon {
+  font-size: 2rem;
+  margin-right: 0.5rem;
+}
+
+.quick-actions .label {
+  font-size: 1.5rem;
+  color: var(--t2);
+}
+```
+
+**src/components/Header/Header.styles.css**
+```css
+.header {
+  background-color: var(--bg);
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+}
+
+.title {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.5rem;
+  color: var(--t1);
+}
+
+.time {
+  font-size: 1rem;
+  color: var(--t2);
+}
+
+.live-badge {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  border-radius: 50%;
+  background-color: var(--green);
+  color: var(--t1);
+}
+
+.live-icon {
+  font-size: 1.5rem;
+  margin-right: 0.5rem;
+}
+
+.live-text {
+  font-size: 1rem;
+}
+```
+
+**src/pages/Dashboard.styles.css**
+```css
+.app {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg);
+  padding: 2rem;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+}
+
+.portfolio-hero {
+  background-color: var(--bg2);
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.portfolio-hero .title {
+  font-size: 2rem;
+  color: var(--t1);
+}
+
+.portfolio-hero .value {
+  font-size: 3rem;
+  color: var(--t1);
+}
+
+.portfolio-hero .variation {
+  font-size: 1.5rem;
+  color: var(--t2);
+}
+
+.portfolio-hero .sparkline {
+  width: 100%;
+  height: 20px;
+  margin-top: 1rem;
+}
+
+.movers {
+  padding: 2rem;
+}
+
+.movers .title {
+  font-size: 2rem;
+  color: var(--t1);
+}
+
+.movers .list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.movers .item {
+  margin: 1rem;
+  padding: 1rem;
+  background-color: var(--bg2);
+  border-radius: 1rem;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.movers .symbol {
+  font-size: 2rem;
+  color: var(--t1);
+}
+
+.movers .price {
+  font-size: 1.5rem;
+  color: var(--t2);
+}
+
+.movers .change {
+  font-size: 1rem;
+  color: var(--t3);
+}
+
+.fear-greed {
+  padding: 2rem;
+}
+
+.fear-greed .title {
+  font-size: 2rem;
+  color: var(--t1);
+}
+
+.fear-greed .gauge {
+  width: 100%;
+  height: 100px;
+  margin-top: 1rem;
+}
+
+.fear-greed .label {
+  font-size: 1.5rem;
+  color: var(--t2);
+}
+
+.news-feed {
+  padding: 2rem;
+}
+
+.news-feed .title {
+  font-size: 2rem;
+  color: var(--t1);
+}
+
+.news-feed .list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.news-feed .item {
+  margin: 1rem;
+  padding: 1rem;
+  background-color: var(--bg2);
+  border-radius: 1rem;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.news-feed .title {
+  font-size: 1.5rem;
+  color: var(--t2);
+}
+
+.news-feed .source {
+  font-size: 1rem;
+  color: var(--t3);
+}
+
+.quick-actions {
+  padding: 2rem;
+}
+
+.quick-actions .title {
+  font-size: 2rem;
+  color: var(--t1);
+}
+
+.quick-actions .grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.quick-actions .item {
+  padding: 1rem;
+  background-color: var(--bg2);
+  border-radius: 1rem;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.quick-actions .icon {
+  font-size: 2rem;
+  margin-right: 0.5rem;
+}
+
+.quick-actions .label {
+  font-size: 1.5rem;
+  color: var(--t2);
+}
+```
+
+**src/components/Header/Header.styles.css**
+```css
+.header {
+  background-color: var(--bg);
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+}
+
+.title {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.5rem;
+  color: var(--t1);
+}
+
+.time {
+  font-size: 1rem;
+  color: var(--t2);
+}
+
+.live-badge {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  border-radius: 50%;
+  background-color: var(--green);
+  color: var(--t1);
+}
+
+.live-icon {
+  font-size: 1.5rem;
+  margin-right: 0.5rem;
+}
+
+.live-text {
+  font-size: 1rem;
+}
+```
+
+**src/pages/Dashboard.styles.css**
+```css
+.app {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg);
+  padding: 2rem;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+}
+
+.portfolio-hero {
+  background-color: var(--bg2);
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.portfolio-hero .title {
+  font-size: 2rem;
+  color: var(--t1);
+}
+
+.portfolio-hero .value {
+  font-size: 3rem;
+  color: var(--t1);
+}
+
+.portfolio-hero .variation {
+  font-size: 1.5rem;
+  color: var(--t2);
+}
+
+.portfolio-hero .sparkline {
+  width: 100%;
+  height: 20px;
+  margin-top: 1rem;
+}
+
+.movers {
+  padding: 2rem;
+}
+
+.movers .title {
+  font-size: 2rem;
+  color: var(--t1);
+}
+
+.movers .list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.movers .item {
+  margin: 1rem;
+  padding: 1rem;
+  background-color: var(--bg2);
+  border-radius: 1rem;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.m
