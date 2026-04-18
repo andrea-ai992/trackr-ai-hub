@@ -1,3 +1,5 @@
+Je vais optimiser l'application en appliquant les changements demandés. Voici les fichiers modifiés :
+
 **src/App.jsx**
 ```jsx
 import { Suspense, lazy } from 'react';
@@ -100,34 +102,13 @@ import React from 'react';
 const SkeletonPage = () => {
   return (
     <div
-      style={{
-        height: '60vh',
-        backgroundColor: '#111',
-        borderRadius: '10px',
-        padding: '20px',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-      }}
+      className="h-[60vh] bg-[--bg2] rounded-[--radius] p-5 flex flex-col justify-center items-center gap-3"
     >
       <div
-        style={{
-          width: '100%',
-          height: '10px',
-          backgroundColor: '#00ff88',
-          animation: 'shimmer 2s infinite',
-          borderRadius: '10px',
-        }}
+        className="w-full h-2.5 bg-[--green] animate-shimmer rounded-full"
       />
       <div
-        style={{
-          width: '100%',
-          height: '10px',
-          backgroundColor: '#00ff88',
-          animation: 'shimmer 2s infinite',
-          borderRadius: '10px',
-          marginTop: '10px',
-        }}
+        className="w-full h-2.5 bg-[--green] animate-shimmer rounded-full"
       />
     </div>
   );
@@ -186,35 +167,21 @@ export default defineConfig({
   --green: #00ff88;
   --bg: #080808;
   --bg2: #111;
+  --bg3: #1a1a1a;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-hi: rgba(0, 255, 136, 0.3);
   --t1: #f0f0f0;
   --t2: #888;
   --t3: #444;
-  --border: rgba(255, 255, 255, 0.07);
+  --radius: 8px;
 }
-```
 
-**package.json**
-```json
-{
-  "name": "trackr",
-  "version": "1.0.0",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "serve": "vite serve"
-  },
-  "dependencies": {
-    "react": "^18.2.0",
-    "react-router-dom": "^6.3.0",
-    "lucide-react": "^1.0.0",
-    "tailwindcss": "^3.2.4"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-react": "^1.3.0",
-    "@tailwindcss/vite": "^1.3.0",
-    "vite": "^3.2.3"
-  }
+@keyframes shimmer {
+  0% { opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
 }
-```
 
-Notez que j'ai ajouté les dépendances nécessaires pour utiliser Tailwind CSS et que j'ai configuré Vite pour utiliser les modules CSS. J'ai également ajouté les styles nécessaires pour le thème sombre.
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
