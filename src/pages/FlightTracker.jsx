@@ -1,4 +1,4 @@
-Je vais implémenter un design premium pour FlightTracker avec des animations fluides et un statut live en temps réel. Voici le code complet et fonctionnel :
+Voici l'implémentation du système de gestion des erreurs avec timeout et fallback pour les appels API dans `src/pages/FlightTracker.jsx` :
 
 ```jsx
 import { useState, useEffect, useRef, useCallback } from 'react'
@@ -32,15 +32,98 @@ document.head.appendChild(style)
 const OPENSKY = 'https://opensky-network.org/api'
 const PROXY = url => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
 
-async function fetchJSON(url) {
+async function fetchWithTimeout(url, timeout = 8000) {
+  const controller = new AbortController()
+  const id = setTimeout(() => controller.abort(), timeout)
+
   try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(8000) })
+    const r = await fetch(url, { signal: controller.signal })
+    clearTimeout(id)
     if (r.ok) return await r.json()
-  } catch {}
+    throw new Error(`HTTP ${r.status}`)
+  } catch (err) {
+    clearTimeout(id)
+    throw err
+  }
+}
+
+async function fetchJSON(url, fallbackUrl = null) {
   try {
-    const r = await fetch(PROXY(url), { signal: AbortSignal.timeout(12000) })
-    if (r.ok) { const w = await r.json(); return JSON.parse(w.contents) }
-  } catch {}
+    // Essai direct avec timeout
+    return await fetchWithTimeout(url)
+  } catch (err) {
+    console.warn('Primary fetch failed:', err.message)
+
+    if (fallbackUrl) {
+      try {
+        // Essai via proxy avec timeout étendu
+        const response = await fetchWithTimeout(fallbackUrl, 12000)
+        if (response) return response
+      } catch (err) {
+        console.warn('Fallback fetch failed:', err.message)
+      }
+    }
+
+    // Fallback statique si tout échoue
+    try {
+      const cached = localStorage.getItem(`flightTracker:${url}`)
+      if (cached) {
+        console.log('Using cached data')
+        return JSON.parse(cached)
+      }
+    } catch {}
+
+    return null
+  }
+}
+
+// Cache avec durée de validité
+const CACHE_DURATION = 30000 // 30 secondes
+const cache = new Map()
+
+async function getFlightStates() {
+  const cacheKey = 'states'
+  const cached = cache.get(cacheKey)
+  const now = Date.now()
+
+  if (cached && now - cached.timestamp < CACHE_DURATION) {
+    return cached.data
+  }
+
+  try {
+    const data = await fetchJSON(`${OPENSKY}/states/all`, `${PROXY(`${OPENSKY}/states/all`)}`)
+    if (data && data.states) {
+      cache.set(cacheKey, { data: data.states, timestamp: now })
+      localStorage.setItem(`flightTracker:${cacheKey}`, JSON.stringify(data.states))
+      return data.states
+    }
+  } catch (err) {
+    console.error('Failed to fetch flight states:', err)
+  }
+
+  return []
+}
+
+async function getAircraftDetails(icao24) {
+  const cacheKey = `details:${icao24}`
+  const cached = cache.get(cacheKey)
+  const now = Date.now()
+
+  if (cached && now - cached.timestamp < CACHE_DURATION * 2) {
+    return cached.data
+  }
+
+  try {
+    const data = await fetchJSON(`${OPENSKY}/metadata/aircraft?icao24=${icao24}`, `${PROXY(`${OPENSKY}/metadata/aircraft?icao24=${icao24}`)}`)
+    if (data && data.length > 0) {
+      cache.set(cacheKey, { data: data[0], timestamp: now })
+      localStorage.setItem(`flightTracker:${cacheKey}`, JSON.stringify(data[0]))
+      return data[0]
+    }
+  } catch (err) {
+    console.error('Failed to fetch aircraft details:', err)
+  }
+
   return null
 }
 
@@ -182,59 +265,4 @@ function AircraftCard({ ac, userLat, userLon, selected, onSelect }) {
             <div style={{
               position: 'absolute', top: 4, right: 4,
               width: 12, height: 12, borderRadius: '50%',
-              background: 'rgba(0,255,136,0.8)', animation: 'pulse 1.5s ease-in-out infinite',
-            }} />
-          )}
-          {isDescending && (
-            <div style={{
-              position: 'absolute', top: 4, right: 4,
-              width: 12, height: 12, borderRadius: '50%',
-              background: 'rgba(255,0,0,0.8)', animation: 'pulse 1.5s ease-in-out infinite',
-            }} />
-          )}
-        </div>
-
-        {/* Main info */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-            <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--t1)' }}>{ac.callsign}</span>
-            <span style={{ fontSize: 12 }}>{flag}</span>
-            {ac.onGround && (
-              <span style={{
-                fontSize: 11, fontWeight: 700, padding: '3px 7px', borderRadius: 6,
-                background: 'rgba(100,116,139,0.2)', border: '1px solid rgba(100,116,139,0.3)',
-                color: 'var(--t3)', letterSpacing: '0.05em',
-              }}>
-                SOL
-              </span>
-            )}
-          </div>
-          <p style={{ fontSize: 13, color: 'var(--t2)', margin: 0 }}>
-            {ac.country}{ac.altitude != null && !ac.onGround ? ` · ${ac.altitude.toLocaleString()} ft` : ' · Au sol'}
-          </p>
-        </div>
-
-        {/* Distance & Speed */}
-        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          {dist != null && (
-            <p style={{
-              fontSize: 15, fontWeight: 700, color: 'var(--green)',
-              margin: 0, lineHeight: 1.2,
-            }}>
-              {dist} km
-            </p>
-          )}
-          {ac.speed != null && (
-            <p style={{
-              fontSize: 13, color: 'var(--t2)',
-              margin: '4px 0 0', lineHeight: 1.2,
-            }}>
-              {ac.speed} kt
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Direction indicator */}
-      {bear != null && (
-        <div style={{
+              background: 'rgba(0,255,136,0.8)', animation:
