@@ -101,6 +101,158 @@ function TVChart({ tvSymbol, tvInterval, uid }) {
   )
 }
 
+// ─── TradingViewWidget Component ───────────────────────────────────────────────
+function TradingViewWidget({ symbol = 'COINBASE:BTCUSD', interval = '15' }) {
+  const [activeSymbol, setActiveSymbol] = useState(symbol)
+  const [activeInterval, setActiveInterval] = useState(interval)
+  const [isExpanded, setIsExpanded] = useState(false)
+  const uid = `tv-widget-${Math.random().toString(36).substr(2, 9)}`
+
+  const handleSymbolChange = (tvSymbol) => {
+    setActiveSymbol(tvSymbol)
+    setIsExpanded(false)
+  }
+
+  const handleIntervalChange = (tvInterval) => {
+    setActiveInterval(tvInterval)
+  }
+
+  return (
+    <div style={{
+      width: '100%',
+      background: 'var(--bg2)',
+      borderRadius: 12,
+      border: '1px solid var(--border)',
+      overflow: 'hidden',
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif'
+    }}>
+      {/* Header Controls */}
+      <div style={{
+        padding: '12px 16px',
+        borderBottom: '1px solid var(--border)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 8
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            style={{
+              background: 'none',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              padding: '6px 12px',
+              fontSize: 12,
+              color: 'var(--t1)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6
+            }}
+          >
+            <TrendingUp size={14} />
+            {ASSETS.find(a => a.tv === activeSymbol)?.label || activeSymbol.split(':')[1]}
+            <ChevronDown size={14} />
+          </button>
+
+          {isExpanded && (
+            <div style={{
+              position: 'absolute',
+              top: 'calc(100% + 8px)',
+              left: 16,
+              background: 'var(--bg2)',
+              borderRadius: 12,
+              border: '1px solid var(--border)',
+              padding: 8,
+              zIndex: 100,
+              minWidth: 200,
+              maxHeight: 300,
+              overflowY: 'auto'
+            }}>
+              {ASSETS.map((asset) => (
+                <div
+                  key={asset.tv}
+                  onClick={() => handleSymbolChange(asset.tv)}
+                  style={{
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    borderRadius: 8,
+                    fontSize: 12,
+                    color: 'var(--t1)',
+                    background: activeSymbol === asset.tv ? 'rgba(0, 255, 136, 0.1)' : 'transparent',
+                    '&:hover': {
+                      background: 'rgba(255, 255, 255, 0.05)'
+                    }
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{
+                      color: TYPE_COLOR[asset.type],
+                      fontWeight: 600
+                    }}>
+                      {asset.label}
+                    </span>
+                    <span style={{ color: 'var(--t2)', fontSize: 10 }}>
+                      {asset.type}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--t2)' }}>
+                    {asset.symbol}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{
+            display: 'flex',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            overflow: 'hidden'
+          }}>
+            {TIMEFRAMES.map((tf) => (
+              <button
+                key={tf.tv}
+                onClick={() => handleIntervalChange(tf.tv)}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: activeInterval === tf.tv ? 'var(--bg)' : 'var(--t2)',
+                  background: activeInterval === tf.tv ? 'var(--green)' : 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  '&:not(:last-child)': {
+                    borderRight: '1px solid var(--border)'
+                  }
+                }}
+              >
+                {tf.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Chart Container */}
+      <div style={{
+        height: 400,
+        width: '100%',
+        '@media (max-width: 768px)': {
+          height: 300
+        }
+      }}>
+        <TVChart
+          tvSymbol={activeSymbol}
+          tvInterval={activeInterval}
+          uid={uid}
+        />
+      </div>
+    </div>
+  )
+}
+
 // ─── Analysis Result ──────────────────────────────────────────────────────────
 function AnalysisCard({ data, loading, onRefresh, symbol, interval }) {
   if (loading) return (
@@ -187,7 +339,7 @@ function AnalysisCard({ data, loading, onRefresh, symbol, interval }) {
 
       // Parse sentiment
       if (currentSection === 'sentiment') {
-        const sentimentMatch = cleanLine.match(/(\d+\.?\d*)\s*(sur|out of|/i)
+        const sentimentMatch = cleanLine.match(/(\d+\.?\d*)\s*(sur|out of)/i)
         if (sentimentMatch) {
           result.sentiment = parseFloat(sentimentMatch[1])
         }
@@ -250,115 +402,4 @@ function AnalysisCard({ data, loading, onRefresh, symbol, interval }) {
         </button>
       </div>
 
-      {/* Key Levels */}
-      {(analysisData.levels.supports.length > 0 || analysisData.levels.resistances.length > 0) && (
-        <div style={{ marginBottom: 16 }}>
-          <div style={{
-            fontSize: 11,
-            fontWeight: 700,
-            color: 'var(--t3)',
-            letterSpacing: '0.08em',
-            marginBottom: 8
-          }}>
-            NIVEAUX CLÉS
-          </div>
-          <div style={{ display: 'flex', gap: 16 }}>
-            {analysisData.levels.supports.length > 0 && (
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>Supports</div>
-                {analysisData.levels.supports.map((level, i) => (
-                  <div key={i} style={{
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: 'var(--t1)',
-                    marginBottom: 2
-                  }}>
-                    {level.toFixed(2)}
-                  </div>
-                ))}
-              </div>
-            )}
-            {analysisData.levels.resistances.length > 0 && (
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>Résistances</div>
-                {analysisData.levels.resistances.map((level, i) => (
-                  <div key={i} style={{
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: 'var(--t1)',
-                    marginBottom: 2
-                  }}>
-                    {level.toFixed(2)}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Patterns */}
-      {analysisData.patterns.length > 0 && (
-        <div style={{ marginBottom: 16 }}>
-          <div style={{
-            fontSize: 11,
-            fontWeight: 700,
-            color: 'var(--t3)',
-            letterSpacing: '0.08em',
-            marginBottom: 8
-          }}>
-            PATTERNS DÉTECTÉS
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {analysisData.patterns.map((pattern, i) => (
-              <div key={i} style={{
-                padding: '4px 12px',
-                borderRadius: 8,
-                fontSize: 11,
-                fontWeight: 600,
-                color: pattern.bullish ? 'var(--green)' : '#ef4444',
-                background: pattern.bullish ? 'rgba(0, 255, 136, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                border: `1px solid ${pattern.bullish ? 'rgba(0, 255, 136, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
-              }}>
-                {pattern.type}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Setup */}
-      {analysisData.setup && (
-        <div style={{ marginBottom: 16 }}>
-          <div style={{
-            fontSize: 11,
-            fontWeight: 700,
-            color: 'var(--t3)',
-            letterSpacing: '0.08em',
-            marginBottom: 8
-          }}>
-            SETUP DE TRADING
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            {analysisData.setup.entry && (
-              <div>
-                <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 2 }}>Entrée</div>
-                <div style={{ fontSize: 13, color: 'var(--t1)', fontWeight: 600 }}>{analysisData.setup.entry}</div>
-              </div>
-            )}
-            {analysisData.setup.stop && (
-              <div>
-                <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 2 }}>Stop</div>
-                <div style={{ fontSize: 13, color: 'var(--t1)', fontWeight: 600 }}>{analysisData.setup.stop}</div>
-              </div>
-            )}
-            {analysisData.setup.target && (
-              <div>
-                <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 2 }}>Objectif</div>
-                <div style={{ fontSize: 13, color: 'var(--t1)', fontWeight: 600 }}>{analysisData.setup.target}</div>
-              </div>
-            )}
-            {analysisData.setup.rr && (
-              <div>
-                <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 2 }}>R:R</div>
-                <div style={{ fontSize: 13, color: 'var(--t1
+      {/* Key
