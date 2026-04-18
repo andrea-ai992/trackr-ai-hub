@@ -247,12 +247,14 @@ async function generateRaw(prompt, maxTokens = 4096, hint = 'smart') {
           if (text) return text
         } catch (e) {
           if (e.message.startsWith('429:')) {
-            const s = parseInt(e.message.split(':')[1]) || 30
-            log(`Groq 429 — wait ${s}s`)
+            const raw = parseInt(e.message.split(':')[1]) || 30
+            const s = Math.min(raw, 45)  // max 45s — si daily limit, on skip Groq
+            log(`Groq 429 — wait ${s}s (raw: ${raw}s)`)
+            if (raw > 300) { log('Groq daily limit — skip Groq ce cycle'); break }
             globalRateLimitUntil = Date.now() + s * 1000
             await sl(s * 1000)
             globalRateLimitUntil = 0
-            continue  // retry immédiatement après le wait
+            continue
           }
           log(`Groq tentative ${i+1}/5: ${e.message}`)
           if (i < 4) await sl(3000)
