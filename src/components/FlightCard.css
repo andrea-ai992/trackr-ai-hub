@@ -1,0 +1,444 @@
+FlightCard.jsx
+```jsx
+import { useState, useEffect } from 'react';
+import './FlightCard.css';
+
+export const FlightCard = ({
+  flightNumber,
+  departure,
+  arrival,
+  airline,
+  status,
+  gate,
+  terminal,
+  scheduledDeparture,
+  scheduledArrival,
+  actualDeparture,
+  actualArrival,
+  delay,
+  aircraft,
+  route,
+  airlineLogo
+}) => {
+  const [isLive, setIsLive] = useState(false);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+
+  useEffect(() => {
+    if (status === 'En Vol' || status === 'Atterrissage') {
+      setIsLive(true);
+      const timer = setTimeout(() => setIsLive(false), 8000);
+      return () => clearTimeout(timer);
+    }
+  }, [status]);
+
+  useEffect(() => {
+    if (delay > 15) {
+      setShowAlert(true);
+      setAlertMessage(`Retard de ${delay} minutes`);
+      const timer = setTimeout(() => setShowAlert(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [delay]);
+
+  const formatTime = (time) => {
+    if (!time) return '--:--';
+    const [hours, minutes] = time.split(':');
+    return `${hours}:${minutes}`;
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '--';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+  };
+
+  return (
+    <div className="flight-card">
+      {showAlert && (
+        <div className="alert-overlay">
+          <div className="alert-message">
+            <span className="alert-icon">⚠️</span>
+            {alertMessage}
+          </div>
+        </div>
+      )}
+
+      <div className="flight-header">
+        <div className="airline-logo">
+          {airlineLogo || <div className="logo-placeholder">{airline?.substring(0, 2)}</div>}
+        </div>
+        <div className="flight-info">
+          <div className="flight-number">{flightNumber}</div>
+          <div className="airline-name">{airline}</div>
+        </div>
+        <div className={`status-badge ${status === 'À l\'heure' ? 'on-time' : status === 'Retard' ? 'delayed' : status === 'Annulé' ? 'cancelled' : 'in-flight'}`}>
+          {status}
+        </div>
+      </div>
+
+      <div className="flight-details">
+        <div className="flight-route">
+          <div className="departure">
+            <div className="time">{formatTime(scheduledDeparture)}</div>
+            <div className="location">{departure}</div>
+            <div className="date">{formatDate(scheduledDeparture)}</div>
+          </div>
+          <div className="route-info">
+            <div className="flight-path">
+              <div className="path-line"></div>
+              {isLive && <div className="live-dot"></div>}
+            </div>
+            <div className="aircraft-info">
+              <div className="aircraft">{aircraft}</div>
+              <div className="route">{route}</div>
+            </div>
+          </div>
+          <div className="arrival">
+            <div className="time">{formatTime(scheduledArrival)}</div>
+            <div className="location">{arrival}</div>
+            <div className="date">{formatDate(scheduledArrival)}</div>
+          </div>
+        </div>
+
+        <div className="flight-meta">
+          <div className="meta-item">
+            <span className="meta-label">Terminal</span>
+            <span className="meta-value">{terminal || '--'}</span>
+          </div>
+          <div className="meta-item">
+            <span className="meta-label">Porte</span>
+            <span className="meta-value">{gate || '--'}</span>
+          </div>
+          <div className="meta-item">
+            <span className="meta-label">Retard</span>
+            <span className={`meta-value ${delay > 0 ? 'delayed' : ''}`}>
+              {delay > 0 ? `+${delay} min` : '--'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {actualDeparture && (
+        <div className="flight-status-details">
+          <div className="status-item">
+            <span className="status-label">Départ réel</span>
+            <span className="status-value">{formatTime(actualDeparture)}</span>
+          </div>
+          {actualArrival && (
+            <div className="status-item">
+              <span className="status-label">Arrivée réelle</span>
+              <span className="status-value">{formatTime(actualArrival)}</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+```
+
+FlightCard.css
+```css
+:root {
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --bg3: #1a1a1a;
+  --border: rgba(255, 255, 255, 0.07);
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --delay: #ff4444;
+  --on-time: #00ff88;
+  --cancelled: #ff4444;
+  --in-flight: #4488ff;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: local('Inter'), url('https://fonts.cdnfonts.com/css/inter') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--bg);
+  color: var(--t1);
+}
+
+.flight-card {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  background: var(--bg2);
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.flight-card:hover {
+  border-color: var(--green);
+  transform: translateY(-2px);
+}
+
+.alert-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.alert-message {
+  background: var(--delay);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: pulse 1.5s infinite;
+}
+
+.alert-icon {
+  font-size: 16px;
+}
+
+.flight-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.airline-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--bg3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.logo-placeholder {
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--t1);
+}
+
+.flight-info {
+  flex: 1;
+}
+
+.flight-number {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--t1);
+}
+
+.airline-name {
+  font-size: 14px;
+  color: var(--t2);
+  margin-top: 2px;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.on-time {
+  background: rgba(0, 255, 136, 0.2);
+  color: var(--on-time);
+  border: 1px solid var(--on-time);
+}
+
+.status-badge.delayed {
+  background: rgba(255, 68, 68, 0.2);
+  color: var(--delay);
+  border: 1px solid var(--delay);
+}
+
+.status-badge.cancelled {
+  background: rgba(255, 68, 68, 0.2);
+  color: var(--cancelled);
+  border: 1px solid var(--cancelled);
+}
+
+.status-badge.in-flight {
+  background: rgba(68, 136, 255, 0.2);
+  color: var(--in-flight);
+  border: 1px solid var(--in-flight);
+}
+
+.flight-details {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.flight-route {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+}
+
+.departure, .arrival {
+  text-align: center;
+  flex: 1;
+}
+
+.time {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--t1);
+  margin-bottom: 4px;
+}
+
+.location {
+  font-size: 14px;
+  color: var(--t2);
+  margin-bottom: 2px;
+}
+
+.date {
+  font-size: 12px;
+  color: var(--t3);
+}
+
+.route-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.flight-path {
+  position: relative;
+  width: 60px;
+  height: 2px;
+  background: var(--border);
+}
+
+.live-dot {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 12px;
+  background: var(--green);
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+  box-shadow: 0 0 8px var(--green);
+}
+
+.aircraft-info {
+  text-align: center;
+}
+
+.aircraft {
+  font-size: 12px;
+  color: var(--t3);
+  margin-bottom: 2px;
+}
+
+.route {
+  font-size: 12px;
+  color: var(--t2);
+  font-weight: 500;
+}
+
+.flight-meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.meta-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.meta-label {
+  font-size: 11px;
+  color: var(--t3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.meta-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--t1);
+}
+
+.meta-value.delayed {
+  color: var(--delay);
+}
+
+.flight-status-details {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 12px;
+  font-size: 13px;
+}
+
+.status-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.status-label {
+  font-size: 11px;
+  color: var(--t3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--t1);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
