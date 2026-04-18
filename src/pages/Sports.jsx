@@ -17,8 +17,6 @@ const Sports = () => {
   }, []);
 
   const fetchPsgData = async () => {
-    // Fetch PSG data from your API or source
-    // Example data structure
     setPsgData([
       {
         match: 'PSG vs Lyon',
@@ -26,7 +24,6 @@ const Sports = () => {
         competition: 'Ligue 1',
         result: 'W',
       },
-      // Add more match results
     ]);
   };
 
@@ -43,14 +40,11 @@ const Sports = () => {
   };
 
   const fetchUfcData = async () => {
-    // Fetch UFC data from your API or source
-    // Example data structure
     setUfcData([
       {
         event: 'UFC 264',
         fights: [
           { fighter1: 'McGregor', fighter2: 'Poirier' },
-          // Add more fights
         ],
       },
     ]);
@@ -74,16 +68,16 @@ const Sports = () => {
       <div className="content">
         {activeTab === 'PSG' && (
           <div className="psg-content">
-            {psgData.map((match, index) => (
-              <div key={index} className="match-card">
-                <div className="match-info">
+            <div className="match-card">
+              {psgData.map((match, index) => (
+                <div key={index} className="match-info">
                   <span>{match.match}</span>
                   <span>{match.time}</span>
                   <span>{match.competition}</span>
+                  <span className={`result ${match.result}`}>{match.result}</span>
                 </div>
-                <span className={`result ${match.result}`}>{match.result}</span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
         {activeTab === 'NBA' && (
@@ -127,8 +121,6 @@ const Sports = () => {
 
 export default Sports;
 
-import './Sports.css';
-
 .sports-container {
   background-color: var(--bg);
   color: var(--t1);
@@ -171,6 +163,12 @@ import './Sports.css';
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 16px;
+}
+
+.match-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .result {
