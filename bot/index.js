@@ -26,6 +26,7 @@ const BOT_TOKEN     = process.env.DISCORD_BOT_TOKEN
 const GUILD_ID      = process.env.DISCORD_GUILD_ID
 const APP_URL       = process.env.APP_URL || 'https://trackr-app-nu.vercel.app'
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY
+const GROQ_KEY      = process.env.GROQ_API_KEY
 const PORT          = process.env.PORT || 3099
 const API           = 'https://discord.com/api/v10'
 const BOT_START     = Date.now()
@@ -36,10 +37,11 @@ const BOT_START_SNOWFLAKE = String((BigInt(BOT_START - 1420070400000) << 22n))
 if (!BOT_TOKEN || !GUILD_ID) {
   console.error('❌ Missing DISCORD_BOT_TOKEN or DISCORD_GUILD_ID'); process.exit(1)
 }
-if (!ANTHROPIC_KEY) {
-  console.error('❌ Missing ANTHROPIC_API_KEY — add it to bot/.env'); process.exit(1)
+if (!ANTHROPIC_KEY && !GROQ_KEY) {
+  console.error('❌ Missing GROQ_API_KEY or ANTHROPIC_API_KEY — add one to .env'); process.exit(1)
 }
-console.log(`🔑 Claude key: ${ANTHROPIC_KEY.slice(0,14)}...${ANTHROPIC_KEY.slice(-4)} (${ANTHROPIC_KEY.length} chars)`)
+if (GROQ_KEY)      console.log(`🔑 Groq key: ${GROQ_KEY.slice(0,10)}... (primary)`)
+if (ANTHROPIC_KEY) console.log(`🔑 Anthropic key: ${ANTHROPIC_KEY.slice(0,14)}... (fallback)`)
 
 
 // Admin IDs (auto-populated from guild owner at startup)
@@ -152,43 +154,58 @@ async function callClaude(message, { channelName = '', mode = 'default', systemN
   const isTrading = TRADING_CHANNELS.has(channelName)
   const systemKey = systemNote ? null : (mode === 'think' ? 'think' : mode === 'web' ? 'web' : isTrading ? 'trading' : 'default')
   const system = systemNote || SYSTEM[systemKey](channelName)
-  const model  = mode === 'think' ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001'
+  const maxTokens = mode === 'think' ? 2000 : 600
 
+  // 1) Groq (gratuit, non-streaming)
+  if (GROQ_KEY) {
+    try {
+      const groqModel = mode === 'think' ? 'llama-3.3-70b-versatile' : 'llama-3.3-70b-versatile'
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GROQ_KEY}` },
+        body: JSON.stringify({
+          model: groqModel,
+          messages: [{ role: 'system', content: system }, { role: 'user', content: message }],
+          max_tokens: maxTokens,
+          temperature: 0.5,
+        }),
+        signal: AbortSignal.timeout(30000),
+      })
+      if (res.ok) {
+        const d = await res.json().catch(() => null)
+        const text = d?.choices?.[0]?.message?.content?.trim()
+        if (text) {
+          if (onChunk) onChunk(text).catch(() => {})
+          return text.slice(0, 1990)
+        }
+      } else {
+        console.error(`Groq ${res.status}`)
+      }
+    } catch (e) { console.error('Groq error:', e.message) }
+  }
+
+  // 2) Anthropic fallback (streaming)
+  if (!ANTHROPIC_KEY) return '⚠️ Aucun provider IA disponible.'
+  const model = mode === 'think' ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001'
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {
-        'x-api-key': ANTHROPIC_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: mode === 'think' ? 2000 : 600,
-        stream: true,
-        system,
-        messages: [{ role: 'user', content: message }],
-      }),
+      headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      body: JSON.stringify({ model, max_tokens: maxTokens, stream: true, system, messages: [{ role: 'user', content: message }] }),
       signal: AbortSignal.timeout(mode === 'think' ? 55000 : 15000),
     })
-
     if (!res.ok) {
-      // Debug: log exact key bytes being sent
-      const keyBytes = Buffer.from(ANTHROPIC_KEY).toString('hex').slice(0, 20)
-      console.error(`Claude ${res.status} | key-hex-start: ${keyBytes} | key-len: ${ANTHROPIC_KEY.length}`)
-      return `❌ Erreur Claude (${res.status})`
+      console.error(`Anthropic ${res.status}`)
+      return `❌ Erreur IA (${res.status}) — crédits épuisés ?`
     }
-
     const reader = res.body.getReader()
     const dec = new TextDecoder()
     let buf = '', text = '', lastEdit = 0
-
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
       buf += dec.decode(value, { stream: true })
       const lines = buf.split('\n'); buf = lines.pop()
-
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue
         try {
@@ -196,20 +213,14 @@ async function callClaude(message, { channelName = '', mode = 'default', systemN
           if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
             text += ev.delta.text
             const now = Date.now()
-            // Update Discord every 900ms (safely under 5 edits/5s rate limit)
-            if (onChunk && text.length > 30 && now - lastEdit > 900) {
-              lastEdit = now
-              onChunk(text + ' ▌').catch(() => {})
-            }
+            if (onChunk && text.length > 30 && now - lastEdit > 900) { lastEdit = now; onChunk(text + ' ▌').catch(() => {}) }
           }
         } catch {}
       }
     }
-
     return text.trim().slice(0, 1990) || null
   } catch (e) {
-    if (e.name === 'TimeoutError' || e.name === 'AbortError')
-      return '⏱️ Timeout — réessaie ou utilise `!think` pour une analyse approfondie.'
+    if (e.name === 'TimeoutError' || e.name === 'AbortError') return '⏱️ Timeout — réessaie.'
     console.error('callClaude:', e.message)
     return null
   }
