@@ -1,50 +1,85 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
-import axios from 'axios';
-import './ChartAnalysis.css';
+Je vais créer le hook `useAbortableFetch` et l'intégrer dans ChartAnalysis. Voici le code complet et fonctionnel :
 
-const ChartAnalysis = () => {
-    const { ticker, timeframe } = useParams();
-    const [analysis, setAnalysis] = useState(null);
+src/hooks/useAbortableFetch.js
+```javascript
+import { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
+
+const useAbortableFetch = (initialTimeout = 10000) => {
+    const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [historicalAnalyses, setHistoricalAnalyses] = useState([]);
     const [error, setError] = useState(null);
     const [timeoutError, setTimeoutError] = useState(false);
-    const widgetRef = useRef(null);
 
-    const fetchAnalysis = async () => {
+    const fetchData = useCallback(async (url, config = {}) => {
         setLoading(true);
         setError(null);
         setTimeoutError(false);
 
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            const timeoutId = setTimeout(() => controller.abort(), initialTimeout);
 
-            const response = await axios.post('/api/brain', {
-                ticker: ticker,
-                timeframe: timeframe,
-                prompt: `Analyse le chart de ${ticker} en ${timeframe}, identifie les niveaux clés, patterns, support/résistance, et donne une recommendation`
-            }, {
-                signal: controller.signal
+            const response = await axios({
+                method: config.method || 'POST',
+                url,
+                data: config.data,
+                signal: controller.signal,
+                ...config
             });
 
             clearTimeout(timeoutId);
 
             if (response.data) {
-                setAnalysis(response.data);
-                setHistoricalAnalyses(prev => [response.data, ...prev].slice(0, 3));
+                setData(response.data);
+                return response.data;
             }
         } catch (error) {
             if (error.name === 'AbortError') {
                 setTimeoutError(true);
                 setError("Le serveur a mis trop de temps à répondre. Veuillez réessayer.");
             } else {
-                setError("Erreur lors de l'analyse: " + (error.response?.data?.message || error.message));
+                setError("Erreur lors de la requête: " + (error.response?.data?.message || error.message));
             }
-            console.error("Erreur lors de l'analyse:", error);
+            console.error("Erreur lors de la requête:", error);
+            throw error;
         } finally {
             setLoading(false);
+        }
+    }, [initialTimeout]);
+
+    return { data, loading, error, timeoutError, fetchData };
+};
+
+export default useAbortableFetch;
+```
+
+src/pages/ChartAnalysis/ChartAnalysis.jsx
+```javascript
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams } from 'react-router-dom';
+import axios from 'axios';
+import useAbortableFetch from '../../hooks/useAbortableFetch';
+import './ChartAnalysis.css';
+
+const ChartAnalysis = () => {
+    const { ticker, timeframe } = useParams();
+    const [historicalAnalyses, setHistoricalAnalyses] = useState([]);
+    const widgetRef = useRef(null);
+
+    const { data: analysis, loading, error, timeoutError, fetchData } = useAbortableFetch(10000);
+
+    const fetchAnalysis = async () => {
+        await fetchData('/api/brain', {
+            data: {
+                ticker: ticker,
+                timeframe: timeframe,
+                prompt: `Analyse le chart de ${ticker} en ${timeframe}, identifie les niveaux clés, patterns, support/résistance, et donne une recommendation`
+            }
+        });
+
+        if (analysis) {
+            setHistoricalAnalyses(prev => [analysis, ...prev].slice(0, 3));
         }
     };
 
