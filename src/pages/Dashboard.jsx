@@ -6,7 +6,7 @@ import { Plane, ChevronRight, TrendingUp, ArrowUpRight, ArrowDownRight, Bot } fr
 
 function greeting() {
   const h = new Date().getHours()
-  if (h < 6)  return 'Bonne nuit'
+  if (h < 6) return 'Bonne nuit'
   if (h < 12) return 'Bonjour'
   if (h < 18) return 'Bon après-midi'
   return 'Bonsoir'
@@ -40,15 +40,14 @@ function FGGauge({ value }) {
   const angle = Math.PI - (v / 100) * Math.PI
   const r = 38, cx = 50, cy = 46
   const nx = cx + r * Math.cos(angle), ny = cy + r * Math.sin(angle)
-  const ex = cx + r * Math.cos(angle), ey = cy + r * Math.sin(angle)
   const largeArc = v > 50 ? 1 : 0
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
       <svg width={100} height={54} viewBox="0 0 100 54">
-        <path d={`M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${cx+r} ${cy}`} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6" strokeLinecap="round" />
-        {v > 0 && <path d={`M ${cx-r} ${cy} A ${r} ${r} 0 ${largeArc} 1 ${ex} ${ey}`} fill="none" stroke={color} strokeWidth="6" strokeLinecap="round" />}
+        <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6" strokeLinecap="round" />
+        {v > 0 && <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 ${largeArc} 1 ${nx} ${ny}`} fill="none" stroke={color} strokeWidth="6" strokeLinecap="round" />}
         <circle cx={nx} cy={ny} r="4" fill={color} />
-        <text x={cx} y={cy+4} textAnchor="middle" fill="white" fontSize="15" fontWeight="800" fontFamily="Inter,system-ui">{v}</text>
+        <text x={cx} y={cy + 4} textAnchor="middle" fill="white" fontSize="15" fontWeight="800" fontFamily="Inter,system-ui">{v}</text>
       </svg>
       <span style={{ fontSize: 10, fontWeight: 700, color, letterSpacing: '0.04em' }}>{label}</span>
     </div>
@@ -84,38 +83,33 @@ export default function Dashboard() {
       .then(r => r.json()).then(d => setNews(d.items || [])).catch(() => {})
   }, [])
 
-  const open   = stocks.filter(s => !s.salePrice)
-  const inv    = open.reduce((s, i) => s + i.buyPrice * i.quantity, 0)
-  const cur    = open.reduce((s, i) => s + (livePrices[i.symbol] ?? i.buyPrice) * i.quantity, 0)
-  const pnl    = cur - inv
+  const open = stocks.filter(s => !s.salePrice)
+  const inv = open.reduce((s, i) => s + i.buyPrice * i.quantity, 0)
+  const cur = open.reduce((s, i) => s + (livePrices[i.symbol] ?? i.buyPrice) * i.quantity, 0)
+  const pnl = cur - inv
   const pnlPct = inv > 0 ? (pnl / inv) * 100 : 0
-  const isUp   = pnl >= 0
-  const pos    = open.length + sneakers.filter(s => !s.salePrice).length
-  const today  = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
-  const fg     = fearGreed ? parseInt(fearGreed.value) : null
+  const isUp = pnl >= 0
+  const pos = open.length + sneakers.filter(s => !s.salePrice).length
+  const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  const fg = fearGreed ? parseInt(fearGreed.value) : null
   const sparkData = Array.from({ length: 8 }, (_, i) => cur * (0.97 + (i / 7) * 0.06 * (isUp ? 1 : -1) + Math.random() * 0.01))
 
   const coinColor = { bitcoin: '#f59e0b', ethereum: '#6366f1', solana: '#9945ff', binancecoin: '#f0b90b' }
 
   return (
-    <div className="page" style={{ paddingTop: 'max(60px, env(safe-area-inset-top, 0px))' }}>
-
-      {/* ── Header ── */}
+    <div className="page" style={{ paddingTop: 'max(60px, env(safe-area-inset-top, 0px))', backgroundColor: '#080808', color: '#f0f0f0' }}>
       <div className="stagger-item" style={{ marginBottom: 24 }}>
         <p style={{ fontSize: 11, color: 'var(--t3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 4 }}>{today}</p>
         <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--t1)', letterSpacing: '-0.3px' }}>
           {greeting()}, <span style={{ color: 'var(--green)' }}>{name}</span>
         </h1>
+        <div className="live-dot" style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#00ff88', animation: 'pulse 1s infinite' }} />
       </div>
 
-      {/* ── Portfolio card ── */}
       <button onClick={() => navigate('/markets')} className="press-scale stagger-item" style={{
         width: '100%', textAlign: 'left', marginBottom: 12,
-        background: 'var(--bg2)',
-        border: `1px solid ${isUp ? 'rgba(0,255,136,0.18)' : 'rgba(255,77,77,0.18)'}`,
-        borderRadius: 'var(--radius-xl)',
-        padding: '20px',
-        display: 'block',
+        background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(12px)', border: `1px solid ${isUp ? 'rgba(0,255,136,0.18)' : 'rgba(255,77,77,0.18)'}`,
+        borderRadius: 'var(--radius-xl)', padding: '20px', display: 'block',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -150,7 +144,6 @@ export default function Dashboard() {
         </div>
       </button>
 
-      {/* ── Crypto movers ── */}
       {crypto.length > 0 && (
         <div className="stagger-item" style={{ marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingLeft: 2 }}>
@@ -162,11 +155,11 @@ export default function Dashboard() {
           <div className="scroll-row">
             {crypto.map(c => {
               const pct = c.price_change_percentage_24h
-              const up  = pct >= 0
-              const cc  = coinColor[c.id] || 'var(--green)'
+              const up = pct >= 0
+              const cc = coinColor[c.id] || 'var(--green)'
               return (
                 <button key={c.id} onClick={() => navigate('/markets?tab=crypto')} className="press-scale"
-                  style={{ minWidth: 90, padding: '14px 12px', borderRadius: 'var(--radius)', textAlign: 'left', background: 'var(--bg2)', border: '1px solid var(--border)', flexShrink: 0 }}>
+                  style={{ minWidth: 90, padding: '14px 12px', borderRadius: 'var(--radius)', textAlign: 'left', background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(12px)', border: '1px solid var(--border)', flexShrink: 0 }}>
                   <div style={{ width: 32, height: 32, borderRadius: 10, background: cc + '18', border: `1px solid ${cc}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10, fontSize: 13, fontWeight: 900, color: cc }}>
                     {c.symbol?.[0]?.toUpperCase()}
                   </div>
@@ -184,25 +177,21 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── 2-col quick actions ── */}
       <div className="stagger-item" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
-
-        {/* Flights */}
-        <button onClick={() => navigate('/flights')} className="press-scale" style={{
+        <button onClick={() => navigate('/markets')} className="press-scale" style={{
           textAlign: 'left', padding: '16px', borderRadius: 'var(--radius-lg)',
-          background: 'var(--bg2)', border: '1px solid var(--border)',
+          background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(12px)', border: '1px solid var(--border)',
         }}>
           <div style={{ width: 36, height: 36, borderRadius: 11, background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
             <Plane size={17} color="var(--blue)" />
           </div>
-          <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--t1)', marginBottom: 2 }}>Flights</p>
-          <p style={{ fontSize: 10, color: 'var(--t3)' }}>Radar live</p>
+          <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--t1)', marginBottom: 2 }}>Markets</p>
+          <p style={{ fontSize: 10, color: 'var(--t3)' }}>Voir les marchés</p>
         </button>
 
-        {/* AnDy */}
         <button onClick={() => navigate('/andy')} className="press-scale" style={{
           textAlign: 'left', padding: '16px', borderRadius: 'var(--radius-lg)',
-          background: 'var(--green-bg)', border: '1px solid var(--border-hi)',
+          background: 'rgba(0,255,136,0.12)', border: '1px solid rgba(0,255,136,0.25)',
         }}>
           <div style={{ width: 36, height: 36, borderRadius: 11, background: 'rgba(0,255,136,0.12)', border: '1px solid rgba(0,255,136,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
             <Bot size={17} color="var(--green)" />
@@ -215,43 +204,23 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* ── Fear & Greed ── */}
-      {fg != null && (
-        <button onClick={() => navigate('/markets?tab=crypto')} className="press-scale stagger-item" style={{
-          width: '100%', textAlign: 'center', marginBottom: 12,
-          background: 'var(--bg2)', border: '1px solid var(--border)',
-          borderRadius: 'var(--radius-lg)', padding: '18px 20px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <div style={{ textAlign: 'left' }}>
-            <p className="section-label" style={{ marginBottom: 6 }}>Fear & Greed Index</p>
-            <p style={{ fontSize: 11, color: 'var(--t3)' }}>Sentiment du marché crypto</p>
-          </div>
-          <FGGauge value={fg} />
-        </button>
-      )}
+      <div className="stagger-item" style={{ marginBottom: 12 }}>
+        <FGGauge value={fg} />
+      </div>
 
-      {/* ── News ── */}
-      {news.length > 0 && (
-        <div className="stagger-item" style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', marginBottom: 12 }}>
-          <button onClick={() => navigate('/news')} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
-            <span className="section-label">Actualités</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: 'var(--green)', fontWeight: 700 }}>
-              Tout voir <ChevronRight size={13} />
-            </div>
-          </button>
-          {news.map((item, i) => (
-            <a key={i} href={item.link} target="_blank" rel="noreferrer" className="press-scale-sm"
-              style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '13px 16px', borderBottom: i < news.length - 1 ? '1px solid var(--border)' : 'none' }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 9, fontWeight: 700, color: 'var(--t3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>BBC Business</p>
-                <p style={{ fontSize: 13, color: 'var(--t1)', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{item.title}</p>
+      <div className="stagger-item" style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {news.slice(0, 3).map((item, index) => (
+            <div key={index} style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(12px)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px' }}>
+              <span style={{ fontSize: 12, color: 'var(--t1)', fontWeight: 700 }}>{item.title.length > 40 ? item.title.slice(0, 40) + '...' : item.title}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                <span style={{ fontSize: 10, color: 'var(--t2)', fontWeight: 600 }}>{item.source}</span>
+                <span style={{ fontSize: 10, color: 'var(--t2)' }}>{new Date(item.pubDate).toLocaleTimeString('fr-FR', { hour: 'numeric', minute: 'numeric' })}</span>
               </div>
-              <ArrowUpRight size={13} color="var(--t3)" style={{ flexShrink: 0, marginTop: 2 }} />
-            </a>
+            </div>
           ))}
         </div>
-      )}
+      </div>
     </div>
   )
 }
