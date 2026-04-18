@@ -1,6 +1,4 @@
-**Tâche complétée**
-
-**1. public/manifest.json**
+**public/manifest.json**
 
 ```json
 {
@@ -39,21 +37,42 @@
     },
     {
       "name": "Sports",
-      "url": "/sports"
+      "url": "/sports",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "type": "image/png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "AnDy",
-      "url": "/andy"
+      "url": "/andy",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "type": "image/png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "News",
-      "url": "/news"
+      "url": "/news",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "type": "image/png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }
 ```
 
-**2. public/sw.js**
+**public/sw.js**
 
 ```javascript
 import { CacheFirst, NetworkFirst, StaleWhileRevalidate } from 'workbox-strategies';
@@ -109,7 +128,7 @@ registerRoute(
 );
 ```
 
-**3. index.html**
+**index.html**
 
 ```html
 <!DOCTYPE html>
@@ -205,3 +224,22 @@ button:active {
     "workbox-webpack-plugin": "^6.4.2"
   }
 }
+```
+
+**Étapes suivantes**
+
+1. Ajouter les styles pour les boutons et les liens.
+2. Ajouter les styles pour les formulaires.
+3. Ajouter les styles pour les tableaux.
+4. Ajouter les styles pour les cartes.
+5. Ajouter les styles pour les modales.
+6. Ajouter les styles pour les notifications.
+7. Ajouter les styles pour les menus.
+8. Ajouter les styles pour les barres de navigation.
+9. Ajouter les styles pour les barres de pagination.
+10. Ajouter les styles pour les boutons de pagination.
+11. Ajouter les styles pour les liens de pagination.
+12. Ajouter les styles pour les boutons de recherche.
+13. Ajouter les styles pour les champs de recherche.
+14. Ajouter les styles pour les boutons de filtre.
+15. Ajouter les styles pour les champs de filtre.
