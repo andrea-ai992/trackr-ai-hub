@@ -1,5 +1,3 @@
-/* src/design-tokens.css */
-
 :root {
   --bg: #080808;
   --bg1: #0c0c0c;
@@ -25,16 +23,17 @@
 
 body {
   font-family: 'Inter', sans-serif;
-  background-color: var(--bg);
+  font-size: 16px;
+  line-height: 1.5;
   color: var(--t1);
+  background-color: var(--bg);
   padding: 0;
   margin: 0;
-  box-sizing: border-box;
 }
 
 .page {
   max-width: 520px;
-  padding: 20px;
+  padding: 16px;
   margin: 0 auto;
   background-color: var(--bg2);
   border: 1px solid var(--border);
@@ -45,49 +44,84 @@ body {
   background-color: var(--bg2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 20px;
+  padding: 16px;
 }
 
 .pill-up {
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-  background-color: var(--green);
-  color: var(--t1);
-  padding: 10px 20px;
+  color: var(--green);
+  background-color: var(--green-bg);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
 }
 
 .pill-down {
-  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-  background-color: var(--green);
-  color: var(--t1);
-  padding: 10px 20px;
+  color: var(--red);
+  background-color: var(--red);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
 }
 
 .scroll-row {
   overflow-x: auto;
-  white-space: nowrap;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }
 
 .tab-btn {
-  background-color: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 10px 20px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg1);
+  color: var(--t1);
   cursor: pointer;
 }
 
 .section-label {
-  font-size: 18px;
-  font-weight: bold;
-  margin-bottom: 10px;
+  text-transform: uppercase;
+  font-size: 10px;
+  color: var(--t2);
 }
 
 .press-scale {
-  transform: scale(1.1);
-  transition: transform 0.2s ease-in-out;
+  transform: scale(0.97);
+  transition: transform 0.2s ease;
 }
 
 .live-dot {
-  animation: ping 1s infinite;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: var(--green);
+  animation: pulse 1s infinite;
+}
+
+.num {
+  font-family: 'Inter', sans-serif;
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+  margin: 16px 0;
+}
+
+@keyframes fadeUp {
+  0% {
+    transform: translateY(16px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+  80% {
+    transition: transform 280ms ease;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-image: linear-gradient(to right, var(--green), var(--green));
+  }
+  100% {
+    background-image: linear-gradient(to right, var(--t2), var(--t2));
+  }
 }
 
 @keyframes ping {
@@ -102,26 +136,23 @@ body {
   }
 }
 
-.num {
-  font-family: 'Inter', sans-serif;
-  font-size: 24px;
-  font-weight: bold;
-  text-align: center;
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
 }
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 ```
 
 ```css
-/* src/index.css */
-
-@import 'design-tokens.css';
-
-/* Reste du code existant */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 ```
 
-J'ai créé un fichier `design-tokens.css` qui définit les design tokens pour les applications. Je les ai utilisés pour définir les styles pour les éléments tels que les pages, les cartes, les boutons, les étiquettes de section, etc.
-
-Je les ai également utilisés pour définir les animations telles que `ping` pour les éléments qui nécessitent une animation.
-
-Enfin, j'ai importé les design tokens dans `index.css` pour les utiliser dans le reste du code.
+```css
+/* Import existing CSS files */
+@import './src/index.css';
