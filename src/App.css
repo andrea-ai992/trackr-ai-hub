@@ -1,601 +1,302 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+Je vais créer un composant TaskDetailPanel réutilisable avec une animation fluide et un design neon pour afficher les détails des tâches. Voici le code complet :
 
-:root {
-  /* Backgrounds */
-  --bg: #080808;
-  --bg1: #0c0c0c;
-  --bg2: #111111;
-  --bg3: #161616;
-  --bg4: #1c1c1c;
+```jsx
+// src/components/TaskDetailPanel.jsx
+import { useState, useEffect, useRef } from 'react';
+import { ChevronDown, ChevronUp, Calendar, Clock, Tag, CheckCircle2, AlertCircle, X } from 'lucide-react';
 
-  /* Borders */
-  --border: rgba(255, 255, 255, 0.07);
-  --border-hi: rgba(0, 255, 136, 0.20);
+const TaskDetailPanel = ({
+  task = null,
+  onClose = () => {},
+  isOpen = false,
+  className = '',
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const panelRef = useRef(null);
 
-  /* Colors */
-  --green: #00ff88;
-  --green-dim: #00cc66;
-  --green-bg: rgba(0, 255, 136, 0.06);
-  --red: #ff4d4d;
-  --amber: #fbbf24;
-  --blue: #38bdf8;
-  --purple: #a78bfa;
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
 
-  /* Text */
-  --t1: #f0f0f0;
-  --t2: #888888;
-  --t3: #444444;
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
-  /* Radius */
-  --radius-sm: 12px;
-  --radius: 16px;
-  --radius-lg: 22px;
-}
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (panelRef.current && !panelRef.current.contains(event.target)) {
+        onClose();
+      }
+    };
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
 
-html {
-  font-size: 16px;
-  -webkit-text-size-adjust: 100%;
-  -webkit-tap-highlight-color: transparent;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
 
-body {
-  background-color: var(--bg);
-  color: var(--t1);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  min-height: 100dvh;
-  line-height: 1.5;
-  overscroll-behavior-y: none;
-}
+  if (!isOpen || !task) return null;
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+  const getPriorityColor = (priority) => {
+    const colors = {
+      high: 'var(--red)',
+      medium: 'var(--amber)',
+      low: 'var(--green)',
+      none: 'var(--t3)',
+    };
+    return colors[priority?.toLowerCase()] || 'var(--t3)';
+  };
 
-button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  font: inherit;
-}
+  const getStatusIcon = (status) => {
+    const icons = {
+      completed: <CheckCircle2 size={16} />,
+      pending: <Clock size={16} />,
+      cancelled: <X size={16} />,
+      in_progress: <AlertCircle size={16} />,
+    };
+    return icons[status?.toLowerCase()] || null;
+  };
 
-input, textarea, select {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--t1);
-  font-family: inherit;
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  transition: border-color 0.2s;
-}
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Pas de date';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch {
+      return dateString;
+    }
+  };
 
-input:focus, textarea:focus, select:focus {
-  outline: none;
-  border-color: var(--green);
-}
+  const formatTime = (dateString) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return '';
+    }
+  };
 
-.page {
-  max-width: 520px;
-  margin: 0 auto;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-}
+  return (
+    <div className={`fixed inset-0 z-50 flex items-end ${className}`}>
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300"
+        style={{ opacity: isOpen ? 1 : 0 }}
+        onClick={onClose}
+      />
 
-.card {
-  background-color: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
-}
+      <div
+        ref={panelRef}
+        className="relative w-full max-w-[520px] mx-auto rounded-t-[22px] bg-[var(--bg2)] border border-[var(--border)] border-b-0 shadow-2xl transform transition-all duration-300 ease-in-out"
+        style={{
+          transform: isOpen ? 'translateY(0)' : 'translateY(100%)',
+          opacity: isOpen ? 1 : 0,
+        }}
+      >
+        {/* Header */}
+        <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onClose}
+              className="press-scale"
+              aria-label="Fermer le panneau"
+            >
+              <ChevronDown size={24} className="text-[var(--t2)]" />
+            </button>
+            <h2 className="text-lg font-semibold text-[var(--t1)]">Détails de la tâche</h2>
+          </div>
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="press-scale"
+            aria-label={isExpanded ? 'Réduire' : 'Développer'}
+          >
+            {isExpanded ? (
+              <ChevronUp size={20} className="text-[var(--t2)]" />
+            ) : (
+              <ChevronDown size={20} className="text-[var(--t2)]" />
+            )}
+          </button>
+        </div>
 
-.pill-up {
-  color: var(--green);
-}
+        {/* Content */}
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-in-out ${
+            isExpanded ? 'max-h-[800px]' : 'max-h-[400px]'
+          }`}
+        >
+          {/* Task Info */}
+          <div className="p-6">
+            <div className="flex items-start gap-4">
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1"
+                style={{ backgroundColor: getPriorityColor(task.priority) }}
+              >
+                {task.completed ? (
+                  <CheckCircle2 size={16} className="text-black" />
+                ) : (
+                  <Tag size={16} className="text-black" />
+                )}
+              </div>
 
-.pill-down {
-  color: var(--red);
-}
+              <div className="flex-1 min-w-0">
+                <h3 className="text-xl font-semibold text-[var(--t1)] mb-2 break-words">
+                  {task.title}
+                </h3>
 
-.scroll-row {
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
+                {task.description && (
+                  <p className="text-[var(--t2)] text-sm leading-relaxed mb-4 break-words">
+                    {task.description}
+                  </p>
+                )}
+              </div>
+            </div>
 
-.scroll-row::-webkit-scrollbar {
-  display: none;
-}
+            {/* Metadata */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+              {/* Priority */}
+              <div className="flex items-center gap-2">
+                <Tag size={16} className="text-[var(--t3)]" />
+                <div>
+                  <p className="text-xs text-[var(--t3)] uppercase tracking-wide">
+                    Priorité
+                  </p>
+                  <p
+                    className="font-medium capitalize"
+                    style={{ color: getPriorityColor(task.priority) }}
+                  >
+                    {task.priority || 'Non définie'}
+                  </p>
+                </div>
+              </div>
 
-.scroll-row > * {
-  scroll-snap-align: start;
-}
+              {/* Status */}
+              <div className="flex items-center gap-2">
+                {getStatusIcon(task.status)}
+                <div>
+                  <p className="text-xs text-[var(--t3)] uppercase tracking-wide">
+                    Statut
+                  </p>
+                  <p className="font-medium capitalize text-[var(--t1)]">
+                    {task.status || 'Non définie'}
+                  </p>
+                </div>
+              </div>
 
-.tab-btn {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 8px 16px;
-  color: var(--t1);
-  font-weight: 600;
-  transition: all 0.2s;
-}
+              {/* Due Date */}
+              {task.dueDate && (
+                <div className="flex items-center gap-2">
+                  <Calendar size={16} className="text-[var(--t3)]" />
+                  <div>
+                    <p className="text-xs text-[var(--t3)] uppercase tracking-wide">
+                      Date limite
+                    </p>
+                    <p className="font-mono text-[var(--t1)]">
+                      {formatDate(task.dueDate)}
+                      {formatTime(task.dueDate) && (
+                        <span className="text-[var(--t3)] ml-1">
+                          {formatTime(task.dueDate)}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
 
-.tab-btn.active {
-  background: var(--green);
-  border-color: var(--green);
-  color: #000;
-}
+              {/* Created Date */}
+              {task.createdAt && (
+                <div className="flex items-center gap-2">
+                  <Calendar size={16} className="text-[var(--t3)]" />
+                  <div>
+                    <p className="text-xs text-[var(--t3)] uppercase tracking-wide">
+                      Créée le
+                    </p>
+                    <p className="font-mono text-[var(--t1)]">
+                      {formatDate(task.createdAt)}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
 
-.tab-btn:hover:not(.active) {
-  background: var(--bg4);
-}
+          {/* Actions */}
+          <div className="p-4 border-t border-[var(--border)] flex gap-2">
+            <button
+              className="flex-1 py-3 px-4 rounded-lg bg-[var(--green-bg)] border border-[var(--green)] text-[var(--green)] font-medium hover:bg-[rgba(0,255,136,0.15)] transition-all duration-200 press-scale"
+              onClick={() => {
+                // Action à définir
+              }}
+            >
+              {task.completed ? 'Marquer comme incomplète' : 'Marquer comme terminée'}
+            </button>
+            <button
+              className="flex-1 py-3 px-4 rounded-lg bg-[var(--bg3)] border border-[var(--border)] text-[var(--t1)] font-medium hover:bg-[var(--bg4)] transition-all duration-200 press-scale"
+              onClick={() => {
+                // Action à définir
+              }}
+            >
+              Modifier
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-.section-label {
-  text-transform: uppercase;
-  font-size: 10px;
-  color: var(--t3);
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-}
+export default TaskDetailPanel;
+```
 
-.press-scale {
-  transform: scale(1);
-  transition: transform 0.1s;
-}
-
-.press-scale:active {
-  transform: scale(0.97);
-}
-
-.live-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  background-color: var(--green);
-  border-radius: 50%;
-  animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-
-.num {
-  font-variant-numeric: tabular-nums;
-}
-
-@keyframes fadeUp {
+```css
+/* src/components/TaskDetailPanel.css */
+@keyframes slideUp {
   from {
+    transform: translateY(100%);
     opacity: 0;
-    transform: translateY(16px);
   }
   to {
-    opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -1000px 0;
-  }
-  100% {
-    background-position: 1000px 0;
-  }
-}
-
-@keyframes ping {
-  0% {
-    transform: scale(1);
     opacity: 1;
   }
-  75% {
-    transform: scale(2);
-    opacity: 0;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(0);
+    opacity: 1;
   }
-  100% {
-    transform: scale(2.5);
+  to {
+    transform: translateY(100%);
     opacity: 0;
   }
 }
 
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+.TaskDetailPanel-enter {
+  animation: slideUp 0.3s ease-out;
 }
 
-/* Existing CSS preserved and updated with design tokens */
-.counter {
-  font-size: 16px;
-  padding: 5px 10px;
-  border-radius: var(--radius-sm);
-  color: var(--green);
-  background: var(--green-bg);
-  border: 2px solid transparent;
-  transition: border-color 0.3s;
-  margin-bottom: 24px;
+.TaskDetailPanel-exit {
+  animation: slideDown 0.2s ease-in;
 }
 
-.counter:hover {
-  border-color: var(--green);
+.TaskDetailPanel-enter-active {
+  animation: slideUp 0.3s ease-out;
 }
 
-.counter:focus-visible {
-  outline: 2px solid var(--green);
-  outline-offset: 2px;
+.TaskDetailPanel-exit-active {
+  animation: slideDown 0.2s ease-in;
 }
-
-.hero {
-  position: relative;
-}
-
-.hero .base,
-.hero .framework,
-.hero .vite {
-  inset-inline: 0;
-  margin: 0 auto;
-}
-
-.hero .base {
-  width: 170px;
-  position: relative;
-  z-index: 0;
-}
-
-.hero .framework,
-.hero .vite {
-  position: absolute;
-}
-
-.hero .framework {
-  z-index: 1;
-  top: 34px;
-  height: 28px;
-  transform: perspective(2000px) rotateZ(300deg) rotateX(44deg) rotateY(39deg) scale(1.4);
-}
-
-.hero .vite {
-  z-index: 0;
-  top: 107px;
-  height: 26px;
-  width: auto;
-  transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg) scale(0.8);
-}
-
-#center {
-  display: flex;
-  flex-direction: column;
-  gap: 25px;
-  place-content: center;
-  place-items: center;
-  flex-grow: 1;
-}
-
-@media (max-width: 1024px) {
-  #center {
-    padding: 32px 20px 24px;
-    gap: 18px;
-  }
-}
-
-#next-steps {
-  display: flex;
-  border-top: 1px solid var(--border);
-  text-align: left;
-}
-
-#next-steps > div {
-  flex: 1 1 0;
-  padding: 32px;
-}
-
-#next-steps .icon {
-  margin-bottom: 16px;
-  width: 22px;
-  height: 22px;
-}
-
-@media (max-width: 1024px) {
-  #next-steps {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  #next-steps > div {
-    padding: 24px 20px;
-  }
-}
-
-#docs {
-  border-right: 1px solid var(--border);
-}
-
-@media (max-width: 1024px) {
-  #docs {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-}
-
-#next-steps ul {
-  list-style: none;
-  padding: 0;
-  display: flex;
-  gap: 8px;
-  margin: 32px 0 0;
-}
-
-#next-steps ul .logo {
-  height: 18px;
-}
-
-#next-steps ul a {
-  color: var(--t1);
-  font-size: 16px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  display: flex;
-  padding: 6px 12px;
-  align-items: center;
-  gap: 8px;
-  text-decoration: none;
-  transition: box-shadow 0.3s;
-}
-
-#next-steps ul a:hover {
-  box-shadow: 0 0 0 1px var(--border);
-}
-
-#next-steps ul a .button-icon {
-  height: 18px;
-  width: 18px;
-}
-
-@media (max-width: 1024px) {
-  #next-steps ul {
-    margin-top: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  #next-steps ul li {
-    flex: 1 1 calc(50% - 8px);
-  }
-
-  #next-steps ul a {
-    width: 100%;
-    justify-content: center;
-    box-sizing: border-box;
-  }
-}
-
-#spacer {
-  height: 88px;
-  border-top: 1px solid var(--border);
-}
-
-@media (max-width: 1024px) {
-  #spacer {
-    height: 48px;
-  }
-}
-
-.ticks {
-  position: relative;
-  width: 100%;
-}
-
-.ticks::before,
-.ticks::after {
-  content: '';
-  position: absolute;
-  top: -4.5px;
-  border: 5px solid transparent;
-}
-
-.ticks::before {
-  left: 0;
-  border-left-color: var(--border);
-}
-
-.ticks::after {
-  right: 0;
-  border-right-color: var(--border);
-}
-
-/* Utility classes additions */
-.fade-in {
-  animation: fadeUp 0.28s ease-out forwards;
-}
-
-.skeleton {
-  position: relative;
-  overflow: hidden;
-  background-color: var(--bg4);
-}
-
-.skeleton::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(90deg, transparent, var(--bg3), transparent);
-  animation: shimmer 1.5s infinite;
-}
-
-.pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-.grid {
-  display: grid;
-  gap: 16px;
-}
-
-.grid-2 {
-  grid-template-columns: repeat(2, 1fr);
-}
-
-.grid-3 {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.gap-1 { gap: 4px; }
-.gap-2 { gap: 8px; }
-.gap-3 { gap: 12px; }
-.gap-4 { gap: 16px; }
-.gap-5 { gap: 20px; }
-.gap-6 { gap: 24px; }
-.gap-8 { gap: 32px; }
-
-.p-1 { padding: 4px; }
-.p-2 { padding: 8px; }
-.p-3 { padding: 12px; }
-.p-4 { padding: 16px; }
-.p-5 { padding: 20px; }
-.p-6 { padding: 24px; }
-
-.py-1 { padding-top: 4px; padding-bottom: 4px; }
-.py-2 { padding-top: 8px; padding-bottom: 8px; }
-.py-3 { padding-top: 12px; padding-bottom: 12px; }
-.py-4 { padding-top: 16px; padding-bottom: 16px; }
-.py-5 { padding-top: 20px; padding-bottom: 20px; }
-.py-6 { padding-top: 24px; padding-bottom: 24px; }
-
-.px-1 { padding-left: 4px; padding-right: 4px; }
-.px-2 { padding-left: 8px; padding-right: 8px; }
-.px-3 { padding-left: 12px; padding-right: 12px; }
-.px-4 { padding-left: 16px; padding-right: 16px; }
-.px-5 { padding-left: 20px; padding-right: 20px; }
-.px-6 { padding-left: 24px; padding-right: 24px; }
-
-.text-center { text-align: center; }
-.text-right { text-align: right; }
-.text-left { text-align: left; }
-
-.font-mono {
-  font-family: 'Inter', monospace;
-}
-
-.underline {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.uppercase {
-  text-transform: uppercase;
-}
-
-.lowercase {
-  text-transform: lowercase;
-}
-
-.capitalize {
-  text-transform: capitalize;
-}
-
-.truncate {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.break-words {
-  word-break: break-word;
-}
-
-.pointer {
-  cursor: pointer;
-}
-
-.select-none {
-  user-select: none;
-}
-
-.overflow-hidden {
-  overflow: hidden;
-}
-
-.relative {
-  position: relative;
-}
-
-.absolute {
-  position: absolute;
-}
-
-.fixed {
-  position: fixed;
-}
-
-.top-0 { top: 0; }
-.bottom-0 { bottom: 0; }
-.left-0 { left: 0; }
-.right-0 { right: 0; }
-.inset-0 { inset: 0; }
-
-.z-0 { z-index: 0; }
-.z-1 { z-index: 1; }
-.z-2 { z-index: 2; }
-.z-3 { z-index: 3; }
-.z-4 { z-index: 4; }
-.z-5 { z-index: 5; }
-
-.w-full { width: 100%; }
-.h-full { height: 100%; }
-.min-h-screen { min-height: 100vh; }
-.max-h-screen { max-height: 100vh; }
-
-.w-1 { width: 4px; }
-.w-2 { width: 8px; }
-.w-3 { width: 12px; }
-.w-4 { width: 16px; }
-.w-5 { width: 20px; }
-.w-6 { width: 24px; }
-.w-8 { width: 32px; }
-.w-10 { width: 40px; }
-.w-12 { width: 48px; }
-.w-16 { width: 64px; }
-.w-20 { width: 80px; }
-.w-24 { width: 96px; }
-.w-32 { width: 128px; }
-
-.h-1 { height: 4px; }
-.h-2 { height: 8px; }
-.h-3 { height: 12px; }
-.h-4 { height: 16px; }
-.h-5 { height: 20px; }
-.h-6 { height: 24px; }
-.h-8 { height: 32px; }
-.h-10 { height: 40px; }
-.h-12 { height: 48px; }
-.h-16 { height: 64px; }
-.h-20 { height: 80px; }
-.h-24 { height: 96px; }
-.h-32 { height: 128px; }
-
-.text-xs { font-size: 12px; }
-.text-sm { font-size: 14px; }
-.text-base { font-size: 16px; }
-.text-lg { font-size: 18px; }
-.text-xl { font-size: 20px; }
-.text-2xl { font-size: 24px; }
-.text-3xl { font-size: 30px; }
-
-.font-bold { font-weight: 700; }
-.font-semibold { font-weight: 600; }
-.font-medium { font-weight: 500; }
-.font-normal { font-weight: 400; }
