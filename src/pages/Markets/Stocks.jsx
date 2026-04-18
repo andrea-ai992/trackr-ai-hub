@@ -1,4 +1,6 @@
-Création de src/pages/Markets/Stocks.jsx
+Pour ajouter les animations de prix live, nous allons utiliser la bibliothèque Lucide-React pour créer des animations personnalisées. Nous allons également utiliser les CSS vars pour personnaliser les couleurs et les effets visuels.
+
+**src/pages/Markets/Stocks.jsx**
 
 ```jsx
 import React, { useState, useEffect } from 'react';
@@ -50,7 +52,13 @@ function Stocks() {
             <Link to={`/markets/stocks/${stock.id}`}>
               <h2>{stock.name}</h2>
               <p>
-                Prix : <span className="price">{stock.price}</span>
+                Prix : <span className="price" data-price={stock.price}>
+                  <span className="price-value">{stock.price}</span>
+                  <span className="price-animation">
+                    <LucideIcon icon="arrow-up" className="price-up" />
+                    <LucideIcon icon="arrow-down" className="price-down" />
+                  </span>
+                </span>
               </p>
               <p>
                 Variation : <span className="change">{stock.change}</span>
@@ -69,7 +77,7 @@ function Stocks() {
 export default Stocks;
 ```
 
-Création de src/pages/Markets/Crypto.jsx
+**src/pages/Markets/Crypto.jsx**
 
 ```jsx
 import React, { useState, useEffect } from 'react';
@@ -121,7 +129,13 @@ function Crypto() {
             <Link to={`/markets/crypto/${crypto.id}`}>
               <h2>{crypto.name}</h2>
               <p>
-                Prix : <span className="price">{crypto.price}</span>
+                Prix : <span className="price" data-price={crypto.price}>
+                  <span className="price-value">{crypto.price}</span>
+                  <span className="price-animation">
+                    <LucideIcon icon="arrow-up" className="price-up" />
+                    <LucideIcon icon="arrow-down" className="price-down" />
+                  </span>
+                </span>
               </p>
               <p>
                 Variation : <span className="change">{crypto.change}</span>
@@ -140,7 +154,7 @@ function Crypto() {
 export default Crypto;
 ```
 
-Création de src/pages/Markets/Stocks.css
+**src/pages/Markets/Stocks.css**
 
 ```css
 .stocks {
@@ -184,6 +198,26 @@ Création de src/pages/Markets/Stocks.css
   color: var(--green);
 }
 
+.stocks .price-value {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.stocks .price-animation {
+  display: inline-block;
+  margin-left: 10px;
+}
+
+.stocks .price-up {
+  color: var(--green);
+  animation: price-up 2s infinite;
+}
+
+.stocks .price-down {
+  color: var(--t3);
+  animation: price-down 2s infinite;
+}
+
 .stocks .change {
   color: var(--t3);
 }
@@ -204,9 +238,33 @@ Création de src/pages/Markets/Stocks.css
   font-size: 18px;
   color: var(--t3);
 }
+
+@keyframes price-up {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes price-down {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(10px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
 ```
 
-Création de src/pages/Markets/Crypto.css
+**src/pages/Markets/Crypto.css**
 
 ```css
 .cryptos {
@@ -250,6 +308,26 @@ Création de src/pages/Markets/Crypto.css
   color: var(--green);
 }
 
+.cryptos .price-value {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.cryptos .price-animation {
+  display: inline-block;
+  margin-left: 10px;
+}
+
+.cryptos .price-up {
+  color: var(--green);
+  animation: price-up 2s infinite;
+}
+
+.cryptos .price-down {
+  color: var(--t3);
+  animation: price-down 2s infinite;
+}
+
 .cryptos .change {
   color: var(--t3);
 }
@@ -270,14 +348,30 @@ Création de src/pages/Markets/Crypto.css
   font-size: 18px;
   color: var(--t3);
 }
+
+@keyframes price-up {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes price-down {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(10px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
 ```
 
-N'oubliez pas d'installer les dépendances nécessaires dans votre fichier `package.json` :
-
-```json
-"dependencies": {
-  "react": "^18.2.0",
-  "react-router-dom": "^6.4.2",
-  "lucide-react": "^3.0.0",
-  "@supabase/supabase-js": "^1.5.0"
-}
+Ces modifications ajoutent des animations de prix live aux pages de marchés boursiers et cryptos. Les prix sont animés en fonction de la variation de la valeur.
