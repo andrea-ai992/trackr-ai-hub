@@ -1,11 +1,23 @@
-Je vais implémenter un système de timeout robuste pour tous les appels fetch() dans les fichiers concernés en utilisant `AbortSignal.timeout()` qui est plus moderne et plus propre que la méthode manuelle avec setTimeout.
-
-Voici les modifications pour `src/api/brain.js`:
+Je vais implémenter un système de validation stricte des requêtes API avec Zod dans `src/api/brain.js`. Voici les modifications nécessaires :
 
 ```javascript
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
+import { z } from 'zod';
+
+const SignalSchema = z.object({
+  rsi: z.object({
+    value: z.string().min(1, "La valeur RSI est requise"),
+    period: z.number().int().positive().default(14),
+  }),
+  macd: z.object({
+    value: z.string().optional(),
+    fast: z.number().int().positive().default(12),
+    slow: z.number().int().positive().default(26),
+  }),
+  volume: z.object({
+    value: z.string().min(1, "La valeur volume est requise"),
+    period: z.number().int().positive().default(14),
+  }),
+});
 
 const Brain = () => {
   const navigate = useNavigate();
@@ -39,10 +51,16 @@ const Brain = () => {
       setSignals((prevSignals) => ({ ...prevSignals, rsi: { value: rsiValue, period: 14 } }));
     }
     if (macdFast && macdSlow) {
-      setSignals((prevSignals) => ({ ...prevSignals, macd: { value: '', fast: parseInt(macdFast), slow: parseInt(macdSlow) } }));
+      setSignals((prevSignals) => ({
+        ...prevSignals,
+        macd: { value: '', fast: parseInt(macdFast), slow: parseInt(macdSlow) }
+      }));
     }
     if (volumeValue && volumePeriod) {
-      setSignals((prevSignals) => ({ ...prevSignals, volume: { value: volumeValue, period: parseInt(volumePeriod) } }));
+      setSignals((prevSignals) => ({
+        ...prevSignals,
+        volume: { value: volumeValue, period: parseInt(volumePeriod) }
+      }));
     }
   }, []);
 
@@ -52,17 +70,21 @@ const Brain = () => {
       setLoading(true);
       setError(null);
 
+      // Validation des données avec Zod
+      const validatedSignals = SignalSchema.parse(signals);
+
       const response = await fetch('/api/brain', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(signals),
+        body: JSON.stringify(validatedSignals),
         signal: AbortSignal.timeout(10000),
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
@@ -74,6 +96,9 @@ const Brain = () => {
       } else if (error.name === 'AbortError') {
         setError('La requête a été annulée (timeout après 10 secondes)');
         console.error('Request aborted:', error);
+      } else if (error instanceof z.ZodError) {
+        setError(error.errors.map(err => err.message).join(', '));
+        console.error('Validation error:', error);
       } else {
         setError(error.message);
         console.error(error);
@@ -215,101 +240,3 @@ const Brain = () => {
 };
 
 export default Brain;
-```
-
-Et voici les modifications pour `src/api/brain-explorer.js`:
-
-```javascript
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
-
-const BrainExplorer = () => {
-  const [signals, setSignals] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const fetchSignals = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const { data, error } = await supabase
-          .from('signals')
-          .select('*')
-          .order('id', { ascending: false })
-          .abortSignal(AbortSignal.timeout(10000));
-
-        if (error) {
-          setError(error.message);
-          console.error(error);
-        } else {
-          setSignals(data);
-        }
-      } catch (error) {
-        if (error.name === 'TimeoutError') {
-          setError('La requête a été annulée (timeout après 10 secondes)');
-          console.error('Request timed out:', error);
-        } else if (error.name === 'AbortError') {
-          setError('La requête a été annulée (timeout après 10 secondes)');
-          console.error('Request aborted:', error);
-        } else {
-          setError(error.message);
-          console.error(error);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSignals();
-
-    return () => {
-      // Cleanup on unmount
-    };
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="container" style={{ backgroundColor: 'var(--bg)', padding: '20px', fontFamily: 'Inter, sans-serif' }}>
-        <h1 style={{ color: 'var(--green)', fontSize: '24px', marginBottom: '20px' }}>Explorateur de signaux</h1>
-        <p style={{ color: 'var(--t1)', fontSize: '16px' }}>Chargement en cours...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container" style={{ backgroundColor: 'var(--bg)', padding: '20px', fontFamily: 'Inter, sans-serif' }}>
-        <h1 style={{ color: 'var(--green)', fontSize: '24px', marginBottom: '20px' }}>Explorateur de signaux</h1>
-        <p style={{ color: 'var(--t1)', fontSize: '16px' }}>Erreur: {error}</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="container" style={{ backgroundColor: 'var(--bg)', padding: '20px', fontFamily: 'Inter, sans-serif' }}>
-      <h1 style={{ color: 'var(--green)', fontSize: '24px', marginBottom: '20px' }}>Explorateur de signaux</h1>
-      {signals.length === 0 ? (
-        <p style={{ color: 'var(--t1)', fontSize: '16px' }}>Aucun signal trouvé</p>
-      ) : (
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-          {signals.map((signal) => (
-            <li key={signal.id} style={{ marginBottom: '20px', padding: '20px', backgroundColor: 'var(--bg2)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '8px 0' }}><strong>ID:</strong> {signal.id}</p>
-              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '8px 0' }}><strong>RSI:</strong> {signal.rsi}</p>
-              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '8px 0' }}><strong>MACD:</strong> {signal.macd}</p>
-              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '8px 0' }}><strong>MACD Fast:</strong> {signal.macd_fast}</p>
-              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '8px 0' }}><strong>MACD Slow:</strong> {signal.macd_slow}</p>
-              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '8px 0' }}><strong>Volume:</strong> {signal.volume}</p>
-              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '8px 0' }}><strong>Volume Period:</strong> {signal.volume_period}</p>
-              <p style={{ color: 'var(--t3)', fontSize: '14px', margin: '8px 0' }}><strong>Créé le:</strong> {new Date(signal.created_at).toLocaleString()}</p>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-};
-
-export default BrainExplorer;
