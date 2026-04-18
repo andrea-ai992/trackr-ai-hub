@@ -1,6 +1,144 @@
+Je vais créer le composant `SignalCard.jsx` et l'intégrer dans `Patterns.jsx` selon les spécifications.
+
+```jsx
+// src/components/SignalCard.jsx
+import { TrendingUp, Info, Zap, Target, BarChart3 } from 'lucide-react'
+
+export function SignalCard({ signal }) {
+  if (!signal) return null
+
+  const {
+    id,
+    name,
+    type,
+    desc,
+    points,
+    support,
+    resistance,
+    neckline,
+    pole,
+    breakout,
+    color = '#3b82f6'
+  } = signal
+
+  const getTypeIcon = (type) => {
+    const typeLower = type.toLowerCase()
+    if (typeLower.includes('bullish')) return <TrendingUp className="w-4 h-4" style={{ color: '#10b981' }} />
+    if (typeLower.includes('bearish')) return <TrendingUp className="w-4 h-4" style={{ color: '#ef4444' }} />
+    if (typeLower.includes('continuation')) return <Zap className="w-4 h-4" style={{ color: '#f59e0b' }} />
+    if (typeLower.includes('reversal')) return <Target className="w-4 h-4" style={{ color: '#8b5cf6' }} />
+    return <BarChart3 className="w-4 h-4" style={{ color: '#3b82f6' }} />
+  }
+
+  return (
+    <div
+      className="w-full p-4 rounded-lg border border-[--border-hi] bg-[--bg2] hover:bg-[--bg3] transition-all duration-300 group"
+      style={{ borderColor: 'rgba(255,255,255,0.12)' }}
+    >
+      <div className="flex items-start justify-between w-full">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            <div
+              className="w-6 h-6 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: color + '20' }}
+            >
+              {getTypeIcon(type)}
+            </div>
+            <h3 className="text-[--t1] font-semibold text-sm" style={{ color: '#f0f0f0' }}>
+              {name}
+            </h3>
+            <span
+              className="px-2 py-0.5 rounded-full text-xs font-medium"
+              style={{
+                backgroundColor: color + '30',
+                color: color
+              }}
+            >
+              {type}
+            </span>
+          </div>
+
+          <p className="text-[--t2] text-xs mb-3 leading-relaxed" style={{ color: '#888' }}>
+            {desc}
+          </p>
+
+          <div className="flex gap-4 text-xs">
+            {support && (
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#10b981' }} />
+                <span style={{ color: '#888' }}>Support</span>
+              </div>
+            )}
+            {resistance && (
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#ef4444' }} />
+                <span style={{ color: '#888' }}>Résistance</span>
+              </div>
+            )}
+            {neckline && (
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#8b5cf6' }} />
+                <span style={{ color: '#888' }}>Ligne de cou</span>
+              </div>
+            )}
+            {pole && (
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#f59e0b' }} />
+                <span style={{ color: '#888' }}>Mât</span>
+              </div>
+            )}
+            {breakout && (
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#06b6d4' }} />
+                <span style={{ color: '#888' }}>Cassure</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="w-24 h-16 ml-4 flex-shrink-0">
+          <svg viewBox="0 0 100 60" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+            <defs>
+              <filter id={`glow-${id}`} x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="1" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+            </defs>
+
+            {/* Grid Lines */}
+            <line x1="0" y1="15" x2="100" y2="15" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
+            <line x1="0" y1="30" x2="100" y2="30" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
+            <line x1="0" y1="45" x2="100" y2="45" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
+
+            {/* Pattern Lines */}
+            {pole && <line x1={pole[0][0]} y1={pole[0][1]} x2={pole[1][0]} y2={pole[1][1]} stroke={color} strokeWidth="1" strokeDasharray="2 1" />}
+            {resistance && <line x1={resistance[0][0]} y1={resistance[0][1]} x2={resistance[1][0]} y2={resistance[1][1]} stroke={color} strokeWidth="1" />}
+            {support && <line x1={support[0][0]} y1={support[0][1]} x2={support[1][0]} y2={support[1][1]} stroke={color} strokeWidth="1" />}
+            {neckline && <line x1={neckline[0][0]} y1={neckline[0][1]} x2={neckline[1][0]} y2={neckline[1][1]} stroke={color} strokeWidth="1" strokeDasharray="1 1" />}
+
+            {/* Price Action */}
+            <polyline
+              points={points.map(p => `${p[0]},${p[1]}`).join(' ')}
+              fill="none"
+              stroke={color}
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+      </div>
+    </div>
+  )
+}
+```
+
+```jsx
+// src/pages/Patterns.jsx
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, TrendingUp, Info, Zap, ChevronRight, BarChart3, LineChart, Target, HelpCircle } from 'lucide-react'
+import { SignalCard } from '../components/SignalCard'
 
 // ─── Pattern Data ─────────────────────────────────────────────────────────────
 const PATTERNS = [
@@ -138,105 +276,4 @@ const PATTERNS = [
   {
     id: 'desc-triangle',
     name: 'Descending Triangle',
-    type: 'Continuation (Bearish)',
-    desc: 'Un support plat et une résistance descendante. Annonce généralement une chute.',
-    points: [[10, 10], [130, 100], [40, 40], [130, 100], [80, 70], [130, 100], [160, 140]],
-    support: [[10, 100], [160, 100]],
-    resistance: [[10, 10], [130, 100]],
-    color: '#ef4444'
-  },
-  {
-    id: 'bull-pennant',
-    name: 'Bullish Pennant',
-    type: 'Continuation (Bullish)',
-    desc: 'Petit triangle qui se forme après un mât vertical. Indique un saut imminent.',
-    pole: [[10, 120], [30, 30]],
-    points: [[30, 30], [60, 80], [80, 40], [100, 70], [120, 55], [150, 0]],
-    resistance: [[30, 30], [120, 55]],
-    support: [[60, 80], [120, 55]],
-    color: '#10b981'
-  },
-  {
-    id: 'bear-pennant',
-    name: 'Bearish Pennant',
-    type: 'Continuation (Bearish)',
-    desc: 'Forme symétrique se créant après une chute libre. Prélude à plus de baisse.',
-    pole: [[10, 10], [30, 100]],
-    points: [[30, 100], [60, 50], [80, 90], [100, 60], [120, 75], [150, 130]],
-    resistance: [[60, 50], [120, 75]],
-    support: [[30, 100], [120, 75]],
-    color: '#ef4444'
-  }
-]
-
-// ─── Pattern SVG Component ────────────────────────────────────────────────────
-function PatternSVG({ pattern, isHovered }) {
-  const { points, support, resistance, neckline, pole, color } = pattern
-
-  const toPoints = (pts) => pts.map(p => `${p[0]},${p[1]}`).join(' ')
-
-  return (
-    <svg viewBox="0 0 160 120" style={{ width: '100%', height: 'auto', overflow: 'visible' }}>
-      <defs>
-        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="2" result="blur" />
-          <feComposite in="SourceGraphic" in2="blur" operator="over" />
-        </filter>
-        <linearGradient id={`grad-${pattern.id}`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.2" />
-          <stop offset="100%" stopColor={color} stopOpacity="0.8" />
-        </linearGradient>
-      </defs>
-
-      {/* Grid Lines (Subtle) */}
-      <line x1="0" y1="20" x2="160" y2="20" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-      <line x1="0" y1="60" x2="160" y2="60" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-      <line x1="0" y1="100" x2="160" y2="100" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-
-      {/* Pattern Lines (Support/Resistance/Neckline) */}
-      {pole && <line x1={pole[0][0]} y1={pole[0][1]} x2={pole[1][0]} y2={pole[1][1]} stroke="rgba(255,255,255,0.2)" strokeWidth="2" strokeDasharray="4 2" />}
-      {resistance && <line x1={resistance[0][0]} y1={resistance[0][1]} x2={resistance[1][0]} y2={resistance[1][1]} stroke={isHovered ? color : "rgba(255,255,255,0.15)"} strokeWidth="1.5" style={{ transition: 'all 300ms' }} />}
-      {support && <line x1={support[0][0]} y1={support[0][1]} x2={support[1][0]} y2={support[1][1]} stroke={isHovered ? color : "rgba(255,255,255,0.15)"} strokeWidth="1.5" style={{ transition: 'all 300ms' }} />}
-      {neckline && <line x1={neckline[0][0]} y1={neckline[0][1]} x2={neckline[1][0]} y2={neckline[1][1]} stroke={isHovered ? color : "rgba(255,255,255,0.15)"} strokeWidth="1.5" strokeDasharray="3 3" style={{ transition: 'all 300ms' }} />}
-
-      {/* Price Action Line */}
-      <polyline
-        points={toPoints(points)}
-        fill="none"
-        stroke={isHovered ? color : "white"}
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        style={{
-          transition: 'all 400ms',
-          strokeDasharray: '300',
-          strokeDashoffset: isHovered ? '0' : '300',
-          animation: isHovered ? 'dash 1.5s ease-out forwards' : 'none',
-          filter: isHovered ? 'url(#glow)' : 'none'
-        }}
-      />
-
-      {/* Breakout Pulse */}
-      {isHovered && points.length > 0 && (
-        <circle
-          cx={points[points.length - 1][0]}
-          cy={points[points.length - 1][1]}
-          r="4"
-          fill={color}
-        >
-          <animate attributeName="r" values="4;8;4" dur="1s" repeatCount="indefinite" />
-          <animate attributeName="opacity" values="1;0;1" dur="1s" repeatCount="indefinite" />
-        </circle>
-      )}
-
-      <style>{`
-        @keyframes dash {
-          to { stroke-dashoffset: 0; }
-        }
-      `}</style>
-    </svg>
-  )
-}
-
-// ─── Skeleton Pattern Component ───────────────────────────────────────────────
-function PatternSkeleton()
+    type: 'Continuation
