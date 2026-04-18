@@ -235,33 +235,36 @@ export default function BrainExplorer() {
           ].map(s => (
             <div key={s.label} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 0', textAlign: 'center' }}>
               <div className="num" style={{ fontSize: 18, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.v}</div>
-              <div style={{ fontSize: 8, color: 'var(--t3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 3 }}>{s.label}</div>
             </div>
-          ))}
-        </div>
-
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: 4, padding: '0 16px 10px', overflowX: 'auto' }}>
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} className="tab-btn"
-              style={{ fontSize: 10, whiteSpace: 'nowrap', color: tab === t.id ? 'var(--green)' : 'var(--t3)', background: tab === t.id ? 'var(--green-bg)' : 'transparent', borderColor: tab === t.id ? 'var(--border-hi)' : 'var(--border)' }}>
-              {t.label}
-            </button>
           ))}
         </div>
       </div>
 
-      {/* Content */}
-      <div style={{ padding: '16px' }}>
-        {tab === 'workers' && (
-          <div>
-            {wIds.map(id => (
-              <WorkerCard key={id} id={id} worker={workers[id]} />
-            ))}
-            <button onClick={() => window.open('http://62.238.12.221:4000/brain', '_blank')} style={{ marginTop: 10, padding: '8px 12px', background: 'var(--green)', border: 'none', borderRadius: 5, color: 'var(--bg)', cursor: 'pointer' }}>
-              Ouvrir dashboard live
-            </button>
-          </div>
-        )}
-        {tab === 'log' && log.map(entry => <LogLine key={entry.ts} entry={entry} />)}
-        {tab === 'done' && done.map
+      {/* Tabs */}
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 10 }}>
+        {TABS.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, padding: '10px', background: tab === t.id ? 'var(--bg2)' : 'transparent', border: 'none', color: 'var(--t1)', fontWeight: tab === t.id ? 700 : 400 }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      {tab === 'workers' && (
+        <div>
+          {Object.entries(workers).map(([id, worker]) => (
+            <WorkerCard key={id} id={id} worker={worker} />
+          ))}
+          <button onClick={() => window.open('http://62.238.12.221:4000/brain', '_blank')} style={{ marginTop: 20, padding: '10px', background: 'var(--green)', color: 'white', border: 'none', borderRadius: 5 }}>
+            Ouvrir dashboard live
+          </button>
+        </div>
+      )}
+
+      {tab === 'log' && log.map((entry, index) => <LogLine key={index} entry={entry} />)}
+      {tab === 'done' && done.map(task => <TaskNode key={task.id} task={task} />)}
+      {tab === 'errors' && errors.map(task => <TaskNode key={task.id} task={task} />)}
+      {tab === 'tree' && <div>Tree content here...</div>}
+
+      {/* New Task Section */}
+      <div style={{ marginTop: 20, padding: '10px', background: 'var(--bg2)',
