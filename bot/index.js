@@ -218,18 +218,17 @@ async function callClaude(message, { channelName = '', mode = 'default', systemN
       }),
       signal: AbortSignal.timeout(30000),
     })
-    if (!res.ok) { console.error(`Groq ${res.status}`); return `❌ Groq erreur ${res.status} — réessaie.` }
+    if (!res.ok) { console.error(`Groq ${res.status}`); return null }
     const d = await res.json().catch(() => null)
     const text = d?.choices?.[0]?.message?.content?.trim()
     if (text) {
       if (onChunk) onChunk(text).catch(() => {})
       return text.slice(0, 1990)
     }
-    return '❌ Pas de réponse.'
+    return null
   } catch (e) {
-    if (e.name === 'TimeoutError' || e.name === 'AbortError') return '⏱️ Timeout — réessaie.'
     console.error('callClaude:', e.message)
-    return '❌ Erreur réseau.'
+    return null
   }
 }
 
@@ -465,14 +464,15 @@ Max 120 mots.`
     if (mode === 'think' && reply) reply = `🧠 **Analyse approfondie**\n\n${reply}`
     if (mode === 'web'   && reply) reply = `🌐 **Mode recherche**\n\n${reply}`
 
-    const final = reply || '❌ Pas de réponse. Réessaie ou tape `!help`.'
+    if (!reply) { if (ph?.id) await editMessage(msg.channel_id, ph.id, '…'); return }
+    const final = reply
     if (ph?.id) await editMessage(msg.channel_id, ph.id, final)
     else        await sendReply(msg.channel_id, msg.id, final)
 
     console.log(`✅ [${mode}] ${username} → ${reply?.length || 0} chars`)
   } catch (e) {
     console.error('reply error:', e.message)
-    if (ph?.id) await editMessage(msg.channel_id, ph.id, `❌ Erreur: ${e.message.slice(0, 80)}`)
+    console.error('reply error:', e.message)
   }
 }
 
