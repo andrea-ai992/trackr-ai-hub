@@ -6,9 +6,11 @@ import * as Lucide from 'lucide-react';
 const BrainStatus = () => {
   const params = useParams();
   const [memory, setMemory] = useState([]);
-  const [activity, setActivity] = useState([]);
+  const [activity, setActivity] = useState(Array(24).fill(0));
   const [pipeline, setPipeline] = useState({});
   const [isNight, setIsNight] = useState(false);
+  const [liveStage, setLiveStage] = useState('IDLE');
+  const [liveLabel, setLiveLabel] = useState('En attente');
 
   useEffect(() => {
     const fetchMemory = async () => {
@@ -36,7 +38,11 @@ const BrainStatus = () => {
       if (error) {
         console.error(error);
       } else {
-        setActivity(data);
+        const act = Array(24).fill(0);
+        data.forEach(({ hour, count }) => {
+          act[hour] = count;
+        });
+        setActivity(act);
       }
     };
     fetchActivity();
@@ -56,7 +62,36 @@ const BrainStatus = () => {
       }
     };
     fetchPipeline();
+
+    const interval = setInterval(() => {
+      setLiveStage(prev => {
+        switch(prev) {
+          case 'IDLE': return 'FETCHING';
+          case 'FETCHING': return 'PROCESSING';
+          case 'PROCESSING': return 'ANALYZING';
+          case 'ANALYZING': return 'GENERATING';
+          case 'GENERATING': return 'IDLE';
+          default: return 'IDLE';
+        }
+      });
+    }, 3000);
+
+    return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    const updateLiveLabel = () => {
+      switch(liveStage) {
+        case 'IDLE': setLiveLabel('En attente'); break;
+        case 'FETCHING': setLiveLabel('Récupération des données'); break;
+        case 'PROCESSING': setLiveLabel('Traitement en cours'); break;
+        case 'ANALYZING': setLiveLabel('Analyse des données'); break;
+        case 'GENERATING': setLiveLabel('Génération des résultats'); break;
+        default: setLiveLabel('En attente');
+      }
+    };
+    updateLiveLabel();
+  }, [liveStage]);
 
   useEffect(() => {
     const checkNightTime = () => {
@@ -83,50 +118,66 @@ const BrainStatus = () => {
         <div className="pipeline">
           <h2 className="title">Pipeline</h2>
           <div className="pipeline-stages">
-            {pipeline && (
-              <div className="pipeline-stage">
-                <span className="stage">{pipeline.stage}</span>
-                <span className="label">{pipeline.label}</span>
-              </div>
-            )}
+            <div className="pipeline-stage">
+              <span className={`stage ${liveStage === 'IDLE' ? 'active' : ''}`}>IDLE</span>
+              <span className={`label ${liveStage === 'IDLE' ? 'active' : ''}`}>{liveLabel}</span>
+            </div>
+            <div className="pipeline-stage">
+              <span className={`stage ${liveStage === 'FETCHING' ? 'active' : ''}`}>FETCHING</span>
+              <span className={`label ${liveStage === 'FETCHING' ? 'active' : ''}`}>Récupération des données</span>
+            </div>
+            <div className="pipeline-stage">
+              <span className={`stage ${liveStage === 'PROCESSING' ? 'active' : ''}`}>PROCESSING</span>
+              <span className={`label ${liveStage === 'PROCESSING' ? 'active' : ''}`}>Traitement en cours</span>
+            </div>
+            <div className="pipeline-stage">
+              <span className={`stage ${liveStage === 'ANALYZING' ? 'active' : ''}`}>ANALYZING</span>
+              <span className={`label ${liveStage === 'ANALYZING' ? 'active' : ''}`}>Analyse des données</span>
+            </div>
+            <div className="pipeline-stage">
+              <span className={`stage ${liveStage === 'GENERATING' ? 'active' : ''}`}>GENERATING</span>
+              <span className={`label ${liveStage === 'GENERATING' ? 'active' : ''}`}>Génération des résultats</span>
+            </div>
           </div>
         </div>
         <div className="activity">
           <h2 className="title">Activité</h2>
-          <svg
-            width="100%"
-            height="100px"
-            viewBox="0 0 24 100"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            {hours.map((hour, i) => (
-              <rect
-                key={hour}
-                x={i * 5}
-                y={100 - (activity[i]?.count || 0) * 5}
-                width={5}
-                height={(activity[i]?.count || 0) * 5}
-                fill="#00ff88"
-                rx={2}
-              />
-            ))}
-            {isNight && (
-              <rect
-                x={22 * 5}
-                y={100 - 5}
-                width={5}
-                height={5}
-                fill="#ff0000"
-                rx={2}
-                className="night-badge"
-              />
-            )}
-          </svg>
-          <div className="activity-hours">
-            {hours.map((hour) => (
-              <span key={hour}>{hour}</span>
-            ))}
+          <div className="activity-container">
+            <svg
+              width="100%"
+              height="100px"
+              viewBox="0 0 120 100"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              {hours.map((hour, i) => (
+                <rect
+                  key={hour}
+                  x={i * 5}
+                  y={100 - (activity[i] || 0) * 5}
+                  width={5}
+                  height={(activity[i] || 0) * 5}
+                  fill="var(--neon)"
+                  rx={2}
+                />
+              ))}
+              {isNight && (
+                <rect
+                  x={22 * 5}
+                  y={100 - 5}
+                  width={5}
+                  height={5}
+                  fill="#ff0000"
+                  rx={2}
+                  className="night-badge"
+                />
+              )}
+            </svg>
+            <div className="activity-hours">
+              {hours.map((hour) => (
+                <span key={hour}>{hour}</span>
+              ))}
+            </div>
           </div>
         </div>
         <div className="memory">
@@ -134,8 +185,8 @@ const BrainStatus = () => {
           <div className="memory-cards">
             {memory.map((item, i) => (
               <div key={i} className="memory-card">
-                <h3 className="title">{item.type}</h3>
-                <p className="description">{item.focus}</p>
+                <h3 className="type">{item.type}</h3>
+                <p className="focus">{item.focus}</p>
                 <p className="timestamp">{item.timestamp}</p>
                 <p className="summary">{item.summary}</p>
               </div>
