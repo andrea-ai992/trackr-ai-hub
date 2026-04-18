@@ -320,7 +320,10 @@ Règles :
 - Réponses concises sauf si une explication longue est vraiment nécessaire.
 - Dans ce terminal, tu peux utiliser du markdown basique (** pour gras, \` pour code).`
 
-// ── Generate raw (Groq primary → Anthropic fallback) ─────────────────────────
+const GEMINI_KEY     = process.env.GEMINI_API_KEY      || ''
+const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY  || ''
+
+// ── Generate raw (Groq → Gemini → OpenRouter → Anthropic) ────────────────────
 async function generateRaw(prompt, maxTokens = 4096) {
   // 1) Groq
   if (GROQ_KEY) {
@@ -329,16 +332,34 @@ async function generateRaw(prompt, maxTokens = 4096) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GROQ_KEY}` },
         body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: prompt }], max_tokens: Math.min(maxTokens, 8000), temperature: 0.4 }),
-        signal: AbortSignal.timeout(60000),
+        signal: AbortSignal.timeout(30000),
       }).catch(() => null)
-      if (r?.ok) {
-        const d = await r.json().catch(() => null)
-        const t = d?.choices?.[0]?.message?.content?.trim()
-        if (t) return t
-      }
+      if (r?.ok) { const d = await r.json().catch(() => null); const t = d?.choices?.[0]?.message?.content?.trim(); if (t) return t }
     } catch {}
   }
-  // 2) Anthropic fallback
+  // 2) Gemini (gratuit)
+  if (GEMINI_KEY) {
+    try {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ systemInstruction: { parts: [{ text: SYSTEM }] }, contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: Math.min(maxTokens, 8192), temperature: 0.4 } }),
+        signal: AbortSignal.timeout(30000),
+      }).catch(() => null)
+      if (r?.ok) { const d = await r.json().catch(() => null); const t = d?.candidates?.[0]?.content?.parts?.[0]?.text?.trim(); if (t) return t }
+    } catch {}
+  }
+  // 3) OpenRouter free
+  if (OPENROUTER_KEY) {
+    try {
+      const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENROUTER_KEY}`, 'HTTP-Referer': APP_URL },
+        body: JSON.stringify({ model: 'nvidia/nemotron-3-super-120b-a12b:free', messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: prompt }], max_tokens: Math.min(maxTokens, 4096), temperature: 0.4 }),
+        signal: AbortSignal.timeout(60000),
+      }).catch(() => null)
+      if (r?.ok) { const d = await r.json().catch(() => null); const t = d?.choices?.[0]?.message?.content?.trim(); if (t) return t }
+    } catch {}
+  }
+  // 4) Anthropic fallback
   if (!API_KEY) return null
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -355,8 +376,8 @@ async function generateRaw(prompt, maxTokens = 4096) {
 const THINKING_BUDGET = 3000   // tokens de réflexion (0 = désactivé)
 
 async function chat(userMessage) {
-  if (!API_KEY) {
-    line(`\n  ${_.red}✗ ANTHROPIC_API_KEY manquante — ajoute-la dans .env${R}`)
+  if (!API_KEY && !GROQ_KEY && !GEMINI_KEY && !OPENROUTER_KEY) {
+    line(`\n  ${_.red}✗ Aucun provider — ajoute GROQ_API_KEY ou GEMINI_API_KEY dans .env${R}`)
     return
   }
 
