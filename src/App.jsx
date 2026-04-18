@@ -1,5 +1,6 @@
-Je vais implémenter le lazy loading avec Suspense pour les pages lourdes et créer des composants de fallback dédiés. Voici les modifications pour `src/App.jsx` :
+Je vais ajouter les transitions de page à 340ms en utilisant react-router-dom et les CSS vars existants. Voici les modifications nécessaires :
 
+src/App.jsx:
 ```jsx
 import { useState, useEffect, Suspense, lazy } from 'react'
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, useOutletContext } from 'react-router-dom'
@@ -22,12 +23,12 @@ const CryptoTrader = lazy(() => import('./pages/CryptoTrader'))
 const Signals = lazy(() => import('./pages/Signals'))
 const BrainExplorer = lazy(() => import('./pages/BrainExplorer'))
 const FlightTracker = lazy(() => import('./pages/FlightTracker'))
-const Sneakers = lazy(() => import('./pages/Sneakers'))
-const Watches = lazy(() => import('./pages/Watches'))
-const RealEstate = lazy(() => import('./pages/RealEstate'))
-const BusinessPlan = lazy(() => import('./pages/BusinessPlan'))
-const Patterns = lazy(() => import('./pages/Patterns'))
-const ChartAnalysis = lazy(() => import('./pages/ChartAnalysis'))
+const Sneakers from './pages/Sneakers'
+const Watches from './pages/Watches'
+const RealEstate from './pages/RealEstate'
+const BusinessPlan from './pages/BusinessPlan')
+const Patterns from './pages/Patterns')
+const ChartAnalysis from './pages/ChartAnalysis')
 
 const AppContent = () => {
   const [showSettings, setShowSettings] = useState(false)
@@ -154,9 +155,67 @@ const App = () => {
 export default App
 ```
 
-Et voici le CSS à ajouter dans `index.css` pour le composant de fallback :
-
+src/styles/index.css:
 ```css
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --bg3: #1a1a1a;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-hi: rgba(0, 255, 136, 0.2);
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --transition-speed: 340ms;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg);
+  color: var(--t1);
+  min-height: 100vh;
+  transition: background-color var(--transition-speed) ease;
+}
+
+.app-container {
+  position: relative;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.app-container > div {
+  transition: opacity var(--transition-speed) ease, transform var(--transition-speed) ease;
+}
+
+.app-container > div[style*="opacity: 0"] {
+  position: absolute;
+  width: 100%;
+  opacity: 0;
+  transform: translateY(20px);
+  pointer-events: none;
+}
+
+.app-container > div[style*="opacity: 1"] {
+  position: relative;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
 .loading-fallback {
   display: flex;
   flex-direction: column;
@@ -181,11 +240,16 @@ Et voici le CSS à ajouter dans `index.css` pour le composant de fallback :
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
-```
 
-Ces modifications :
-1. Implémentent le lazy loading pour toutes les pages lourdes (Sports, Markets, ChartAnalysis et les autres pages du sous-routeur /more)
-2. Créent un composant de fallback générique avec une animation de spinner
-3. Mainiennent le fonctionnement existant tout en améliorant les performances de chargement initial
-4. Respectent le design system avec les variables CSS
-5. Sont mobiles-first par défaut
+/* Media queries pour mobile-first */
+@media (min-width: 768px) {
+  :root {
+    font-size: 18px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    font-size: 20px;
+  }
+}
