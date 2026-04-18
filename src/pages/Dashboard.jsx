@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { fetchMultiplePrices } from '../hooks/useStockPrice'
-import { Plane, Languages, ExternalLink, ChevronRight, TrendingUp, Zap } from 'lucide-react'
+import { Plane, Languages, ExternalLink, ChevronRight, TrendingUp, Zap, TrendingDown, Wallet, ChartLine, Bell, Settings, Bitcoin, Ethereum, Dogecoin, Cardano, Solana, Ripple } from 'lucide-react'
 
 function greeting() {
   const h = new Date().getHours()
@@ -16,7 +16,12 @@ function fmtUSD(n) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-function Sparkline({ data, color = '#6366f1', width = 80, height = 28 }) {
+function fmtPct(n) {
+  if (n == null) return '—'
+  return (n >= 0 ? '+' : '') + n.toFixed(2) + '%'
+}
+
+function Sparkline({ data, color = '#00ff88', width = 80, height = 28 }) {
   if (!data || data.length < 2) return <div style={{ width, height }} />
   const min = Math.min(...data), max = Math.max(...data), range = max - min || 1
   const pts = data.map((v, i) => `${(i / (data.length - 1)) * width},${height - ((v - min) / range) * (height - 2) + 1}`).join(' ')
@@ -43,11 +48,81 @@ function FearGreedGauge({ value }) {
   const largeArc = clamped > 50 ? 1 : 0
   return (
     <svg width={112} height={60} viewBox="0 0 112 60">
-      <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="7" strokeLinecap="round" />
+      <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} fill="none" stroke="var(--border)" strokeWidth="7" strokeLinecap="round" />
       {clamped > 0 && <path d={`M ${sx} ${cy} A ${r} ${r} 0 ${largeArc} 1 ${ex} ${ey}`} fill="none" stroke={color} strokeWidth="7" strokeLinecap="round" style={{ filter: `drop-shadow(0 0 4px ${color})` }} />}
       <circle cx={needle.x} cy={needle.y} r="5" fill={color} style={{ filter: `drop-shadow(0 0 4px ${color})` }} />
-      <text x={cx} y={cy + 6} textAnchor="middle" fill="white" fontSize="17" fontWeight="800" fontFamily="system-ui">{value}</text>
+      <text x={cx} y={cy + 6} textAnchor="middle" fill="white" fontSize="17" fontWeight="800" fontFamily="JetBrains Mono">{value}</text>
     </svg>
+  )
+}
+
+function NewsItem({ item }) {
+  const ago = (() => {
+    const now = new Date()
+    const then = new Date(item.pubDate)
+    const diff = now - then
+    const mins = Math.floor(diff / 60000)
+    if (mins < 1) return 'just now'
+    if (mins < 60) return `${mins}min`
+    const hours = Math.floor(mins / 60)
+    return `${hours}h`
+  })()
+
+  const sources = {
+    'bbc.com': { color: '#007bff', name: 'BBC' },
+    'reuters.com': { color: '#ff6600', name: 'Reuters' },
+    'ft.com': { color: '#003366', name: 'FT' },
+    'bloomberg.com': { color: '#0066cc', name: 'Bloomberg' },
+    'cnbc.com': { color: '#008080', name: 'CNBC' }
+  }
+
+  const source = sources[new URL(item.link).hostname] || { color: '#666', name: 'News' }
+
+  return (
+    <article style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '12px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 10, fontWeight: 700, color: source.color, padding: '2px 8px', borderRadius: 12, background: `${source.color}20`, border: `1px solid ${source.color}30` }}>{source.name}</span>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{ago}</span>
+      </div>
+      <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.4 }}>{item.title}</h3>
+    </article>
+  )
+}
+
+function QuickAction({ icon: Icon, label, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: 'rgba(255,255,255,0.04)',
+        border: '1px solid var(--border)',
+        borderRadius: 16,
+        padding: 16,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 8,
+        backdropFilter: 'blur(12px)',
+        transition: 'all 0.2s ease',
+        fontFamily: 'JetBrains Mono',
+        fontSize: 13,
+        fontWeight: 600,
+        color: 'var(--text-primary)',
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
+        e.currentTarget.style.transform = 'translateY(-2px)'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+        e.currentTarget.style.transform = 'translateY(0)'
+      }}
+    >
+      <Icon size={20} color="var(--neon)" />
+      <span>{label}</span>
+    </button>
   )
 }
 
@@ -59,6 +134,7 @@ export default function Dashboard() {
   const [topMovers, setTopMovers] = useState([])
   const [flightCount, setFlightCount] = useState(null)
   const [news, setNews] = useState([])
+  const [loading, setLoading] = useState(true)
   const userName = localStorage.getItem('nexus_name') || 'there'
 
   useEffect(() => {
@@ -67,13 +143,32 @@ export default function Dashboard() {
   }, [stocks.length])
 
   useEffect(() => {
-    fetch('https://api.alternative.me/fng/?limit=1', { signal: AbortSignal.timeout(8000) })
-      .then(r => r.json()).then(d => setFearGreed(d.data?.[0])).catch(() => {})
-  }, [])
+    const fetchData = async () => {
+      try {
+        const [fgRes, moversRes, newsRes] = await Promise.allSettled([
+          fetch('https://api.alternative.me/fng/?limit=1', { signal: AbortSignal.timeout(8000) }),
+          fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,solana,binancecoin,cardano,dogecoin,ripple&order=market_cap_desc&sparkline=false&price_change_percentage=24h', { signal: AbortSignal.timeout(12000) }),
+          fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://feeds.bbci.co.uk/news/business/rss.xml') + '&count=3', { signal: AbortSignal.timeout(10000) })
+        ])
 
-  useEffect(() => {
-    fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,solana,binancecoin,cardano&order=market_cap_desc&sparkline=false&price_change_percentage=24h', { signal: AbortSignal.timeout(12000) })
-      .then(r => r.json()).then(d => setTopMovers(Array.isArray(d) ? d : [])).catch(() => {})
+        if (fgRes.status === 'fulfilled' && fgRes.value.ok) {
+          const d = await fgRes.value.json()
+          setFearGreed(d.data?.[0])
+        }
+
+        if (moversRes.status === 'fulfilled' && moversRes.value.ok) {
+          const d = await moversRes.value.json()
+          setTopMovers(Array.isArray(d) ? d : [])
+        }
+
+        if (newsRes.status === 'fulfilled' && newsRes.value.ok) {
+          const d = await newsRes.value.json()
+          setNews(d.items || [])
+        }
+      } catch (e) {}
+      setLoading(false)
+    }
+    fetchData()
   }, [])
 
   useEffect(() => {
@@ -81,11 +176,6 @@ export default function Dashboard() {
       .then(r => r.json())
       .then(d => setFlightCount((d.states || []).filter(s => !s[8] && s[5] != null && s[6] != null).length))
       .catch(() => {})
-  }, [])
-
-  useEffect(() => {
-    fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://feeds.bbci.co.uk/news/business/rss.xml') + '&count=3', { signal: AbortSignal.timeout(10000) })
-      .then(r => r.json()).then(d => setNews(d.items || [])).catch(() => {})
   }, [])
 
   const openStocks = stocks.filter(s => !s.salePrice)
@@ -100,40 +190,94 @@ export default function Dashboard() {
   const fgLabel = fg == null ? '' : fg < 25 ? 'Extreme Fear' : fg < 45 ? 'Fear' : fg < 55 ? 'Neutral' : fg < 75 ? 'Greed' : 'Extreme Greed'
   const isUp = totalPnL >= 0
 
-  // Coin colors
-  const coinColors = { bitcoin: '#f59e0b', ethereum: '#6366f1', solana: '#9945ff', binancecoin: '#f0b90b', cardano: '#0033ad' }
+  const coinIcons = {
+    bitcoin: <Bitcoin size={16} />,
+    ethereum: <Ethereum size={16} />,
+    solana: <Solana size={16} />,
+    binancecoin: <Ripple size={16} />,
+    cardano: <Cardano size={16} />,
+    dogecoin: <Dogecoin size={16} />,
+    ripple: <Ripple size={16} />
+  }
 
   return (
-    <div style={{ maxWidth: 500, margin: '0 auto', padding: '0 16px 24px' }}>
+    <div style={{
+      maxWidth: 520,
+      margin: '0 auto',
+      padding: '0 16px 24px',
+      minHeight: '100vh',
+      backgroundColor: 'var(--bg)',
+      fontFamily: 'JetBrains Mono',
+      color: 'var(--text-primary)',
+      position: 'relative'
+    }}>
+      <style>{`
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .stagger-item { animation: fadeInUp 0.3s ease-out forwards; }
+        .stagger-item:nth-child(1) { animation-delay: 0.06s; }
+        .stagger-item:nth-child(2) { animation-delay: 0.12s; }
+        .stagger-item:nth-child(3) { animation-delay: 0.18s; }
+        .stagger-item:nth-child(4) { animation-delay: 0.24s; }
+        .stagger-item:nth-child(5) { animation-delay: 0.30s; }
+        .stagger-item:nth-child(6) { animation-delay: 0.36s; }
+        .stagger-item:nth-child(7) { animation-delay: 0.42s; }
+        .stagger-item:nth-child(8) { animation-delay: 0.48s; }
+        .live-ping {
+          animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+        .skeleton {
+          background: linear-gradient(90deg, var(--surface-low) 25%, var(--surface) 50%, var(--surface-low) 75%);
+          background-size: 200% 100%;
+          animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+        .press-scale:active { transform: scale(0.96); }
+      `}</style>
 
       {/* Header */}
       <div className="stagger-item" style={{ paddingTop: 'max(56px, env(safe-area-inset-top, 0px))', paddingBottom: 20 }}>
-        <p style={{ fontSize: 12, color: '#4b6070', fontWeight: 600, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: "'Space Grotesk', system-ui" }}>{today}</p>
+        <p style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{today}</p>
         <h1 style={{ fontSize: 28, fontWeight: 800, color: 'white', letterSpacing: '-0.5px', lineHeight: 1.15 }}>
-          {greeting()}, <span style={{ background: 'linear-gradient(135deg,#818cf8,#c084fc)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{userName}</span>
+          {greeting()}, <span style={{ color: 'var(--neon)' }}>{userName}</span>
         </h1>
       </div>
 
       {/* ── Portfolio Hero Card ── */}
-      <button onClick={() => navigate('/markets')} className="press-scale stagger-item" style={{
-        width: '100%', textAlign: 'left', marginBottom: 16,
-        background: 'linear-gradient(135deg, rgba(99,102,241,0.13) 0%, rgba(139,92,246,0.09) 100%)',
-        border: '1px solid rgba(99,102,241,0.22)',
-        borderRadius: 24,
-        padding: '22px 20px',
-        boxShadow: '0 0 40px rgba(99,102,241,0.1), 0 8px 32px rgba(0,0,0,0.4)',
-        position: 'relative',
-        overflow: 'hidden',
-      }}>
-        {/* Subtle grid pattern */}
-        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(99,102,241,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,0.05) 1px,transparent 1px)', backgroundSize: '28px 28px', borderRadius: 28 }} />
+      <button
+        onClick={() => navigate('/markets')}
+        className="press-scale stagger-item"
+        style={{
+          width: '100%',
+          textAlign: 'left',
+          marginBottom: 16,
+          background: 'linear-gradient(135deg, rgba(0,255,136,0.08) 0%, rgba(0,255,136,0.04) 100%)',
+          border: '1px solid var(--border)',
+          borderRadius: 24,
+          padding: '22px 20px',
+          boxShadow: '0 0 40px rgba(0,255,136,0.1), 0 8px 32px rgba(0,0,0,0.4)',
+          position: 'relative',
+          overflow: 'hidden',
+          backdropFilter: 'blur(12px)'
+        }}
+      >
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(0,255,136,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,136,0.03) 1px,transparent 1px)', backgroundSize: '28px 28px', borderRadius: 28 }} />
 
         <div style={{ position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(99,102,241,0.25)', border: '1px solid rgba(99,102,241,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <TrendingUp size={14} color="#818cf8" />
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(0,255,136,0.25)', border: '1px solid var(--neon)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <TrendingUp size={14} color="var(--neon)" />
             </div>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Portfolio</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--neon)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Portfolio</span>
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px #10b981', display: 'inline-block' }} className="live-ping" />
               <span style={{ fontSize: 11, color: '#10b981', fontWeight: 600 }}>Live</span>
@@ -141,148 +285,128 @@ export default function Dashboard() {
           </div>
 
           <div style={{ fontSize: 42, fontWeight: 900, color: 'white', letterSpacing: '-1px', marginBottom: 6, fontVariantNumeric: 'tabular-nums' }}>
-            {fmtUSD(totalCurrent)}
+            {loading ? <span className="skeleton" style={{ display: 'inline-block', width: '60%', height: 42, borderRadius: 4 }} /> : fmtUSD(totalCurrent)}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-            <span style={{ fontSize: 16, fontWeight: 700, color: isUp ? '#10b981' : '#ef4444', filter: isUp ? 'drop-shadow(0 0 4px rgba(16,185,129,0.5))' : 'drop-shadow(0 0 4px rgba(239,68,68,0.5))' }}>
-              {isUp ? '+' : ''}{fmtUSD(totalPnL)}
+            <span style={{
+              fontSize: 16,
+              fontWeight: 700,
+              color: isUp ? '#10b981' : '#ef4444',
+              filter: isUp ? 'drop-shadow(0 0 4px rgba(16,185,129,0.5))' : 'drop-shadow(0 0 4px rgba(239,68,68,0.5))'
+            }}>
+              {loading ? <span className="skeleton" style={{ display: 'inline-block', width: 80, height: 16, borderRadius: 4 }} /> : (isUp ? '+' : '') + fmtUSD(totalPnL)}
             </span>
-            <span style={{ fontSize: 13, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: isUp ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)', color: isUp ? '#10b981' : '#ef4444', border: `1px solid ${isUp ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
-              {isUp ? '+' : ''}{totalPnLPct.toFixed(2)}%
+            <span style={{
+              fontSize: 13,
+              fontWeight: 600,
+              padding: '3px 10px',
+              borderRadius: 20,
+              background: isUp ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+              color: isUp ? '#10b981' : '#ef4444',
+              border: `1px solid ${isUp ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
+            }}>
+              {loading ? <span className="skeleton" style={{ display: 'inline-block', width: 40, height: 14, borderRadius: 7 }} /> : fmtPct(totalPnLPct)}
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-            <span style={{ fontSize: 13, color: '#6b7280' }}>{positions} position{positions !== 1 ? 's' : ''}</span>
-            <Sparkline data={sparkData} color={isUp ? '#10b981' : '#ef4444'} width={80} height={26} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+              {loading ? <span className="skeleton" style={{ display: 'inline-block', width: 60, height: 12, borderRadius: 4 }} /> : `${positions} position${positions !== 1 ? 's' : ''}`}
+            </span>
+            {loading ? <div style={{ width: 80, height: 26 }} className="skeleton" /> : <Sparkline data={sparkData} color={isUp ? '#10b981' : '#ef4444'} width={80} height={26} />}
           </div>
         </div>
       </button>
 
       {/* ── Top Movers ── */}
-      {topMovers.length > 0 && (
-        <div className="stagger-item" style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingLeft: 2 }}>
-            <span className="section-label">Crypto Movers</span>
-            <button onClick={() => navigate('/markets?tab=crypto')} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: '#6366f1', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Space Grotesk', system-ui" }}>
-              Voir tout <ChevronRight size={13} />
-            </button>
-          </div>
-          <div className="scroll-row">
-            {topMovers.map(coin => {
-              const pct = coin.price_change_percentage_24h
-              const up  = pct >= 0
-              const cc  = coinColors[coin.id] || '#6366f1'
+      <div className="stagger-item" style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingLeft: 2 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--neon)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Top Movers</span>
+          <button onClick={() => navigate('/markets')} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: 'var(--neon)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}>
+            View all <ChevronRight size={14} />
+          </button>
+        </div>
+
+        <div style={{
+          display: 'flex',
+          gap: 12,
+          overflowX: 'auto',
+          paddingBottom: 8,
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none'
+        }}>
+          {topMovers.length === 0 ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} style={{ minWidth: 120, padding: 12, borderRadius: 16, background: 'var(--surface)', border: '1px solid var(--border)' }} className="skeleton" />
+            ))
+          ) : (
+            topMovers.map((coin) => {
+              const change = coin.price_change_percentage_24h || 0
+              const isPositive = change >= 0
               return (
-                <button key={coin.id} onClick={() => navigate('/markets?tab=crypto')} className="press-scale"
-                  style={{ minWidth: 86, padding: '14px 11px', borderRadius: 20, textAlign: 'left',
-                    background: `rgba(${up ? '16,185,129' : '239,68,68'},0.07)`,
-                    border: `1px solid rgba(${up ? '16,185,129' : '239,68,68'},0.16)`,
-                    boxShadow: `0 4px 20px rgba(${up ? '16,185,129' : '239,68,68'},0.07)`,
+                <button
+                  key={coin.id}
+                  onClick={() => navigate(`/markets?tab=crypto&coin=${coin.id}`)}
+                  style={{
+                    minWidth: 120,
+                    padding: 12,
+                    borderRadius: 16,
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
+                    textAlign: 'left',
+                    transition: 'all 0.2s ease',
+                    backdropFilter: 'blur(12px)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--surface-high)'
+                    e.currentTarget.style.transform = 'translateY(-2px)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'var(--surface)'
+                    e.currentTarget.style.transform = 'translateY(0)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: 6,
+                      background: 'var(--surface-low)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: 'white'
+                    }}>
+                      {coinIcons[coin.id] || coin.symbol.toUpperCase().slice(0, 2)}
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{coin.symbol.toUpperCase()}</span>
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>{fmtUSD(coin.current_price)}</div>
+                  <div style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: isPositive ? '#10b981' : '#ef4444',
+                    padding: '2px 6px',
+                    borderRadius: 10,
+                    background: isPositive ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+                    border: `1px solid ${isPositive ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                    display: 'inline-block',
+                    animation: 'pulse 1.5s infinite'
                   }}>
-                  <div style={{ width: 30, height: 30, borderRadius: 9, background: cc + '22', border: `1px solid ${cc}38`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 9, fontSize: 12, fontWeight: 900, color: cc }}>
-                    {coin.symbol[0].toUpperCase()}
+                    {isPositive ? '+' : ''}{change.toFixed(2)}%
                   </div>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: 'white', marginBottom: 1 }}>{coin.symbol.toUpperCase()}</div>
-                  <div style={{ fontSize: 10, color: '#6b7280', fontVariantNumeric: 'tabular-nums', marginBottom: 5 }}>
-                    ${coin.current_price >= 1 ? coin.current_price.toLocaleString('en-US', { maximumFractionDigits: 0 }) : coin.current_price.toFixed(3)}
-                  </div>
-                  <span className={`pill ${up ? 'pill-up' : 'pill-down'}`} style={{ fontSize: 10, padding: '2px 7px' }}>
-                    {up ? '+' : ''}{pct?.toFixed(2)}%
-                  </span>
                 </button>
               )
-            })}
-          </div>
+            })
+          )}
         </div>
-      )}
-
-      {/* ── Live Flights ── */}
-      <button onClick={() => navigate('/flights')} className="press-scale stagger-item" style={{
-        width: '100%', textAlign: 'left', marginBottom: 10,
-        background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.15)',
-        borderRadius: 22, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14,
-        boxShadow: '0 4px 24px rgba(6,182,212,0.07)',
-      }}>
-        <div style={{ width: 46, height: 46, borderRadius: 14, background: 'rgba(6,182,212,0.14)', border: '1px solid rgba(6,182,212,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Plane size={20} color="#22d3ee" />
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
-            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22d3ee', boxShadow: '0 0 5px #22d3ee', display: 'inline-block' }} className="live-ping" />
-            <span className="section-label" style={{ color: '#22d3ee' }}>Live Flights</span>
-          </div>
-          <div style={{ fontSize: 24, fontWeight: 900, color: 'white', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
-            {flightCount != null ? flightCount.toLocaleString() : '—'}
-          </div>
-          <div style={{ fontSize: 12, color: '#4b6070', marginTop: 1 }}>en vol dans le monde</div>
-        </div>
-        <ChevronRight size={18} color="#374151" />
-      </button>
-
-      {/* ── News ── */}
-      <div className="stagger-item" style={{ background: 'rgba(19,28,43,0.5)', border: '1px solid rgba(132,147,150,0.12)', borderRadius: 22, overflow: 'hidden', marginBottom: 10 }}>
-        <button onClick={() => navigate('/news')} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'none', border: 'none', borderBottom: '1px solid rgba(132,147,150,0.08)', cursor: 'pointer' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Zap size={12} color="#6366f1" />
-            <span className="section-label">Actualités</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: '#6366f1', fontWeight: 700, fontFamily: "'Space Grotesk', system-ui" }}>
-            Tout voir <ChevronRight size={13} />
-          </div>
-        </button>
-        {news.length === 0 ? (
-          <div style={{ padding: '18px', textAlign: 'center', color: '#374151', fontSize: 13 }}>Chargement…</div>
-        ) : news.map((item, i) => (
-          <a key={i} href={item.link} target="_blank" rel="noreferrer" className="press-scale-sm"
-            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 18px', borderBottom: i < news.length - 1 ? '1px solid rgba(132,147,150,0.07)' : 'none', textDecoration: 'none', transition: 'background 150ms ease' }}
-            onTouchStart={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-            onTouchEnd={e => e.currentTarget.style.background = 'transparent'}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, color: '#6366f1', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>BBC Business</p>
-              <p style={{ fontSize: 13, color: '#bac9cc', lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{item.title}</p>
-            </div>
-            <ExternalLink size={12} color="#374151" style={{ flexShrink: 0 }} />
-          </a>
-        ))}
       </div>
 
-      {/* ── 2-col grid: Fear & Greed + Translate ── */}
-      <div className="stagger-item" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <button onClick={() => navigate('/markets?tab=crypto')} className="press-scale" style={{
-          textAlign: 'left', padding: '16px 14px', borderRadius: 22,
-          background: 'rgba(19,28,43,0.5)', border: '1px solid rgba(132,147,150,0.12)',
-          boxShadow: fg != null && fg > 60 ? '0 0 20px rgba(34,197,94,0.07)' : fg != null && fg < 40 ? '0 0 20px rgba(239,68,68,0.07)' : 'none',
-        }}>
-          <p className="section-label" style={{ marginBottom: 10 }}>Fear & Greed</p>
-          {fg != null ? (
-            <>
-              <FearGreedGauge value={fg} />
-              <p style={{ fontSize: 11, fontWeight: 700, marginTop: 6, color: fg < 25 ? '#ef4444' : fg < 45 ? '#f97316' : fg < 55 ? '#eab308' : fg < 75 ? '#84cc16' : '#22c55e' }}>{fgLabel}</p>
-            </>
-          ) : <div style={{ height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#374151', fontSize: 13 }}>…</div>}
-        </button>
-
-        <button onClick={() => navigate('/translator')} className="press-scale" style={{
-          textAlign: 'left', padding: '16px 14px', borderRadius: 22,
-          background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.16)',
-          display: 'flex', flexDirection: 'column',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 14 }}>
-            <div style={{ width: 26, height: 26, borderRadius: 9, background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Languages size={13} color="#818cf8" />
-            </div>
-            <span className="section-label">Traduire</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 18, marginBottom: 6 }}>
-            <span>🇺🇸</span>
-            <ChevronRight size={12} color="#374151" />
-            <span>🇫🇷</span>
-          </div>
-          <p style={{ fontSize: 12, color: '#4b6070' }}>Appuyer pour traduire</p>
-        </button>
-      </div>
-    </div>
-  )
-}
+      {/* ── Fear & Greed ── */}
+      <div className="stagger-item" style={{ marginBottom:
