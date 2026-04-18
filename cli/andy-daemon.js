@@ -291,10 +291,15 @@ async function generateRaw(prompt, maxTokens = 4096, hint = 'smart') {
           if (e.message.startsWith('429:')) {
             const raw = parseInt(e.message.split(':')[1]) || 30
             if (raw > 300) {
-              setCooldown(name, Math.min(raw, 8 * 3600))  // daily limit — cooldown jusqu'à reset
+              setCooldown(name, Math.min(raw, 8 * 3600))
               return null
             }
-            const wait = Math.min(raw, 60) + 3
+            // Si wait > 15s → skip ce provider, essaie le suivant immédiatement
+            if (raw > 15) {
+              log(`[LLM] ${name} 429 ${raw}s — skip → next provider`)
+              return null
+            }
+            const wait = raw + 3
             log(`[LLM] ${name} 429 — wait ${wait}s`)
             await sl(wait * 1000)
             continue
