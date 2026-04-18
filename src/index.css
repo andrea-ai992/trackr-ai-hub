@@ -1,206 +1,50 @@
-**src/index.css**
-```css
 :root {
   --green: #00ff88;
   --bg: #080808;
-  --bg2: #111;
+  --bg2: #111111;
   --t1: #f0f0f0;
-  --t2: #888;
-  --t3: #444;
+  --t2: #888888;
+  --t3: #444444;
   --border: rgba(255, 255, 255, 0.07);
-  --font-family: 'Inter', sans-serif;
+  --border-hi: rgba(0, 255, 136, 0.20);
+  --green-dim: #00cc66;
+  --green-bg: rgba(0, 255, 136, 0.06);
+  --red: #ff4d4d;
+  --amber: #fbbf24;
+  --blue: #38bdf8;
+  --radius-sm: 12px;
+  --radius: 16px;
+  --radius-lg: 22px;
 }
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 body {
-  font-family: var(--font-family);
+  font-family: 'Inter', sans-serif;
   background-color: var(--bg);
   color: var(--t1);
-  margin: 0;
   padding: 0;
+  margin: 0;
 }
 
-.container {
-  max-width: 600px;
-  margin: 40px auto;
-  padding: 20px;
-  background-color: var(--bg2);
-  border: 1px solid var(--border);
-  box-shadow: 0 8px 32px rgba(0, 255, 136, 0.08);
+.num {
+  font-feature-settings: 'tnum';
+  color: var(--green);
 }
 
-.anim-1 {
-  animation: fadeUp 300ms ease-out;
-  animation-delay: 50ms;
+.section-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--t3);
 }
 
-.anim-2 {
-  animation: fadeUp 300ms ease-out;
-  animation-delay: 100ms;
+.scroll-row {
+  overflow-x: auto;
+  scrollbar-width: none;
+  display: flex;
+  gap: 10px;
 }
 
-.anim-3 {
-  animation: fadeUp 300ms ease-out;
-  animation-delay: 150ms;
+.scroll-row::-webkit-scrollbar {
+  display: none;
 }
-
-.anim-4 {
-  animation: fadeUp 300ms ease-out;
-  animation-delay: 200ms;
-}
-
-.anim-5 {
-  animation: fadeUp 300ms ease-out;
-  animation-delay: 250ms;
-}
-
-.anim-6 {
-  animation: fadeUp 300ms ease-out;
-  animation-delay: 300ms;
-}
-
-@keyframes fadeUp {
-  0% {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  100% {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes slideRight {
-  0% {
-    transform: translateX(-20px);
-  }
-  100% {
-    transform: translateX(0);
-  }
-}
-
-@keyframes slideLeft {
-  0% {
-    transform: translateX(20px);
-  }
-  100% {
-    transform: translateX(0);
-  }
-}
-
-@keyframes scaleIn {
-  0% {
-    transform: scale(0.97);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200%;
-  }
-  100% {
-    background-position: 200%;
-  }
-}
-
-.page-card {
-  transition: 200ms;
-}
-
-.page-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(0, 255, 136, 0.08);
-}
-```
-
-**src/components/PageTransition.jsx**
-```jsx
-import { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-
-const PageTransition = ({ children }) => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    const handleMount = () => {
-      setIsMounted(true);
-    };
-
-    const handleUnmount = () => {
-      setIsMounted(false);
-    };
-
-    document.addEventListener('DOMContentLoaded', handleMount);
-    document.addEventListener('unload', handleUnmount);
-
-    return () => {
-      document.removeEventListener('DOMContentLoaded', handleMount);
-      document.removeEventListener('unload', handleUnmount);
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleTransition = () => {
-      if (isMounted) {
-        const currentPathname = location.pathname;
-        const nextPathname = navigate.location.pathname;
-
-        if (currentPathname !== nextPathname) {
-          const currentTab = document.querySelector('.tab-active');
-          const nextTab = document.querySelector(`.tab-${nextPathname}`);
-
-          if (currentTab) {
-            currentTab.classList.remove('tab-active');
-            currentTab.classList.add('tab-previous');
-          }
-
-          if (nextTab) {
-            nextTab.classList.remove('tab-previous');
-            nextTab.classList.add('tab-active');
-          }
-
-          requestAnimationFrame(() => {
-            const currentPage = document.querySelector('.page-active');
-            const nextPage = document.querySelector(`.page-${nextPathname}`);
-
-            if (currentPage) {
-              currentPage.classList.remove('page-active');
-              currentPage.classList.add('page-previous');
-            }
-
-            if (nextPage) {
-              nextPage.classList.remove('page-previous');
-              nextPage.classList.add('page-active');
-            }
-          });
-        }
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleTransition);
-    document.addEventListener('pagehide', handleTransition);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleTransition);
-      document.removeEventListener('pagehide', handleTransition);
-    };
-  }, [isMounted, location, navigate]);
-
-  return (
-    <div className="container">
-      <div className="page-card page-active anim-1">
-        {children}
-      </div>
-    </div>
-  );
-};
-
-export default PageTransition;
-```
-Note : J'ai ajouté les animations CSS et les classes correspondantes dans `src/index.css`. J'ai également créé le composant `PageTransition` qui gère la transition entre les pages et les tabs. Ce composant utilise les événements `visibilitychange` et `pagehide` pour détecter les transitions entre les pages. Il utilise également `requestAnimationFrame` pour éviter les flashs.
