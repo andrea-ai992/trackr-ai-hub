@@ -1,31 +1,102 @@
+**1. Ajouter headers de sécurité dans vercel.json**
+
+```json
 {
-  "crons": [
-    { "path": "/api/monitor",                         "schedule": "0 6 * * *"  },
-    { "path": "/api/brain",                           "schedule": "0 0 * * *"  },
-    { "path": "/api/morning",                         "schedule": "0 9 * * *"  },
-    { "path": "/api/reports?type=daily&post=true",    "schedule": "0 8 * * *"  },
-    { "path": "/api/reports?type=weekly&post=true",   "schedule": "0 9 * * 0"  },
-    { "path": "/api/reports?type=status&post=true",   "schedule": "0 7 * * *"  },
-    { "path": "/api/self-improve?focus=security",     "schedule": "0 4 * * *"  },
-    { "path": "/api/self-improve?focus=bugs",         "schedule": "0 6 * * *"  },
-    { "path": "/api/self-improve?focus=performance",  "schedule": "0 10 * * *" },
-    { "path": "/api/self-improve?focus=frontend",     "schedule": "0 14 * * *" },
-    { "path": "/api/self-improve?focus=trading",      "schedule": "0 16 * * *" },
-    { "path": "/api/self-improve?focus=features",     "schedule": "0 0 * * 1"  },
-    { "path": "/api/self-improve?focus=autonomous",   "schedule": "0 3 * * *"  },
-    { "path": "/api/self-improve?focus=realestate",   "schedule": "0 11 * * *" },
-    { "path": "/api/self-improve?focus=business",     "schedule": "0 13 * * *" },
-    { "path": "/api/self-improve?focus=full",         "schedule": "0 2 * * 0"  }
-  ],
-  "functions": {
-    "api/andy.js":          { "maxDuration": 60 },
-    "api/brain.js":         { "maxDuration": 60 },
-    "api/reports.js":       { "maxDuration": 60 },
-    "api/discord.js":       { "maxDuration": 60 },
-    "api/self-improve.js":  { "maxDuration": 60 },
-    "api/morning.js":       { "maxDuration": 60 },
-    "api/trading-expert.js":{ "maxDuration": 60 },
-    "api/business-plan.js": { "maxDuration": 60 },
-    "api/real-estate.js":   { "maxDuration": 30 }
+  "headers": [
+    {
+      "destination": "*",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=( ), microphone=( ), geolocation=( )"
+        }
+      ]
+    }
+  ]
+}
+```
+
+**2. Créer le middleware de sécurité dans api/_security.js**
+
+```javascript
+import { NextApiRequest, NextApiResponse } from 'next';
+
+const rateLimit = new Map();
+const maxRequests = 100;
+const timeWindow = 60 * 1000; // 1 minute
+
+export const securityMiddleware = async (req: NextApiRequest, res: NextApiResponse) => {
+  const ip = req.ip;
+  const now = Date.now();
+
+  if (rateLimit.has(ip)) {
+    const { timestamp, count } = rateLimit.get(ip);
+    if (now - timestamp < timeWindow) {
+      if (count >= maxRequests) {
+        return res.status(429).json({ error: 'Too many requests' });
+      } else {
+        rateLimit.set(ip, { timestamp, count: count + 1 });
+        return res.status(200).json({ message: 'OK' });
+      }
+    } else {
+      rateLimit.set(ip, { timestamp: now, count: 1 });
+      return res.status(200).json({ message: 'OK' });
+    }
+  } else {
+    rateLimit.set(ip, { timestamp: now, count: 1 });
+    return res.status(200).json({ message: 'OK' });
   }
+};
+
+export const sanitizeInput = (str: string) => {
+  return str.replace(/<|>|\n|\\|\'|\"/g, '');
+};
+```
+
+**3. Vérifier que .env n'est pas dans le build Vite**
+
+```javascript
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  envPrefix: 'VITE_',
+  envFile: '.env',
+  build: {
+    outDir: 'build',
+    emptyOutDir: true,
+  },
+});
+```
+
+**4. Créer la fonction sanitizeInput dans src/utils/sanitize.ts**
+
+```typescript
+export function sanitizeInput(str: string) {
+  return str.replace(/<|>|\n|\\|\'|\"/g, '');
+}
+```
+
+**5. Ajouter la sécurité dans les routes API**
+
+```javascript
+import { NextApiRequest, NextApiResponse } from 'next';
+import securityMiddleware from '../_security';
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  await securityMiddleware(req, res);
+  // ... code API ...
 }
