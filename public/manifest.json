@@ -3,62 +3,77 @@
 {
   "name": "Trackr",
   "short_name": "Trackr",
-  "description": "Dashboard intelligent personnel",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#080808",
+  "description": "Application de suivi de sports, marchés et actualités",
   "theme_color": "#00ff88",
+  "background_color": "#080808",
+  "display": "standalone",
   "orientation": "portrait",
-  "categories": ["finance", "productivity"],
+  "start_url": "/",
+  "scope": "/",
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "/android-chrome-192x192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
+      "type": "image/png"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/android-chrome-512x512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/apple-touch-icon.png",
-      "sizes": "180x180",
       "type": "image/png"
     }
   ],
   "shortcuts": [
     {
-      "name": "Markets",
-      "url": "/markets",
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Accueil de l'application",
       "icons": [
         {
-          "src": "/icon-192.png",
+          "src": "/android-chrome-192x192.png",
           "sizes": "192x192",
-          "type": "image/png",
-          "purpose": "any"
+          "type": "image/png"
         }
-      ]
+      ],
+      "url": "/"
+    },
+    {
+      "name": "Markets",
+      "short_name": "Markets",
+      "description": "Suivi des marchés",
+      "icons": [
+        {
+          "src": "/android-chrome-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ],
+      "url": "/markets"
     },
     {
       "name": "Sports",
+      "short_name": "Sports",
+      "description": "Suivi des sports",
+      "icons": [
+        {
+          "src": "/android-chrome-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ],
       "url": "/sports"
     },
     {
       "name": "AnDy",
+      "short_name": "AnDy",
+      "description": "Chat avec AnDy",
+      "icons": [
+        {
+          "src": "/android-chrome-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ],
       "url": "/andy"
-    },
-    {
-      "name": "News",
-      "url": "/news"
     }
   ]
 }
@@ -66,80 +81,41 @@
 
 **public/sw.js**
 ```javascript
-import { CacheFirst, NetworkFirst, StaleWhileRevalidate } from 'workbox-strategies';
-import { precacheAndRoute } from 'workbox-precaching';
-import { registerRoute } from 'workbox-routing';
-import { CacheableResponsePlugin } from 'workbox-cacheable-response';
+import { registerSW } from 'virtual:windi-sw';
+import { CacheFirst, NetworkFirst } from 'virtual:windi-cache';
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open('trackr-v3').then((cache) => {
-      return cache.addAll([
-        '/index.html',
-        '/manifest.json',
-        '/icon-192.png',
-        '/icon-512.png',
-        '/apple-touch-icon.png',
-        '/styles.css',
-        '/script.js',
-        '/fonts.css'
-      ]);
-    })
-  );
+registerSW({
+  // Cache-first pour assets statiques
+  cacheName: 'trackr-static',
+  cacheOptions: {
+    cacheName: 'trackr-static',
+    expiration: {
+      maxAge: 60 * 60 * 24 * 30, // 30 jours
+    },
+  },
+  matchOptions: {
+    ignoreSearch: true,
+  },
+  fetchOptions: {
+    credentials: 'same-origin',
+  },
+  // Network-first pour API calls
+  cacheName: 'trackr-api',
+  cacheOptions: {
+    cacheName: 'trackr-api',
+    expiration: {
+      maxAge: 60 * 60 * 24 * 30, // 30 jours
+    },
+  },
+  fetchOptions: {
+    credentials: 'same-origin',
+  },
+  // Fallback offline page simple
+  fallback: () => import('./offline.html'),
 });
-
-self.addEventListener('fetch', (event) => {
-  if (event.request.method === 'GET' && event.request.url.startsWith(self.location.origin)) {
-    event.respondWith(
-      caches.match(event.request).then((response) => {
-        return response || fetch(event.request).then((response) => {
-          return response;
-        });
-      })
-    );
-  }
-});
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.filter((cacheName) => cacheName !== 'trackr-v3').map((cacheName) => {
-          return caches.delete(cacheName);
-        })
-      );
-    })
-  );
-});
-
-precacheAndRoute(self.__WB_MANIFEST);
-
-registerRoute(
-  ({ url }) => url.startsWith(self.location.origin + '/api/'),
-  new NetworkFirst({
-    cacheName: 'api-cache',
-    plugins: [
-      new CacheableResponsePlugin({
-        statuses: [0, 200],
-      }),
-    ],
-  })
-);
-
-registerRoute(
-  ({ url }) => url.startsWith(self.location.origin + '/'),
-  new StaleWhileRevalidate({
-    cacheName: 'pages-cache',
-    plugins: [
-      new CacheableResponsePlugin({
-        statuses: [0, 200],
-      }),
-    ],
-  })
-);
 ```
 
-**public/index.html**
+**index.html**
 ```html
 <!DOCTYPE html>
 <html lang="fr">
@@ -148,29 +124,19 @@ registerRoute(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Trackr</title>
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#00ff88">
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <link rel="apple-mobile-web-app-capable" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="/android-chrome-192x192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <script type="module" src="/script.js"></script>
+  <div id="root"></div>
+  <script type="module" src="/index.js"></script>
 </body>
 </html>
 ```
 
 **styles.css**
 ```css
-:root {
-  --green: #00ff88;
-  --bg: #080808;
-  --bg2: #111;
-  --t1: #f0f0f0;
-  --t2: #888;
-  --t3: #444;
-  --border: rgba(255, 255, 255, 0.07);
-}
-
 body {
   font-family: 'Inter', sans-serif;
   background-color: var(--bg);
@@ -179,22 +145,40 @@ body {
 
 a {
   color: var(--green);
+  text-decoration: none;
 }
 
 a:hover {
-  color: var(--t2);
+  color: var(--green);
+}
+
+a:active {
+  color: var(--green);
+}
+
+#root {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 ```
 
-**script.js**
-```javascript
-import { createRoot } from 'react-dom/client';
-import { BrowserRouter as Router } from 'react-router-dom';
-import App from './App';
-
-const root = createRoot(document.getElementById('root'));
-root.render(
-  <Router>
-    <App />
-  </Router>
-);
+**offline.html**
+```html
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trackr - Hors ligne</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <h1>Vous êtes hors ligne</h1>
+  <p>Veuillez vous reconnecter à votre réseau pour accéder à l'application.</p>
+</body>
+</html>
