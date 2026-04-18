@@ -21,7 +21,6 @@ try {
 const BOT_TOKEN  = process.env.DISCORD_DEV_BOT_TOKEN
 const GUILD_ID   = process.env.DISCORD_GUILD_ID
 const GROQ_KEY   = process.env.GROQ_API_KEY
-const ANTH_KEY   = process.env.ANTHROPIC_API_KEY
 const TASKS_DIR  = resolve(ROOT, 'andy-tasks')
 const LOG_FILE   = '/root/logs/andy-daemon.log'
 const API        = 'https://discord.com/api/v10'
@@ -97,21 +96,6 @@ async function askAI(message, maxTokens = 800) {
         if (t) return t.slice(0, 1990)
       }
     } catch (e) { console.error('Groq:', e.message) }
-  }
-  // Anthropic fallback
-  if (ANTH_KEY) {
-    try {
-      const r = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'x-api-key': ANTH_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: maxTokens, system: DEV_SYSTEM, messages: [{ role: 'user', content: message }] }),
-        signal: AbortSignal.timeout(30000),
-      })
-      if (r.ok) {
-        const d = await r.json().catch(() => null)
-        return d?.content?.[0]?.text?.trim()?.slice(0, 1990)
-      }
-    } catch (e) { console.error('Anthropic:', e.message) }
   }
   return null
 }
