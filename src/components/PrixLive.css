@@ -1,0 +1,198 @@
+**src/components/PrixLive.css**
+```css
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+.prix-live {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+.prix-live h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--t1);
+  margin-bottom: 10px;
+}
+
+.prix-live .prix {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--green);
+  margin-bottom: 10px;
+}
+
+.prix-live .variation {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--t2);
+  margin-bottom: 10px;
+}
+
+.prix-live .icone {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--green);
+  margin-right: 10px;
+}
+
+.prix-live .icone svg {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
+
+.prix-live .icone.up {
+  transform: translateY(-2px);
+}
+
+.prix-live .icone.down {
+  transform: translateY(2px);
+}
+
+.prix-live .icone.up svg {
+  transform: translateY(-2px);
+}
+
+.prix-live .icone.down svg {
+  transform: translateY(2px);
+}
+
+.prix-live .icone.up path {
+  stroke-width: 2px;
+}
+
+.prix-live .icone.down path {
+  stroke-width: 2px;
+}
+
+.prix-live .icone.up path:nth-child(1) {
+  stroke-dasharray: 50 150;
+  stroke-dashoffset: 0;
+  animation: up 1s ease-in-out;
+}
+
+.prix-live .icone.up path:nth-child(2) {
+  stroke-dasharray: 50 150;
+  stroke-dashoffset: -150;
+  animation: up 1s ease-in-out;
+}
+
+.prix-live .icone.down path:nth-child(1) {
+  stroke-dasharray: 50 150;
+  stroke-dashoffset: 0;
+  animation: down 1s ease-in-out;
+}
+
+.prix-live .icone.down path:nth-child(2) {
+  stroke-dasharray: 50 150;
+  stroke-dashoffset: -150;
+  animation: down 1s ease-in-out;
+}
+
+@keyframes up {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -150;
+  }
+}
+
+@keyframes down {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: 150;
+  }
+}
+```
+
+**src/pages/Markets/Stocks.jsx**
+```jsx
+import React from 'react';
+import { Link } from 'react-router-dom';
+import PrixLive from '../components/PrixLive';
+
+const Stocks = () => {
+  return (
+    <div className="container">
+      <h1>Marchés des Actions</h1>
+      <div className="prix-live">
+        <h2>Apple</h2>
+        <PrixLive prix="123.45" variation="+5.67%" icone="up" />
+      </div>
+      <div className="prix-live">
+        <h2>Amazon</h2>
+        <PrixLive prix="678.90" variation="-3.21%" icone="down" />
+      </div>
+      <div className="prix-live">
+        <h2>Google</h2>
+        <PrixLive prix="901.23" variation="+2.34%" icone="up" />
+      </div>
+      <Link to="/markets/crypto">Voir les cryptomonnaies</Link>
+    </div>
+  );
+};
+
+export default Stocks;
+```
+
+**src/pages/Markets/Crypto.jsx**
+```jsx
+import React from 'react';
+import { Link } from 'react-router-dom';
+import PrixLive from '../components/PrixLive';
+
+const Crypto = () => {
+  return (
+    <div className="container">
+      <h1>Marchés des Cryptomonnaies</h1>
+      <div className="prix-live">
+        <h2>BTC</h2>
+        <PrixLive prix="12345.67" variation="+5.67%" icone="up" />
+      </div>
+      <div className="prix-live">
+        <h2>ETH</h2>
+        <PrixLive prix="67890.12" variation="-3.21%" icone="down" />
+      </div>
+      <div className="prix-live">
+        <h2>LTC</h2>
+        <PrixLive prix="90123.45" variation="+2.34%" icone="up" />
+      </div>
+      <Link to="/markets/stocks">Voir les marchés des actions</Link>
+    </div>
+  );
+};
+
+export default Crypto;
+```
+
+**src/components/PrixLive.jsx**
+```jsx
+import React from 'react';
+import './PrixLive.css';
+
+const PrixLive = ({ prix, variation, icone }) => {
+  return (
+    <div className="prix-live">
+      <h2>{icone}</h2>
+      <div className="icone">
+        <svg>
+          <path d="M0 0h24v24H0z" fill="none" />
+          <path d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z" />
+        </svg>
+      </div>
+      <p className="prix">{prix}</p>
+      <p className="variation">{variation}</p>
+    </div>
+  );
+};
+
+export default PrixLive;
