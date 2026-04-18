@@ -109,7 +109,7 @@
   animation-delay: 300ms;
 }
 
-body {
+.body {
   font-family: 'Inter', sans-serif;
   background-color: var(--bg);
   color: var(--t1);
@@ -167,56 +167,53 @@ body {
   animation: fadeUp 300ms ease-out;
   animation-delay: 100ms;
 }
+
+.page-transition-slide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg);
+  transition: 250ms;
+}
+
+.page-transition-slide::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg);
+  opacity: 0;
+  transition: 200ms;
+}
+
+.page-transition-slide::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg);
+  opacity: 0;
+  transition: 200ms;
+}
+
+.page-transition-slide::before {
+  animation: slideRight 250ms;
+  animation-delay: 50ms;
+}
+
+.page-transition-slide::after {
+  animation: slideLeft 250ms;
+  animation-delay: 100ms;
+}
 ```
 
 **src/components/PageTransition.jsx**
-```jsx
-import { useEffect, useRef, useState } from 'react';
-
-const PageTransition = ({ children, className = '' }) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const [isLeaving, setIsLeaving] = useState(false);
-  const containerRef = useRef(null);
-
-  useEffect(() => {
-    const timer = requestAnimationFrame(() => {
-      setIsVisible(true);
-    });
-
-    return () => {
-      cancelAnimationFrame(timer);
-    };
-  }, []);
-
-  const transitionStyles = {
-    opacity: isVisible && !isLeaving ? 1 : 0,
-    transform: isVisible && !isLeaving ? 'translateY(0px)' : 'translateY(8px)',
-    transition: 'opacity 200ms ease-out, transform 200ms ease-out',
-    willChange: 'opacity, transform',
-  };
-
-  const slideStyles = {
-    transform: `translateX(${isVisible && !isLeaving ? '0px' : '-20px'})`,
-    transition: 'transform 250ms',
-  };
-
-  return (
-    <div
-      ref={containerRef}
-      className={`page-transition-wrapper ${className}`}
-      style={transitionStyles}
-    >
-      <div className="page-transition-slide" style={slideStyles}>
-        {children}
-      </div>
-    </div>
-  );
-};
-
-export default PageTransition;
-```
-
-**src/components/PageTransition.js** (ajout de la fonction de transition slide)
 ```jsx
 import { useEffect, useRef, useState } from 'react';
 
@@ -256,11 +253,20 @@ const PageTransition = ({ children, className = '' }) => {
     }
   };
 
+  const handleLeave = () => {
+    setIsLeaving(true);
+    setTimeout(() => {
+      setIsLeaving(false);
+      setIsVisible(false);
+    }, 200);
+  };
+
   return (
     <div
       ref={containerRef}
       className={`page-transition-wrapper ${className}`}
       style={transitionStyles}
+      onClick={handleLeave}
     >
       <div
         ref={slideRef}
@@ -276,4 +282,78 @@ const PageTransition = ({ children, className = '' }) => {
 
 export default PageTransition;
 ```
-Note : J'ai ajouté la fonction de transition slide dans le composant PageTransition.js. Cette fonction permet de faire glisser les éléments vers la gauche ou la droite en fonction de l'index du tab. J'ai également ajouté les classes pour les animations dans le fichier index.css.
+
+**src/components/PageTransition.js**
+```jsx
+import { useEffect, useRef, useState } from 'react';
+
+const PageTransition = ({ children, className = '' }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+  const containerRef = useRef(null);
+  const slideRef = useRef(null);
+
+  useEffect(() => {
+    const timer = requestAnimationFrame(() => {
+      setIsVisible(true);
+    });
+
+    return () => {
+      cancelAnimationFrame(timer);
+    };
+  }, []);
+
+  const transitionStyles = {
+    opacity: isVisible && !isLeaving ? 1 : 0,
+    transform: isVisible && !isLeaving ? 'translateY(0px)' : 'translateY(8px)',
+    transition: 'opacity 200ms ease-out, transform 200ms ease-out',
+    willChange: 'opacity, transform',
+  };
+
+  const slideStyles = {
+    transform: `translateX(${isVisible && !isLeaving ? '0px' : '-20px'})`,
+    transition: 'transform 250ms',
+  };
+
+  const handleSlide = (direction) => {
+    if (direction === 'left') {
+      slideRef.current.style.transform = 'translateX(-20px)';
+    } else if (direction === 'right') {
+      slideRef.current.style.transform = 'translateX(20px)';
+    }
+  };
+
+  const handleLeave = () => {
+    setIsLeaving(true);
+    setTimeout(() => {
+      setIsLeaving(false);
+      setIsVisible(false);
+    }, 200);
+  };
+
+  const handleEnter = () => {
+    setIsVisible(true);
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className={`page-transition-wrapper ${className}`}
+      style={transitionStyles}
+      onClick={handleLeave}
+    >
+      <div
+        ref={slideRef}
+        className="page-transition-slide"
+        style={slideStyles}
+        onClick={() => handleSlide('left')}
+      >
+        {children}
+      </div>
+    </div>
+  );
+};
+
+export default PageTransition;
+```
+J'ai ajouté les classes pour les animations dans le fichier index.css. J'ai également ajouté la fonction de transition slide dans le composant PageTransition.js. Cette fonction permet de faire glisser les éléments vers la gauche ou la droite en fonction de l'index du tab. J'ai également ajouté les classes pour les animations dans le fichier index.css.
