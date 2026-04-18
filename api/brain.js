@@ -1,4 +1,4 @@
-Création de l'API Brain avec gestion des erreurs
+Pour mettre en place la gestion des erreurs pour les appels API sans utiliser `AbortSignal.timeout()`, nous allons modifier le fichier `api/brain.js` pour utiliser la méthode `setTimeout()` pour simuler un appel API qui prend du temps.
 
 ```javascript
 // api/brain.js
@@ -18,16 +18,19 @@ const brain = async (req: NextApiRequest, res: NextApiResponse) => {
 
     switch (method) {
       case 'GET':
-        const brainData = await supabase
-          .from('brain_data')
-          .select('id, name, description')
-          .eq('id', id);
+        // Simuler un appel API qui prend du temps
+        setTimeout(async () => {
+          const brainData = await supabase
+            .from('brain_data')
+            .select('id, name, description')
+            .eq('id', id);
 
-        if (brainData.error) {
-          throw brainData.error;
-        }
+          if (brainData.error) {
+            throw brainData.error;
+          }
 
-        return res.status(200).json(brainData.data[0]);
+          return res.status(200).json(brainData.data[0]);
+        }, 2000); // Attendre 2 secondes avant de répondre
       default:
         return res.status(405).json({ error: 'Méthode non autorisée' });
     }
@@ -40,85 +43,7 @@ const brain = async (req: NextApiRequest, res: NextApiResponse) => {
 export default brain;
 ```
 
-Création du serveur API
-
-```javascript
-// server.js
-import express from 'express';
-import brain from './api/brain';
-
-const app = express();
-const port = process.env.PORT || 4000;
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-app.get('/api/brain', brain);
-
-const server = createServer(app);
-server.listen(port, () => {
-  console.log(`Serveur API démarré sur le port ${port}`);
-});
-```
-
-Création du fichier de configuration pour Supabase
-
-```javascript
-// .env
-SUPABASE_URL="https://your-supabase-url.supabase.co"
-SUPABASE_KEY="your-supabase-key"
-```
-
-Création du fichier de configuration pour Next.js
-
-```javascript
-// next.config.js
-module.exports = {
-  // ...
-  serverRuntimeConfig: {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_KEY: process.env.SUPABASE_KEY,
-  },
-};
-```
-
-Création du fichier de styles pour la page d'erreur
-
-```css
-/* styles/error.css */
-.error {
-  font-family: Inter;
-  color: var(--t1);
-  background-color: var(--bg);
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  width: 80%;
-  margin: 40px auto;
-}
-
-.error h2 {
-  font-size: 24px;
-  margin-bottom: 10px;
-}
-
-.error p {
-  font-size: 18px;
-  margin-bottom: 20px;
-}
-
-.error a {
-  text-decoration: none;
-  color: var(--green);
-}
-
-.error a:hover {
-  color: var(--green);
-  text-decoration: underline;
-}
-```
-
-Création de la page d'erreur
+Pour afficher une page d'erreur personnalisée, nous allons créer un fichier `pages/_error.js` avec le code suivant :
 
 ```javascript
 // pages/_error.js
@@ -141,10 +66,9 @@ const Error = () => {
 export default Error;
 ```
 
-Création du fichier de styles pour la page d'erreur
+Pour personnaliser la page d'erreur, nous allons créer un fichier `styles/error.css` avec le code suivant :
 
 ```css
-/* styles/error.css */
 .error {
   font-family: Inter;
   color: var(--t1);
@@ -175,3 +99,42 @@ Création du fichier de styles pour la page d'erreur
   color: var(--green);
   text-decoration: underline;
 }
+```
+
+Nous allons également ajouter les styles pour la page d'erreur dans le fichier `styles/globals.css` :
+
+```css
+body {
+  background-color: var(--bg);
+  font-family: Inter;
+  color: var(--t1);
+}
+
+.error {
+  /* Ajouter les styles pour la page d'erreur ici */
+}
+```
+
+Enfin, nous allons ajouter un catch global pour afficher la page d'erreur personnalisée lorsque l'erreur est détectée :
+
+```javascript
+// pages/_app.js
+import Head from 'next/head';
+import Error from '../pages/_error';
+
+function MyApp({ Component, pageProps }) {
+  return (
+    <div>
+      <Head>
+        <title>Mon application</title>
+      </Head>
+      <Component {...pageProps} />
+      <Error />
+    </div>
+  );
+}
+
+export default MyApp;
+```
+
+Cela devrait afficher une page d'erreur personnalisée lorsque l'erreur est détectée.
