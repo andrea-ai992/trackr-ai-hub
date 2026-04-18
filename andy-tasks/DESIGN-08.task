@@ -1,0 +1,19 @@
+CATÉGORIE: DESIGN
+PRIORITÉ: basse
+FICHIER: src/components/NewsCard.jsx
+
+Redesign du composant NewsCard pour correspondre au nouveau style Pulse.
+
+MODIFICATIONS REQUISES:
+1. Layout:
+   - Ligne 1: [SOURCE BADGE] ···· [TEMPS RELATIF]
+   - Ligne 2-3: TITRE (2 lignes max, font-size 14px, weight 600)
+   - Ligne 4: DESCRIPTION (1 ligne, 12px, --text-muted, truncated)
+2. Source badge: pill coloré (couleur propre à chaque source), 10px, uppercase
+3. Temps relatif: "2h", "30m", "3j" — en monospace 11px --text-muted
+4. Tap effect: brief background flash rgba(0,255,136,0.04)
+5. Séparateur bottom: border-bottom 1px var(--border), PAS de margin
+
+Props attendus: { title, source, sourceColor, time, description, url }
+
+RÈGLES DESIGN: JetBrains Mono pour source/time, pas de shadow, fond transparent.

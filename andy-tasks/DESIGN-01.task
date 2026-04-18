@@ -1,0 +1,20 @@
+CATÉGORIE: DESIGN
+PRIORITÉ: haute
+FICHIER: src/pages/Dashboard.jsx
+
+Redesign complet du Dashboard en style "terminal financier Bloomberg".
+Objectif: chaque section doit être ultra-dense et lisible d'un coup d'œil.
+
+MODIFICATIONS REQUISES:
+1. Header sticky — "Hub" à gauche, heure en temps réel à droite (HH:MM:SS, JetBrains Mono, --neon)
+2. Section crypto — chaque coin sur UNE ligne: [logo 20px] [NOM] [PRIX] [%24h] [sparkline 60px] — padding 12px 16px, séparateur border-bottom
+3. Section Fear & Greed — afficher le chiffre en grand (48px) avec label et jauge horizontale fine (4px hauteur)
+4. Section vols — cards horizontales compactes avec: [✈ CALLSIGN] [ORIGIN→DEST] [ALT ft] [SPD kt]
+5. Section news — 3 titres max, 1 ligne chacun avec favicon/emoji source, tronqués à 60 chars
+
+RÈGLES DESIGN (depuis ai-data/DESIGN.md):
+- JetBrains Mono partout
+- --neon #00ff88 pour valeurs positives, #ff4444 pour négatives
+- background: var(--surface), border: 1px solid var(--border)
+- Pas de cards, utiliser des listes séparées par border-bottom
+- Transitions 0.15s ease sur hover

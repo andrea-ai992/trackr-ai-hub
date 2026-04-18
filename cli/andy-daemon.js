@@ -231,14 +231,16 @@ APPS ACTIVES:
 
 Tu travailles en mode autonome 24/7 — tu génères du code production-ready, tu le pousses sur GitHub.
 Règles ABSOLUES:
-- Code complet et fonctionnel (pas de TODO, pas de placeholder, pas de lorem ipsum)
-- Mobile-first, dark theme (#080808 fond, #00ff88 accent neon)
-- Design tokens CSS vars: --green, --bg, --bg2, --bg3, --border, --border-hi, --t1, --t2, --t3
+- Code COMPLET et fonctionnel (pas de TODO, pas de placeholder, pas de lorem ipsum)
+- Mobile-first (375px), dark theme pur noir
+- Design System Trackr: JetBrains Mono (font obligatoire), neon vert #00ff88, fond #080808
+- CSS vars: --neon #00ff88, --bg #080808, --surface #0f0f0f, --text-primary #e0e0e0, --border rgba(0,255,136,0.08)
 - Préfère améliorer ce qui existe plutôt que créer de zéro
 - Si tu modifies un fichier, tu gardes toute la logique existante
 - Imports: vérifie que les librairies sont dans package.json avant de les importer
-- Pas de librairies externes non installées (recharts, framer-motion, etc. ne sont pas disponibles)
-- Librairies disponibles: react, react-router-dom, lucide-react, @supabase/supabase-js`
+- Librairies disponibles UNIQUEMENT: react, react-router-dom, lucide-react, @supabase/supabase-js
+- Pas de librairies non installées (pas de recharts, framer-motion, chart.js, styled-components)
+- NE JAMAIS écrire d'explication, de prose, de markdown — CODE UNIQUEMENT`
 
 // ── OpenAI-compatible call (Groq, OpenRouter, Ollama) ────────────────────────
 async function callOpenAI(baseUrl, apiKey, model, prompt, maxTokens, extraHeaders = {}) {
@@ -532,18 +534,31 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
       }
     }
 
+    // Load design brief if this is a design task
+    let designContext = ''
+    const isDesignTask = /CATÉGORIE:\s*DESIGN/i.test(taskContent) || /DESIGN-\d+/i.test(taskContent)
+    if (isDesignTask) {
+      try {
+        const designBrief = readFileSync(resolve(ROOT, 'ai-data/DESIGN.md'), 'utf8')
+        designContext = '\nDESIGN SYSTEM (RESPECTER STRICTEMENT):\n' + designBrief.slice(0, 3000)
+      } catch {}
+    }
+
     const codePrompt = [
       'TÂCHE: ' + taskContent,
       op.action === 'MODIFY' && currentContent
-        ? 'FICHIER ACTUEL (' + op.path + '):\n' + currentContent.slice(0, 12000)
+        ? 'FICHIER ACTUEL (' + op.path + '):\n' + currentContent.slice(0, 10000)
         : 'Crée ' + op.path + ' from scratch.',
+      designContext,
       '',
       'RÈGLES:',
       '- Code COMPLET et fonctionnel, pas de TODO, pas de placeholder',
-      '- Utilise CSS vars: --green #00ff88, --bg #080808, --bg2 #111, --t1 #f0f0f0, --t2 #888, --t3 #444, --border rgba(255,255,255,0.07)',
-      '- Mobile-first, dark theme, Inter font',
-      '- Pas de librairies non installées (pas de recharts, framer-motion, chart.js)',
-      'Code uniquement, pas de backticks.',
+      '- CSS vars disponibles: --neon #00ff88, --bg #080808, --surface #0f0f0f, --surface-low #111, --surface-high #1a1a1a, --text-primary #e0e0e0, --text-secondary #aaa, --text-muted #555, --border rgba(0,255,136,0.08), --border-bright rgba(0,255,136,0.18)',
+      '- Font: JetBrains Mono monospace — OBLIGATOIRE',
+      '- Mobile-first (375px), dark theme',
+      '- Pas de librairies non installées (pas de recharts, framer-motion, chart.js, styled-components)',
+      '- Utiliser uniquement: react, react-router-dom, lucide-react, CSS vars',
+      'Code uniquement, pas de backticks, pas d\'explication.',
     ].filter(Boolean).join('\n')
 
     checkInterrupt()
@@ -726,13 +741,28 @@ async function runTask(filePath) {
 }
 
 // ── Auto-gen — génère de nouvelles tâches intelligemment ─────────────────────
+
+// Domaines design prioritaires (1 tâche design toutes les 2 tâches auto)
+const DESIGN_DOMAINS = [
+  'CATÉGORIE: DESIGN\nFICHIER: src/pages/Dashboard.jsx\nRedesign dashboard style terminal Bloomberg: crypto watchlist dense (1 ligne/coin avec sparkline SVG), Fear&Greed gauge SVG, section vols compacte, news 3 titres. JetBrains Mono, --neon, séparateurs border-bottom uniquement.',
+  'CATÉGORIE: DESIGN\nFICHIER: src/pages/Sports.jsx\nRedesign sports style app paris: scores en 2 colonnes symétriques [TEAM A] [SCORE] [TEAM B], badge LIVE rouge clignotant, tabs ligues scroll horizontal, PSG/Heat/Broncos épinglés. JetBrains Mono.',
+  'CATÉGORIE: DESIGN\nFICHIER: src/pages/News.jsx\nRedesign news/Pulse: filtre catégories pills horizontal, articles liste (pas cards), source badge coloré, temps relatif, auto-refresh 5min, skeleton 5 lignes. JetBrains Mono pour meta.',
+  'CATÉGORIE: DESIGN\nFICHIER: src/pages/Markets.jsx\nRedesign markets watchlist: une ligne par asset [TICKER] [NOM] [PRIX tabular] [% badge coloré] [sparkline 48px]. Onglets Crypto/Stocks sticky. Séparateurs border-bottom.',
+  'CATÉGORIE: DESIGN\nFICHIER: src/pages/More.jsx\nRedesign More: grille 2 colonnes de modules carrés (icon lucide 28px + label), section "AI Tools" séparée, version info en bas. border-radius 14px, hover neon glow.',
+  'CATÉGORIE: DESIGN\nFICHIER: src/index.css\nAudit et harmonisation CSS vars: nettoyer doublons, ajouter --radius-sm/md/lg, --space-xs/sm/md/lg, classes .glass-card .neon-text .shimmer .page-enter. safe-area-inset-bottom partout.',
+  'CATÉGORIE: DESIGN\nFICHIER: src/components/BottomNav.jsx\nPolir BottomNav: pill indicator cubic-bezier 0.25s, icon active scale(1.1)+neon, label visible seulement sur actif (opacity transition), backdrop-filter blur(16px), tap highlight transparent.',
+  'CATÉGORIE: DESIGN\nFICHIER: src/pages/Andy.jsx\nRedesign Andy chat: bulles messages (envoyé=droite neon, reçu=gauche surface), thinking animation 3 dots, suggestions rapides en pills, input sticky en bas avec send button neon.',
+  'CATÉGORIE: DESIGN\nFICHIER: src/components/NewsCard.jsx\nRedesign NewsCard: [SOURCE BADGE] [TEMPS relatif] / [TITRE 2 lignes 14px 600] / [DESC 1 ligne 12px muted]. Séparateur border-bottom, tap flash rgba neon, pas de shadow.',
+  'CATÉGORIE: DESIGN\nFICHIER: src/pages/Portfolio.jsx\nRedesign portfolio: total P&L en grand (36px), graphique SVG performance 30j, liste positions compacte [TICKER][QTÉ][VALEUR][%P&L coloré], allocation donut SVG inline.',
+]
+
 const TASK_DOMAINS = [
   'Trackr/Dashboard — redesign: hero card portfolio neon vert, crypto movers scroll, Fear&Greed gauge SVG, news feed, quick actions 2x2',
   'Trackr/Sports — ESPN live scores animés, team cards couleurs club, tabs PSG/NBA/NFL/UFC scroll horizontal',
   'Trackr/Markets — Stocks et Crypto, prix live pulsants rouge/vert, sparklines SVG, search bar sticky',
   'Trackr/News — header sticky tabs catégories, cards accent bar couleur source, badge BREAKING/NEW',
   'Trackr/More — grille modules 2col, badges NEW/LIVE, settings dark mode toggle en bas',
-  'Trackr/CSS — design tokens index.css: variables CSS complètes, Inter font, animations fadeUp/ping/shimmer',
+  'Trackr/CSS — design tokens index.css: variables CSS complètes, JetBrains Mono font, animations fadeUp/ping/shimmer',
   'Trackr/BottomNav — pill animé neon qui suit l onglet actif, safe area bottom, badge news rouge',
   'Trackr/Performance — lazy/Suspense sur pages lourdes, bundle < 300kb',
   'Trackr/PWA — service worker cache offline, manifest complet avec shortcuts',
@@ -742,8 +772,6 @@ const TASK_DOMAINS = [
   'Trackr/Andy — chat premium: bulles messages, thinking animé, suggestions rapides',
   'Trackr/BrainExplorer — arbre tâches infini, task detail panel, activité 24h',
   'Trackr/Animations — stagger fadeUp, page transitions 340ms, skeleton shimmer neon',
-  'Serveur/Vibe — pipeline par tâche détaillée, stats uptime/coût, logs filtrables',
-  'Trackr/Security — sanitisation inputs, CSP headers, rate limiting, validation',
   'Trackr/ChartAnalysis — TradingView widget full width, analyse IA contextuelle',
   'Trackr/Patterns — 16 patterns chartistes SVG, description, niveau confiance',
   'Trackr/FlightTracker — design premium, statut live, alertes perturbations',
@@ -789,6 +817,14 @@ async function generateNextTasks() {
   const domain    = pickNextDomain()
   const secDomain = SECURITY_DOMAINS[autoGenCount % SECURITY_DOMAINS.length]
   const prefix    = String(Date.now())
+
+  // Injecter une tâche DESIGN toutes les 2 générations auto
+  if (autoGenCount % 2 === 0) {
+    const designTask = DESIGN_DOMAINS[Math.floor(autoGenCount / 2) % DESIGN_DOMAINS.length]
+    const fname = `design-auto-${prefix}.txt`
+    writeFileSync(resolve(TASKS_DIR, fname), designTask, 'utf8')
+    log(`🎨 design task injected: ${fname}`)
+  }
   const allStatus = readStatus()
   const done      = allStatus.filter(t => t.status === 'DONE')
   const errors    = allStatus.filter(t => t.status === 'ERROR')

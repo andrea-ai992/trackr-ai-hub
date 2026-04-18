@@ -1,0 +1,16 @@
+CATÉGORIE: DESIGN
+PRIORITÉ: basse
+FICHIER: src/components/BottomNav.jsx
+
+Polir les micro-animations de la BottomNav.
+
+MODIFICATIONS REQUISES:
+1. La pill indicator doit glisser avec `transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1)` et `width` animé
+2. Icon active: scale(1.1) + color --neon
+3. Icon inactive: scale(1) + color --text-muted
+4. Label visible seulement sur l'onglet actif (opacity 0→1, height 0→auto sur actif)
+5. Background navbar: `rgba(8,8,8,0.97)` + `backdrop-filter: blur(16px)`
+6. Border-top: `1px solid rgba(0,255,136,0.06)` (très subtil)
+7. Pas de tap highlight rectangle (webkit-tap-highlight-color: transparent)
+
+RÈGLES: La structure des TABS et la logique ne changent PAS — uniquement CSS et styles inline.

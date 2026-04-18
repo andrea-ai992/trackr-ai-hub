@@ -1,0 +1,24 @@
+CATÉGORIE: DESIGN
+PRIORITÉ: moyenne
+FICHIER: src/index.css
+
+Audit et harmonisation du design system CSS global.
+
+MODIFICATIONS REQUISES:
+1. Vérifier et nettoyer les CSS vars — supprimer les doublons (--cyan = --neon, etc.)
+2. Ajouter les vars manquantes:
+   --radius-sm: 8px
+   --radius-md: 12px  
+   --radius-lg: 16px
+   --space-xs: 4px
+   --space-sm: 8px
+   --space-md: 16px
+   --space-lg: 24px
+   --space-xl: 32px
+3. Ajouter une classe utilitaire `.neon-text` : color + text-shadow neon
+4. Ajouter `.glass-card` : backdrop-filter + border + background glass
+5. Ajouter `.shimmer` animation (keyframe skeleton)
+6. Vérifier que safe-area-inset est appliqué sur le padding bottom du body
+7. Ajouter `@media (prefers-reduced-motion: reduce)` pour couper les animations
+
+RÈGLES: Ne pas supprimer les vars existantes utilisées — seulement ajouter et nettoyer les doublons évidents.

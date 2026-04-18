@@ -1,0 +1,21 @@
+CATÉGORIE: DESIGN
+PRIORITÉ: haute
+FICHIER: src/pages/Sports.jsx
+
+Redesign de la page Sports en style "app de paris sportifs" — dense, live, intense.
+
+MODIFICATIONS REQUISES:
+1. Header — onglets de ligues en scroll horizontal, pill indicator vert sous l'onglet actif
+2. Chaque match: layout en 2 colonnes symétriques — [EQUIPE A] [SCORE] [EQUIPE B]
+   - Score: 28px bold, centré, blanc si live (clignoter doucement)
+   - Noms équipes: 13px, truncated, 100px max-width
+   - Badge "LIVE" rouge clignotant si en cours, sinon l'heure du match
+3. Séparer matchs du jour / matchs à venir / résultats récents (3 sections)
+4. Equipes suivies (PSG, Broncos, Heat) épinglées en haut avec badge "⭐ Suivi"
+5. Pull-to-refresh : spinner vert neon en haut, disparaît après 1s
+
+RÈGLES DESIGN (depuis ai-data/DESIGN.md):
+- JetBrains Mono partout
+- Live = --neon, Terminé = --text-muted, À venir = --text-secondary
+- Items liste séparés border-bottom: 1px solid var(--border)
+- Tap target min 52px height

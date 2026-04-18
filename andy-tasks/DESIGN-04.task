@@ -1,0 +1,22 @@
+CATÉGORIE: DESIGN
+PRIORITÉ: moyenne
+FICHIER: src/pages/Markets.jsx
+
+Redesign Markets — watchlist compacte style terminal Bloomberg.
+
+MODIFICATIONS REQUISES:
+1. Onglets: Crypto | Stocks | Forex | Indices — en haut, sticky
+2. Chaque ligne de la watchlist (1 item = 1 ligne):
+   FORMAT: [TICKER bold 14px] [NOM 12px --text-muted] [PRIX bold 16px tabular-nums] [%24h badge coloré] [sparkline 48x20px]
+   - Tout sur une ligne, padding 12px 16px
+   - TICKER en monospace uppercase, 5 chars max
+   - Prix: toujours en USD, formaté ($1,234.56)
+   - Sparkline: SVG inline, vert si +, rouge si -
+3. Bouton "+" pour ajouter un ticker (modal simple: input + confirm)
+4. Swipe gauche → supprimer de la watchlist (CSS only, translateX)
+5. Trier par: % variation | Vol | Alphabétique (toggle en haut à droite)
+
+RÈGLES DESIGN (depuis ai-data/DESIGN.md):
+- Fond liste: var(--bg), séparateurs border-bottom
+- Badge % positif: background var(--neon-glow-soft), color var(--neon)
+- Badge % négatif: background rgba(255,68,68,0.1), color #ff4444

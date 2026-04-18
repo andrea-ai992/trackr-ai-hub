@@ -1,0 +1,30 @@
+CATÉGORIE: DESIGN
+PRIORITÉ: moyenne
+FICHIER: src/pages/More.jsx
+
+Redesign de la page More — grille de modules claire et navigable.
+
+MODIFICATIONS REQUISES:
+1. Grid 2×N de modules — chaque module = card carrée:
+   - Icon lucide 28px, --neon
+   - Label 12px, --text-primary, sous l'icon
+   - Background var(--surface), border var(--border)
+   - Border-radius 14px, padding 20px
+   - Hover: border-color var(--border-bright), box-shadow var(--glow-primary)
+2. Modules à inclure:
+   ✈ Flight Tracker → /flights
+   🏠 Real Estate → /real-estate  
+   💼 Business → /business
+   👟 Sneakers → /sneakers
+   ⌚ Watches → /watches
+   📊 Portfolio → /portfolio
+   💬 Translator → /translator
+   ⚙️ Settings → /settings
+   🤖 Andy → /andy
+3. Section séparée "AI Tools" pour Andy/Agents/Brain
+4. Version info en bas (small, --text-muted): "Trackr v2 · AnDy active"
+
+RÈGLES DESIGN (depuis ai-data/DESIGN.md):
+- Grille: `display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;`
+- Padding page: 16px
+- Pas de liste, que des cards en grille

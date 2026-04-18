@@ -1,0 +1,24 @@
+CATÉGORIE: DESIGN
+PRIORITÉ: haute
+FICHIER: src/pages/News.jsx
+
+Redesign de la page News/Pulse — lecteur fluide, hiérarchie claire.
+
+MODIFICATIONS REQUISES:
+1. Header — titre "Pulse" + filtre catégories horizontal (Markets / Crypto / World / Sports / Tech)
+   - Pill actif: fond --neon, texte #000
+   - Pill inactif: border --border, texte --text-secondary
+2. Chaque article:
+   - Source (badge coloré, 10px) + Temps relatif ("2h") à droite
+   - Titre: 14px, weight 600, 2 lignes max, --text-primary
+   - Description: 12px, 2 lignes max, --text-muted
+   - Séparateur border-bottom, PAS de card shadow
+   - Tap → ouvre dans nouvel onglet (target="_blank")
+3. État chargement: 5 skeletons (2 lignes titre + 1 ligne desc)
+4. État vide: "📡 Fetching signals..." centré
+5. Refresh automatique toutes les 5 minutes, badge rouge "+X new" si nouveaux articles
+
+RÈGLES DESIGN (depuis ai-data/DESIGN.md):
+- JetBrains Mono pour source/temps
+- Inter ou system-ui pour les titres (lisibilité)
+- Fond page: var(--bg), articles sur var(--surface) avec hover var(--surface-low)
