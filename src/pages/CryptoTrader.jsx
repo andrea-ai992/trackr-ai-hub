@@ -1,275 +1,281 @@
-import { useState, useEffect } from 'react';
-import { ChevronDown, TrendingUp, TrendingDown } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronDown, TrendingUp, TrendingDown, Plus, Minus } from 'lucide-react';
 
 const CryptoTrader = () => {
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('Marché');
   const [prices, setPrices] = useState({
-    BTC: { price: 0, change24h: 0 },
-    ETH: { price: 0, change24h: 0 },
-    SOL: { price: 0, change24h: 0 }
+    BTC: { current: 0, change24h: 0 },
+    ETH: { current: 0, change24h: 0 },
+    SOL: { current: 0, change24h: 0 },
   });
-  const [activePair, setActivePair] = useState('BTC');
-  const [orderbook, setOrderbook] = useState({ bids: [], asks: [] });
+  const [orderbook, setOrderbook] = useState({
+    bids: [],
+    asks: [],
+    spread: 0,
+  });
   const [positions, setPositions] = useState([
-    { symbol: 'BTC', entry: 42000, current: 42500, size: 0.05 },
-    { symbol: 'ETH', entry: 3200, current: 3150, size: 2.5 },
-    { symbol: 'SOL', entry: 150, current: 155, size: 10 }
+    { symbol: 'BTC', side: 'long', entry: 50000, current: 52500, size: 0.02 },
+    { symbol: 'ETH', side: 'short', entry: 3000, current: 2940, size: 0.1 },
+    { symbol: 'SOL', side: 'long', entry: 150, current: 168, size: 1 },
   ]);
-  const [orderType, setOrderType] = useState('market');
-  const [orderSize, setOrderSize] = useState(0.01);
-  const [orderPrice, setOrderPrice] = useState(0);
+  const [portfolioValue, setPortfolioValue] = useState(12500);
+
+  const fetchPrices = useCallback(async () => {
+    try {
+      const response = await fetch(
+        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true'
+      );
+      const data = await response.json();
+      setPrices({
+        BTC: { current: data.bitcoin.usd, change24h: data.bitcoin.usd_24h_change },
+        ETH: { current: data.ethereum.usd, change24h: data.ethereum.usd_24h_change },
+        SOL: { current: data.solana.usd, change24h: data.solana.usd_24h_change },
+      });
+    } catch (error) {
+      console.error('Error fetching prices:', error);
+    }
+  }, []);
+
+  const generateOrderbook = useCallback(() => {
+    const bids = [];
+    const asks = [];
+    const midPrice = prices.BTC.current;
+
+    for (let i = 1; i <= 8; i++) {
+      const priceVariation = midPrice * (1 - i * 0.001);
+      bids.push({
+        price: parseFloat(priceVariation.toFixed(2)),
+        size: parseFloat((Math.random() * 10 + 5).toFixed(2)),
+      });
+    }
+
+    for (let i = 1; i <= 8; i++) {
+      const priceVariation = midPrice * (1 + i * 0.001);
+      asks.push({
+        price: parseFloat(priceVariation.toFixed(2)),
+        size: parseFloat((Math.random() * 10 + 5).toFixed(2)),
+      });
+    }
+
+    const spread = asks[0].price - bids[0].price;
+    setOrderbook({ bids, asks, spread });
+  }, [prices.BTC.current]);
+
+  const calculatePositions = useCallback(() => {
+    const updatedPositions = positions.map(position => {
+      const currentPrice = prices[position.symbol]?.current || 0;
+      const pnlValue = (currentPrice - position.entry) * position.size * (position.side === 'long' ? 1 : -1);
+      const pnlPercent = (pnlValue / (position.entry * position.size)) * 100;
+
+      return {
+        ...position,
+        current: currentPrice,
+        pnlValue: parseFloat(pnlValue.toFixed(2)),
+        pnlPercent: parseFloat(pnlPercent.toFixed(2)),
+      };
+    });
+
+    const totalPnl = updatedPositions.reduce((sum, pos) => sum + pos.pnlValue, 0);
+    setPortfolioValue(12500 + totalPnl);
+    setPositions(updatedPositions);
+  }, [prices, positions]);
 
   useEffect(() => {
-    const fetchPrices = async () => {
-      try {
-        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true');
-        const data = await response.json();
-        setPrices({
-          BTC: { price: data.bitcoin.usd, change24h: data.bitcoin.usd_24h_change },
-          ETH: { price: data.ethereum.usd, change24h: data.ethereum.usd_24h_change },
-          SOL: { price: data.solana.usd, change24h: data.solana.usd_24h_change }
-        });
-        setOrderPrice(data[activePair.toLowerCase()].usd);
-      } catch (error) {
-        console.error('Error fetching prices:', error);
-      }
-    };
-
     fetchPrices();
-    const interval = setInterval(fetchPrices, 15000);
+    const interval = setInterval(fetchPrices, 10000);
     return () => clearInterval(interval);
-  }, [activePair]);
+  }, [fetchPrices]);
 
   useEffect(() => {
-    const generateOrderbook = () => {
-      const bids = [];
-      const asks = [];
-      const midPrice = prices[activePair].price;
-
-      for (let i = 1; i <= 10; i++) {
-        const priceDeviation = midPrice * (0.001 * i);
-        bids.push({
-          price: midPrice - priceDeviation,
-          size: Math.random() * 50 + 10,
-          total: Math.random() * 500 + 100
-        });
-        asks.push({
-          price: midPrice + priceDeviation,
-          size: Math.random() * 50 + 10,
-          total: Math.random() * 500 + 100
-        });
-      }
-
-      setOrderbook({ bids: bids.reverse(), asks });
-    };
-
     generateOrderbook();
-  }, [activePair, prices]);
+  }, [prices.BTC.current, generateOrderbook]);
 
-  const calculatePL = (position) => {
-    const currentPrice = prices[position.symbol].price;
-    const pl = ((currentPrice - position.entry) / position.entry) * 100 * position.size;
-    return pl;
+  useEffect(() => {
+    calculatePositions();
+  }, [prices, calculatePositions]);
+
+  const handleBuy = (symbol) => {
+    const currentPrice = prices[symbol]?.current || 0;
+    setPositions(prev => [
+      ...prev,
+      {
+        symbol,
+        side: 'long',
+        entry: currentPrice,
+        current: currentPrice,
+        size: 0.01,
+        pnlValue: 0,
+        pnlPercent: 0,
+      },
+    ]);
   };
 
-  const handleBuy = () => {
-    const newPosition = {
-      symbol: activePair,
-      entry: orderPrice,
-      current: prices[activePair].price,
-      size: orderSize
-    };
-    setPositions([...positions, newPosition]);
-  };
-
-  const handleSell = () => {
-    const newPosition = {
-      symbol: activePair,
-      entry: orderPrice,
-      current: prices[activePair].price,
-      size: -orderSize
-    };
-    setPositions([...positions, newPosition]);
+  const handleSell = (symbol) => {
+    const currentPrice = prices[symbol]?.current || 0;
+    setPositions(prev => [
+      ...prev,
+      {
+        symbol,
+        side: 'short',
+        entry: currentPrice,
+        current: currentPrice,
+        size: 0.01,
+        pnlValue: 0,
+        pnlPercent: 0,
+      },
+    ]);
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--text-primary)] font-[JetBrains_Mono] p-4">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-4">
-          <h1 className="text-xl font-bold text-[var(--neon)]">CRYPTO TRADER</h1>
-          <ChevronDown className="w-4 h-4 text-[var(--text-secondary)]" />
-        </div>
+    <div className="min-h-screen w-full bg-[var(--bg)] text-[var(--text-primary)] font-[JetBrains_Mono] text-sm">
+      <header className="flex items-center justify-between p-3 border-b border-[var(--border)]">
+        <button onClick={() => navigate(-1)} className="text-[var(--neon)]">
+          <ChevronDown size={20} />
+        </button>
+        <h1 className="text-lg font-bold">CRYPTO TRADER</h1>
+        <div className="w-6"></div>
+      </header>
 
-        {/* Price Ticker */}
-        <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4">
-          {['BTC', 'ETH', 'SOL'].map((symbol) => (
-            <div
-              key={symbol}
-              className={`flex-shrink-0 w-32 p-3 rounded-lg border border-[var(--border)] cursor-pointer transition-all ${
-                activePair === symbol ? 'bg-[var(--surface-high)] border-[var(--neon)]' : 'hover:bg-[var(--surface-low)]'
-              }`}
-              onClick={() => setActivePair(symbol)}
-            >
-              <div className="text-sm text-[var(--text-secondary)]">{symbol}</div>
-              <div className="font-bold text-lg">${prices[symbol].price.toLocaleString()}</div>
-              <div className={`text-xs flex items-center gap-1 ${
-                prices[symbol].change24h >= 0 ? 'text-green-400' : 'text-red-400'
-              }`}>
-                {prices[symbol].change24h >= 0 ? (
-                  <TrendingUp className="w-3 h-3" />
-                ) : (
-                  <TrendingDown className="w-3 h-3" />
-                )}
-                {prices[symbol].change24h.toFixed(2)}%
+      <main className="p-3">
+        {/* Header Section */}
+        <section className="mb-4">
+          <div className="bg-[var(--surface)] rounded-lg p-3 mb-2">
+            <div className="text-[var(--text-secondary)] text-xs mb-1">TOTAL PORTFOLIO</div>
+            <div className="text-xl font-bold text-[var(--neon)]">${portfolioValue.toLocaleString()}</div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            {Object.entries(prices).map(([symbol, data]) => (
+              <div key={symbol} className="bg-[var(--surface)] rounded-lg p-2 text-center">
+                <div className="text-xs font-bold">{symbol}</div>
+                <div className="text-lg font-bold text-[var(--neon)]">${data.current.toLocaleString()}</div>
+                <div className={`text-xs ${data.change24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {data.change24h >= 0 ? '+' : ''}{data.change24h.toFixed(2)}%
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Orderbook Section */}
+        <section className="mb-4">
+          <div className="bg-[var(--surface)] rounded-lg p-3">
+            <div className="flex justify-between items-center mb-2">
+              <div className="text-xs text-[var(--text-secondary)]">ORDERBOOK</div>
+              <div className="text-xs text-[var(--text-secondary)]">SPREAD: ${orderbook.spread.toFixed(2)}</div>
+            </div>
+
+            <div className="flex">
+              {/* Bids */}
+              <div className="flex-1 pr-2">
+                <div className="flex justify-between text-xs text-green-500 mb-1">
+                  <span>BID</span>
+                  <span>SIZE</span>
+                </div>
+                {orderbook.bids.map((bid, index) => (
+                  <div key={`bid-${index}`} className="flex justify-between text-xs mb-1">
+                    <span>${bid.price.toFixed(2)}</span>
+                    <span>{bid.size}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Asks */}
+              <div className="flex-1 pl-2 border-l border-[var(--border)]">
+                <div className="flex justify-between text-xs text-red-500 mb-1">
+                  <span>ASK</span>
+                  <span>SIZE</span>
+                </div>
+                {orderbook.asks.map((ask, index) => (
+                  <div key={`ask-${index}`} className="flex justify-between text-xs mb-1">
+                    <span>${ask.price.toFixed(2)}</span>
+                    <span>{ask.size}</span>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Orderbook */}
-      <div className="mb-6">
-        <div className="grid grid-cols-2 gap-4">
-          {/* Bids */}
-          <div className="bg-[var(--surface)] rounded-lg p-3">
-            <div className="text-sm text-[var(--text-secondary)] mb-2">BIDS</div>
-            <div className="space-y-1 text-xs font-mono">
-              {orderbook.bids.map((bid, index) => (
-                <div key={index} className="flex justify-between">
-                  <span className="text-green-400">${bid.price.toFixed(2)}</span>
-                  <span className="text-[var(--text-muted)]">{bid.size.toFixed(2)}</span>
-                  <span className="text-[var(--text-muted)]">{bid.total.toFixed(0)}</span>
-                </div>
-              ))}
-            </div>
           </div>
+        </section>
 
-          {/* Asks */}
+        {/* Positions Section */}
+        <section className="mb-4">
           <div className="bg-[var(--surface)] rounded-lg p-3">
-            <div className="text-sm text-[var(--text-secondary)] mb-2">ASKS</div>
-            <div className="space-y-1 text-xs font-mono">
-              {orderbook.asks.map((ask, index) => (
-                <div key={index} className="flex justify-between">
-                  <span className="text-red-400">${ask.price.toFixed(2)}</span>
-                  <span className="text-[var(--text-muted)]">{ask.size.toFixed(2)}</span>
-                  <span className="text-[var(--text-muted)]">{ask.total.toFixed(0)}</span>
-                </div>
-              ))}
+            <div className="flex justify-between items-center mb-2">
+              <div className="text-xs text-[var(--text-secondary)]">POSITIONS</div>
+              <div className="text-xs text-[var(--text-secondary)]">3 ACTIVE</div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Positions */}
-      <div className="mb-6">
-        <div className="text-sm text-[var(--text-secondary)] mb-3">OPEN POSITIONS</div>
-        <div className="space-y-3">
-          {positions.map((position, index) => {
-            const pl = calculatePL(position);
-            const plColor = pl >= 0 ? 'text-green-400' : 'text-red-400';
-            const plSymbol = pl >= 0 ? '+' : '';
-
-            return (
-              <div key={index} className="bg-[var(--surface)] rounded-lg p-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="font-bold">{position.symbol}</div>
-                    <div className="text-xs text-[var(--text-secondary)]">
-                      Entry: ${position.entry.toFixed(2)} | Size: {position.size}
-                    </div>
+            {positions.map((position, index) => (
+              <div key={index} className="mb-2 p-2 bg-[var(--surface-low)] rounded">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center">
+                    <span className={`text-xs font-bold mr-2 ${position.side === 'long' ? 'text-green-500' : 'text-red-500'}`}>
+                      {position.side === 'long' ? 'LONG' : 'SHORT'}
+                    </span>
+                    <span className="font-bold">{position.symbol}</span>
                   </div>
                   <div className="text-right">
-                    <div className={`font-bold ${plColor}`}>
-                      {plSymbol}{pl.toFixed(2)}%
-                    </div>
-                    <div className="text-xs text-[var(--text-secondary)]">
-                      ${position.current.toFixed(2)}
+                    <div className="text-xs text-[var(--text-secondary)]">ENTRY</div>
+                    <div className="text-xs">${position.entry.toFixed(2)}</div>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center mt-1">
+                  <div className="text-right">
+                    <div className="text-xs text-[var(--text-secondary)]">CURRENT</div>
+                    <div className="text-xs">${position.current.toFixed(2)}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-[var(--text-secondary)]">P&L</div>
+                    <div className={`text-xs font-bold ${position.pnlValue >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      ${position.pnlValue.toFixed(2)} ({position.pnlPercent >= 0 ? '+' : ''}{position.pnlPercent.toFixed(2)}%)
                     </div>
                   </div>
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Order Panel */}
-      <div className="fixed bottom-4 left-4 right-4 bg-[var(--surface-high)] rounded-lg p-4 border border-[var(--border-bright)]">
-        <div className="flex gap-2 mb-3">
-          <button
-            className={`flex-1 py-2 px-4 rounded text-sm font-bold ${
-              orderType === 'market' ? 'bg-[var(--neon)] text-black' : 'bg-[var(--surface)] text-[var(--text-primary)]'
-            }`}
-            onClick={() => setOrderType('market')}
-          >
-            MARKET
-          </button>
-          <button
-            className={`flex-1 py-2 px-4 rounded text-sm font-bold ${
-              orderType === 'limit' ? 'bg-[var(--neon)] text-black' : 'bg-[var(--surface)] text-[var(--text-primary)]'
-            }`}
-            onClick={() => setOrderType('limit')}
-          >
-            LIMIT
-          </button>
-        </div>
-
-        {orderType === 'limit' && (
-          <div className="mb-3">
-            <div className="text-xs text-[var(--text-secondary)] mb-1">LIMIT PRICE</div>
-            <input
-              type="number"
-              value={orderPrice}
-              onChange={(e) => setOrderPrice(parseFloat(e.target.value) || 0)}
-              className="w-full bg-[var(--surface)] border border-[var(--border)] rounded p-2 text-sm font-mono text-[var(--text-primary)]"
-              placeholder="Price"
-            />
+            ))}
           </div>
-        )}
+        </section>
 
-        <div className="flex items-center gap-2 mb-3">
-          <button
-            className="bg-[var(--surface)] px-3 py-1 rounded text-xs"
-            onClick={() => setOrderSize(0.01)}
-          >
-            0.01
-          </button>
-          <button
-            className="bg-[var(--surface)] px-3 py-1 rounded text-xs"
-            onClick={() => setOrderSize(0.1)}
-          >
-            0.1
-          </button>
-          <button
-            className="bg-[var(--surface)] px-3 py-1 rounded text-xs"
-            onClick={() => setOrderSize(1)}
-          >
-            1
-          </button>
-          <input
-            type="number"
-            value={orderSize}
-            onChange={(e) => setOrderSize(parseFloat(e.target.value) || 0)}
-            className="flex-1 bg-[var(--surface)] border border-[var(--border)] rounded p-2 text-xs font-mono text-[var(--text-primary)]"
-            placeholder="Size"
-          />
-        </div>
+        {/* Buy/Sell Buttons */}
+        <section className="grid grid-cols-2 gap-2 mb-4">
+          {Object.keys(prices).map(symbol => (
+            <div key={symbol} className="flex gap-2">
+              <button
+                onClick={() => handleBuy(symbol)}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded p-2 flex items-center justify-center gap-1 text-xs font-bold h-11"
+              >
+                <Plus size={16} />
+                <span>BUY</span>
+                <span className="text-[var(--text-secondary)]">{symbol}</span>
+              </button>
+              <button
+                onClick={() => handleSell(symbol)}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded p-2 flex items-center justify-center gap-1 text-xs font-bold h-11"
+              >
+                <Minus size={16} />
+                <span>SELL</span>
+                <span className="text-[var(--text-secondary)]">{symbol}</span>
+              </button>
+            </div>
+          ))}
+        </section>
 
-        <div className="flex gap-2">
-          <button
-            className="flex-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 py-3 rounded font-bold transition-colors"
-            onClick={handleBuy}
-          >
-            BUY
-          </button>
-          <button
-            className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 py-3 rounded font-bold transition-colors"
-            onClick={handleSell}
-          >
-            SELL
-          </button>
-        </div>
-      </div>
+        {/* Tabs */}
+        <section className="flex justify-around border-t border-[var(--border)]">
+          {['Marché', 'Positions', 'Historique'].map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 py-3 text-center text-xs font-bold border-b-2 ${activeTab === tab ? 'border-[var(--neon)] text-[var(--neon)]' : 'border-transparent text-[var(--text-secondary)]'}`}
+            >
+              {tab}
+            </button>
+          ))}
+        </section>
+      </main>
     </div>
   );
 };
