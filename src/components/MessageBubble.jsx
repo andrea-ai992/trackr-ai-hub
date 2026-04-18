@@ -1,6 +1,5 @@
-MessageBubble.jsx
-```jsx
 import { useState } from 'react';
+import DOMPurify from 'dompurify';
 
 export const MessageBubble = ({
   content,
@@ -37,6 +36,11 @@ export const MessageBubble = ({
     return classes;
   };
 
+  const sanitizedContent = DOMPurify.sanitize(content, {
+    ALLOWED_TAGS: ['b', 'i', 'u', 'em', 'strong', 'a', 'br', 'code', 'pre'],
+    ALLOWED_ATTR: ['href', 'title', 'class', 'style']
+  });
+
   return (
     <div
       className={getClasses()}
@@ -49,7 +53,7 @@ export const MessageBubble = ({
       onMouseLeave={() => setIsHovered(false)}
       onClick={onClick}
     >
-      <div className="font-inter">{content}</div>
+      <div className="font-inter" dangerouslySetInnerHTML={{ __html: sanitizedContent }} />
 
       {isSuggestion && onClick && (
         <style jsx>{`
@@ -77,6 +81,23 @@ export const MessageBubble = ({
         }
         .font-inter {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        a {
+          color: var(--green);
+          text-decoration: none;
+        }
+        a:hover {
+          text-decoration: underline;
+        }
+        code, pre {
+          background: rgba(0, 255, 136, 0.1);
+          padding: 0.2em 0.4em;
+          border-radius: 4px;
+          font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        }
+        pre {
+          padding: 1em;
+          overflow-x: auto;
         }
       `}</style>
     </div>
