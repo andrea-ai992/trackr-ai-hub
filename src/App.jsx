@@ -1,219 +1,276 @@
-import { useState, Suspense, lazy } from 'react'
-import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
-import { AppProvider } from './context/AppContext'
-import { SettingsProvider } from './context/SettingsContext'
-import { AuthProvider, useAuth } from './context/AuthContext'
-import BottomNav from './components/BottomNav'
-import Toast from './components/Toast'
-import SearchOverlay from './components/SearchOverlay'
-import Dashboard from './pages/Dashboard'
-import Markets from './pages/Markets'
-import StockDetail from './pages/StockDetail'
-import CryptoDetail from './pages/CryptoDetail'
-import News from './pages/News'
-import More from './pages/More'
-import Sports from './pages/Sports'
-import Andy from './pages/Andy'
-import Portfolio from './pages/Portfolio'
-import Widget from './pages/Widget'
-import Agents from './pages/Agents'
-import BrainStatus from './pages/BrainStatus'
-import Login from './pages/Login'
-import SkeletonPage from './components/SkeletonPage'
-import { useAlerts } from './hooks/useAlerts'
-import { useNewsAlerts } from './hooks/useNewsAlerts'
-import { Search } from 'lucide-react'
-import VoiceAssistant from './components/VoiceAssistant'
+import { useState, useEffect, useMemo } from 'react'
+import { ChevronDown, TrendingUp, TrendingDown } from 'lucide-react'
 
-const FlightTracker = lazy(() => import('./pages/FlightTracker'))
-const ChartAnalysis = lazy(() => import('./pages/ChartAnalysis'))
-const Patterns = lazy(() => import('./pages/Patterns'))
-const CryptoTrader = lazy(() => import('./pages/CryptoTrader'))
-const Signals = lazy(() => import('./pages/Signals'))
-const RealEstate = lazy(() => import('./pages/RealEstate'))
-const BusinessPlan = lazy(() => import('./pages/BusinessPlan'))
-const Admin = lazy(() => import('./pages/Admin'))
-const Sneakers = lazy(() => import('./pages/Sneakers'))
-const Watches = lazy(() => import('./pages/Watches'))
-const Translator = lazy(() => import('./pages/Translator'))
-const BrainExplorer = lazy(() => import('./pages/BrainExplorer'))
-const CategoryPage = lazy(() => import('./pages/CategoryPage'))
-const Settings = lazy(() => import('./pages/Settings'))
+const CRYPTO_SYMBOLS = ['bitcoin', 'ethereum', 'solana']
 
-function AlertWatcher() {
-  useAlerts()
-  useNewsAlerts()
-  return null
-}
+export default function CryptoTrader() {
+  const [prices, setPrices] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [selected, setSelected] = useState('bitcoin')
+  const [orderBook, setOrderBook] = useState({ bids: [], asks: [] })
+  const [positions, setPositions] = useState([
+    { symbol: 'bitcoin', entry: 42000, current: 42500, size: 0.05 },
+    { symbol: 'ethereum', entry: 2800, current: 2750, size: 1.2 },
+    { symbol: 'solana', entry: 120, current: 125, size: 5 }
+  ])
+  const [positionSize, setPositionSize] = useState(1)
 
-function getTabIndex(path) {
-  if (path === '/') return 0
-  if (path.startsWith('/sports')) return 1
-  if (path.startsWith('/markets')) return 2
-  if (path.startsWith('/news')) return 3
-  if (
-    path.startsWith('/more') || path.startsWith('/translator') ||
-    path.startsWith('/settings') || path.startsWith('/sneakers') || path.startsWith('/watches') ||
-    path.startsWith('/real-estate') || path.startsWith('/business') ||
-    path.startsWith('/portfolio') || path.startsWith('/category') ||
-    path.startsWith('/flights') || path.startsWith('/patterns')
-  ) return 4
-  return -1
-}
-
-const DETAIL_PREFIXES = ['/stocks/', '/crypto/', '/translator', '/settings', '/sneakers', '/watches', '/real-estate', '/business', '/portfolio', '/category/', '/flights', '/andy', '/agents', '/brain', '/admin', '/patterns']
-
-let _prevPath = '/'
-let _prevTabIdx = 0
-
-function PageTransition({ children }) {
-  const location = useLocation()
-
-  let animClass = 'page-enter-fade'
-
-  if (location.pathname !== _prevPath) {
-    const isDetail     = DETAIL_PREFIXES.some(p => location.pathname.startsWith(p))
-    const wasDetail    = DETAIL_PREFIXES.some(p => _prevPath.startsWith(p))
-    const currTabIdx   = getTabIndex(location.pathname)
-    const prevTabIdx   = getTabIndex(_prevPath)
-
-    if (isDetail && !wasDetail) {
-      animClass = 'page-enter-up'
-    } else if (!isDetail && wasDetail) {
-      animClass = 'page-enter-fade'
-    } else if (currTabIdx !== -1 && prevTabIdx !== -1 && currTabIdx !== prevTabIdx) {
-      animClass = currTabIdx > prevTabIdx ? 'page-enter-right' : 'page-enter-left'
-    } else {
-      animClass = 'page-enter-fade'
+  useEffect(() => {
+    const fetchPrices = async () => {
+      try {
+        const responses = await Promise.all(
+          CRYPTO_SYMBOLS.map(symbol =>
+            fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${symbol}&vs_currencies=usd&include_24hr_change=true`)
+          )
+        )
+        const data = await Promise.all(responses.map(r => r.json()))
+        const priceData = {}
+        data.forEach((item, i) => {
+          const symbol = CRYPTO_SYMBOLS[i]
+          priceData[symbol] = {
+            price: item[symbol].usd,
+            change: item[symbol].usd_24h_change
+          }
+        })
+        setPrices(priceData)
+        setLoading(false)
+      } catch (err) {
+        console.error('Failed to fetch prices:', err)
+        setLoading(false)
+      }
     }
 
-    _prevPath    = location.pathname
-    _prevTabIdx  = currTabIdx
+    fetchPrices()
+    const interval = setInterval(fetchPrices, 15000)
+    return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    const generateOrderBook = () => {
+      const midPrice = prices[selected]?.price || 50000
+      const spread = midPrice * 0.001
+      const bestBid = midPrice - spread / 2
+      const bestAsk = midPrice + spread / 2
+
+      const bids = Array.from({ length: 10 }, (_, i) => ({
+        price: bestBid - (i * 10),
+        size: Math.random() * 5 + 1
+      }))
+
+      const asks = Array.from({ length: 10 }, (_, i) => ({
+        price: bestAsk + (i * 10),
+        size: Math.random() * 5 + 1
+      }))
+
+      setOrderBook({ bids, asks })
+    }
+
+    generateOrderBook()
+  }, [selected, prices])
+
+  const updatePositionPrices = () => {
+    setPositions(prev => prev.map(pos => {
+      const currentPrice = prices[pos.symbol]?.price || pos.current
+      return { ...pos, current: currentPrice }
+    }))
+  }
+
+  useEffect(() => {
+    updatePositionPrices()
+    const interval = setInterval(updatePositionPrices, 5000)
+    return () => clearInterval(interval)
+  }, [prices])
+
+  const selectedPrice = prices[selected] || { price: 0, change: 0 }
+  const pnl = positions.reduce((acc, pos) => {
+    const currentPrice = prices[pos.symbol]?.price || pos.current
+    const pnlPercent = ((currentPrice - pos.entry) / pos.entry) * 100 * pos.size
+    return acc + pnlPercent
+  }, 0)
+
+  const formatPrice = (price) => {
+    return price.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })
+  }
+
+  const formatChange = (change) => {
+    return change.toFixed(2) + '%'
+  }
+
+  const formatCurrency = (value) => {
+    return '$' + value.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })
+  }
+
+  const handleBuy = () => {
+    const newPosition = {
+      symbol: selected,
+      entry: prices[selected]?.price || 0,
+      current: prices[selected]?.price || 0,
+      size: positionSize
+    }
+    setPositions(prev => [...prev, newPosition])
+  }
+
+  const handleSell = () => {
+    const newPosition = {
+      symbol: selected,
+      entry: prices[selected]?.price || 0,
+      current: prices[selected]?.price || 0,
+      size: -positionSize
+    }
+    setPositions(prev => [...prev, newPosition])
   }
 
   return (
-    <div key={location.key} className={animClass} style={{ willChange: 'transform, opacity' }}>
-      {children}
-    </div>
-  )
-}
+    <div className="w-full h-full min-h-screen flex flex-col" style={{ fontFamily: 'JetBrains Mono, monospace' }}>
+      {/* Header */}
+      <div className="w-full p-4 border-b border-bright">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2">
+            <img
+              src={`https://cryptologos.cc/logos/${selected === 'bitcoin' ? 'bitcoin-btc-logo' : selected === 'ethereum' ? 'ethereum-eth-logo' : 'solana-sol-logo'}`}
+              alt={selected}
+              className="w-6 h-6"
+            />
+            <span className="text-lg font-bold">{selected.toUpperCase()}</span>
+            <ChevronDown size={16} className="text-text-muted" />
+          </div>
+        </div>
 
-function GlobalSearchButton({ onOpen }) {
-  const location = useLocation()
-  if (location.pathname.startsWith('/flights')) return null
-  if (location.pathname.startsWith('/widget')) return null
-  if (location.pathname.startsWith('/andy')) return null
+        <div className="flex gap-4 mb-4">
+          {CRYPTO_SYMBOLS.map(symbol => (
+            <button
+              key={symbol}
+              onClick={() => setSelected(symbol)}
+              className={`px-3 py-1 rounded text-sm ${selected === symbol ? 'bg-surface-high text-neon border border-neon' : 'text-text-secondary hover:text-text-primary'}`}
+            >
+              {symbol.toUpperCase()}
+            </button>
+          ))}
+        </div>
 
-  return (
-    <button
-      onClick={onOpen}
-      className="press-scale"
-      style={{
-        position: 'fixed',
-        top: 'max(12px, env(safe-area-inset-top, 0px))',
-        right: 16,
-        zIndex: 900,
-        width: 40,
-        height: 40,
-        borderRadius: 14,
-        background: 'rgba(11,19,35,0.85)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255,255,255,0.1)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        color: '#9ca3af',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-      }}
-    >
-      <Search size={16} />
-    </button>
-  )
-}
-
-function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth()
-  if (!import.meta.env.VITE_SUPABASE_URL) return children
-  if (loading) return null
-  if (!user) return <Navigate to="/login" replace />
-  return children
-}
-
-function AdminRoute({ children }) {
-  const { user, isAdmin, loading } = useAuth()
-  if (!import.meta.env.VITE_SUPABASE_URL) return children
-  if (loading) return null
-  if (!user) return <Navigate to="/login" replace />
-  if (!isAdmin) return <Navigate to="/" replace />
-  return children
-}
-
-function AppInner() {
-  const [searchOpen, setSearchOpen] = useState(false)
-
-  return (
-    <>
-      <AlertWatcher />
-      <Toast />
-      <GlobalSearchButton onOpen={() => setSearchOpen(true)} />
-      <VoiceAssistant />
-      {searchOpen && <SearchOverlay onClose={() => setSearchOpen(false)} />}
-      <div style={{ minHeight: '100dvh', background: 'var(--bg)', color: 'var(--text-primary)', fontFamily: 'JetBrains Mono, monospace' }}>
-        <main style={{ paddingBottom: 'calc(88px + env(safe-area-inset-bottom, 0px) + 8px)', position: 'relative', zIndex: 1 }}>
-          <PageTransition>
-            <Suspense fallback={<SkeletonPage />}>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                <Route path="/markets" element={<ProtectedRoute><Markets /></ProtectedRoute>} />
-                <Route path="/stocks/:id" element={<ProtectedRoute><StockDetail /></ProtectedRoute>} />
-                <Route path="/crypto/:id" element={<ProtectedRoute><CryptoDetail /></ProtectedRoute>} />
-                <Route path="/news" element={<ProtectedRoute><News /></ProtectedRoute>} />
-                <Route path="/sports" element={<ProtectedRoute><Sports /></ProtectedRoute>} />
-                <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
-                <Route path="/andy" element={<ProtectedRoute><Andy /></ProtectedRoute>} />
-                <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
-                <Route path="/widget" element={<ProtectedRoute><Widget /></ProtectedRoute>} />
-                <Route path="/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
-                <Route path="/brain" element={<ProtectedRoute><BrainStatus /></ProtectedRoute>} />
-
-                <Route path="/flights" element={<ProtectedRoute><FlightTracker /></ProtectedRoute>} />
-                <Route path="/charts" element={<ProtectedRoute><ChartAnalysis /></ProtectedRoute>} />
-                <Route path="/patterns" element={<ProtectedRoute><Patterns /></ProtectedRoute>} />
-                <Route path="/translator" element={<ProtectedRoute><Translator /></ProtectedRoute>} />
-                <Route path="/sneakers" element={<ProtectedRoute><Sneakers /></ProtectedRoute>} />
-                <Route path="/watches" element={<ProtectedRoute><Watches /></ProtectedRoute>} />
-                <Route path="/real-estate" element={<ProtectedRoute><RealEstate /></ProtectedRoute>} />
-                <Route path="/business" element={<ProtectedRoute><BusinessPlan /></ProtectedRoute>} />
-                <Route path="/crypto-trader" element={<ProtectedRoute><CryptoTrader /></ProtectedRoute>} />
-                <Route path="/signals" element={<ProtectedRoute><Signals /></ProtectedRoute>} />
-                <Route path="/brain-explorer" element={<ProtectedRoute><BrainExplorer /></ProtectedRoute>} />
-
-                <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
-                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                <Route path="/category/:id" element={<ProtectedRoute><CategoryPage /></ProtectedRoute>} />
-              </Routes>
-            </Suspense>
-          </PageTransition>
-        </main>
-        <BottomNav />
+        <div className="flex flex-col gap-1">
+          <div className="text-2xl font-bold">
+            {loading ? 'Loading...' : formatCurrency(selectedPrice.price)}
+          </div>
+          <div className={`text-sm flex items-center gap-1 ${selectedPrice.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+            {selectedPrice.change >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+            {formatChange(selectedPrice.change)}
+          </div>
+        </div>
       </div>
-    </>
-  )
-}
 
-export default function App() {
-  return (
-    <SettingsProvider>
-      <AppProvider>
-        <BrowserRouter>
-          <AuthProvider>
-            <AppInner />
-          </AuthProvider>
-        </BrowserRouter>
-      </AppProvider>
-    </SettingsProvider>
+      {/* PnL Bar */}
+      <div className="w-full px-4 py-2">
+        <div className="w-full h-2 rounded-full bg-surface-low overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-300"
+            style={{
+              width: `${Math.min(Math.max(pnl, -100), 100) + 100}%`,
+              background: pnl >= 0 ? 'linear-gradient(90deg, #00ff88, #00aa55)' : 'linear-gradient(90deg, #ff4444, #aa0000)'
+            }}
+          />
+        </div>
+        <div className="text-xs text-text-muted mt-1 text-center">
+          P&L: {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}%
+        </div>
+      </div>
+
+      {/* Order Book */}
+      <div className="flex-1 flex flex-col overflow-hidden px-4 py-2">
+        <div className="flex-1 flex flex-col gap-2 overflow-y-auto">
+          <div className="text-xs text-text-muted mb-1">BIDS</div>
+          {orderBook.bids.map((bid, i) => (
+            <div key={`bid-${i}`} className="flex justify-between text-xs">
+              <span className="text-green-500">{formatPrice(bid.price)}</span>
+              <span className="text-text-secondary">{bid.size.toFixed(2)}</span>
+            </div>
+          ))}
+
+          <div className="flex justify-between text-sm font-bold my-1 py-1 border-t border-b border-bright">
+            <span>PRICE</span>
+            <span>SIZE</span>
+          </div>
+
+          <div className="text-xs text-text-muted mb-1">ASKS</div>
+          {orderBook.asks.map((ask, i) => (
+            <div key={`ask-${i}`} className="flex justify-between text-xs">
+              <span className="text-red-500">{formatPrice(ask.price)}</span>
+              <span className="text-text-secondary">{ask.size.toFixed(2)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Positions */}
+      <div className="w-full px-4 py-2 overflow-y-auto max-h-40">
+        <div className="text-xs text-text-muted mb-2">OPEN POSITIONS</div>
+        {positions.length === 0 ? (
+          <div className="text-xs text-text-muted text-center py-2">No open positions</div>
+        ) : (
+          positions.map((pos, i) => {
+            const currentPrice = prices[pos.symbol]?.price || pos.current
+            const pnlPercent = ((currentPrice - pos.entry) / pos.entry) * 100 * pos.size
+            const pnlColor = pnlPercent >= 0 ? 'text-green-500' : 'text-red-500'
+
+            return (
+              <div key={`pos-${i}`} className="flex justify-between text-xs mb-1 py-1 border-b border-bright">
+                <div className="flex flex-col">
+                  <span className="font-bold">{pos.symbol.toUpperCase()}</span>
+                  <span className="text-text-muted text-xs">
+                    {pos.size > 0 ? 'LONG' : 'SHORT'} • {formatPrice(pos.entry)}
+                  </span>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className={pnlColor}>{pnlPercent >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}%</span>
+                  <span className="text-text-muted text-xs">{formatPrice(currentPrice)}</span>
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
+
+      {/* Controls */}
+      <div className="w-full px-4 py-4 border-t border-bright">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPositionSize(prev => Math.max(0.01, prev - 0.01))}
+              className="px-3 py-1 text-lg hover:bg-surface-high rounded"
+            >
+              -
+            </button>
+            <span className="text-lg font-bold">{positionSize}</span>
+            <button
+              onClick={() => setPositionSize(prev => prev + 0.01)}
+              className="px-3 py-1 text-lg hover:bg-surface-high rounded"
+            >
+              +
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={handleSell}
+            className="w-full py-3 bg-red-900/50 hover:bg-red-800/50 text-red-400 rounded border border-red-500/30 text-sm font-bold press-scale"
+          >
+            SELL
+          </button>
+          <button
+            onClick={handleBuy}
+            className="w-full py-3 bg-green-900/50 hover:bg-green-800/50 text-green-400 rounded border border-green-500/30 text-sm font-bold press-scale"
+          >
+            BUY
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
