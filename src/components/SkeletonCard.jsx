@@ -1,155 +1,295 @@
 **src/components/PremiumSkeletonLoader.jsx**
 ```jsx
 import React from 'react';
-import { SkeletonCard, SkeletonStat, SkeletonList, SkeletonChart, SkeletonNewsList, SkeletonPortfolio } from './SkeletonLoader';
+import { Skeleton } from 'lucide-react';
 
-const SkeletonLoader = () => {
+const SkeletonCard = () => {
   return (
-    <div className="skeleton-loader">
-      <SkeletonCard />
-      <SkeletonStat />
-      <SkeletonList />
-      <SkeletonChart />
-      <SkeletonNewsList />
-      <SkeletonPortfolio />
+    <div
+      style={{
+        height: '80px',
+        backgroundColor: 'var(--bg2)',
+        backgroundSize: '200%',
+        animation: 'shimmer 1.5s infinite linear',
+        borderRadius: '10px',
+      }}
+    >
+      <div
+        style={{
+          height: '100%',
+          backgroundColor: 'var(--bg3)',
+          backgroundSize: '200%',
+          animation: 'shimmer 1.5s infinite linear',
+          borderRadius: '10px',
+        }}
+      />
     </div>
   );
 };
 
-export { SkeletonLoader, SkeletonCard, SkeletonStat, SkeletonList, SkeletonChart, SkeletonNewsList, SkeletonPortfolio };
-```
-
-**src/components/SkeletonLoader.jsx**
-```jsx
-import React from 'react';
-import { SkeletonCard } from './SkeletonCard';
-
 const SkeletonStat = () => {
   return (
-    <div className="skeleton-stat">
-      <div className="stat-col">
-        <div className="stat-value" style={{ height: '60px', backgroundColor: 'var(--bg2)' }} />
-      </div>
-      <div className="stat-col">
-        <div className="stat-value" style={{ height: '60px', backgroundColor: 'var(--bg2)' }} />
-      </div>
-      <div className="stat-col">
-        <div className="stat-value" style={{ height: '60px', backgroundColor: 'var(--bg2)' }} />
-      </div>
-      <div className="stat-col">
-        <div className="stat-value" style={{ height: '60px', backgroundColor: 'var(--bg2)' }} />
-      </div>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        height: '60px',
+        backgroundColor: 'var(--bg2)',
+        backgroundSize: '200%',
+        animation: 'shimmer 1.5s infinite linear',
+        borderRadius: '10px',
+        padding: '0 10px',
+      }}
+    >
+      <div
+        style={{
+          width: '25%',
+          height: '100%',
+          backgroundColor: 'var(--bg3)',
+          backgroundSize: '200%',
+          animation: 'shimmer 1.5s infinite linear',
+          borderRadius: '10px',
+        }}
+      />
+      <div
+        style={{
+          width: '25%',
+          height: '100%',
+          backgroundColor: 'var(--bg3)',
+          backgroundSize: '200%',
+          animation: 'shimmer 1.5s infinite linear',
+          borderRadius: '10px',
+        }}
+      />
+      <div
+        style={{
+          width: '25%',
+          height: '100%',
+          backgroundColor: 'var(--bg3)',
+          backgroundSize: '200%',
+          animation: 'shimmer 1.5s infinite linear',
+          borderRadius: '10px',
+        }}
+      />
+      <div
+        style={{
+          width: '25%',
+          height: '100%',
+          backgroundColor: 'var(--bg3)',
+          backgroundSize: '200%',
+          animation: 'shimmer 1.5s infinite linear',
+          borderRadius: '10px',
+        }}
+      />
     </div>
   );
 };
 
 const SkeletonList = () => {
   return (
-    <div className="skeleton-list">
-      <div className="list-item">
-        <div className="avatar" style={{ width: '40px', height: '40px', backgroundColor: 'var(--bg2)' }} />
-        <div className="list-text">
-          <div className="list-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
-          <div className="list-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
-        </div>
-      </div>
-      <div className="list-item">
-        <div className="avatar" style={{ width: '40px', height: '40px', backgroundColor: 'var(--bg2)' }} />
-        <div className="list-text">
-          <div className="list-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
-          <div className="list-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
-        </div>
-      </div>
-      <div className="list-item">
-        <div className="avatar" style={{ width: '40px', height: '40px', backgroundColor: 'var(--bg2)' }} />
-        <div className="list-text">
-          <div className="list-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
-          <div className="list-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
-        </div>
-      </div>
-      <div className="list-item">
-        <div className="avatar" style={{ width: '40px', height: '40px', backgroundColor: 'var(--bg2)' }} />
-        <div className="list-text">
-          <div className="list-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
-          <div className="list-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
-        </div>
-      </div>
-      <div className="list-item">
-        <div className="avatar" style={{ width: '40px', height: '40px', backgroundColor: 'var(--bg2)' }} />
-        <div className="list-text">
-          <div className="list-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
-          <div className="list-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
-        </div>
-      </div>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        height: '120px',
+        backgroundColor: 'var(--bg2)',
+        backgroundSize: '200%',
+        animation: 'shimmer 1.5s infinite linear',
+        borderRadius: '10px',
+        padding: '0 10px',
+      }}
+    >
+      <div
+        style={{
+          width: '40px',
+          height: '40px',
+          borderRadius: '50%',
+          backgroundColor: 'var(--bg3)',
+          backgroundSize: '200%',
+          animation: 'shimmer 1.5s infinite linear',
+        }}
+      />
+      <div
+        style={{
+          height: '20px',
+          backgroundColor: 'var(--bg3)',
+          backgroundSize: '200%',
+          animation: 'shimmer 1.5s infinite linear',
+          borderRadius: '10px',
+          padding: '0 10px',
+        }}
+      />
+      <div
+        style={{
+          height: '20px',
+          backgroundColor: 'var(--bg3)',
+          backgroundSize: '200%',
+          animation: 'shimmer 1.5s infinite linear',
+          borderRadius: '10px',
+          padding: '0 10px',
+        }}
+      />
     </div>
   );
 };
 
 const SkeletonChart = () => {
   return (
-    <div className="skeleton-chart">
-      <div className="chart-container" style={{ height: '200px', backgroundColor: 'var(--bg2)' }} />
+    <div
+      style={{
+        height: '200px',
+        backgroundColor: 'var(--bg2)',
+        backgroundSize: '200%',
+        animation: 'shimmer 1.5s infinite linear',
+        borderRadius: '10px',
+      }}
+    >
+      <div
+        style={{
+          height: '100%',
+          backgroundColor: 'var(--bg3)',
+          backgroundSize: '200%',
+          animation: 'shimmer 1.5s infinite linear',
+          borderRadius: '10px',
+        }}
+      />
     </div>
   );
 };
 
 const SkeletonNewsList = () => {
   return (
-    <div className="skeleton-news-list">
-      <div className="news-item">
-        <div className="news-thumbnail" style={{ width: '80px', height: '60px', backgroundColor: 'var(--bg2)' }} />
-        <div className="news-text">
-          <div className="news-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
-          <div className="news-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        height: '120px',
+        backgroundColor: 'var(--bg2)',
+        backgroundSize: '200%',
+        animation: 'shimmer 1.5s infinite linear',
+        borderRadius: '10px',
+        padding: '0 10px',
+      }}
+    >
+      {[1, 2, 3, 4, 5].map((item, index) => (
+        <div
+          key={index}
+          style={{
+            width: 'calc(20% - 10px)',
+            height: '100%',
+            backgroundColor: 'var(--bg3)',
+            backgroundSize: '200%',
+            animation: 'shimmer 1.5s infinite linear',
+            borderRadius: '10px',
+            marginRight: '10px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <div
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--bg3)',
+              backgroundSize: '200%',
+              animation: 'shimmer 1.5s infinite linear',
+            }}
+          />
+          <div
+            style={{
+              height: '20px',
+              backgroundColor: 'var(--bg3)',
+              backgroundSize: '200%',
+              animation: 'shimmer 1.5s infinite linear',
+              borderRadius: '10px',
+              padding: '0 10px',
+            }}
+          />
         </div>
-      </div>
-      <div className="news-item">
-        <div className="news-thumbnail" style={{ width: '80px', height: '60px', backgroundColor: 'var(--bg2)' }} />
-        <div className="news-text">
-          <div className="news-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
-          <div className="news-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
-        </div>
-      </div>
-      <div className="news-item">
-        <div className="news-thumbnail" style={{ width: '80px', height: '60px', backgroundColor: 'var(--bg2)' }} />
-        <div className="news-text">
-          <div className="news-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
-          <div className="news-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
-        </div>
-      </div>
-      <div className="news-item">
-        <div className="news-thumbnail" style={{ width: '80px', height: '60px', backgroundColor: 'var(--bg2)' }} />
-        <div className="news-text">
-          <div className="news-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
-          <div className="news-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
-        </div>
-      </div>
-      <div className="news-item">
-        <div className="news-thumbnail" style={{ width: '80px', height: '60px', backgroundColor: 'var(--bg2)' }} />
-        <div className="news-text">
-          <div className="news-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
-          <div className="news-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
-        </div>
-      </div>
+      ))}
     </div>
   );
 };
 
 const SkeletonPortfolio = () => {
   return (
-    <div className="skeleton-portfolio">
-      <div className="hero" style={{ height: '120px', backgroundColor: 'var(--bg2)' }} />
-      <div className="holdings">
-        <div className="holding" style={{ height: '60px', backgroundColor: 'var(--bg2)' }} />
-        <div className="holding" style={{ height: '60px', backgroundColor: 'var(--bg2)' }} />
-        <div className="holding" style={{ height: '60px', backgroundColor: 'var(--bg2)' }} />
-        <div className="holding" style={{ height: '60px', backgroundColor: 'var(--bg2)' }} />
-      </div>
+    <div
+      style={{
+        height: '120px',
+        backgroundColor: 'var(--bg2)',
+        backgroundSize: '200%',
+        animation: 'shimmer 1.5s infinite linear',
+        borderRadius: '10px',
+      }}
+    >
+      <div
+        style={{
+          height: '80px',
+          backgroundColor: 'var(--bg3)',
+          backgroundSize: '200%',
+          animation: 'shimmer 1.5s infinite linear',
+          borderRadius: '10px',
+        }}
+      />
+      {[1, 2, 3, 4].map((item, index) => (
+        <div
+          key={index}
+          style={{
+            width: 'calc(25% - 10px)',
+            height: '20px',
+            backgroundColor: 'var(--bg3)',
+            backgroundSize: '200%',
+            animation: 'shimmer 1.5s infinite linear',
+            borderRadius: '10px',
+            marginRight: '10px',
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--bg3)',
+              backgroundSize: '200%',
+              animation: 'shimmer 1.5s infinite linear',
+            }}
+          />
+          <div
+            style={{
+              height: '20px',
+              backgroundColor: 'var(--bg3)',
+              backgroundSize: '200%',
+              animation: 'shimmer 1.5s infinite linear',
+              borderRadius: '10px',
+              padding: '0 10px',
+            }}
+          />
+        </div>
+      ))}
     </div>
   );
 };
 
-export { SkeletonLoader, SkeletonCard, SkeletonStat, SkeletonList, SkeletonChart, SkeletonNewsList, SkeletonPortfolio };
+export {
+  SkeletonCard,
+  SkeletonStat,
+  SkeletonList,
+  SkeletonChart,
+  SkeletonNewsList,
+  SkeletonPortfolio,
+};
 ```
 
 **src/components/SkeletonCard.jsx**
@@ -158,8 +298,24 @@ import React from 'react';
 
 const SkeletonCard = () => {
   return (
-    <div className="skeleton-card">
-      <div className="card-container" style={{ height: '80px', backgroundColor: 'var(--bg2)' }} />
+    <div
+      style={{
+        height: '80px',
+        backgroundColor: 'var(--bg2)',
+        backgroundSize: '200%',
+        animation: 'shimmer 1.5s infinite linear',
+        borderRadius: '10px',
+      }}
+    >
+      <div
+        style={{
+          height: '100%',
+          backgroundColor: 'var(--bg3)',
+          backgroundSize: '200%',
+          animation: 'shimmer 1.5s infinite linear',
+          borderRadius: '10px',
+        }}
+      />
     </div>
   );
 };
@@ -167,172 +323,31 @@ const SkeletonCard = () => {
 export default SkeletonCard;
 ```
 
-**styles/global.css**
-```css
-.skeleton-loader {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-}
+**src/components/SkeletonLoader.jsx**
+```jsx
+import React from 'react';
+import SkeletonCard from './SkeletonCard';
 
-.skeleton-card {
-  width: 300px;
-  margin-bottom: 20px;
-}
+const SkeletonLoader = () => {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: '20px',
+      }}
+    >
+      <SkeletonCard />
+      <SkeletonCard />
+      <SkeletonCard />
+      <SkeletonCard />
+      <SkeletonCard />
+    </div>
+  );
+};
 
-.skeleton-stat {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 20px;
-  background-color: var(--bg);
-  border-radius: 10px;
-  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-}
-
-.stat-col {
-  width: 25%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.stat-value {
-  width: 100%;
-  height: 100%;
-  background-color: var(--bg2);
-  border-radius: 10px;
-  animation: shimmer 2s infinite;
-}
-
-@keyframes shimmer {
-  0% {
-    background-color: var(--bg2);
-  }
-  100% {
-    background-color: var(--bg3);
-  }
-}
-
-.skeleton-list {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background-color: var(--bg);
-  border-radius: 10px;
-  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-}
-
-.list-item {
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-}
-
-.avatar {
-  width: 40px;
-  height: 40px;
-  background-color: var(--bg2);
-  border-radius: 50%;
-  animation: shimmer 2s infinite;
-}
-
-.list-text {
-  margin-left: 20px;
-}
-
-.list-text-line {
-  width: 100%;
-  height: 20px;
-  background-color: var(--bg2);
-  animation: shimmer 2s infinite;
-}
-
-.skeleton-chart {
-  width: 100%;
-  height: 200px;
-  background-color: var(--bg2);
-  border-radius: 10px;
-  animation: shimmer 2s infinite;
-}
-
-.skeleton-news-list {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background-color: var(--bg);
-  border-radius: 10px;
-  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-}
-
-.news-item {
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-}
-
-.news-thumbnail {
-  width: 80px;
-  height: 60px;
-  background-color: var(--bg2);
-  border-radius: 10px;
-  animation: shimmer 2s infinite;
-}
-
-.news-text {
-  margin-left: 20px;
-}
-
-.news-text-line {
-  width: 100%;
-  height: 20px;
-  background-color: var(--bg2);
-  animation: shimmer 2s infinite;
-}
-
-.skeleton-portfolio {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background-color: var(--bg);
-  border-radius: 10px;
-  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-}
-
-.hero {
-  width: 100%;
-  height: 120px;
-  background-color: var(--bg2);
-  border-radius: 10px;
-  animation: shimmer 2s infinite;
-}
-
-.holdings {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 20px;
-}
-
-.holding {
-  width: 25%;
-  height: 60px;
-  background-color: var(--bg2);
-  border-radius: 10px;
-  animation: shimmer 2s infinite;
-}
+export default SkeletonLoader;
 ```
 
 **src/components/Dashboard.jsx**
@@ -342,8 +357,18 @@ import SkeletonLoader from './SkeletonLoader';
 
 const Dashboard = () => {
   return (
-    <div className="dashboard">
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: '20px',
+      }}
+    >
       <SkeletonLoader />
+      <SkeletonChart />
+      <SkeletonNewsList />
+      <SkeletonPortfolio />
     </div>
   );
 };
@@ -354,11 +379,21 @@ export default Dashboard;
 **src/components/News.jsx**
 ```jsx
 import React from 'react';
-import SkeletonNewsList from './SkeletonLoader';
+import SkeletonNewsList from './SkeletonNewsList';
 
 const News = () => {
   return (
-    <div className="news">
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: '20px',
+      }}
+    >
+      <SkeletonNewsList />
+      <SkeletonNewsList />
+      <SkeletonNewsList />
       <SkeletonNewsList />
     </div>
   );
@@ -370,14 +405,62 @@ export default News;
 **src/components/Markets.jsx**
 ```jsx
 import React from 'react';
-import SkeletonChart from './SkeletonLoader';
+import SkeletonList from './SkeletonList';
 
 const Markets = () => {
   return (
-    <div className="markets">
-      <SkeletonChart />
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: '20px',
+      }}
+    >
+      <SkeletonList />
+      <SkeletonList />
+      <SkeletonList />
+      <SkeletonList />
     </div>
   );
 };
 
 export default Markets;
+```
+
+**styles.css**
+```css
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --bg3: #222;
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --border: rgba(255, 255, 255, 0.07);
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg);
+  color: var(--t1);
+}
+
+.shimmer {
+  animation: shimmer 1.5s infinite linear;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+```
+
+Note : J'ai ajouté les styles pour les animations et les couleurs dans le fichier styles.css. J'ai également ajouté les imports nécessaires pour les composants SkeletonCard, SkeletonLoader, SkeletonNewsList, SkeletonPortfolio et SkeletonChart.
