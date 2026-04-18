@@ -1,5 +1,3 @@
-src/App.js
-
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
@@ -23,10 +21,7 @@ const App = () => {
 
 export default App;
 
-src/pages/Dashboard.jsx
-
-import React from 'react';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import './Dashboard.css';
 import NewsFeed from '../components/NewsFeed';
 import QuickActions from '../components/QuickActions';
@@ -39,9 +34,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate fetching portfolio value
     setTimeout(() => {
-      setPortfolioValue(10000); // Example value
+      setPortfolioValue(10000);
       setLoading(false);
     }, 1000);
   }, []);
@@ -66,8 +60,6 @@ const Dashboard = () => {
 
 export default Dashboard;
 
-src/pages/Markets.jsx
-
 import React from 'react';
 import './Markets.css';
 
@@ -81,8 +73,6 @@ const Markets = () => {
 };
 
 export default Markets;
-
-src/components/BottomNav.jsx
 
 import React from 'react';
 import { NavLink } from 'react-router-dom';
@@ -104,8 +94,6 @@ const BottomNav = () => {
 
 export default BottomNav;
 
-src/components/NewsFeed.jsx
-
 import React from 'react';
 import './NewsFeed.css';
 
@@ -118,8 +106,6 @@ const NewsFeed = () => {
 };
 
 export default NewsFeed;
-
-src/components/QuickActions.jsx
 
 import React from 'react';
 import './QuickActions.css';
@@ -134,8 +120,6 @@ const QuickActions = () => {
 
 export default QuickActions;
 
-src/components/Sparkline.jsx
-
 import React from 'react';
 import './Sparkline.css';
 
@@ -148,8 +132,6 @@ const Sparkline = () => {
 };
 
 export default Sparkline;
-
-src/components/TopMovers.jsx
 
 import React from 'react';
 import './TopMovers.css';
@@ -164,8 +146,6 @@ const TopMovers = () => {
 
 export default TopMovers;
 
-src/components/FearGreedGauge.jsx
-
 import React from 'react';
 import './FearGreedGauge.css';
 
@@ -178,8 +158,6 @@ const FearGreedGauge = () => {
 };
 
 export default FearGreedGauge;
-
-src/App.css
 
 :root {
   --green: #00ff88;
