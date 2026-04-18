@@ -1,16 +1,31 @@
-Je vais optimiser le composant `SearchBar.jsx` avec un debounce de 300ms et l'intégrer avec les filtres stocks/crypto dans `Markets.jsx`. Voici les modifications :
+Je vais optimiser le composant `SearchBar.jsx` avec un schéma Zod pour valider les paramètres de recherche et améliorer la sécurité. Voici les modifications :
 
 **src/components/SearchBar.jsx**
 ```jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { FaSearch } from 'react-icons/fa';
+import { z } from 'zod';
+
+const searchSchema = z.object({
+  query: z.string().max(100, "La recherche ne doit pas dépasser 100 caractères")
+    .regex(/^[a-zA-Z0-9\s\-_@.]+$/, "Caractères non autorisés dans la recherche"),
+});
 
 function SearchBar({ onSearch, debounceTime = 300 }) {
   const [query, setQuery] = useState('');
+  const [error, setError] = useState('');
 
   const debouncedSearch = useCallback(
     useCallback((value) => {
-      onSearch(value);
+      try {
+        const validated = searchSchema.parse({ query: value });
+        setError('');
+        onSearch(validated.query);
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          setError(err.errors[0].message);
+        }
+      }
     }, [onSearch]),
     [onSearch]
   );
@@ -31,27 +46,36 @@ function SearchBar({ onSearch, debounceTime = 300 }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSearch(query);
+    debouncedSearch(query);
   };
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex items-center bg-[var(--bg2)] rounded-md p-2 w-full"
+      className="flex flex-col w-full"
     >
-      <input
-        type="search"
-        value={query}
-        onChange={handleChange}
-        placeholder="Recherche..."
-        className="bg-transparent outline-none p-2 text-[var(--t2)] w-full"
-      />
-      <button
-        type="submit"
-        className="bg-[var(--green)] h-8 w-8 rounded-full ml-2 flex items-center justify-center"
-      >
-        <FaSearch className="text-[var(--bg)]" />
-      </button>
+      <div className="flex items-center bg-[var(--bg2)] rounded-md p-2 w-full">
+        <input
+          type="search"
+          value={query}
+          onChange={handleChange}
+          placeholder="Recherche (symboles, noms)..."
+          className="bg-transparent outline-none p-2 text-[var(--t2)] w-full"
+          aria-label="Rechercher des actifs"
+        />
+        <button
+          type="submit"
+          className="bg-[var(--green)] h-8 w-8 rounded-full ml-2 flex items-center justify-center"
+          aria-label="Rechercher"
+        >
+          <FaSearch className="text-[var(--bg)]" />
+        </button>
+      </div>
+      {error && (
+        <p className="text-red-500 text-xs mt-1 px-2" role="alert">
+          {error}
+        </p>
+      )}
     </form>
   );
 }
@@ -65,7 +89,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../utils/supabase';
 import SearchBar from '../components/SearchBar';
-import { Tabs, TabList, TabPanels, TabPanel } from '@lucide-react/core';
+import { Tabs, TabList, TabPanels, TabPanel } from '@lucide-react';
 
 function Markets() {
   const [stocks, setStocks] = useState([]);
@@ -85,7 +109,6 @@ function Markets() {
   useEffect(() => {
     const fetchMarkets = async () => {
       try {
-        // Fetch stocks
         const { data: stocksData, error: stocksError } = await supabase
           .from('stocks')
           .select('*')
@@ -93,7 +116,6 @@ function Markets() {
 
         if (stocksError) throw stocksError;
 
-        // Fetch crypto
         const { data: cryptoData, error: cryptoError } = await supabase
           .from('crypto')
           .select('*')
@@ -101,8 +123,8 @@ function Markets() {
 
         if (cryptoError) throw cryptoError;
 
-        setStocks(stocksData);
-        setCrypto(cryptoData);
+        setStocks(stocksData || []);
+        setCrypto(cryptoData || []);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching markets:', error);
@@ -131,19 +153,28 @@ function Markets() {
 
   const applyFilters = (items) => {
     return items.filter(item => {
-      // Filtre par recherche
-      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           item.symbol.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = !searchQuery ||
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.symbol.toLowerCase().includes(searchQuery.toLowerCase());
 
-      // Filtres spécifiques
       const matchesExchange = filters.exchange ? item.exchange === filters.exchange : true;
       const matchesCategory = filters.category ? item.category === filters.category : true;
-      const matchesPrice = filters.minPrice || filters.maxPrice
+      const matchesPrice = (filters.minPrice || filters.maxPrice)
         ? (filters.minPrice ? item.price >= parseFloat(filters.minPrice) : true) &&
           (filters.maxPrice ? item.price <= parseFloat(filters.maxPrice) : true)
         : true;
 
-      return matchesSearch && matchesExchange && matchesCategory && matchesPrice;
+      const matchesMarketCap = filters.marketCap
+        ? (() => {
+            const cap = item.market_cap || 0;
+            if (filters.marketCap === 'large') return cap >= 10000000000;
+            if (filters.marketCap === 'medium') return cap >= 1000000000 && cap < 10000000000;
+            if (filters.marketCap === 'small') return cap < 1000000000;
+            return true;
+          })()
+        : true;
+
+      return matchesSearch && matchesExchange && matchesCategory && matchesPrice && matchesMarketCap;
     });
   };
 
@@ -153,21 +184,23 @@ function Markets() {
   return (
     <div className="bg-[var(--bg)] min-h-screen p-4">
       <header className="sticky top-0 bg-[var(--bg)] py-2 z-10">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
           <h1 className="text-[var(--t1)] font-bold">Markets</h1>
-          <SearchBar onSearch={handleSearch} />
+          <div className="w-full sm:w-auto">
+            <SearchBar onSearch={handleSearch} />
+          </div>
         </div>
 
         <div className="flex justify-center mb-4">
           <Tabs
-            active={activeTab}
-            onChange={handleTabChange}
+            value={activeTab}
+            onValueChange={handleTabChange}
             className="flex justify-center gap-4"
           >
-            <TabList>
-              <Tab>Tout</Tab>
-              <Tab>Stocks</Tab>
-              <Tab>Crypto</Tab>
+            <TabList className="flex gap-4">
+              <Tab value="Tout">Tout</Tab>
+              <Tab value="Stocks">Stocks</Tab>
+              <Tab value="Crypto">Crypto</Tab>
             </TabList>
           </Tabs>
         </div>
@@ -175,7 +208,7 @@ function Markets() {
         {activeTab === 'Stocks' && (
           <div className="bg-[var(--bg2)] rounded-lg p-4 mb-4">
             <h3 className="text-[var(--t1)] font-semibold mb-3">Filtres Stocks</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div>
                 <label className="text-[var(--t2)] text-sm block mb-1">Bourse</label>
                 <select
@@ -213,6 +246,8 @@ function Markets() {
                   value={filters.minPrice}
                   onChange={handleFilterChange}
                   placeholder="0"
+                  min="0"
+                  step="0.01"
                   className="w-full bg-[var(--bg)] border border-[var(--border)] rounded p-2 text-[var(--t1)]"
                 />
               </div>
@@ -224,6 +259,8 @@ function Markets() {
                   value={filters.maxPrice}
                   onChange={handleFilterChange}
                   placeholder="10000"
+                  min="0"
+                  step="0.01"
                   className="w-full bg-[var(--bg)] border border-[var(--border)] rounded p-2 text-[var(--t1)]"
                 />
               </div>
@@ -234,7 +271,7 @@ function Markets() {
         {activeTab === 'Crypto' && (
           <div className="bg-[var(--bg2)] rounded-lg p-4 mb-4">
             <h3 className="text-[var(--t1)] font-semibold mb-3">Filtres Crypto</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-[var(--t2)] text-sm block mb-1">Catégorie</label>
                 <select
@@ -283,9 +320,77 @@ function Markets() {
               <>
                 <div className="mb-6">
                   <h2 className="text-[var(--t1)] font-bold mb-3">Stocks</h2>
+                  {filteredStocks.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-4">
+                      {filteredStocks.map((stock) => (
+                        <Link
+                          key={stock.id}
+                          to={`/stocks/${stock.symbol}`}
+                          className="block bg-[var(--bg2)] rounded-md p-4 hover:bg-[var(--bg3)] transition-colors"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="text-[var(--t1)] font-bold">{stock.name}</h3>
+                              <p className="text-[var(--t2)]">{stock.symbol} • {stock.exchange}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-[var(--t1)] font-bold">${stock.price.toFixed(2)}</p>
+                              <p className={`text-sm ${stock.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)}%
+                              </p>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[var(--t2)] text-center py-8">Aucun résultat trouvé</p>
+                  )}
+                </div>
+
+                <div>
+                  <h2 className="text-[var(--t1)] font-bold mb-3">Cryptos</h2>
+                  {filteredCrypto.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-4">
+                      {filteredCrypto.map((crypto) => (
+                        <Link
+                          key={crypto.id}
+                          to={`/crypto/${crypto.symbol}`}
+                          className="block bg-[var(--bg2)] rounded-md p-4 hover:bg-[var(--bg3)] transition-colors"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="text-[var(--t1)] font-bold">{crypto.name}</h3>
+                              <p className="text-[var(--t2)]">{crypto.symbol}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-[var(--t1)] font-bold">${crypto.price.toFixed(2)}</p>
+                              <p className={`text-sm ${crypto.change_24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {crypto.change_24h >= 0 ? '+' : ''}{crypto.change_24h.toFixed(2)}%
+                              </p>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[var(--t2)] text-center py-8">Aucun résultat trouvé</p>
+                  )}
+                </div>
+              </>
+            )}
+
+            {activeTab === 'Stocks' && (
+              <div className="mb-6">
+                <h2 className="text-[var(--t1)] font-bold mb-3">Stocks</h2>
+                {filteredStocks.length > 0 ? (
                   <div className="grid grid-cols-1 gap-4">
                     {filteredStocks.map((stock) => (
-                      <div key={stock.id} className="bg-[var(--bg2)] rounded-md p-4">
+                      <Link
+                        key={stock.id}
+                        to={`/stocks/${stock.symbol}`}
+                        className="block bg-[var(--bg2)] rounded-md p-4 hover:bg-[var(--bg3)] transition-colors"
+                      >
                         <div className="flex justify-between items-start">
                           <div>
                             <h3 className="text-[var(--t1)] font-bold">{stock.name}</h3>
@@ -298,81 +403,26 @@ function Markets() {
                             </p>
                           </div>
                         </div>
-                      </div>
+                      </Link>
                     ))}
                   </div>
-                </div>
-
-                <div>
-                  <h2 className="text-[var(--t1)] font-bold mb-3">Cryptos</h2>
-                  <div className="grid grid-cols-1 gap-4">
-                    {filteredCrypto.map((crypto) => (
-                      <div key={crypto.id} className="bg-[var(--bg2)] rounded-md p-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="text-[var(--t1)] font-bold">{crypto.name}</h3>
-                            <p className="text-[var(--t2)]">{crypto.symbol}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-[var(--t1)] font-bold">${crypto.price.toFixed(2)}</p>
-                            <p className={`text-sm ${crypto.change_24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                              {crypto.change_24h >= 0 ? '+' : ''}{crypto.change_24h.toFixed(2)}%
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {activeTab === 'Stocks' && (
-              <div className="grid grid-cols-1 gap-4">
-                {filteredStocks.map((stock) => (
-                  <div key={stock.id} className="bg-[var(--bg2)] rounded-md p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-[var(--t1)] font-bold">{stock.name}</h3>
-                        <p className="text-[var(--t2)]">{stock.symbol} • {stock.exchange}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[var(--t1)] font-bold">${stock.price.toFixed(2)}</p>
-                        <p className={`text-sm ${stock.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                          {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)}%
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                ) : (
+                  <p className="text-[var(--t2)] text-center py-8">Aucun résultat trouvé</p>
+                )}
               </div>
             )}
 
             {activeTab === 'Crypto' && (
-              <div className="grid grid-cols-1 gap-4">
-                {filteredCrypto.map((crypto) => (
-                  <div key={crypto.id} className="bg-[var(--bg2)] rounded-md p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-[var(--t1)] font-bold">{crypto.name}</h3>
-                        <p className="text-[var(--t2)]">{crypto.symbol}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[var(--t1)] font-bold">${crypto.price.toFixed(2)}</p>
-                        <p className={`text-sm ${crypto.change_24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                          {crypto.change_24h >= 0 ? '+' : ''}{crypto.change_24h.toFixed(2)}%
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </main>
-    </div>
-  );
-}
-
-export default Markets;
+              <div>
+                <h2 className="text-[var(--t1)] font-bold mb-3">Cryptos</h2>
+                {filteredCrypto.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-4">
+                    {filteredCrypto.map((crypto) => (
+                      <Link
+                        key={crypto.id}
+                        to={`/crypto/${crypto.symbol}`}
+                        className="block bg-[var(--bg2)] rounded-md p-4 hover:bg-[var(--bg3)] transition-colors"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="text-[var(--t1)] font-bold">{crypto.name
