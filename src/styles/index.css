@@ -1,3 +1,7 @@
+Je vais ajouter les transitions de page avec react-router-dom et les CSS vars personnalisés.
+
+src/styles/index.css:
+```css
 :root {
   --green: #00ff88;
   --bg: #080808;
@@ -9,13 +13,14 @@
   --border: rgba(255, 255, 255, 0.07);
   --border-hi: rgba(0, 255, 136, 0.2);
   --font-family: 'Inter', sans-serif;
+  --transition-speed: 340ms;
 }
 
 body {
   font-family: var(--font-family);
   background-color: var(--bg);
   color: var(--t1);
-  transition: background-color 0.3s ease;
+  transition: background-color var(--transition-speed) ease;
 }
 
 .container {
@@ -43,7 +48,7 @@ body {
   border-radius: 8px;
   padding: 6px 12px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all var(--transition-speed) ease;
   font-size: 14px;
 }
 
@@ -61,7 +66,7 @@ body {
   text-align: center;
   color: var(--t2);
   background-color: var(--green);
-  transition: background-color 0.3s ease;
+  transition: background-color var(--transition-speed) ease;
 }
 
 .badge.LIVE {
@@ -103,6 +108,27 @@ a {
 
 a:hover {
   color: var(--green);
+}
+
+/* Page transitions */
+.page-enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity var(--transition-speed) ease, transform var(--transition-speed) ease;
+}
+
+.page-exit {
+  opacity: 1;
+}
+
+.page-exit-active {
+  opacity: 0;
+  transition: opacity var(--transition-speed) ease;
 }
 
 /* Media Queries */
@@ -165,3 +191,59 @@ a:hover {
     padding: 16px 0;
   }
 }
+```
+
+src/App.jsx:
+```jsx
+import { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { Home, Sports, Markets, News, More, Andy, Agents, Portfolio, CryptoTrader, Signals, BrainExplorer, FlightTracker, Sneakers, Watches, RealEstate, BusinessPlan, Patterns, ChartAnalysis } from './pages';
+
+function App() {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) return null;
+
+  return (
+    <Router>
+      <PageTransitionWrapper>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/sports" element={<Sports />} />
+          <Route path="/markets" element={<Markets />} />
+          <Route path="/news" element={<News />} />
+          <Route path="/more" element={<More />} />
+          <Route path="/andy" element={<Andy />} />
+          <Route path="/agents" element={<Agents />} />
+          <Route path="/portfolio" element={<Portfolio />} />
+          <Route path="/cryptotrader" element={<CryptoTrader />} />
+          <Route path="/signals" element={<Signals />} />
+          <Route path="/brainexplorer" element={<BrainExplorer />} />
+          <Route path="/flighttracker" element={<FlightTracker />} />
+          <Route path="/sneakers" element={<Sneakers />} />
+          <Route path="/watches" element={<Watches />} />
+          <Route path="/realestate" element={<RealEstate />} />
+          <Route path="/businessplan" element={<BusinessPlan />} />
+          <Route path="/patterns" element={<Patterns />} />
+          <Route path="/chartanalysis" element={<ChartAnalysis />} />
+        </Routes>
+      </PageTransitionWrapper>
+    </Router>
+  );
+}
+
+function PageTransitionWrapper({ children }) {
+  const location = useLocation();
+
+  return (
+    <div key={location.pathname}>
+      {children}
+    </div>
+  );
+}
+
+export default App;
