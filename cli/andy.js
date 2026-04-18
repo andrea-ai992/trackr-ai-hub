@@ -149,62 +149,46 @@ async function glitch(text, color = _.cyan, passes = 4) {
 async function banner(quick = false) {
   clr()
   if (!quick) {
-    // Scan HUD
     const scanChars = '░▒▓█▓▒░'
-    for (let i = 0; i <= 52; i += 4) {
-      const bar = Array.from({length: 52}, (_, j) => {
-        if (j < i) return scanChars[Math.floor(Math.random() * scanChars.length)]
-        return ' '
-      }).join('')
+    for (let i = 0; i <= 48; i += 6) {
+      const bar = Array.from({length: 48}, (_, j) => j < i ? scanChars[Math.floor(Math.random() * scanChars.length)] : ' ').join('')
       out(`\r${BG}  ${_.dark}[${_.search}${bar}${_.dark}]${R}`)
-      await sl(18)
+      await sl(22)
     }
     out('\r\x1b[2K')
     await sl(80)
   }
 
-  const w = 58
-  const border = `${_.dark}${'─'.repeat(w)}`
+  const D = _.dark, S = _.success, T = _.think
   line()
-  line(`  ${_.dark}┌${border}┐`)
-  line(`  ${_.dark}│${' '.repeat(w)}│`)
-
-  // Logo AnDy ligne 1
-  out(`${BG}  ${_.dark}│  `)
+  line(`  ${D}┌────────────────────────────────────────────────────────────┐`)
+  line(`  ${D}│`)
+  out(`${BG}  ${D}│   `)
   if (!quick) {
-    for (const ch of '▄▀█ █▄░█ █▀▄ █▄█') { out(`${_.success}${_.bold}${ch}${R}`); await sl(18) }
+    for (const ch of '▄▀█ █▄░█ █▀▄ █▄█') { out(`${S}${_.bold}${ch}${R}`); await sl(18) }
+    out(`  `)
+    for (const ch of '█▀█ █░▀█ █▄▀ ░█░') { out(`${T}${_.bold}${ch}${R}`); await sl(18) }
   } else {
-    out(`${_.success}${_.bold}▄▀█ █▄░█ █▀▄ █▄█${R}`)
+    out(`${S}${_.bold}▄▀█ █▄░█ █▀▄ █▄█${R}  ${T}${_.bold}█▀█ █░▀█ █▄▀ ░█░${R}`)
   }
-  out(`${_.dark}  ·  ${_.grey}PERSONAL INTELLIGENCE${_.dark}${''.padEnd(15)}│\x1b[K\n`)
-
-  // Logo AnDy ligne 2
-  out(`${BG}  ${_.dark}│  `)
-  if (!quick) {
-    for (const ch of '█▀█ █░▀█ █▄▀ ░█░') { out(`${_.think}${_.bold}${ch}${R}`); await sl(18) }
-  } else {
-    out(`${_.think}${_.bold}█▀█ █░▀█ █▄▀ ░█░${R}`)
-  }
-  out(`${_.dark}  ·  ${_.grey}SYSTEM  ·  TRACKR AI${_.dark}${''.padEnd(14)}│\x1b[K\n`)
-
-  line(`  ${_.dark}│${' '.repeat(w)}│`)
-  line(`  ${_.dark}├${'─'.repeat(w)}┤`)
-
-  // Status row
-  const model = process.env._CLI_MODEL || 'claude-sonnet-4-6'
+  out(`\n`)
+  line(`  ${D}│`)
+  line(`  ${D}│   ${_.grey}PERSONAL INTELLIGENCE SYSTEM  ·  TRACKR AI`)
+  const model   = process.env._CLI_MODEL || 'claude-sonnet-4-6'
   const groqOk  = !!process.env.GROQ_API_KEY
-  const claudeOk = !!process.env.ANTHROPIC_API_KEY
-  line(`  ${_.dark}│  ${_.grey}NEURAL  ${groqOk ? _.success+'● GROQ' : _.dark+'○ GROQ'}${R}  ${claudeOk ? _.think+'● CLAUDE' : _.dark+'○ CLAUDE'}${R}  ${_.search}● GITHUB${R}  ${_.run}● DAEMON${_.dark}${''.padEnd(w - 46)}│`)
-  line(`  ${_.dark}│  ${_.grey}MODEL   ${_.think}${model}${_.dark}${''.padEnd(w - 4 - model.length - 9)}│`)
-  line(`  ${_.dark}└${'─'.repeat(w)}┘`)
+  const claudeOk= !!process.env.ANTHROPIC_API_KEY
+  line(`  ${D}│   ${groqOk ? S+'● GROQ' : D+'○ GROQ'}${R}   ${claudeOk ? T+'● CLAUDE' : D+'○ CLAUDE'}${R}   ${_.search}● GITHUB${R}   ${_.run}● DAEMON${R}`)
+  line(`  ${D}│   ${_.grey}${model}`)
+  line(`  ${D}│`)
+  line(`  ${D}└────────────────────────────────────────────────────────────┘`)
   line()
 
   if (!quick) {
-    await glitch('◈ SYSTÈME EN LIGNE — BIENVENUE, ANDREA ◈', _.success, 3)
+    await glitch('◈ SYSTÈME EN LIGNE — BIENVENUE, ANDREA ◈', S, 3)
     line()
   }
 
-  line(`  ${_.dark}/help ${_.grey}commandes   ${_.dark}/exit ${_.grey}quitter   ${_.dark}/watch ${_.grey}tasks live`)
+  line(`  ${D}/help ${_.grey}commandes   ${D}/watch ${_.grey}tasks live   ${D}/exit ${_.grey}quitter`)
   line()
 }
 
@@ -324,9 +308,9 @@ async function chat(userMessage) {
 
   const ts = new Date().toLocaleTimeString('fr-FR')
   line()
-  line(`  ${_.dark}┌${'─'.repeat(54)}┐`)
-  line(`  ${_.dark}│  ${_.think}◈ ${_.bold}${_.white}AnDy${R}  ${_.dark}·  ${_.grey}${ts}  ${_.dark}·  ${_.think}⠋ THINKING${_.dark}${''.padEnd(20)}│`)
-  line(`  ${_.dark}└${'─'.repeat(54)}┘`)
+  line(`  ${_.dark}┌──────────────────────────────────────────────`)
+  line(`  ${_.dark}│  ${_.think}◈ ${_.bold}${_.white}AnDy${R}   ${_.dark}${ts}   ${_.think}⠋ THINKING`)
+  line(`  ${_.dark}└──────────────────────────────────────────────`)
   line()
 
   spinStart('réflexion…', _.think, 'think')
@@ -842,18 +826,16 @@ async function runTask(filePath) {
 
   // Header tâche futuriste
   const ts2  = new Date().toLocaleTimeString('fr-FR')
-  const W    = 56
   const prio = name.startsWith('urgent-') ? `${_.error}⚡ URGENT` : name.startsWith('manual-') ? `${_.retry}▸ MANUAL` : `${_.run}· AUTO`
   line()
-  line(`  ${_.run}╔${'═'.repeat(W)}╗`)
-  line(`  ${_.run}║${R}  ${prio}${R}  ${_.dark}·  ${_.grey}${pad(name, 24)}${_.dark}·  ${_.grey}${ts2}${_.run}${''.padEnd(W - name.slice(0,24).length - ts2.length - 12)}║`)
-  line(`  ${_.run}╠${'═'.repeat(W)}╣`)
-  line(`  ${_.run}║${R}  ${_.silver}${content.slice(0, W - 2)}${R}`)
-  if (content.length > W - 2)
-    line(`  ${_.run}║${R}  ${_.grey}${content.slice(W - 2, (W - 2) * 2)}${R}`)
-  line(`  ${_.run}╠${'═'.repeat(W)}╣`)
-  line(`  ${_.run}║${R}  ${_.run}◐ ${_.bold}RUNNING${R}  ${_.dark}→  ${_.think}PLAN  ${_.dark}→  ${_.search}CODE  ${_.dark}→  ${_.retry}TEST  ${_.dark}→  ${_.success}LIVE`)
-  line(`  ${_.run}╚${'═'.repeat(W)}╝`)
+  line(`  ${_.run}╔════════════════════════════════════════════════════════`)
+  line(`  ${_.run}║  ${prio}${R}  ${_.grey}${name.slice(0, 30)}  ${_.dark}${ts2}`)
+  line(`  ${_.run}╠════════════════════════════════════════════════════════`)
+  line(`  ${_.run}║  ${_.silver}${content.slice(0, 54)}`)
+  if (content.length > 54) line(`  ${_.run}║  ${_.grey}${content.slice(54, 108)}`)
+  line(`  ${_.run}╠════════════════════════════════════════════════════════`)
+  line(`  ${_.run}║  ${_.run}◐ RUNNING  ${_.dark}→  ${_.think}PLAN  →  ${_.search}CODE  →  ${_.retry}TEST  →  ${_.success}LIVE`)
+  line(`  ${_.run}╚════════════════════════════════════════════════════════`)
   line()
 
   const runningPath = filePath.replace(/\.txt$/, '.running')
@@ -869,9 +851,9 @@ async function runTask(filePath) {
   renameSync(runningPath, donePath)
 
   // Recap tâche
-  line(`  ${_.success}╔${'═'.repeat(W)}╗`)
-  line(`  ${_.success}║${R}  ${_.success}✓ ${_.bold}DONE${R}  ${_.dark}·  ${_.grey}${pad(name, 26)}${_.dark}·  ${_.success}${dur}s${_.dark}${''.padEnd(W - name.slice(0,26).length - String(dur).length - 12)}${_.success}║`)
-  line(`  ${_.success}╚${'═'.repeat(W)}╝`)
+  line(`  ${_.success}╔════════════════════════════════════════════════════════`)
+  line(`  ${_.success}║  ✓ DONE  ${_.grey}${name.slice(0, 36)}  ${_.success}${dur}s`)
+  line(`  ${_.success}╚════════════════════════════════════════════════════════`)
   line()
 
   // Tableau session complet
@@ -1695,15 +1677,14 @@ async function showConnections() {
   const memData   = memR.status === 'fulfilled' ? await memR.value?.json().catch(() => null) : null
   const updates   = (memData?.entries || []).filter(e => e.applied).slice(0, 2)
 
-  const w2 = 52
-  line(`  ${_.dark}┌${'─'.repeat(w2)}┐`)
-  line(`  ${_.dark}│${R}  ${_.grey}CONNEXIONS${_.dark}${'─'.repeat(w2 - 10)}│`)
-  line(`  ${_.dark}├${'─'.repeat(w2)}┤`)
-  line(`  ${_.dark}│${R}  ${vercelOk ? _.success+'●' : _.error+'○'}${R} ${_.grey}Trackr${R}     ${vercelOk ? _.success+'ONLINE' : _.error+'OFFLINE'}${R}  ${_.dark}${APP_URL.replace('https://','')}`)
-  line(`  ${_.dark}│${R}  ${discordOk ? _.run+'●' : _.amber+'○'}${R} ${_.grey}Discord${R}    ${discordOk ? _.run+'LIVE' : _.amber+(BOT_TOKEN ? 'ERR' : 'N/A')}${R}${guild ? `  ${_.dark}${guild.name}` : ''}`)
-  line(`  ${_.dark}│${R}  ${API_KEY ? _.think+'●' : _.dark+'○'}${R} ${_.grey}Claude${R}     ${API_KEY ? _.think+'ONLINE' : _.dark+'ABSENT'}${R}  ${_.dark}${process.env._CLI_MODEL || 'claude-sonnet-4-6'}`)
-  line(`  ${_.dark}│${R}  ${process.env.GROQ_API_KEY ? _.success+'●' : _.dark+'○'}${R} ${_.grey}Groq${R}       ${process.env.GROQ_API_KEY ? _.success+'FREE · llama-3.3-70b' : _.dark+'ABSENT'}${R}`)
-  line(`  ${_.dark}└${'─'.repeat(w2)}┘`)
+  line(`  ${_.dark}┌──────────────────────────────────────────────`)
+  line(`  ${_.dark}│  ${_.grey}CONNEXIONS`)
+  line(`  ${_.dark}├──────────────────────────────────────────────`)
+  line(`  ${_.dark}│  ${vercelOk ? _.success+'●' : _.error+'○'}${R}  ${_.grey}Trackr    ${vercelOk ? _.success+'ONLINE' : _.error+'OFFLINE'}${R}  ${_.dark}${APP_URL.replace('https://','')}`)
+  line(`  ${_.dark}│  ${discordOk ? _.run+'●' : _.amber+'○'}${R}  ${_.grey}Discord   ${discordOk ? _.run+'LIVE' : _.amber+(BOT_TOKEN ? 'ERR' : 'N/A')}${R}${guild ? `  ${_.dark}${guild.name}` : ''}`)
+  line(`  ${_.dark}│  ${API_KEY ? _.think+'●' : _.dark+'○'}${R}  ${_.grey}Claude    ${API_KEY ? _.think+'ONLINE' : _.dark+'ABSENT'}${R}  ${_.dark}${process.env._CLI_MODEL || 'claude-sonnet-4-6'}`)
+  line(`  ${_.dark}│  ${process.env.GROQ_API_KEY ? _.success+'●' : _.dark+'○'}${R}  ${_.grey}Groq      ${process.env.GROQ_API_KEY ? _.success+'FREE  llama-3.3-70b' : _.dark+'ABSENT'}`)
+  line(`  ${_.dark}└──────────────────────────────────────────────`)
   line()
 
   if (updates.length) {
