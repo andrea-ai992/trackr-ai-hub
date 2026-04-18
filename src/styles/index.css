@@ -1,7 +1,3 @@
-Je vais ajouter les transitions de page avec react-router-dom et les CSS vars personnalisés.
-
-src/styles/index.css:
-```css
 :root {
   --green: #00ff88;
   --bg: #080808;
@@ -20,6 +16,9 @@ body {
   font-family: var(--font-family);
   background-color: var(--bg);
   color: var(--t1);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
   transition: background-color var(--transition-speed) ease;
 }
 
@@ -57,6 +56,10 @@ body {
   border-color: var(--border-hi);
 }
 
+.button:active {
+  transform: scale(0.98);
+}
+
 .badge {
   display: inline-block;
   padding: 6px 12px;
@@ -70,13 +73,14 @@ body {
 }
 
 .badge.LIVE {
-  background-color: var(--t3);
+  background-color: #ff3333;
   color: var(--t1);
+  animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
 .badge.NEW {
-  background-color: var(--t3);
-  color: var(--t1);
+  background-color: var(--green);
+  animation: fadeUp 0.5s ease-out forwards;
 }
 
 .badge {
@@ -129,6 +133,49 @@ a:hover {
 .page-exit-active {
   opacity: 0;
   transition: opacity var(--transition-speed) ease;
+}
+
+/* Animations */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ping {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  75% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, var(--bg3), var(--green), var(--bg3));
+  background-size: 2000px 100%;
+  animation: shimmer 3s infinite;
+  border-radius: 8px;
 }
 
 /* Media Queries */
@@ -191,59 +238,3 @@ a:hover {
     padding: 16px 0;
   }
 }
-```
-
-src/App.jsx:
-```jsx
-import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { Home, Sports, Markets, News, More, Andy, Agents, Portfolio, CryptoTrader, Signals, BrainExplorer, FlightTracker, Sneakers, Watches, RealEstate, BusinessPlan, Patterns, ChartAnalysis } from './pages';
-
-function App() {
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  if (!isMounted) return null;
-
-  return (
-    <Router>
-      <PageTransitionWrapper>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/sports" element={<Sports />} />
-          <Route path="/markets" element={<Markets />} />
-          <Route path="/news" element={<News />} />
-          <Route path="/more" element={<More />} />
-          <Route path="/andy" element={<Andy />} />
-          <Route path="/agents" element={<Agents />} />
-          <Route path="/portfolio" element={<Portfolio />} />
-          <Route path="/cryptotrader" element={<CryptoTrader />} />
-          <Route path="/signals" element={<Signals />} />
-          <Route path="/brainexplorer" element={<BrainExplorer />} />
-          <Route path="/flighttracker" element={<FlightTracker />} />
-          <Route path="/sneakers" element={<Sneakers />} />
-          <Route path="/watches" element={<Watches />} />
-          <Route path="/realestate" element={<RealEstate />} />
-          <Route path="/businessplan" element={<BusinessPlan />} />
-          <Route path="/patterns" element={<Patterns />} />
-          <Route path="/chartanalysis" element={<ChartAnalysis />} />
-        </Routes>
-      </PageTransitionWrapper>
-    </Router>
-  );
-}
-
-function PageTransitionWrapper({ children }) {
-  const location = useLocation();
-
-  return (
-    <div key={location.pathname}>
-      {children}
-    </div>
-  );
-}
-
-export default App;
