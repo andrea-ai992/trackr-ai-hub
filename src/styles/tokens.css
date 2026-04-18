@@ -1,24 +1,42 @@
-src/styles/tokens.css
-```css
-:root {
-  --green: #00ff88;
-  --bg: #080808;
-  --bg2: #111;
-  --bg3: #1a1a1a;
-  --border: rgba(255, 255, 255, 0.07);
-  --border-hi: rgba(0, 255, 136, 0.2);
-  --t1: #f0f0f0;
-  --t2: #888;
-  --t3: #444;
-  --font: 'Inter', sans-serif;
-}
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap');
 
-@font-face {
-  font-family: 'Inter';
-  src: url('/fonts/Inter.var.woff2') format('woff2-variations');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
+:root {
+  /* Colors */
+  --neon: #00ff88;
+  --bg: #080808;
+  --bg1: #0c0c0c;
+  --bg2: #111111;
+  --bg3: #161616;
+  --bg4: #1c1c1c;
+  --surface: #0f0f0f;
+  --surface-low: #111;
+  --surface-high: #1a1a1a;
+  --text-primary: #e0e0e0;
+  --text-secondary: #aaa;
+  --text-muted: #555;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-bright: rgba(0, 255, 136, 0.18);
+  --green: #00ff88;
+  --green-dim: #00cc66;
+  --green-bg: rgba(0, 255, 136, 0.06);
+  --red: #ff4d4d;
+  --amber: #fbbf24;
+  --blue: #38bdf8;
+  --purple: #a78bfa;
+  --t1: #f0f0f0;
+  --t2: #888888;
+  --t3: #444444;
+
+  /* Radius */
+  --radius-sm: 12px;
+  --radius: 16px;
+  --radius-lg: 22px;
+
+  /* Font */
+  --font-main: 'JetBrains Mono', monospace;
+  --font-weight-400: 400;
+  --font-weight-600: 600;
+  --font-weight-700: 700;
 }
 
 * {
@@ -27,109 +45,175 @@ src/styles/tokens.css
   box-sizing: border-box;
 }
 
-html {
-  font-size: 16px;
+html, body {
+  font-family: var(--font-main);
+  font-size: 14px;
+  line-height: 1.5;
   background-color: var(--bg);
-  color: var(--t1);
-  font-family: var(--font);
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-body {
-  min-height: 100dvh;
-  background-color: var(--bg);
-  color: var(--t1);
-}
-
 a {
-  color: var(--t1);
+  color: inherit;
   text-decoration: none;
 }
 
 button {
-  background: none;
+  background: transparent;
   border: none;
   cursor: pointer;
-  padding: 0;
+  font-family: var(--font-main);
 }
 
-input, textarea, select {
+input {
+  font-family: var(--font-main);
   background: transparent;
   border: 1px solid var(--border);
-  color: var(--t1);
-  font-family: var(--font);
+  color: var(--text-primary);
 }
 
-input:focus, textarea:focus, select:focus {
+input:focus {
   outline: none;
-  border-color: var(--green);
+  border-color: var(--neon);
 }
-```
 
-src/components/Card/Card.jsx
-```jsx
-import React, { useEffect, useRef } from 'react';
-import './Card.css';
+.page {
+  max-width: 520px;
+  min-height: 100vh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  display: flex;
+  flex-direction: column;
+}
 
-export const Card = ({ children, className = '', delay = 0 }) => {
-  const cardRef = useRef(null);
-
-  useEffect(() => {
-    const card = cardRef.current;
-    if (!card) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const index = Array.from(card.parentNode.children).indexOf(card);
-            const delayMs = delay + index * 340;
-
-            setTimeout(() => {
-              card.style.opacity = '1';
-              card.style.transform = 'translateY(0)';
-            }, delayMs);
-            observer.unobserve(card);
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(card);
-
-    return () => observer.disconnect();
-  }, [delay]);
-
-  return (
-    <div
-      ref={cardRef}
-      className={`card ${className}`}
-      style={{
-        opacity: 0,
-        transform: 'translateY(20px)',
-        transition: 'opacity 340ms ease-out, transform 340ms ease-out',
-      }}
-    >
-      {children}
-    </div>
-  );
-};
-```
-
-src/components/Card/Card.css
-```css
 .card {
-  width: 100%;
-  max-width: 100%;
-  padding: 1.5rem;
-  border-radius: 0.75rem;
   background-color: var(--bg2);
   border: 1px solid var(--border);
-  transition: opacity 340ms ease-out, transform 340ms ease-out;
+  border-radius: var(--radius);
+  padding: 16px;
 }
 
-.card:hover {
-  border-color: var(--border-hi);
+.scroll-row {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scroll-row::-webkit-scrollbar {
+  display: none;
+}
+
+.scroll-row > * {
+  scroll-snap-align: start;
+}
+
+.pill-up {
+  background-color: var(--green-bg);
+  color: var(--green);
+  border: 1px solid var(--green);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: var(--font-weight-600);
+}
+
+.pill-down {
+  background-color: rgba(255, 77, 77, 0.1);
+  color: var(--red);
+  border: 1px solid var(--red);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: var(--font-weight-600);
+}
+
+.tab-btn {
+  background-color: var(--surface-low);
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: var(--font-weight-600);
+  transition: background-color 0.2s;
+}
+
+.tab-btn:hover {
+  background-color: var(--surface-high);
+}
+
+.tab-btn.active {
+  background-color: var(--neon);
+  color: var(--bg);
+}
+
+.section-label {
+  text-transform: uppercase;
+  font-size: 10px;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.press-scale {
+  transition: transform 0.1s;
+}
+
+.press-scale:active {
+  transform: scale(0.97);
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--green);
+  border-radius: 50%;
+  animation: ping 1.5s infinite;
+}
+
+@keyframes ping {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  75% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
