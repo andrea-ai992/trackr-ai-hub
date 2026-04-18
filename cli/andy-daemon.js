@@ -124,82 +124,40 @@ async function flushSyncQueue() {
   saveSyncQueue(remaining)
 }
 
-// ── Claude API — avec semaphore global ───────────────────────────────────────
-// Stratégie économique: Haiku pour plan/review/autogen, Sonnet pour code
+// ── Providers LLM — priorité: Groq (gratuit) > Anthropic (payant) > Ollama (local) ──
+//
+//  Groq  : GRATUIT — console.groq.com (compte gratuit, pas de CB)
+//          Llama 3.3 70B · 6000 req/jour · 500K tokens/jour
+//  Anthropic: PAYANT — fallback si Groq indisponible/épuisé
+//  Ollama: LOCAL/GRATUIT — si OLLAMA_URL défini (ex: http://localhost:11434)
+//          Installation: curl -fsSL https://ollama.ai/install.sh | sh
+//          Modèle code: ollama pull qwen2.5-coder:7b
+
+const GROQ_KEY    = process.env.GROQ_API_KEY    || ''
+const OLLAMA_URL  = process.env.OLLAMA_URL       || ''
+const OLLAMA_MODEL= process.env.OLLAMA_MODEL     || 'qwen2.5-coder:7b'
+
+// Modèles Anthropic (fallback)
 const MODEL_SMART = 'claude-sonnet-4-6'
 const MODEL_FAST  = 'claude-haiku-4-5-20251001'
+// Modèles Groq (gratuit)
+const GROQ_SMART  = 'llama-3.3-70b-versatile'   // meilleur qualité gratuit
+const GROQ_FAST   = 'llama-3.1-8b-instant'       // ultra rapide, gratuit
 
-// Semaphore: limite le nombre d'appels API simultanés pour éviter les 429
-const API_SEMAPHORE_LIMIT = 2   // max 2 appels Claude en même temps
+// Semaphore global — évite burst API
+const API_SEMAPHORE_LIMIT = 2
 let   apiConcurrent = 0
-let   globalRateLimitUntil = 0  // si 429, tous les workers attendent
+let   globalRateLimitUntil = 0
 
-async function generateRaw(prompt, maxTokens = 4096, model = MODEL_SMART) {
-  if (!API_KEY) throw new Error('ANTHROPIC_API_KEY manquante')
-
-  // Attendre si rate limit global
-  const now = Date.now()
-  if (globalRateLimitUntil > now) {
-    const wait = globalRateLimitUntil - now
-    log(`Rate limit global — attente ${Math.ceil(wait/1000)}s`)
-    await sl(wait)
-  }
-
-  // Attendre le semaphore
-  while (apiConcurrent >= API_SEMAPHORE_LIMIT) await sl(2000)
-  apiConcurrent++
-
-  try {
-    while (true) {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': API_KEY,
-          'anthropic-version': '2023-06-01',
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-          model, max_tokens: maxTokens,
-          system: SYSTEM, stream: false,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-        signal: AbortSignal.timeout(130000),
-      }).catch(err => { throw new Error(`Réseau: ${err.message}`) })
-
-      if (res.status === 429) {
-        const retryAfter = parseInt(res.headers?.get?.('retry-after') || '60') || 60
-        const waitMs = retryAfter * 1000
-        globalRateLimitUntil = Date.now() + waitMs
-        log(`429 rate limit — backoff global ${retryAfter}s`)
-        await sl(waitMs)
-        globalRateLimitUntil = 0
-        continue
-      }
-      if ([500, 503, 529].includes(res.status)) {
-        log(`API ${res.status} — retry dans 30s`)
-        await sl(30000)
-        continue
-      }
-      if (res.status === 400) {
-        const body = await res.json().catch(() => ({}))
-        const msg  = body?.error?.message || ''
-        if (msg.toLowerCase().includes('credit')) {
-          log(`Crédits épuisés — retry dans 5min`)
-          await sl(300000)
-          continue
-        }
-        throw new Error(`API 400: ${msg}`)
-      }
-      if (!res.ok) throw new Error(`API ${res.status}`)
-      const d = await res.json().catch(() => null)
-      const text = d?.content?.[0]?.text?.trim()
-      if (!text) throw new Error('Réponse vide')
-      return text
-    }
-  } finally {
-    apiConcurrent--
-  }
+// Détecte le provider disponible au démarrage
+function detectProvider() {
+  if (GROQ_KEY)   return 'groq'
+  if (API_KEY)    return 'anthropic'
+  if (OLLAMA_URL) return 'ollama'
+  return null
 }
+
+const PROVIDER = detectProvider()
 
 // ── System prompt ─────────────────────────────────────────────────────────────
 const SYSTEM = `Tu es AnDy, l'IA autonome d'Andrea Matlega.
@@ -219,6 +177,71 @@ Règles ABSOLUES:
 - Imports: vérifie que les librairies sont dans package.json avant de les importer
 - Pas de librairies externes non installées (recharts, framer-motion, etc. ne sont pas disponibles)
 - Librairies disponibles: react, react-router-dom, lucide-react, @supabase/supabase-js`
+
+// ── OpenAI-compatible call (Groq + Ollama) ────────────────────────────────────
+async function callOpenAI(baseUrl, apiKey, model, prompt, maxTokens) {
+  const res = await fetch(`${baseUrl}/v1/chat/completions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}) },
+    body: JSON.stringify({ model, messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: prompt }], max_tokens: maxTokens, temperature: 0.4 }),
+    signal: AbortSignal.timeout(120000),
+  }).catch(err => { throw new Error(`Réseau: ${err.message}`) })
+  if (res.status === 429) { const s = parseInt(res.headers?.get?.('retry-after') || '30') || 30; throw new Error(`429:${s}`) }
+  if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(`API ${res.status}: ${b?.error?.message || ''}`) }
+  const d = await res.json().catch(() => null)
+  return d?.choices?.[0]?.message?.content?.trim() || null
+}
+
+// ── Multi-provider LLM (Groq free → Anthropic paid → Ollama local) ────────────
+async function generateRaw(prompt, maxTokens = 4096, hint = 'smart') {
+  if (globalRateLimitUntil > Date.now()) { await sl(globalRateLimitUntil - Date.now()); globalRateLimitUntil = 0 }
+  while (apiConcurrent >= API_SEMAPHORE_LIMIT) await sl(1500)
+  apiConcurrent++
+  try {
+    // Groq (gratuit, prioritaire)
+    if (GROQ_KEY) {
+      const model = hint === 'fast' ? GROQ_FAST : GROQ_SMART
+      for (let i = 0; i < 4; i++) {
+        try {
+          const text = await callOpenAI('https://api.groq.com/openai', GROQ_KEY, model, prompt, maxTokens)
+          if (text) return text
+        } catch (e) {
+          if (e.message.startsWith('429:')) { const s = parseInt(e.message.split(':')[1]) || 30; globalRateLimitUntil = Date.now() + s * 1000; await sl(s * 1000); globalRateLimitUntil = 0; continue }
+          if (i === 3) log(`Groq échec: ${e.message} — fallback Anthropic`)
+          else await sl(5000)
+        }
+      }
+    }
+    // Anthropic (fallback payant)
+    if (API_KEY) {
+      const model = hint === 'fast' ? MODEL_FAST : MODEL_SMART
+      while (true) {
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+          body: JSON.stringify({ model, max_tokens: maxTokens, system: SYSTEM, stream: false, messages: [{ role: 'user', content: prompt }] }),
+          signal: AbortSignal.timeout(130000),
+        }).catch(e => { throw new Error(`Réseau: ${e.message}`) })
+        if (res.status === 429) { const s = parseInt(res.headers?.get?.('retry-after') || '60') || 60; globalRateLimitUntil = Date.now() + s * 1000; await sl(s * 1000); globalRateLimitUntil = 0; continue }
+        if ([500, 503, 529].includes(res.status)) { await sl(30000); continue }
+        if (res.status === 400) { const b = await res.json().catch(() => ({})); const msg = b?.error?.message || ''; if (msg.toLowerCase().includes('credit')) { log('Crédits épuisés'); await sl(300000); continue } throw new Error(`API 400: ${msg}`) }
+        if (!res.ok) throw new Error(`API ${res.status}`)
+        const d = await res.json().catch(() => null)
+        const text = d?.content?.[0]?.text?.trim()
+        if (!text) throw new Error('Réponse vide')
+        return text
+      }
+    }
+    // Ollama (local fallback)
+    if (OLLAMA_URL) {
+      const text = await callOpenAI(OLLAMA_URL, '', OLLAMA_MODEL, prompt, maxTokens)
+      if (text) return text
+    }
+    throw new Error('Aucun provider LLM disponible (GROQ_API_KEY / ANTHROPIC_API_KEY / OLLAMA_URL requis)')
+  } finally {
+    apiConcurrent--
+  }
+}
 
 // ── Task status ───────────────────────────────────────────────────────────────
 const TASKS_DIR   = resolve(ROOT, 'andy-tasks')
