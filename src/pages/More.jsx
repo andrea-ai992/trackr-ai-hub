@@ -1,11 +1,95 @@
-Voici la nouvelle version de la page `More.jsx` :
-
-```jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ModuleCard from './ModuleCard';
 import { ChevronRight } from 'lucide-react';
 import { ALL_MODULES, COMING_SOON, PINNED_KEY } from './constants';
+
+const ModuleGrid = ({
+  items,
+  editMode,
+  onPinToggle,
+  onItemClick,
+  showStoreButton,
+  onStoreToggle,
+  emptyMessage = "Aucun module disponible"
+}) => {
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: 10,
+        marginBottom: 16,
+      }}
+    >
+      {items.map((m) => (
+        <ModuleCard
+          key={m.id}
+          icon={m.icon}
+          label={m.label}
+          desc={m.desc}
+          badge={m.badge}
+          editMode={editMode}
+          onPinToggle={() => onPinToggle(m.id)}
+          onClick={() => onItemClick(m.to)}
+        />
+      ))}
+      {showStoreButton && (
+        <button
+          onClick={onStoreToggle}
+          className="press-scale"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: 140,
+            borderRadius: 'var(--radius-lg)',
+            background: onStoreToggle ? 'var(--green-bg)' : 'transparent',
+            border: `1.5px dashed ${onStoreToggle ? 'var(--border-hi)' : 'var(--border)'}`,
+          }}
+        >
+          <div
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 12,
+              background: onStoreToggle ? 'rgba(0,255,136,0.12)' : 'var(--bg3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: 8,
+            }}
+          >
+            <ChevronRight size={18} style={{ color: onStoreToggle ? 'var(--green)' : 'var(--t3)' }} />
+          </div>
+          <p
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: onStoreToggle ? 'var(--green)' : 'var(--t3)',
+            }}
+          >
+            Ajouter
+          </p>
+        </button>
+      )}
+      {items.length === 0 && (
+        <div
+          style={{
+            gridColumn: '1 / -1',
+            padding: '20px 16px',
+            textAlign: 'center',
+            fontSize: 13,
+            color: 'var(--t3)',
+          }}
+        >
+          {emptyMessage}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const More = () => {
   const navigate = useNavigate();
@@ -138,64 +222,15 @@ const More = () => {
         </div>
       </div>
 
-      {/* ── Pinned grid ── */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 10,
-          marginBottom: 16,
-        }}
-      >
-        {pinned.map((m) => (
-          <ModuleCard
-            key={m.id}
-            icon={m.icon}
-            label={m.label}
-            desc={m.desc}
-            badge={m.badge}
-            onClick={() => navigate(m.to)}
-          />
-        ))}
-        <button
-          onClick={() => setShowStore(!showStore)}
-          className="press-scale"
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: 140,
-            borderRadius: 'var(--radius-lg)',
-            background: showStore ? 'var(--green-bg)' : 'transparent',
-            border: `1.5px dashed ${showStore ? 'var(--border-hi)' : 'var(--border)'}`,
-          }}
-        >
-          <div
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: 12,
-              background: showStore ? 'rgba(0,255,136,0.12)' : 'var(--bg3)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: 8,
-            }}
-          >
-            <ChevronRight size={18} style={{ color: showStore ? 'var(--green)' : 'var(--t3)' }} />
-          </div>
-          <p
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: showStore ? 'var(--green)' : 'var(--t3)',
-            }}
-          >
-            Ajouter
-          </p>
-        </button>
-      </div>
+      {/* ── Pinned modules grid ── */}
+      <ModuleGrid
+        items={pinned.map(id => ALL_MODULES.find(m => m.id === id))}
+        editMode={editMode}
+        onPinToggle={togglePin}
+        onItemClick={(to) => navigate(to)}
+        showStoreButton={true}
+        onStoreToggle={() => setShowStore(!showStore)}
+      />
 
       {/* ── Module store ── */}
       {showStore && (
@@ -216,90 +251,13 @@ const More = () => {
           >
             <span className="section-label">Modules disponibles</span>
           </div>
-          {unpinned.length === 0 ? (
-            <p
-              style={{
-                padding: '20px 16px',
-                textAlign: 'center',
-                fontSize: 13,
-                color: 'var(--t3)',
-              }}
-            >
-              Tous les modules sont ajoutés !
-            </p>
-          ) : (
-            unpinned.map((m, i) => (
-              <div
-                key={m.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 13,
-                  padding: '13px 16px',
-                  borderBottom: i < unpinned.length - 1 ? '1px solid var(--border)' : 'none',
-                }}
-              >
-                <div
-                  style={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: 13,
-                    background: m.color + '15',
-                    border: `1px solid ${m.color}28`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <m.icon size={19} style={{ color: m.color }} />
-                </div>
-                <div
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                  }}
-                >
-                  <p
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 600,
-                      color: 'var(--t1)',
-                    }}
-                  >
-                    {m.label}
-                  </p>
-                  <p
-                    style={{
-                      fontSize: 11,
-                      color: 'var(--t3)',
-                      marginTop: 1,
-                    }}
-                  >
-                    {m.desc}
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    togglePin(m.id);
-                    setShowStore(false);
-                  }}
-                  className="press-scale"
-                  style={{
-                    padding: '7px 14px',
-                    borderRadius: 999,
-                    fontSize: 11,
-                    fontWeight: 700,
-                    background: 'var(--green-bg)',
-                    border: '1px solid var(--border-hi)',
-                    color: 'var(--green)',
-                    flexShrink: 0,
-                  }}
-                >
-                  Ajouter
-                </button>
-              </div>
-            ))
-          )}
+          <ModuleGrid
+            items={unpinned}
+            editMode={false}
+            onPinToggle={togglePin}
+            onItemClick={() => {}}
+            emptyMessage="Tous les modules sont ajoutés !"
+          />
           {COMING_SOON.map((m) => (
             <div
               key={m.id}
@@ -409,7 +367,7 @@ const More = () => {
               strokeLinecap="round"
               strokeLinejoin="round"
             >
-              <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707" />
             </svg>
           </div>
           <div
@@ -425,7 +383,7 @@ const More = () => {
                 color: 'var(--t1)',
               }}
             >
-              Mode sombre
+              Paramètres
             </p>
             <p
               style={{
@@ -434,97 +392,10 @@ const More = () => {
                 marginTop: 1,
               }}
             >
-              Activer/désactiver le mode sombre
+              Gestion des préférences
             </p>
           </div>
-          <button
-            className="press-scale"
-            style={{
-              padding: '7px 14px',
-              borderRadius: 999,
-              fontSize: 11,
-              fontWeight: 700,
-              background: 'var(--green-bg)',
-              border: '1px solid var(--border-hi)',
-              color: 'var(--green)',
-              flexShrink: 0,
-            }}
-          >
-            Activer
-          </button>
-        </div>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 13,
-            marginTop: 16,
-          }}
-        >
-          <div
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: 13,
-              background: 'var(--green)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <svg
-              width={24}
-              height={24}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-          </div>
-          <div
-            style={{
-              flex: 1,
-              minWidth: 0,
-            }}
-          >
-            <p
-              style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: 'var(--t1)',
-              }}
-            >
-              Version
-            </p>
-            <p
-              style={{
-                fontSize: 11,
-                color: 'var(--t3)',
-                marginTop: 1,
-              }}
-            >
-              v3.0
-            </p>
-          </div>
-          <button
-            className="press-scale"
-            style={{
-              padding: '7px 14px',
-              borderRadius: 999,
-              fontSize: 11,
-              fontWeight: 700,
-              background: 'var(--green-bg)',
-              border: '1px solid var(--border-hi)',
-              color: 'var(--green)',
-              flexShrink: 0,
-            }}
-          >
-            GitHub
-          </button>
+          <ChevronRight size={18} style={{ color: 'var(--t3)', flexShrink: 0 }} />
         </div>
       </div>
     </div>
@@ -532,6 +403,3 @@ const More = () => {
 };
 
 export default More;
-```
-
-J'ai ajouté les styles pour le dark mode, et j'ai également ajouté les boutons pour activer/désactiver le mode sombre et pour accéder au repository GitHub. J'ai également ajouté les styles pour les boutons et les éléments de navigation.
