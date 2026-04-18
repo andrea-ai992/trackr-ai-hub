@@ -1,8 +1,6 @@
-src/pages/Dashboard.jsx
-```jsx
 import React from 'react';
 import { useEffect, useState } from 'react';
-import { fetchPortfolioData, fetchMoversData, fetchNewsData, fetchFearAndGreedData } from '../api'; // Assurez-vous que ces hooks existent
+import { fetchPortfolioData, fetchMoversData, fetchNewsData, fetchFearAndGreedData } from '../api';
 
 const Dashboard = () => {
   const [portfolio, setPortfolio] = useState({});
@@ -44,7 +42,6 @@ const Dashboard = () => {
         <div className={`portfolio-change ${getChangeClass(portfolio.change)}`}>
           <span>{portfolio.change}%</span>
           <svg className="sparkline" viewBox="0 0 60 20">
-            {/* Remplacez par votre logique de dessin de sparkline */}
             <path d="M0,10 L10,5 L20,15 L30,10 L40,12 L50,8 L60,10" />
           </svg>
         </div>
@@ -88,6 +85,7 @@ const Dashboard = () => {
         <div className="news-list">
           {news.map((item) => (
             <div key={item.title} className="news-item">
+              <div className="thumbnail" style={{ backgroundImage: `url(${item.thumbnail})` }} />
               <div className="title">{item.title}</div>
               <div className="meta">
                 <span className="source">{item.source}</span>
@@ -101,16 +99,16 @@ const Dashboard = () => {
       <section className="actions-section">
         <div className="actions-grid">
           <div className="action-card">
+            <div className="icon">✈️</div>
+            <div className="label">Flights</div>
+          </div>
+          <div className="action-card">
             <div className="icon">📈</div>
             <div className="label">Markets</div>
           </div>
           <div className="action-card">
-            <div className="icon">📊</div>
-            <div className="label">Portfolio</div>
-          </div>
-          <div className="action-card">
-            <div className="icon">📉</div>
-            <div className="label">Signals</div>
+            <div className="icon">🏀</div>
+            <div className="label">Sports</div>
           </div>
           <div className="action-card">
             <div className="icon">🤖</div>
@@ -123,41 +121,6 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-```
-
-src/styles/Dashboard.css
-```css
-:root {
-  --green: #00ff88;
-  --bg: #080808;
-  --bg2: #111;
-  --bg3: #1a1a1a;
-  --border: rgba(255, 255, 255, 0.07);
-  --border-hi: rgba(0, 255, 136, 0.2);
-  --t1: #f0f0f0;
-  --t2: #888;
-  --t3: #444;
-}
-
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 400;
-  src: local('Inter var'), url('/fonts/Inter.var.woff2') format('woff2-variations');
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: 'Inter', sans-serif;
-  background-color: var(--bg);
-  color: var(--t1);
-  line-height: 1.5;
-}
 
 .container {
   max-width: 520px;
@@ -200,7 +163,7 @@ body {
 
 .portfolio-hero {
   background-color: var(--bg2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--green);
   border-radius: 1rem;
   padding: 1.5rem;
   margin-bottom: 2rem;
@@ -355,10 +318,20 @@ body {
   border-radius: 0.75rem;
   padding: 1rem;
   transition: background-color 0.2s ease;
+  display: flex;
+  gap: 1rem;
 }
 
 .news-item:hover {
   background-color: var(--bg3);
+}
+
+.news-item .thumbnail {
+  width: 60px;
+  height: 60px;
+  border-radius: 0.5rem;
+  background-size: cover;
+  background-position: center;
 }
 
 .news-item .title {
@@ -423,32 +396,4 @@ body {
 .action-card .label {
   font-size: 0.875rem;
   font-weight: 500;
-}
-
-/* Animations */
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(1rem);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.section {
-  animation: fadeUp 0.5s ease-out forwards;
-  opacity: 0;
-}
-
-.section.visible {
-  opacity: 1;
-}
-
-/* Responsive */
-@media (min-width: 768px) {
-  .container {
-    padding: 0 2rem;
-  }
 }
