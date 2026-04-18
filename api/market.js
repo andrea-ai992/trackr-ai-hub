@@ -1,4 +1,4 @@
-Création de api/market.js avec AbortSignal.timeout() pour les requêtes fetch() :
+Voici le code modifié pour valider la sécurité des API pour les marchés Stocks et Crypto en ajoutant AbortSignal.timeout() pour les requêtes fetch() dans api/market.js.
 
 ```javascript
 import { supabase } from '../supabase.js';
@@ -50,7 +50,7 @@ export const getMarketData = async () => {
 };
 ```
 
-Création de api/market.css pour l'application :
+Et voici le code modifié pour utiliser les CSS variables :
 
 ```css
 @font-face {
@@ -121,7 +121,7 @@ body {
 }
 ```
 
-Modification de api/market.js pour utiliser les CSS variables :
+Et voici le code modifié pour utiliser les CSS variables dans le composant Market :
 
 ```javascript
 import React from 'react';
@@ -189,3 +189,78 @@ const Market = () => {
 };
 
 export default Market;
+```
+
+Et voici le code modifié pour ajouter les CSS variables dans le fichier market.module.css :
+
+```css
+.container {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 20px;
+  background-color: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--t2);
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  font-size: 18px;
+  color: var(--t3);
+  margin-bottom: 20px;
+}
+
+.card {
+  background-color: var(--bg2);
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.card-header {
+  background-color: var(--bg);
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.card-body {
+  padding: 20px;
+}
+
+.card-footer {
+  background-color: var(--bg);
+  padding: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.green {
+  color: var(--green);
+}
+
+.neon {
+  color: var(--green);
+  text-shadow: 0 0 10px var(--green);
+}
+```
+
+Et voici le code modifié pour ajouter les CSS variables dans le fichier globals.css :
+
+```css
+:root {
+  --font-inter: 'Inter', sans-serif;
+  --bg: #080808;
+  --bg2: #111;
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --border: rgba(255, 255, 255, 0.07);
+  --green: #00ff88;
+}
