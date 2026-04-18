@@ -1,5 +1,5 @@
 src/styles/global.css
-
+```css
 :root {
     --green: #00ff88;
     --bg: #080808;
@@ -16,16 +16,36 @@ body {
     font-family: 'Inter', sans-serif;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
+}
+
+.container {
+    max-width: 520px;
+    padding: 16px;
+    margin: auto;
 }
 
 .card {
-    background-color: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(12px);
     border: 1px solid var(--border);
     border-radius: 8px;
-    backdrop-filter: blur(12px);
     padding: 16px;
-    margin: 8px;
+    margin-bottom: 16px;
+}
+
+.skeleton {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 25%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.1) 75%);
+    background-size: 400% 100%;
+    animation: shimmer 1.2s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 100% 0;
+    }
+    100% {
+        background-position: 0 0;
+    }
 }
 
 .fade-up {
@@ -42,122 +62,154 @@ body {
         transform: translateY(0);
     }
 }
-
-.skeleton {
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 25%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.1) 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-}
-
-@keyframes shimmer {
-    0% {
-        background-position: 200% 0;
-    }
-    100% {
-        background-position: 0 0;
-    }
-}
-
-.max-width {
-    max-width: 520px;
-    margin: auto;
-    padding: 0 16px;
-}
-
-.safe-area {
-    padding: env(safe-area-inset);
-}
-
-.scroll-horizontal {
-    display: flex;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-}
-
-.pill {
-    border-radius: 50px;
-    background: rgba(255, 255, 255, 0.1);
-    padding: 8px 16px;
-    margin: 4px;
-}
-
-.bottom-nav {
-    display: flex;
-    justify-content: space-around;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 50px;
-    padding: 10px;
-}
-
-.active-indicator {
-    color: var(--green);
-}
+```
 
 src/pages/Dashboard.jsx
-
-import React from 'react';
-import './Dashboard.css';
-import { Sparkline, TopMovers, FearGreedGauge, NewsFeed, QuickActions } from '../components';
+```jsx
+import React, { useEffect, useState } from 'react';
+import { fetchPortfolioData, fetchNews } from '../api'; // Assurez-vous que ces fonctions existent
+import Skeleton from '../components/Skeleton';
+import Sparkline from '../components/Sparkline';
+import TopMovers from '../components/TopMovers';
+import FearGreedGauge from '../components/FearGreedGauge';
+import QuickActions from '../components/QuickActions';
 
 const Dashboard = () => {
+    const [portfolio, setPortfolio] = useState(null);
+    const [news, setNews] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const loadData = async () => {
+            setLoading(true);
+            const portfolioData = await fetchPortfolioData();
+            const newsData = await fetchNews();
+            setPortfolio(portfolioData);
+            setNews(newsData);
+            setLoading(false);
+        };
+        loadData();
+    }, []);
+
     return (
-        <div className="max-width safe-area">
-            <div className="card fade-up">
-                <h1>Portfolio Value</h1>
-                <Sparkline />
-            </div>
-            <div className="card fade-up">
-                <TopMovers />
-            </div>
-            <div className="card fade-up">
-                <FearGreedGauge />
-            </div>
-            <div className="card fade-up">
-                <NewsFeed />
-            </div>
-            <div className="card fade-up">
-                <QuickActions />
-            </div>
+        <div className="container">
+            {loading ? (
+                <Skeleton />
+            ) : (
+                <>
+                    <div className="card fade-up">
+                        <h1>Portfolio Value: ${portfolio.value}</h1>
+                        <Sparkline data={portfolio.sparklineData} />
+                    </div>
+                    <TopMovers />
+                    <FearGreedGauge />
+                    <QuickActions />
+                    <div className="news-feed fade-up">
+                        {news.map((item, index) => (
+                            <div key={index} className="card">
+                                <h3>{item.title}</h3>
+                                <p>{item.description}</p>
+                            </div>
+                        ))}
+                    </div>
+                </>
+            )}
         </div>
     );
 };
 
 export default Dashboard;
+```
 
 src/components/BottomNav.jsx
-
+```jsx
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import './BottomNav.css';
+import { Home, Market, News, More, Profile } from 'lucide-react';
 
 const BottomNav = () => {
     return (
-        <div className="bottom-nav">
-            <NavLink to="/dashboard" className="pill" activeClassName="active-indicator">Dashboard</NavLink>
-            <NavLink to="/markets" className="pill" activeClassName="active-indicator">Markets</NavLink>
-            <NavLink to="/news" className="pill" activeClassName="active-indicator">News</NavLink>
-            <NavLink to="/portfolio" className="pill" activeClassName="active-indicator">Portfolio</NavLink>
-            <NavLink to="/more" className="pill" activeClassName="active-indicator">More</NavLink>
-        </div>
+        <nav className="bottom-nav">
+            <NavLink to="/" activeClassName="active">
+                <Home />
+                <span>Home</span>
+            </NavLink>
+            <NavLink to="/markets" activeClassName="active">
+                <Market />
+                <span>Markets</span>
+            </NavLink>
+            <NavLink to="/news" activeClassName="active">
+                <News />
+                <span>News</span>
+            </NavLink>
+            <NavLink to="/more" activeClassName="active">
+                <More />
+                <span>More</span>
+            </NavLink>
+            <NavLink to="/profile" activeClassName="active">
+                <Profile />
+                <span>Profile</span>
+            </NavLink>
+        </nav>
     );
 };
 
 export default BottomNav;
+```
 
 src/pages/Markets.jsx
-
-import React from 'react';
-import './Markets.css';
-import { MarketList } from '../components';
+```jsx
+import React, { useEffect, useState } from 'react';
+import { fetchMarketData } from '../api'; // Assurez-vous que cette fonction existe
+import Skeleton from '../components/Skeleton';
 
 const Markets = () => {
+    const [markets, setMarkets] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const loadData = async () => {
+            setLoading(true);
+            const marketData = await fetchMarketData();
+            setMarkets(marketData);
+            setLoading(false);
+        };
+        loadData();
+    }, []);
+
     return (
-        <div className="max-width safe-area">
-            <div className="card fade-up">
-                <MarketList />
-            </div>
+        <div className="container">
+            {loading ? (
+                <Skeleton />
+            ) : (
+                <div className="market-list fade-up">
+                    {markets.map((market, index) => (
+                        <div key={index} className="card">
+                            <h3>{market.name}</h3>
+                            <p>${market.price}</p>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 };
 
 export default Markets;
+```
+
+src/components/Skeleton.jsx
+```jsx
+import React from 'react';
+
+const Skeleton = () => {
+    return (
+        <div className="skeleton">
+            <div className="card" style={{ height: '100px', marginBottom: '16px' }}></div>
+            <div className="card" style={{ height: '100px', marginBottom: '16px' }}></div>
+            <div className="card" style={{ height: '100px', marginBottom: '16px' }}></div>
+        </div>
+    );
+};
+
+export default Skeleton;
