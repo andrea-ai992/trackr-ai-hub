@@ -1,9 +1,9 @@
-Pour ajouter les éléments demandés, vous pouvez modifier le code comme suit :
-
-```jsx
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { ChevronRight, TrendingUp, TrendingDown } from 'lucide-react';
+import { Inter } from 'next/font/google';
+
+const inter = Inter({ subsets: ['latin'] });
 
 function fmt(n, currency = 'EUR') {
   if (n == null) return '—';
@@ -75,9 +75,9 @@ export default function Portfolio() {
   }, holdings[0]);
 
   return (
-    <div className="page">
+    <div className={inter.className}>
       {/* Header */}
-      <div style={{ padding: '16px 16px 0' }}>
+      <div style={{ padding: '16px 16px 0', backgroundColor: 'var(--bg)' }}>
         <div style={{ fontSize: 13, color: 'var(--t3)', marginBottom: 4 }}>Portfolio total</div>
         <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--t1)', letterSpacing: '-.02em', fontVariantNumeric: 'tabular-nums' }}>
           {fmt(totalValue)}
@@ -294,4 +294,13 @@ export default function Portfolio() {
 }
 ```
 
-J'ai ajouté un animateur pour la courbe de performance, ainsi qu'une légende pour le graphique de allocation. J'ai également ajouté les statistiques globales : Total Value en grand, Best performer (vert), Worst performer (rouge), Beta portfolio.
+```css
+:root {
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --border: rgba(255, 255, 255, 0.07);
+}
