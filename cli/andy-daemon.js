@@ -265,10 +265,7 @@ async function callGemini(prompt, maxTokens) {
     }
   ).catch(err => { throw new Error(`Réseau: ${err.message}`) })
   if (res.status === 429) {
-    const d = await res.json().catch(() => ({}))
-    const retryMs = d?.error?.details?.find(x => x.retryDelay)?.retryDelay
-    const s = retryMs ? Math.ceil(parseInt(retryMs) / 1000) || 60 : 60
-    throw new Error(`429:${s}`)
+    throw new Error('429:65')  // >15 → fast-failover + cooldown 65s (vide la fenêtre 60s)
   }
   if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(`Gemini ${res.status}: ${(b?.error?.message || '').slice(0,80)}`) }
   const d = await res.json().catch(() => null)
@@ -294,9 +291,10 @@ async function generateRaw(prompt, maxTokens = 4096, hint = 'smart') {
               setCooldown(name, Math.min(raw, 8 * 3600))
               return null
             }
-            // Si wait > 15s → skip ce provider, essaie le suivant immédiatement
+            // Si wait > 15s → cooldown + skip → next provider immédiatement
             if (raw > 15) {
-              log(`[LLM] ${name} 429 ${raw}s — skip → next provider`)
+              setCooldown(name, Math.min(raw, 300))  // cooldown respectant retry-after (max 5min)
+              log(`[LLM] ${name} 429 ${raw}s — cooldown + next provider`)
               return null
             }
             const wait = raw + 3
