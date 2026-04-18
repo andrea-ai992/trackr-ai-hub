@@ -1,3 +1,5 @@
+**src/App.jsx**
+```jsx
 import { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import SkeletonPage from './components/SkeletonPage';
@@ -89,7 +91,53 @@ function App() {
 }
 
 export default App;
+```
 
+**src/components/SkeletonPage.jsx**
+```jsx
+import React from 'react';
+
+const SkeletonPage = () => {
+  return (
+    <div
+      style={{
+        height: '60vh',
+        backgroundColor: '#111',
+        borderRadius: '10px',
+        padding: '20px',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          height: '10px',
+          backgroundColor: '#00ff88',
+          animation: 'shimmer 2s infinite',
+          borderRadius: '10px',
+        }}
+      />
+      <div
+        style={{
+          width: '100%',
+          height: '10px',
+          backgroundColor: '#00ff88',
+          animation: 'shimmer 2s infinite',
+          borderRadius: '10px',
+          marginTop: '10px',
+        }}
+      />
+    </div>
+  );
+};
+
+export default SkeletonPage;
+```
+
+**vite.config.js**
+```javascript
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
@@ -109,10 +157,64 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
+            if (id.includes('react')) return 'react';
+            if (id.includes('react-router-dom')) return 'react-router-dom';
+            if (id.includes('lucide-react')) return 'lucide-react';
             return id.split('node_modules/')[1].split('/')[0].toString();
           }
         },
       },
     },
   },
+  css: {
+    modules: true,
+    preprocessorOptions: {
+      scss: {
+        additionalData: '@import "./src/styles/variables.scss";',
+      },
+    },
+  },
+  optimizeDeps: {
+    include: ['react', 'react-router-dom', 'lucide-react'],
+  },
 });
+```
+
+**src/styles/variables.scss**
+```scss
+:root {
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --border: rgba(255, 255, 255, 0.07);
+}
+```
+
+**package.json**
+```json
+{
+  "name": "trackr",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite serve"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-router-dom": "^6.3.0",
+    "lucide-react": "^1.0.0",
+    "tailwindcss": "^3.2.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^1.3.0",
+    "@tailwindcss/vite": "^1.3.0",
+    "vite": "^3.2.3"
+  }
+}
+```
+
+Notez que j'ai ajouté les dépendances nécessaires pour utiliser Tailwind CSS et que j'ai configuré Vite pour utiliser les modules CSS. J'ai également ajouté les styles nécessaires pour le thème sombre.
