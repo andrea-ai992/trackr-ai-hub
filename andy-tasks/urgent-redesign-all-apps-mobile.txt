@@ -1,0 +1,41 @@
+REDESIGN COMPLET — Toutes les apps mobiles Trackr + AnDy Dev
+
+PRIORITÉ ABSOLUE. Travaille dans cet ordre :
+
+═══════════════════════════════════════════
+1. APP TRACKR (src/) — Mobile-first redesign
+═══════════════════════════════════════════
+- Toutes les pages : fond #080808, cards rgba(255,255,255,0.04), backdrop-blur(12px), border rgba(255,255,255,0.07)
+- Accent : #00ff88, font : Inter, max-width 520px, safe-area padding
+- Animations : fadeUp stagger 60ms au mount, skeleton shimmer pendant loading
+- Dashboard (src/pages/Dashboard.jsx) : hero portfolio grande valeur, sparkline SVG 7j, Top Movers scroll horizontal, Fear&Greed gauge SVG, news feed, quick actions 2x2
+- Markets (src/pages/Markets.jsx) : liste fluide, prix animés pulse, filtres en chips scroll horizontal
+- BottomNav (src/components/BottomNav.jsx) : pill arrondi glassmorphism, icons + labels, active indicator vert
+- Transitions pages : fluides, 200ms ease-out
+- Tout doit être FAST : lazy loading, skeleton loaders partout, pas de layout shift
+
+═══════════════════════════════════════════
+2. APP AnDy DEV (deploy/dashboard.js — /vibe)
+═══════════════════════════════════════════
+Refaire VIBE_HTML complètement avec tabs améliorées :
+
+TAB LIVE : statut daemon, pipeline animé, queue avec noms tronqués
+TAB COMMITS : liste commits avec SHA coloré, badge AnDy vert
+TAB TÂCHE : form + chips + confirmation + statut tâches + logs
+TAB LOGS : logs colorés par type (push=vert, err=rouge, task=violet)
+TAB BRAIN : workers, stats coût, cycle count (nouveau tab)
+
+Chaque tab doit charger sa data indépendamment.
+Bottom nav pill glassmorphism avec 5 tabs.
+Auto-refresh : LIVE toutes les 4s, BRAIN toutes les 3s, autres on-demand.
+
+═══════════════════════════════════════════
+3. PERFORMANCE GÉNÉRALE
+═══════════════════════════════════════════
+- Vérifier que andy-daemon.js tourne sans blocage (semaphore, timeout, retry)
+- Vérifier que les tâches passent bien de .txt → .running → .done sans rester bloquées
+- Si une tâche est en .running depuis plus de 10min sans activité log → la requeue automatiquement
+- Logs plus verbeux : chaque étape du pipeline doit logger son avancement
+
+Commence par le Dashboard Trackr, puis BottomNav, puis Markets, puis /vibe.
+Commit après chaque fichier modifié avec message [AnDy] descriptif.

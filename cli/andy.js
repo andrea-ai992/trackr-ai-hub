@@ -24,6 +24,7 @@ for (const f of ['.env', '.env.local']) {
 }
 
 const API_KEY        = process.env.ANTHROPIC_API_KEY
+const GROQ_KEY       = process.env.GROQ_API_KEY
 const APP_URL        = process.env.APP_URL || 'https://trackr-app-nu.vercel.app'
 const CRON_SECRET    = process.env.CRON_SECRET || ''
 const GITHUB_TOKEN   = process.env.GITHUB_TOKEN || ''
@@ -245,31 +246,35 @@ Règles :
 - Réponses concises sauf si une explication longue est vraiment nécessaire.
 - Dans ce terminal, tu peux utiliser du markdown basique (** pour gras, \` pour code).`
 
-// ── Generate raw (silencieux, pour /git write, /bot brief, etc.) ────────────
-async function generateRaw(prompt, maxTokens = 8192) {
-  if (!API_KEY) return null
-  const WAITS = [20, 45, 90]
-  for (let attempt = 0; attempt < 4; attempt++) {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      body: JSON.stringify({ model: process.env._CLI_MODEL || 'claude-sonnet-4-6', max_tokens: maxTokens, system: SYSTEM, stream: false, messages: [{ role: 'user', content: prompt }] }),
-      signal: AbortSignal.timeout(120000),
-    }).catch(() => null)
-    if (res?.status === 429 && attempt < 3) {
-      const wait = WAITS[attempt]
-      for (let s = wait; s > 0; s--) {
-        out(`\r${BG}  ${_.amber}⏳ Rate limit generateRaw — reprise dans ${s}s…${R}   `)
-        await sl(1000)
+// ── Generate raw (Groq primary → Anthropic fallback) ─────────────────────────
+async function generateRaw(prompt, maxTokens = 4096) {
+  // 1) Groq
+  if (GROQ_KEY) {
+    try {
+      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GROQ_KEY}` },
+        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: prompt }], max_tokens: Math.min(maxTokens, 8000), temperature: 0.4 }),
+        signal: AbortSignal.timeout(60000),
+      }).catch(() => null)
+      if (r?.ok) {
+        const d = await r.json().catch(() => null)
+        const t = d?.choices?.[0]?.message?.content?.trim()
+        if (t) return t
       }
-      out('\r\x1b[2K')
-      continue
-    }
-    if (!res?.ok) return null
-    const d = await res.json().catch(() => null)
-    return d?.content?.[0]?.text?.trim() || null
+    } catch {}
   }
-  return null
+  // 2) Anthropic fallback
+  if (!API_KEY) return null
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: maxTokens, system: SYSTEM, stream: false, messages: [{ role: 'user', content: prompt }] }),
+    signal: AbortSignal.timeout(120000),
+  }).catch(() => null)
+  if (!res?.ok) return null
+  const d = await res.json().catch(() => null)
+  return d?.content?.[0]?.text?.trim() || null
 }
 
 // ── Chat streaming (extended thinking activé) ────────────────────────────────
@@ -333,6 +338,35 @@ async function chat(userMessage) {
   }
 
   spinStop()
+
+  // Fallback Groq si Anthropic échoue
+  if (!res.ok && GROQ_KEY) {
+    const status = res.status || 0
+    line(`  ${_.amber}⚠ Anthropic ${status} — bascule sur Groq…${R}`)
+    try {
+      const gr = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GROQ_KEY}` },
+        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: SYSTEM }, ...history], max_tokens: 4096, temperature: 0.5 }),
+        signal: AbortSignal.timeout(60000),
+      })
+      if (gr.ok) {
+        const d = await gr.json().catch(() => null)
+        const text = d?.choices?.[0]?.message?.content?.trim()
+        if (text) {
+          line()
+          out(`${BG}  `)
+          for (const ch of text) { out(ch); await sl(1) }
+          line(); line()
+          history.push({ role: 'assistant', content: text })
+          return
+        }
+      }
+    } catch {}
+    line(`  ${_.red}✗ Groq aussi inaccessible. Vérifie ta connexion.${R}`)
+    history.pop()
+    return
+  }
 
   try {
     if (!res.ok) {
