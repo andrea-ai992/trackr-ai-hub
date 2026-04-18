@@ -1,0 +1,189 @@
+src/styles/variables.css
+:root {
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --border: rgba(255, 255, 255, 0.07);
+}
+
+src/pages/Dashboard.jsx
+import React from 'react';
+import './Dashboard.css';
+import Sparkline from '../components/Sparkline';
+import TopMovers from '../components/TopMovers';
+import FearGreedGauge from '../components/FearGreedGauge';
+import NewsFeed from '../components/NewsFeed';
+import QuickActions from '../components/QuickActions';
+
+const Dashboard = () => {
+  return (
+    <div className="dashboard">
+      <div className="hero-portfolio">
+        {/* Hero Portfolio Component */}
+      </div>
+      <Sparkline />
+      <TopMovers />
+      <FearGreedGauge />
+      <NewsFeed />
+      <QuickActions />
+    </div>
+  );
+};
+
+export default Dashboard;
+
+src/pages/Dashboard.css
+.dashboard {
+  background-color: var(--bg);
+  color: var(--t1);
+  max-width: 520px;
+  padding: 16px;
+  margin: auto;
+}
+
+.hero-portfolio {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-up {
+  animation: fadeUp 0.6s ease-out forwards;
+}
+
+src/components/BottomNav.jsx
+import React from 'react';
+import { NavLink } from 'react-router-dom';
+import './BottomNav.css';
+
+const BottomNav = () => {
+  return (
+    <nav className="bottom-nav">
+      <NavLink to="/dashboard" activeClassName="active">
+        Dashboard
+      </NavLink>
+      <NavLink to="/markets" activeClassName="active">
+        Markets
+      </NavLink>
+      <NavLink to="/news" activeClassName="active">
+        News
+      </NavLink>
+      <NavLink to="/more" activeClassName="active">
+        More
+      </NavLink>
+      <NavLink to="/andy" activeClassName="active">
+        AnDy
+      </NavLink>
+    </nav>
+  );
+};
+
+export default BottomNav;
+
+src/components/BottomNav.css
+.bottom-nav {
+  display: flex;
+  justify-content: space-around;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 8px;
+}
+
+.bottom-nav a {
+  color: var(--t1);
+  text-align: center;
+  flex: 1;
+}
+
+.bottom-nav .active {
+  color: var(--green);
+}
+
+src/pages/Markets.jsx
+import React from 'react';
+import './Markets.css';
+
+const Markets = () => {
+  return (
+    <div className="markets">
+      {/* Market List Component */}
+    </div>
+  );
+};
+
+export default Markets;
+
+src/pages/Markets.css
+.markets {
+  background-color: var(--bg);
+  color: var(--t1);
+  max-width: 520px;
+  padding: 16px;
+  margin: auto;
+}
+
+.price-pulse {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+src/vibe/dashboard.js
+import React from 'react';
+import './Vibe.css';
+
+const Vibe = () => {
+  return (
+    <div className="vibe">
+      {/* Vibe Tabs Component */}
+    </div>
+  );
+};
+
+export default Vibe;
+
+src/vibe/Vibe.css
+.vibe {
+  background-color: var(--bg);
+  color: var(--t1);
+  max-width: 520px;
+  padding: 16px;
+  margin: auto;
+}
+
+.tab {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  padding: 16px;
+}
