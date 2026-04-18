@@ -1,0 +1,426 @@
+Création de src/pages/Dashboard/Dashboard.css
+```css
+/* Variables CSS */
+:root {
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --border: rgba(255, 255, 255, 0.07);
+}
+
+/* Styles globaux */
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg);
+  color: var(--t1);
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.header__greeting {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--t1);
+}
+
+.header__time {
+  font-size: 14px;
+  color: var(--t2);
+}
+
+.header__badge {
+  background-color: var(--green);
+  color: var(--t1);
+  padding: 5px 10px;
+  border-radius: 10px;
+  font-size: 14px;
+  position: relative;
+}
+
+.header__badge::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  background-color: var(--green);
+  border-radius: 50%;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* Section portfolio hero */
+.portfolio-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.portfolio-hero__value {
+  font-size: 36px;
+  font-weight: bold;
+  color: var(--t1);
+}
+
+.portfolio-hero__variation {
+  font-size: 18px;
+  color: var(--t2);
+}
+
+.portfolio-hero__sparkline {
+  width: 100%;
+  height: 20px;
+  margin-top: 10px;
+}
+
+.portfolio-hero__sparkline svg {
+  width: 100%;
+  height: 100%;
+}
+
+.portfolio-hero__sparkline svg path {
+  fill: var(--green);
+}
+
+/* Section Movers */
+.movers {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.movers__card {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.movers__card:last-child {
+  border-bottom: none;
+}
+
+.movers__card__symbol {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--t1);
+  margin-right: 10px;
+}
+
+.movers__card__price {
+  font-size: 18px;
+  color: var(--t2);
+}
+
+.movers__card__change {
+  font-size: 14px;
+  color: var(--t3);
+}
+
+.movers__card__change--positive {
+  color: var(--green);
+}
+
+.movers__card__change--negative {
+  color: var(--red);
+}
+
+/* Section Fear & Greed */
+.fear-and-greed {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.fear-and-greed__gauge {
+  width: 100%;
+  height: 100px;
+  margin-top: 10px;
+}
+
+.fear-and-greed__gauge svg {
+  width: 100%;
+  height: 100%;
+}
+
+.fear-and-greed__gauge svg path {
+  fill: var(--green);
+}
+
+.fear-and-greed__label {
+  font-size: 18px;
+  color: var(--t2);
+}
+
+.fear-and-greed__label--fear {
+  color: var(--red);
+}
+
+.fear-and-greed__label--greed {
+  color: var(--green);
+}
+
+.fear-and-greed__label--neutral {
+  color: var(--t3);
+}
+
+/* Section news feed */
+.news-feed {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.news-feed__item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.news-feed__item:last-child {
+  border-bottom: none;
+}
+
+.news-feed__item__title {
+  font-size: 18px;
+  color: var(--t1);
+}
+
+.news-feed__item__source {
+  font-size: 14px;
+  color: var(--t3);
+}
+
+.news-feed__item__time {
+  font-size: 14px;
+  color: var(--t3);
+}
+
+/* Section quick actions */
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  padding: 20px;
+}
+
+.quick-actions__item {
+  background-color: var(--bg2);
+  padding: 10px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quick-actions__item__icon {
+  font-size: 24px;
+  color: var(--t1);
+  margin-right: 10px;
+}
+
+.quick-actions__item__label {
+  font-size: 18px;
+  color: var(--t2);
+}
+
+/* Animations */
+.fadeUp {
+  animation: fadeUp 0.5s ease-out;
+}
+
+@keyframes fadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+```
+Création de src/pages/Dashboard/Dashboard.jsx
+```jsx
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { HiOutlineClock } from 'lucide-react';
+import { supabase } from '../utils/supabase';
+
+const Dashboard = () => {
+  const location = useLocation();
+  const [data, setData] = useState({
+    portfolioValue: 24830,
+    portfolioVariation: 2.4,
+    movers: [],
+    fearAndGreed: {
+      value: 50,
+      label: 'Neutral',
+    },
+    news: [],
+  });
+
+  useEffect(() => {
+    const fetchPortfolioValue = async () => {
+      const { data: portfolioValue } = await supabase
+        .from('portfolio')
+        .select('value')
+        .eq('user_id', 'current_user_id');
+      setData((prevData) => ({ ...prevData, portfolioValue: portfolioValue[0].value }));
+    };
+
+    const fetchPortfolioVariation = async () => {
+      const { data: portfolioVariation } = await supabase
+        .from('portfolio')
+        .select('variation')
+        .eq('user_id', 'current_user_id');
+      setData((prevData) => ({ ...prevData, portfolioVariation: portfolioVariation[0].variation }));
+    };
+
+    const fetchMovers = async () => {
+      const { data: movers } = await supabase
+        .from('movers')
+        .select('symbol, price, change')
+        .limit(10);
+      setData((prevData) => ({ ...prevData, movers }));
+    };
+
+    const fetchFearAndGreed = async () => {
+      const { data: fearAndGreed } = await supabase
+        .from('fear_and_greed')
+        .select('value, label')
+        .eq('user_id', 'current_user_id');
+      setData((prevData) => ({ ...prevData, fearAndGreed }));
+    };
+
+    const fetchNews = async () => {
+      const { data: news } = await supabase
+        .from('news')
+        .select('title, source, time')
+        .limit(3);
+      setData((prevData) => ({ ...prevData, news }));
+    };
+
+    fetchPortfolioValue();
+    fetchPortfolioVariation();
+    fetchMovers();
+    fetchFearAndGreed();
+    fetchNews();
+  }, []);
+
+  return (
+    <div className="container">
+      <header className="header">
+        <span className="header__greeting">Bonjour Andrea</span>
+        <span className="header__time">
+          <HiOutlineClock />
+          {new Date().toLocaleTimeString()}
+        </span>
+        <span className="header__badge">
+          Live
+        </span>
+      </header>
+      <section className="portfolio-hero">
+        <span className="portfolio-hero__value">${data.portfolioValue}</span>
+        <span className="portfolio-hero__variation">
+          {data.portfolioVariation > 0 ? (
+            <span className="portfolio-hero__variation--positive">
+              +{data.portfolioVariation}%
+            </span>
+          ) : (
+            <span className="portfolio-hero__variation--negative">
+              {data.portfolioVariation}%
+            </span>
+          )}
+        </span>
+        <svg className="portfolio-hero__sparkline" viewBox="0 0 100 20">
+          <path d="M0 10 L50 15 L100 10" />
+        </svg>
+      </section>
+      <section className="movers">
+        {data.movers.map((mover, index) => (
+          <div key={index} className="movers__card">
+            <span className="movers__card__symbol">{mover.symbol}</span>
+            <span className="movers__card__price">${mover.price}</span>
+            <span className="movers__card__change">
+              {mover.change > 0 ? (
+                <span className="movers__card__change--positive">
+                  +{mover.change}%
+                </span>
+              ) : (
+                <span className="movers__card__change--negative">
+                  {mover.change}%
+                </span>
+              )}
+            </span>
+          </div>
+        ))}
+      </section>
+      <section className="fear-and-greed">
+        <svg className="fear-and-greed__gauge" viewBox="0 0 100 100">
+          <path d="M50 0 A50 50 0 0 1 100 100 L0 100 A50 50 0 0 1 50 0 Z" />
+        </svg>
+        <span className="fear-and-greed__label">
+          {data.fearAndGreed.label}
+        </span>
+      </section>
+      <section className="news-feed">
+        {data.news.map((news, index) => (
+          <div key={index} className="news-feed__item">
+            <span className="news-feed__item__title">{news.title}</span>
+            <span className="news-feed__item__source">{news.source}</span>
+            <span className="news-feed__item__time">{news.time}</span>
+          </div>
+        ))}
+      </section>
+      <section className="quick-actions">
+        {[
+          { icon: 'Market', label: 'Markets' },
+          { icon: 'Portfolio', label: 'Portfolio' },
+          { icon: 'Signal', label: 'Signals' },
+          { icon: 'Andy', label: 'AnDy' },
+        ].map((action, index) => (
+          <div key={index} className="quick-actions__item">
+            <span className="quick-actions__item__icon">{action.icon}</span>
+            <span className="quick-actions__item__label">{action.label}</span>
+          </div>
+        ))}
+      </section>
+    </div>
+  );
+};
+
+export default Dashboard;
