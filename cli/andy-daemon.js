@@ -186,9 +186,15 @@ const MODEL_FAST   = 'claude-3-5-haiku-20241022'
 const GROQ_SMART   = 'llama-3.3-70b-versatile'
 const GROQ_FAST    = 'llama-3.1-8b-instant'
 
-// Semaphore global — Groq/Anthropic: 3 parallèles · Gemini seul: 1 (15 req/min)
-const API_SEMAPHORE_LIMIT = GROQ_KEY ? 3 : 1
+// Semaphore dynamique — ajuste selon les providers disponibles
+const API_SEMAPHORE_LIMIT = 3  // max absolu
 let   apiConcurrent = 0
+
+function activeSemaphoreLimit() {
+  if (GROQ_KEY && providerAvailable('groq')) return 3
+  if (API_KEY  && providerAvailable('anthropic')) return 2
+  return 1  // Gemini/OpenRouter seuls — sérialiser pour 15 req/min
+}
 
 // Cooldown par provider — évite retry inutile quand daily limit ou crédits épuisés
 const providerCooldown = { groq: 0, gemini: 0, openrouter: 0, anthropic: 0, ollama: 0 }
@@ -265,7 +271,7 @@ async function callGemini(prompt, maxTokens) {
 
 // ── Multi-provider LLM — chaîne de fallback intelligente ─────────────────────
 async function generateRaw(prompt, maxTokens = 4096, hint = 'smart') {
-  while (apiConcurrent >= API_SEMAPHORE_LIMIT) await sl(500)
+  while (apiConcurrent >= activeSemaphoreLimit()) await sl(500)
   apiConcurrent++
   try {
     // Helper: appelle un provider avec retries sur 429 transient
