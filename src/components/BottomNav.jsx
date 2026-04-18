@@ -1,10 +1,10 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
-import { Home, Trophy, TrendingUp, Newspaper, MoreHorizontal } from 'lucide-react';
+import { Home, Trophy, TrendingUp, Newspaper, MoreHorizontal, Activity } from 'lucide-react';
 
 const TABS = [
   { to: '/', icon: Home, label: 'Home' },
-  { to: '/sports', icon: Trophy, label: 'Sports' },
+  { to: '/sports', icon: Activity, label: 'Sports' },
   { to: '/markets', icon: TrendingUp, label: 'Markets' },
   { to: '/news', icon: Newspaper, label: 'News' },
   { to: '/more', icon: MoreHorizontal, label: 'More' },
@@ -84,15 +84,15 @@ export default function BottomNav() {
           gap: 2,
           width: '100%',
           maxWidth: 380,
-          background: 'rgba(8, 8, 8, 0.92)',
+          background: 'var(--surface)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
-          borderTop: '1px solid rgba(255, 255, 255, 0.07)',
+          borderTop: '1px solid var(--border)',
           borderRadius: 0,
           padding: '5px 6px',
           boxShadow: '0 -8px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--border-bright) inset',
           position: 'relative',
-          height: 60,
+          height: 56,
           pointerEvents: 'auto',
           WebkitTapHighlightColor: 'transparent',
         }}
@@ -106,10 +106,10 @@ export default function BottomNav() {
               bottom: 0,
               left: pillStyle.left,
               width: pillStyle.width,
-              backgroundColor: 'rgba(0, 255, 136, 0.12)',
+              backgroundColor: 'var(--surface-high)',
               border: '1px solid var(--neon)',
-              borderRadius: 12,
-              transition: 'left 300ms cubic-bezier(0.4, 0, 0.2, 1), width 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+              borderRadius: 999,
+              transition: 'left 250ms ease, width 250ms ease',
               pointerEvents: 'none',
               zIndex: 0,
             }}
@@ -136,7 +136,7 @@ export default function BottomNav() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 3,
-                minHeight: 60,
+                minHeight: 56,
                 padding: '8px 4px',
                 position: 'relative',
                 background: 'transparent',
@@ -164,7 +164,7 @@ export default function BottomNav() {
                   size={22}
                   strokeWidth={active ? 2.2 : 1.6}
                   style={{
-                    color: active ? 'var(--neon)' : '#444',
+                    color: active ? 'var(--neon)' : 'var(--text-muted)',
                     transition: 'color 200ms ease',
                   }}
                 />
@@ -186,7 +186,7 @@ export default function BottomNav() {
                       justifyContent: 'center',
                       padding: '0 3px',
                       boxShadow: '0 0 6px rgba(239, 68, 68, 0.6)',
-                      border: '1.5px solid #0b1323',
+                      border: '1.5px solid var(--bg)',
                     }}
                   >
                     {badge > 99 ? '99+' : badge}
@@ -196,9 +196,9 @@ export default function BottomNav() {
 
               <span
                 style={{
-                  fontSize: 9,
+                  fontSize: 8,
                   fontWeight: active ? 700 : 500,
-                  color: active ? 'var(--neon)' : '#444',
+                  color: active ? 'var(--neon)' : 'var(--text-secondary)',
                   transition: 'color 200ms ease, font-weight 200ms ease',
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
