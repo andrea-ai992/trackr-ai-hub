@@ -88,3 +88,36 @@ function validateTasks(tasks) {
 
   return { isValid: true };
 }
+
+function priorityScore(filename) {
+  let score = 0;
+
+  if (filename.startsWith('NUIT-')) score += 100;
+  else if (filename.startsWith('v2-')) score += 80;
+  else if (filename.startsWith('manual-')) score += 60;
+  else if (filename.startsWith('auto-')) score += 40;
+
+  if (filename.includes('redesign')) score += 20;
+  if (filename.includes('fix')) score += 30;
+  if (filename.includes('critical')) score += 50;
+  if (filename.includes('perf')) score += 10;
+
+  return score;
+}
+
+async function claimNextTask() {
+  const tasks = await getPendingTasks();
+  tasks.sort((a, b) => priorityScore(b) - priorityScore(a));
+
+  if (tasks.length === 0) {
+    console.log('Aucune tâche à traiter.');
+    return;
+  }
+
+  const nextTask = tasks[0];
+  const score = priorityScore(nextTask);
+  console.log(`Tâche réclamée: ${nextTask} avec un score de priorité de ${score}`);
+
+  // Logique pour traiter la tâche
+  await processTask(nextTask);
+}
