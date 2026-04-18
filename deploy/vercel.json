@@ -1,0 +1,160 @@
+**1. Ajoute headers de sécurité dans vercel.json**
+```json
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "index.js",
+      "use": "@vercel/static-build",
+      "config": {
+        "headers": [
+          {
+            "source": "/",
+            "headers": [
+              {
+                "key": "X-Frame-Options",
+                "value": "DENY"
+              },
+              {
+                "key": "X-Content-Type-Options",
+                "value": "nosniff"
+              },
+              {
+                "key": "Referrer-Policy",
+                "value": "strict-origin-when-cross-origin"
+              },
+              {
+                "key": "Permissions-Policy",
+                "value": "camera=(,), microphone=(,), geolocation=(,)"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+**2. Crée le middleware d'API sécurité dans api/_security.js**
+```javascript
+import { NextApiRequest, NextApiResponse } from 'next';
+import { SupabaseClient } from '@supabase/supabase-js';
+
+const supabase = new SupabaseClient('https://trackr-app-nu.supabase.co', {
+  key: 'YOUR_API_KEY',
+  secret: 'YOUR_API_SECRET',
+});
+
+const rateLimit = new Map();
+
+const securityMiddleware = async (req: NextApiRequest, res: NextApiResponse) => {
+  const ip = req.ip;
+  const now = Date.now();
+
+  if (rateLimit.has(ip)) {
+    const limit = rateLimit.get(ip);
+    if (now - limit.timestamp > 60000) {
+      rateLimit.delete(ip);
+    } else if (limit.count >= 100) {
+      return res.status(429).json({ error: 'Too many requests' });
+    }
+  }
+
+  rateLimit.set(ip, { count: 0, timestamp: now });
+
+  const apiKey = req.headers['x-api-key'];
+  if (!apiKey) {
+    return res.status(401).json({ error: 'API key missing' });
+  }
+
+  const { data, error } = await supabase
+    .from('api_keys')
+    .select('id')
+    .eq('key', apiKey);
+
+  if (error || !data.length) {
+    return res.status(401).json({ error: 'Invalid API key' });
+  }
+
+  const sanitizedInput = sanitizeInput(req.body);
+  req.body = sanitizedInput;
+
+  return next();
+};
+
+export default securityMiddleware;
+```
+
+**3. Vérifie que .env n'est pas dans le build Vite**
+```javascript
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  envPrefix: 'VITE_',
+  // ...
+});
+```
+
+**4. Crée la fonction sanitizeInput dans src/utils/sanitize.ts**
+```typescript
+function sanitizeInput(str: string) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
+export default sanitizeInput;
+```
+
+**5. Crée deploy/vercel.json from scratch**
+```json
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "index.js",
+      "use": "@vercel/static-build",
+      "config": {
+        "headers": [
+          {
+            "source": "/",
+            "headers": [
+              {
+                "key": "X-Frame-Options",
+                "value": "DENY"
+              },
+              {
+                "key": "X-Content-Type-Options",
+                "value": "nosniff"
+              },
+              {
+                "key": "Referrer-Policy",
+                "value": "strict-origin-when-cross-origin"
+              },
+              {
+                "key": "Permissions-Policy",
+                "value": "camera=(,), microphone=(,), geolocation=(,)"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+**6. Ajoute la sécurité au niveau de la route dans api/_security.js**
+```javascript
+import { NextApiRequest, NextApiResponse } from 'next';
+import securityMiddleware from './_security';
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  await securityMiddleware(req, res);
+
+  // Traitement de la requête
+}
