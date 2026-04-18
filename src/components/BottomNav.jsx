@@ -112,9 +112,10 @@ export default function BottomNav() {
             height: pillStyle.height,
             backgroundColor: 'var(--green)',
             border: `1px solid var(--border-hi)`,
-            borderRadius: '999px',
+            borderRadius: '12px',
+            padding: '6px 16px',
             transform: `translateX(${pillStyle.left}px)`,
-            transition: 'transform 250ms ease',
+            transition: 'transform 300ms ease',
             pointerEvents: 'none',
             zIndex: 0,
           }}
