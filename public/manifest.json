@@ -1,6 +1,3 @@
-Je vais nettoyer et compléter le manifest.json avec les champs PWA requis et ajouter les shortcuts pour Dashboard, Sports et Markets.
-
-```json
 {
   "short_name": "Trackr",
   "name": "Trackr Application",
@@ -8,7 +5,7 @@ Je vais nettoyer et compléter le manifest.json avec les champs PWA requis et aj
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "theme_color": "#080808",
+  "theme_color": "#00ff88",
   "background_color": "#080808",
   "lang": "fr-FR",
   "dir": "ltr",
