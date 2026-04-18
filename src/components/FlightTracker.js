@@ -1,9 +1,50 @@
-// src/components/FlightTracker.js
+Pour ajouter un statut live à la page FlightTracker, nous allons créer un nouveau composant appelé `FlightStatus` qui affichera le statut live du vol. Nous allons également modifier le composant `FlightTracker` pour inclure le nouveau composant.
 
+**src/components/FlightStatus.js**
+```jsx
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../utils/supabase';
+
+const FlightStatus = ({ flightId }) => {
+  const [status, setStatus] = useState('');
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('flights')
+          .select('status')
+          .eq('id', flightId);
+        if (error) {
+          console.error(error);
+        } else {
+          setStatus(data[0].status);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    fetchStatus();
+  }, [flightId]);
+
+  return (
+    <div className="status">
+      <span className="label">Statut live :</span>
+      <span className="value">{status}</span>
+    </div>
+  );
+};
+
+export default FlightStatus;
+```
+
+**src/components/FlightTracker.js**
+```jsx
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Icon } from '@lucide-react-native/core';
 import { supabase } from '../utils/supabase';
+import FlightStatus from './FlightStatus';
 
 const FlightTracker = () => {
   const [flights, setFlights] = useState([]);
@@ -77,6 +118,7 @@ const FlightTracker = () => {
             >
               Afficher l'alerte
             </button>
+            <FlightStatus flightId={flight.id} />
           </li>
         ))}
       </ul>
@@ -129,6 +171,11 @@ const styles = {
     border: 'none',
     cursor: 'pointer',
   },
+  status: {
+    backgroundColor: 'var(--bg2)',
+    padding: '10px',
+    borderRadius: '10px',
+  },
 };
 
 FlightTracker.styles = styles;
@@ -136,85 +183,23 @@ FlightTracker.styles = styles;
 export default FlightTracker;
 ```
 
+**src/styles/globals.css**
 ```css
-/* src/styles/globals.css */
-
-:root {
-  --green: #00ff88;
-  --bg: #080808;
-  --bg2: #111;
-  --t1: #f0f0f0;
-  --t2: #888;
-  --t3: #444;
-  --border: rgba(255, 255, 255, 0.07);
-}
-
-.container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
-  background-color: var(--bg);
-}
-
-.title {
-  color: var(--t1);
-  font-size: 24px;
-  margin-bottom: 20px;
-}
-
-.flights {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.flight {
-  padding: 10px;
-  border-bottom: 1px solid var(--border);
-}
-
-.departure,
-.arrival {
-  color: var(--t2);
-  font-size: 18px;
-}
-
 .status {
-  color: var(--t3);
+  background-color: var(--bg2);
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.status .label {
+  color: var(--t2);
   font-size: 14px;
 }
 
-.alerte {
-  background-color: var(--green);
-  padding: 5px;
-  border-radius: 10px;
-}
-
-.btn {
-  background-color: var(--bg2);
+.status .value {
   color: var(--t1);
-  padding: 10px;
-  border-radius: 10px;
-  border: none;
-  cursor: pointer;
+  font-size: 18px;
 }
 ```
 
-```javascript
-// src/App.js
-
-import React from 'react';
-import { BrowserRouter, Route, Switch } from 'react-router-dom';
-import FlightTracker from './components/FlightTracker';
-
-const App = () => {
-  return (
-    <BrowserRouter>
-      <Switch>
-        <Route path="/flight-tracker" component={FlightTracker} />
-      </Switch>
-    </BrowserRouter>
-  );
-};
-
-export default App;
+Nous avons ajouté un nouveau composant `FlightStatus` qui affiche le statut live du vol en fonction de l'ID du vol. Nous avons également modifié le composant `FlightTracker` pour inclure le nouveau composant dans chaque élément de la liste des vols.
