@@ -1,85 +1,94 @@
-/* src/components/BottomNav.css */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap');
+import React from 'react';
+import { NavLink } from 'react-router-dom';
+import { Home, Sports, Market, News, More } from 'lucide-react';
+import './BottomNav.css';
+
+const BottomNav = ({ unreadNews }) => {
+  return (
+    <div className="bottom-nav">
+      <NavLink to="/" className="nav-item" activeClassName="active">
+        <Home size={22} />
+        <span className="nav-label">Home</span>
+      </NavLink>
+      <NavLink to="/sports" className="nav-item" activeClassName="active">
+        <Sports size={22} />
+        <span className="nav-label">Sports</span>
+      </NavLink>
+      <NavLink to="/markets" className="nav-item" activeClassName="active">
+        <Market size={22} />
+        <span className="nav-label">Markets</span>
+      </NavLink>
+      <NavLink to="/news" className="nav-item" activeClassName="active">
+        <News size={22} />
+        {unreadNews > 0 && <span className="badge">{unreadNews}</span>}
+        <span className="nav-label">News</span>
+      </NavLink>
+      <NavLink to="/more" className="nav-item" activeClassName="active">
+        <More size={22} />
+        <span className="nav-label">More</span>
+      </NavLink>
+    </div>
+  );
+};
+
+export default BottomNav;
 
 .bottom-nav {
-  --tab-active-color: var(--green);
-  --tab-inactive-color: var(--t3);
-  --badge-color: #ff3b30;
-
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: calc(60px + env(safe-area-inset-bottom));
-  padding-bottom: env(safe-area-inset-bottom);
-  background: rgba(8, 8, 8, 0.92);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-top: 1px solid var(--border);
   display: flex;
   justify-content: space-around;
   align-items: center;
-  z-index: 1000;
-  font-family: 'Inter', sans-serif;
+  height: 60px;
+  background: rgba(8, 8, 8, 0.92);
+  backdrop-filter: blur(24px);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
-.tab {
-  position: relative;
+.nav-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  height: 100%;
-  flex: 1;
-  color: var(--tab-inactive-color);
+  color: var(--t3);
   text-decoration: none;
-  transition: color 0.2s ease;
-  cursor: pointer;
-  transform: scale(1);
+  position: relative;
+  transition: transform 300ms ease;
 }
 
-.tab:hover {
-  color: var(--green);
-}
-
-.tab:active {
+.nav-item:hover {
   transform: scale(0.92);
 }
 
-.tab-icon {
-  width: 22px;
-  height: 22px;
-  margin-bottom: 4px;
-}
-
-.tab-label {
+.nav-label {
   font-size: 9px;
-  font-weight: 500;
-  letter-spacing: 0.5px;
 }
 
-.tab.active .tab-icon,
-.tab.active .tab-label {
-  color: var(--tab-active-color);
+.active {
+  color: var(--green);
 }
 
-.pill-indicator {
+.active .nav-label {
+  color: var(--green);
+}
+
+.nav-item.active::before {
+  content: '';
   position: absolute;
-  bottom: 12px;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
   background: rgba(0, 255, 136, 0.12);
   border-radius: 12px;
   padding: 6px 16px;
-  pointer-events: none;
   transition: transform 300ms ease;
-  z-index: -1;
 }
 
 .badge {
   position: absolute;
-  top: 8px;
-  right: 12px;
-  width: 6px;
-  height: 6px;
-  background-color: var(--badge-color);
+  top: 0;
+  right: 0;
+  background: red;
   border-radius: 50%;
+  color: white;
+  font-size: 10px;
+  padding: 2px 5px;
 }
