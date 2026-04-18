@@ -1,4 +1,4 @@
-Je vais implémenter les modifications nécessaires pour ajouter un système de timeout robuste avec `AbortSignal.timeout()` pour toutes les requêtes fetch dans `src/api/brain.js` et `src/api/brain-explorer.js`. Voici les fichiers mis à jour :
+Je vais implémenter les modifications nécessaires pour ajouter des timeouts robustes à tous les fetch() dans les fichiers concernés. Voici les fichiers mis à jour :
 
 ```javascript
 // src/api/brain.js
@@ -51,14 +51,19 @@ const Brain = () => {
       setLoading(true);
       setError(null);
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
       const response = await fetch('/api/brain', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(signals),
-        signal: AbortSignal.timeout(10000),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -80,7 +85,7 @@ const Brain = () => {
   };
 
   return (
-    <div className="container" style={{ backgroundColor: 'var(--bg)', padding: '20px' }}>
+    <div className="container" style={{ backgroundColor: 'var(--bg)', padding: '20px', fontFamily: 'Inter, sans-serif' }}>
       <h1 style={{ color: 'var(--green)', fontSize: '24px', marginBottom: '20px' }}>Signaux IA</h1>
       {error && (
         <div style={{ color: 'var(--t1)', backgroundColor: '#ff444420', padding: '10px', borderRadius: '5px', marginBottom: '20px', border: '1px solid #ff444440' }}>
@@ -89,7 +94,7 @@ const Brain = () => {
       )}
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label style={{ color: 'var(--t1)' }}>RSI</label>
+          <label style={{ color: 'var(--t1)', fontSize: '16px', display: 'block', marginBottom: '5px' }}>RSI</label>
           <input
             type="number"
             value={signals.rsi.value}
@@ -100,16 +105,17 @@ const Brain = () => {
               border: '1px solid var(--border)',
               color: 'var(--t1)',
               borderRadius: '4px',
-              padding: '10px',
+              padding: '12px',
               width: '100%',
-              fontSize: '16px'
+              fontSize: '16px',
+              fontFamily: 'Inter, sans-serif'
             }}
           />
         </div>
         <div className="form-group">
-          <label style={{ color: 'var(--t1)' }}>MACD</label>
+          <label style={{ color: 'var(--t1)', fontSize: '16px', display: 'block', marginBottom: '5px', marginTop: '15px' }}>MACD</label>
           <div className="form-group">
-            <label style={{ color: 'var(--t1)', marginTop: '10px', display: 'block' }}>Fast</label>
+            <label style={{ color: 'var(--t1)', marginTop: '10px', display: 'block', fontSize: '14px' }}>Fast</label>
             <input
               type="number"
               value={signals.macd.fast}
@@ -120,14 +126,15 @@ const Brain = () => {
                 border: '1px solid var(--border)',
                 color: 'var(--t1)',
                 borderRadius: '4px',
-                padding: '10px',
+                padding: '12px',
                 width: '100%',
-                fontSize: '16px'
+                fontSize: '16px',
+                fontFamily: 'Inter, sans-serif'
               }}
             />
           </div>
           <div className="form-group">
-            <label style={{ color: 'var(--t1)', marginTop: '10px', display: 'block' }}>Slow</label>
+            <label style={{ color: 'var(--t1)', marginTop: '10px', display: 'block', fontSize: '14px' }}>Slow</label>
             <input
               type="number"
               value={signals.macd.slow}
@@ -138,15 +145,16 @@ const Brain = () => {
                 border: '1px solid var(--border)',
                 color: 'var(--t1)',
                 borderRadius: '4px',
-                padding: '10px',
+                padding: '12px',
                 width: '100%',
-                fontSize: '16px'
+                fontSize: '16px',
+                fontFamily: 'Inter, sans-serif'
               }}
             />
           </div>
         </div>
         <div className="form-group">
-          <label style={{ color: 'var(--t1)' }}>Volume</label>
+          <label style={{ color: 'var(--t1)', fontSize: '16px', display: 'block', marginBottom: '5px', marginTop: '15px' }}>Volume</label>
           <input
             type="number"
             value={signals.volume.value}
@@ -157,9 +165,10 @@ const Brain = () => {
               border: '1px solid var(--border)',
               color: 'var(--t1)',
               borderRadius: '4px',
-              padding: '10px',
+              padding: '12px',
               width: '100%',
               fontSize: '16px',
+              fontFamily: 'Inter, sans-serif',
               marginBottom: '10px'
             }}
           />
@@ -173,9 +182,10 @@ const Brain = () => {
               border: '1px solid var(--border)',
               color: 'var(--t1)',
               borderRadius: '4px',
-              padding: '10px',
+              padding: '12px',
               width: '100%',
-              fontSize: '16px'
+              fontSize: '16px',
+              fontFamily: 'Inter, sans-serif'
             }}
           />
         </div>
@@ -184,8 +194,8 @@ const Brain = () => {
           disabled={loading}
           style={{
             width: '100%',
-            height: '40px',
-            padding: '10px',
+            height: '48px',
+            padding: '12px',
             fontSize: '16px',
             backgroundColor: loading ? 'var(--border)' : 'var(--green)',
             border: 'none',
@@ -193,7 +203,9 @@ const Brain = () => {
             cursor: loading ? 'not-allowed' : 'pointer',
             borderRadius: '4px',
             fontWeight: '600',
-            transition: 'background-color 0.2s'
+            transition: 'all 0.2s ease',
+            fontFamily: 'Inter, sans-serif',
+            marginTop: '20px'
           }}
         >
           {loading ? 'Envoi en cours...' : 'Soumettre'}
@@ -222,11 +234,16 @@ const BrainExplorer = () => {
         setLoading(true);
         setError(null);
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
         const { data, error } = await supabase
           .from('signals')
           .select('*')
           .order('id', { ascending: false })
-          .timeout(10000);
+          .abortSignal(controller.signal);
+
+        clearTimeout(timeoutId);
 
         if (error) {
           setError(error.message);
@@ -256,39 +273,39 @@ const BrainExplorer = () => {
 
   if (loading) {
     return (
-      <div className="container" style={{ backgroundColor: 'var(--bg)', padding: '20px' }}>
+      <div className="container" style={{ backgroundColor: 'var(--bg)', padding: '20px', fontFamily: 'Inter, sans-serif' }}>
         <h1 style={{ color: 'var(--green)', fontSize: '24px', marginBottom: '20px' }}>Explorateur de signaux</h1>
-        <p style={{ color: 'var(--t1)' }}>Chargement en cours...</p>
+        <p style={{ color: 'var(--t1)', fontSize: '16px' }}>Chargement en cours...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="container" style={{ backgroundColor: 'var(--bg)', padding: '20px' }}>
+      <div className="container" style={{ backgroundColor: 'var(--bg)', padding: '20px', fontFamily: 'Inter, sans-serif' }}>
         <h1 style={{ color: 'var(--green)', fontSize: '24px', marginBottom: '20px' }}>Explorateur de signaux</h1>
-        <p style={{ color: 'var(--t1)' }}>Erreur: {error}</p>
+        <p style={{ color: 'var(--t1)', fontSize: '16px' }}>Erreur: {error}</p>
       </div>
     );
   }
 
   return (
-    <div className="container" style={{ backgroundColor: 'var(--bg)', padding: '20px' }}>
+    <div className="container" style={{ backgroundColor: 'var(--bg)', padding: '20px', fontFamily: 'Inter, sans-serif' }}>
       <h1 style={{ color: 'var(--green)', fontSize: '24px', marginBottom: '20px' }}>Explorateur de signaux</h1>
       {signals.length === 0 ? (
-        <p style={{ color: 'var(--t1)' }}>Aucun signal trouvé</p>
+        <p style={{ color: 'var(--t1)', fontSize: '16px' }}>Aucun signal trouvé</p>
       ) : (
         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
           {signals.map((signal) => (
-            <li key={signal.id} style={{ marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg2)', borderRadius: '5px', border: '1px solid var(--border)' }}>
-              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '5px 0' }}>ID: {signal.id}</p>
-              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '5px 0' }}>RSI: {signal.rsi}</p>
-              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '5px 0' }}>MACD: {signal.macd}</p>
-              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '5px 0' }}>MACD Fast: {signal.macd_fast}</p>
-              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '5px 0' }}>MACD Slow: {signal.macd_slow}</p>
-              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '5px 0' }}>Volume: {signal.volume}</p>
-              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '5px 0' }}>Volume Period: {signal.volume_period}</p>
-              <p style={{ color: 'var(--t3)', fontSize: '14px', margin: '5px 0' }}>Créé le: {new Date(signal.created_at).toLocaleString()}</p>
+            <li key={signal.id} style={{ marginBottom: '20px', padding: '20px', backgroundColor: 'var(--bg2)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '8px 0' }}><strong>ID:</strong> {signal.id}</p>
+              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '8px 0' }}><strong>RSI:</strong> {signal.rsi}</p>
+              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '8px 0' }}><strong>MACD:</strong> {signal.macd}</p>
+              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '8px 0' }}><strong>MACD Fast:</strong> {signal.macd_fast}</p>
+              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '8px 0' }}><strong>MACD Slow:</strong> {signal.macd_slow}</p>
+              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '8px 0' }}><strong>Volume:</strong> {signal.volume}</p>
+              <p style={{ color: 'var(--t1)', fontSize: '18px', margin: '8px 0' }}><strong>Volume Period:</strong> {signal.volume_period}</p>
+              <p style={{ color: 'var(--t3)', fontSize: '14px', margin: '8px 0' }}><strong>Créé le:</strong> {new Date(signal.created_at).toLocaleString()}</p>
             </li>
           ))}
         </ul>
