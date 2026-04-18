@@ -1,0 +1,68 @@
+const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
+
+const TASK_STATUS_FILE = path.join(__dirname, '..', '.task-status.json');
+const ANDY_MEMORY_FILE = path.join(__dirname, '..', 'public', 'ANDY_MEMORY.json');
+
+function readLastTasks() {
+    if (fs.existsSync(TASK_STATUS_FILE)) {
+        const data = JSON.parse(fs.readFileSync(TASK_STATUS_FILE, 'utf-8'));
+        return {
+            completedTasks: data.completedTasks.slice(-20),
+            errors: data.errors.slice(-5),
+        };
+    }
+    return { completedTasks: [], errors: [] };
+}
+
+function getRecentModifiedFiles() {
+    const output = execSync('git diff --name-only HEAD~10').toString();
+    return output.split('\n').filter(file => file);
+}
+
+function analyzeContext(lastTasks, recentFiles) {
+    // Analyze the context based on last tasks and recent files
+    // This is a placeholder for actual analysis logic
+    return {
+        lastTasks,
+        recentFiles,
+        issues: [
+            'Navigation is unclear',
+            'Buttons are too small',
+            'Loading times are excessive',
+        ],
+    };
+}
+
+function askClaude(issues) {
+    // Simulate asking Claude (Haiku) for UX problems
+    return issues.slice(0, 3);
+}
+
+function saveReflection(reflection) {
+    fs.writeFileSync(ANDY_MEMORY_FILE, JSON.stringify(reflection, null, 2));
+}
+
+function generateNextTasks() {
+    const { completedTasks, errors } = readLastTasks();
+    const recentFiles = getRecentModifiedFiles();
+    const context = analyzeContext(completedTasks, recentFiles);
+    const urgentIssues = askClaude(context.issues);
+
+    const newTasks = urgentIssues.map(issue => ({
+        task: `Fix UX issue: ${issue}`,
+        status: 'pending',
+    }));
+
+    const reflection = {
+        context,
+        urgentIssues,
+        newTasks,
+    };
+
+    saveReflection(reflection);
+    return newTasks;
+}
+
+module.exports = { generateNextTasks };
