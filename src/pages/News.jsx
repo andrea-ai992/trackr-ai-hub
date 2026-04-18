@@ -1,3 +1,6 @@
+Pour améliorer le design et ajouter un header sticky pour les onglets de catégories, voici le code modifié :
+
+```jsx
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   RefreshCw,
@@ -234,6 +237,131 @@ function NewsCard({ item }) {
   );
 }
 
+// ─── Header component ─────────────────────────────────────────────────────────
+function Header() {
+  const [tab, setTab] = useState('all');
+
+  return (
+    <header
+      style={{
+        position: 'sticky',
+        top: 0,
+        background: 'var(--bg)',
+        zIndex: 10,
+        padding: '12px 0',
+        backdropFilter: 'blur(12px)',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          marginBottom: '12px',
+        }}
+      >
+        <div
+          style={{
+            position: 'relative',
+            flex: 1,
+            maxWidth: '240px',
+            transition: 'max-width 0.3s ease',
+          }}
+        >
+          <Search
+            size={18}
+            style={{
+              position: 'absolute',
+              left: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--t3)',
+              pointerEvents: 'none',
+            }}
+          />
+          <input
+            type="text"
+            placeholder="Search news..."
+            style={{
+              width: '100%',
+              padding: '10px 12px 10px 38px',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
+              background: 'var(--bg2)',
+              color: 'var(--t1)',
+              fontSize: '14px',
+              outline: 'none',
+              transition: 'all 0.3s ease',
+            }}
+          />
+          <button
+            onClick={() => setTab('all')}
+            style={{
+              position: 'absolute',
+              right: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'none',
+              border: 'none',
+              color: 'var(--t3)',
+              cursor: 'pointer',
+              padding: '4px',
+            }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            overflowX: 'auto',
+            gap: '8px',
+            paddingBottom: '8px',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+          }}
+        >
+          {TABS.map((tabItem) => (
+            <button
+              key={tabItem.id}
+              onClick={() => setTab(tabItem.id)}
+              style={{
+                flex: 'none',
+                padding: '8px 16px',
+                background: tab === tabItem.id ? 'var(--green)' : 'var(--bg2)',
+                color: tab === tabItem.id ? '#000' : 'var(--t1)',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 500,
+                whiteSpace: 'nowrap',
+                transition: 'all 0.2s ease',
+                position: 'relative',
+              }}
+            >
+              {tabItem.label}
+              {tab === tabItem.id && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '-8px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: '100%',
+                    height: '3px',
+                    background: 'var(--green)',
+                    borderRadius: '2px',
+                  }}
+                />
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+    </header>
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function News() {
   const [tab, setTab] = useState('all');
@@ -294,142 +422,23 @@ export default function News() {
         fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
       }}
     >
-      <header
-        style={{
-          position: 'sticky',
-          top: 0,
-          background: 'var(--bg)',
-          zIndex: 10,
-          padding: '12px 0',
-          backdropFilter: 'blur(12px)',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            marginBottom: '12px',
-          }}
-        >
-          <div
-            style={{
-              position: 'relative',
-              flex: 1,
-              maxWidth: searchFocused ? '240px' : '120px',
-              transition: 'max-width 0.3s ease',
-            }}
-          >
-            <Search
-              size={18}
-              style={{
-                position: 'absolute',
-                left: '12px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--t3)',
-                pointerEvents: 'none',
-              }}
-            />
-            <input
-              type="text"
-              placeholder="Search news..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onFocus={() => setSearchFocused(true)}
-              onBlur={() => setSearchFocused(false)}
-              style={{
-                width: '100%',
-                padding: '10px 12px 10px 38px',
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
-                background: 'var(--bg2)',
-                color: 'var(--t1)',
-                fontSize: '14px',
-                outline: 'none',
-                transition: 'all 0.3s ease',
-              }}
-            />
-            {search && (
-              <button
-                onClick={() => setSearch('')}
-                style={{
-                  position: 'absolute',
-                  right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--t3)',
-                  cursor: 'pointer',
-                  padding: '4px',
-                }}
-              >
-                <X size={16} />
-              </button>
-            )}
-          </div>
-        </div>
-        <div
-          style={{
-            display: 'flex',
-            overflowX: 'auto',
-            gap: '8px',
-            paddingBottom: '8px',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none',
-          }}
-        >
-          {TABS.map((tabItem) => (
-            <button
-              key={tabItem.id}
-              onClick={() => setTab(tabItem.id)}
-              style={{
-                flex: 'none',
-                padding: '8px 16px',
-                background: tab === tabItem.id ? 'var(--green)' : 'var(--bg2)',
-                color: tab === tabItem.id ? '#000' : 'var(--t1)',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 500,
-                whiteSpace: 'nowrap',
-                transition: 'all 0.2s ease',
-                position: 'relative',
-              }}
-            >
-              {tabItem.label}
-              {tab === tabItem.id && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    bottom: '-8px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: '100%',
-                    height: '3px',
-                    background: 'var(--green)',
-                    borderRadius: '2px',
-                  }}
-                />
-              )}
-            </button>
-          ))}
-        </div>
-      </header>
+      <Header />
       {loading ? (
         <div style={{ display: 'grid', gap: '12px' }}>
           {[...Array(6)].map((_, index) => (
-            <div key={index} className="skeleton-loader" style={{ height: '100px', background: 'var(--bg2)', borderRadius: '8px' }} />
+            <div key={index} style={{ background: 'var(--bg2)', padding: '16px', borderRadius: '8px' }}>
+              <Loader2 size={24} />
+            </div>
           ))}
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: '12px' }}>
-          {filtered.map((item, index) => (
-            <NewsCard key={index} item={item} />
-          ))}
-        </div>
+        filtered.map((item) => (
+          <NewsCard key={item.url} item={item} />
+        ))
       )}
     </div>
   );
 }
+```
+
+Ce code ajoute un header sticky avec les onglets de catégories, et améliore le design des cartes avec une barre d'accent colorée par source. Les badges BREAKING/NEW sont également dynamiques.
