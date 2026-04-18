@@ -1,63 +1,74 @@
-**src/components/BrainExplorer.js**
+Création du fichier src/components/BrainExplorer.js :
+
 ```jsx
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Inter } from '@lucide-react/inter';
-import styles from './BrainExplorer.module.css';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { supabase } from '../services/api/supabase';
+import { useTheme } from '../services/theme';
 
 const BrainExplorer = () => {
+  const theme = useTheme();
+  const location = useLocation();
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const { data: brainData, error: brainError } = await supabase
+          .from('brain')
+          .select('*')
+          .order('id', { ascending: false });
+        setData(brainData);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const handleRefresh = async () => {
+    setLoading(true);
+    try {
+      const { data: brainData, error: brainError } = await supabase
+        .from('brain')
+        .select('*')
+        .order('id', { ascending: false });
+      setData(brainData);
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className={styles.container}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>Brain Explorer</h1>
-        <nav className={styles.nav}>
-          <ul className={styles.list}>
-            <li className={styles.item}>
-              <Link to="/brain-explorer/brainwaves" className={styles.link}>
-                Brainwaves
+    <div className="container">
+      <h1 className="title">Brain Explorer</h1>
+      {loading ? (
+        <p>Loading...</p>
+      ) : error ? (
+        <p>{error}</p>
+      ) : (
+        <div className="cards">
+          {data.map((item, index) => (
+            <div key={item.id} className="card">
+              <h2 className="card-title">{item.title}</h2>
+              <p className="card-description">{item.description}</p>
+              <Link to={`/brain/${item.id}`} className="card-link">
+                Explore
               </Link>
-            </li>
-            <li className={styles.item}>
-              <Link to="/brain-explorer/neuroplasticity" className={styles.link}>
-                Neuroplasticity
-              </Link>
-            </li>
-            <li className={styles.item}>
-              <Link to="/brain-explorer/cognitive-bias" className={styles.link}>
-                Cognitive Bias
-              </Link>
-            </li>
-          </ul>
-        </nav>
-      </header>
-      <main className={styles.main}>
-        <section className={styles.section}>
-          <h2 className={styles.subtitle}>Brainwaves</h2>
-          <p className={styles.paragraph}>
-            Brainwaves are a type of electrical activity in the brain that can be measured using electroencephalography (EEG).
-          </p>
-          <button className={styles.button}>Learn More</button>
-        </section>
-        <section className={styles.section}>
-          <h2 className={styles.subtitle}>Neuroplasticity</h2>
-          <p className={styles.paragraph}>
-            Neuroplasticity is the brain's ability to change and adapt throughout life.
-          </p>
-          <button className={styles.button}>Learn More</button>
-        </section>
-        <section className={styles.section}>
-          <h2 className={styles.subtitle}>Cognitive Bias</h2>
-          <p className={styles.paragraph}>
-            Cognitive bias is a systematic error in thinking that affects the way we perceive and process information.
-          </p>
-          <button className={styles.button}>Learn More</button>
-        </section>
-      </main>
-      <footer className={styles.footer}>
-        <p className={styles.copyright}>
-          &copy; 2023 Brain Explorer. All rights reserved.
-        </p>
-      </footer>
+            </div>
+          ))}
+        </div>
+      )}
+      <button className="refresh-button" onClick={handleRefresh}>
+        Refresh
+      </button>
     </div>
   );
 };
@@ -65,7 +76,67 @@ const BrainExplorer = () => {
 export default BrainExplorer;
 ```
 
-**src/styles/global.css**
+Création du fichier src/services/api/brain.js :
+
+```jsx
+import { supabase } from '../services/supabase';
+
+const getBrainData = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('brain')
+      .select('*')
+      .order('id', { ascending: false });
+    return { data, error };
+  } catch (error) {
+    return { error };
+  }
+};
+
+export { getBrainData };
+```
+
+Création du fichier src/services/theme.js :
+
+```jsx
+import { createTheme } from '@supabase/ui';
+
+const theme = createTheme({
+  colors: {
+    primary: '#00ff88',
+    secondary: '#080808',
+    background: '#111',
+    text: {
+      primary: '#f0f0f0',
+      secondary: '#888',
+      tertiary: '#444',
+    },
+    border: 'rgba(255, 255, 255, 0.07)',
+  },
+  fonts: {
+    body: 'Inter',
+  },
+});
+
+export default theme;
+```
+
+Création du fichier src/services/supabase.js :
+
+```jsx
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = 'https://your-supabase-url.supabase.co';
+const supabaseKey = 'your-supabase-key';
+const supabaseSecret = 'your-supabase-secret';
+
+const supabase = createClient(supabaseUrl, supabaseKey, supabaseSecret);
+
+export default supabase;
+```
+
+Création du fichier src/styles/global.css :
+
 ```css
 :root {
   --green: #00ff88;
@@ -77,17 +148,29 @@ export default BrainExplorer;
   --border: rgba(255, 255, 255, 0.07);
 }
 
-body {
-  font-family: 'Inter', sans-serif;
-  background-color: var(--bg);
-  color: var(--t1);
-  padding: 0;
-  margin: 0;
-}
-
 .container {
   max-width: 800px;
-  margin: 0 auto;
+  margin: 40px auto;
+  padding: 20px;
+  background-color: var(--bg);
+  color: var(--t1);
+}
+
+.title {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.card {
+  width: calc(33.33% - 20px);
+  margin: 20px;
   padding: 20px;
   background-color: var(--bg2);
   border: 1px solid var(--border);
@@ -95,160 +178,63 @@ body {
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
-.header {
-  background-color: var(--bg);
-  padding: 20px;
-  border-bottom: 1px solid var(--border);
-}
-
-.title {
-  font-size: 24px;
+.card-title {
+  font-size: 18px;
   font-weight: bold;
-  color: var(--green);
-}
-
-.nav {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.item {
   margin-bottom: 10px;
 }
 
-.link {
-  text-decoration: none;
+.card-description {
+  font-size: 14px;
   color: var(--t2);
 }
 
-.link:hover {
-  color: var(--green);
-}
-
-.main {
-  padding: 20px;
-}
-
-.section {
-  background-color: var(--bg2);
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  margin-bottom: 20px;
-}
-
-.subtitle {
-  font-size: 18px;
-  font-weight: bold;
-  color: var(--t2);
-}
-
-.paragraph {
-  margin-bottom: 20px;
-}
-
-.button {
+.card-link {
   background-color: var(--green);
   color: var(--t1);
-  border: none;
   padding: 10px 20px;
-  font-size: 16px;
+  border: none;
+  border-radius: 10px;
   cursor: pointer;
 }
 
-.button:hover {
+.card-link:hover {
+  background-color: var(--green);
+}
+
+.refresh-button {
   background-color: var(--green);
   color: var(--t1);
+  padding: 10px 20px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
 }
 
-.footer {
-  background-color: var(--bg);
-  padding: 20px;
-  border-top: 1px solid var(--border);
+.refresh-button:hover {
+  background-color: var(--green);
 }
 
-.copyright {
-  font-size: 14px;
-  color: var(--t3);
+.inter {
+  font-family: 'Inter', sans-serif;
 }
 ```
 
-**src/components/BrainExplorer.module.css**
-```css
-.container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
-  background-color: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-}
+Création du fichier src/index.js :
 
-.header {
-  background-color: var(--bg);
-  padding: 20px;
-  border-bottom: 1px solid var(--border);
-}
+```jsx
+import React from 'react';
+import ReactDOM from 'react-dom';
+import { BrowserRouter as Router } from 'react-router-dom';
+import App from './App';
+import { BrainExplorer } from './components/BrainExplorer';
 
-.title {
-  font-size: 24px;
-  font-weight: bold;
-  color: var(--green);
-}
-
-.nav {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.item {
-  margin-bottom: 10px;
-}
-
-.link {
-  text-decoration: none;
-  color: var(--t2);
-}
-
-.link:hover {
-  color: var(--green);
-}
-
-.main {
-  padding: 20px;
-}
-
-.section {
-  background-color: var(--bg2);
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  margin-bottom: 20px;
-}
-
-.subtitle {
-  font-size: 18px;
-  font-weight: bold;
-  color: var(--t2);
-}
-
-.paragraph {
-  margin-bottom: 20px;
-}
-
-.button {
-  background-color: var(--green);
-  color: var(--t1);
-  border: none;
-  padding: 10px 20px;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-.button:hover {
-  background-color: var(--green);
-  color: var(--t1);
-}
+ReactDOM.render(
+  <React.StrictMode>
+    <Router>
+      <App />
+      <BrainExplorer />
+    </Router>
+  </React.StrictMode>,
+  document.getElementById('root')
+);
