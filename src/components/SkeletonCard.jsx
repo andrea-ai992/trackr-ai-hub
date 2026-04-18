@@ -1,9 +1,7 @@
-Création des composants de skeleton loader
-
-**src/components/SkeletonLoader.jsx**
+**src/components/PremiumSkeletonLoader.jsx**
 ```jsx
 import React from 'react';
-import { SkeletonCard, SkeletonStat, SkeletonList, SkeletonChart, SkeletonNewsList, SkeletonPortfolio } from './SkeletonCard';
+import { SkeletonCard, SkeletonStat, SkeletonList, SkeletonChart, SkeletonNewsList, SkeletonPortfolio } from './SkeletonLoader';
 
 const SkeletonLoader = () => {
   return (
@@ -18,637 +16,333 @@ const SkeletonLoader = () => {
   );
 };
 
-export default SkeletonLoader;
+export { SkeletonLoader, SkeletonCard, SkeletonStat, SkeletonList, SkeletonChart, SkeletonNewsList, SkeletonPortfolio };
+```
+
+**src/components/SkeletonLoader.jsx**
+```jsx
+import React from 'react';
+import { SkeletonCard } from './SkeletonCard';
+
+const SkeletonStat = () => {
+  return (
+    <div className="skeleton-stat">
+      <div className="stat-col">
+        <div className="stat-value" style={{ height: '60px', backgroundColor: 'var(--bg2)' }} />
+      </div>
+      <div className="stat-col">
+        <div className="stat-value" style={{ height: '60px', backgroundColor: 'var(--bg2)' }} />
+      </div>
+      <div className="stat-col">
+        <div className="stat-value" style={{ height: '60px', backgroundColor: 'var(--bg2)' }} />
+      </div>
+      <div className="stat-col">
+        <div className="stat-value" style={{ height: '60px', backgroundColor: 'var(--bg2)' }} />
+      </div>
+    </div>
+  );
+};
+
+const SkeletonList = () => {
+  return (
+    <div className="skeleton-list">
+      <div className="list-item">
+        <div className="avatar" style={{ width: '40px', height: '40px', backgroundColor: 'var(--bg2)' }} />
+        <div className="list-text">
+          <div className="list-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
+          <div className="list-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
+        </div>
+      </div>
+      <div className="list-item">
+        <div className="avatar" style={{ width: '40px', height: '40px', backgroundColor: 'var(--bg2)' }} />
+        <div className="list-text">
+          <div className="list-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
+          <div className="list-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
+        </div>
+      </div>
+      <div className="list-item">
+        <div className="avatar" style={{ width: '40px', height: '40px', backgroundColor: 'var(--bg2)' }} />
+        <div className="list-text">
+          <div className="list-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
+          <div className="list-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
+        </div>
+      </div>
+      <div className="list-item">
+        <div className="avatar" style={{ width: '40px', height: '40px', backgroundColor: 'var(--bg2)' }} />
+        <div className="list-text">
+          <div className="list-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
+          <div className="list-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
+        </div>
+      </div>
+      <div className="list-item">
+        <div className="avatar" style={{ width: '40px', height: '40px', backgroundColor: 'var(--bg2)' }} />
+        <div className="list-text">
+          <div className="list-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
+          <div className="list-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const SkeletonChart = () => {
+  return (
+    <div className="skeleton-chart">
+      <div className="chart-container" style={{ height: '200px', backgroundColor: 'var(--bg2)' }} />
+    </div>
+  );
+};
+
+const SkeletonNewsList = () => {
+  return (
+    <div className="skeleton-news-list">
+      <div className="news-item">
+        <div className="news-thumbnail" style={{ width: '80px', height: '60px', backgroundColor: 'var(--bg2)' }} />
+        <div className="news-text">
+          <div className="news-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
+          <div className="news-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
+        </div>
+      </div>
+      <div className="news-item">
+        <div className="news-thumbnail" style={{ width: '80px', height: '60px', backgroundColor: 'var(--bg2)' }} />
+        <div className="news-text">
+          <div className="news-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
+          <div className="news-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
+        </div>
+      </div>
+      <div className="news-item">
+        <div className="news-thumbnail" style={{ width: '80px', height: '60px', backgroundColor: 'var(--bg2)' }} />
+        <div className="news-text">
+          <div className="news-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
+          <div className="news-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
+        </div>
+      </div>
+      <div className="news-item">
+        <div className="news-thumbnail" style={{ width: '80px', height: '60px', backgroundColor: 'var(--bg2)' }} />
+        <div className="news-text">
+          <div className="news-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
+          <div className="news-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
+        </div>
+      </div>
+      <div className="news-item">
+        <div className="news-thumbnail" style={{ width: '80px', height: '60px', backgroundColor: 'var(--bg2)' }} />
+        <div className="news-text">
+          <div className="news-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
+          <div className="news-text-line" style={{ height: '20px', backgroundColor: 'var(--bg2)' }} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const SkeletonPortfolio = () => {
+  return (
+    <div className="skeleton-portfolio">
+      <div className="hero" style={{ height: '120px', backgroundColor: 'var(--bg2)' }} />
+      <div className="holdings">
+        <div className="holding" style={{ height: '60px', backgroundColor: 'var(--bg2)' }} />
+        <div className="holding" style={{ height: '60px', backgroundColor: 'var(--bg2)' }} />
+        <div className="holding" style={{ height: '60px', backgroundColor: 'var(--bg2)' }} />
+        <div className="holding" style={{ height: '60px', backgroundColor: 'var(--bg2)' }} />
+      </div>
+    </div>
+  );
+};
+
+export { SkeletonLoader, SkeletonCard, SkeletonStat, SkeletonList, SkeletonChart, SkeletonNewsList, SkeletonPortfolio };
 ```
 
 **src/components/SkeletonCard.jsx**
 ```jsx
 import React from 'react';
-import { styled } from 'styled-components';
-
-const SkeletonCardContainer = styled.div`
-  width: 80px;
-  height: 80px;
-  background-color: var(--bg2);
-  border-radius: 10px;
-  background-size: 200%;
-  animation: shimmer 2s infinite;
-  @keyframes shimmer {
-    0% {
-      background-position: -100%;
-    }
-    100% {
-      background-position: 100%;
-    }
-  }
-`;
 
 const SkeletonCard = () => {
   return (
-    <SkeletonCardContainer />
+    <div className="skeleton-card">
+      <div className="card-container" style={{ height: '80px', backgroundColor: 'var(--bg2)' }} />
+    </div>
   );
 };
 
-export { SkeletonCard };
+export default SkeletonCard;
 ```
 
-**src/components/SkeletonStat.jsx**
-```jsx
-import React from 'react';
-import { styled } from 'styled-components';
-
-const SkeletonStatContainer = styled.div`
-  display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
-`;
-
-const SkeletonStatItem = styled.div`
-  width: 60px;
-  height: 60px;
-  background-color: var(--bg2);
-  border-radius: 10px;
-  background-size: 200%;
-  animation: shimmer 2s infinite;
-  @keyframes shimmer {
-    0% {
-      background-position: -100%;
-    }
-    100% {
-      background-position: 100%;
-    }
-  }
-`;
-
-const SkeletonStat = () => {
-  return (
-    <SkeletonStatContainer>
-      <SkeletonStatItem />
-      <SkeletonStatItem />
-      <SkeletonStatItem />
-      <SkeletonStatItem />
-    </SkeletonStatContainer>
-  );
-};
-
-export { SkeletonStat };
-```
-
-**src/components/SkeletonList.jsx**
-```jsx
-import React from 'react';
-import { styled } from 'styled-components';
-
-const SkeletonListContainer = styled.div`
+**styles/global.css**
+```css
+.skeleton-loader {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 20px;
-`;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
 
-const SkeletonListItem = styled.div`
+.skeleton-card {
+  width: 300px;
+  margin-bottom: 20px;
+}
+
+.skeleton-stat {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 20px;
+  background-color: var(--bg);
+  border-radius: 10px;
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+}
+
+.stat-col {
+  width: 25%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.stat-value {
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg2);
+  border-radius: 10px;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-color: var(--bg2);
+  }
+  100% {
+    background-color: var(--bg3);
+  }
+}
+
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background-color: var(--bg);
+  border-radius: 10px;
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+}
+
+.list-item {
+  margin-bottom: 20px;
   display: flex;
   align-items: center;
-  gap: 10px;
-`;
+}
 
-const SkeletonAvatar = styled.div`
+.avatar {
   width: 40px;
   height: 40px;
   background-color: var(--bg2);
   border-radius: 50%;
-  background-size: 200%;
   animation: shimmer 2s infinite;
-  @keyframes shimmer {
-    0% {
-      background-position: -100%;
-    }
-    100% {
-      background-position: 100%;
-    }
-  }
-`;
+}
 
-const SkeletonListItemText = styled.div`
-  font-size: 14px;
-  color: var(--t1);
-`;
+.list-text {
+  margin-left: 20px;
+}
 
-const SkeletonList = () => {
-  return (
-    <SkeletonListContainer>
-      <SkeletonListItem>
-        <SkeletonAvatar />
-        <SkeletonListItemText>Text 1</SkeletonListItemText>
-      </SkeletonListItem>
-      <SkeletonListItem>
-        <SkeletonAvatar />
-        <SkeletonListItemText>Text 2</SkeletonListItemText>
-      </SkeletonListItem>
-      <SkeletonListItem>
-        <SkeletonAvatar />
-        <SkeletonListItemText>Text 3</SkeletonListItemText>
-      </SkeletonListItem>
-      <SkeletonListItem>
-        <SkeletonAvatar />
-        <SkeletonListItemText>Text 4</SkeletonListItemText>
-      </SkeletonListItem>
-      <SkeletonListItem>
-        <SkeletonAvatar />
-        <SkeletonListItemText>Text 5</SkeletonListItemText>
-      </SkeletonListItem>
-    </SkeletonListContainer>
-  );
-};
+.list-text-line {
+  width: 100%;
+  height: 20px;
+  background-color: var(--bg2);
+  animation: shimmer 2s infinite;
+}
 
-export { SkeletonList };
-```
-
-**src/components/SkeletonChart.jsx**
-```jsx
-import React from 'react';
-import { styled } from 'styled-components';
-
-const SkeletonChartContainer = styled.div`
-  width: 200px;
+.skeleton-chart {
+  width: 100%;
   height: 200px;
   background-color: var(--bg2);
   border-radius: 10px;
-  background-size: 200%;
   animation: shimmer 2s infinite;
-  @keyframes shimmer {
-    0% {
-      background-position: -100%;
-    }
-    100% {
-      background-position: 100%;
-    }
-  }
-`;
+}
 
-const SkeletonChart = () => {
-  return (
-    <SkeletonChartContainer />
-  );
-};
-
-export { SkeletonChart };
-```
-
-**src/components/SkeletonNewsList.jsx**
-```jsx
-import React from 'react';
-import { styled } from 'styled-components';
-
-const SkeletonNewsListContainer = styled.div`
+.skeleton-news-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 20px;
-`;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background-color: var(--bg);
+  border-radius: 10px;
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+}
 
-const SkeletonNewsListItem = styled.div`
+.news-item {
+  margin-bottom: 20px;
   display: flex;
   align-items: center;
-  gap: 10px;
-`;
+}
 
-const SkeletonNewsThumbnail = styled.div`
+.news-thumbnail {
   width: 80px;
-  height: 80px;
-  background-color: var(--bg2);
-  border-radius: 10px;
-  background-size: 200%;
-  animation: shimmer 2s infinite;
-  @keyframes shimmer {
-    0% {
-      background-position: -100%;
-    }
-    100% {
-      background-position: 100%;
-    }
-  }
-`;
-
-const SkeletonNewsListItemText = styled.div`
-  font-size: 14px;
-  color: var(--t1);
-`;
-
-const SkeletonNewsList = () => {
-  return (
-    <SkeletonNewsListContainer>
-      <SkeletonNewsListItem>
-        <SkeletonNewsThumbnail />
-        <SkeletonNewsListItemText>News 1</SkeletonNewsListItemText>
-      </SkeletonNewsListItem>
-      <SkeletonNewsListItem>
-        <SkeletonNewsThumbnail />
-        <SkeletonNewsListItemText>News 2</SkeletonNewsListItemText>
-      </SkeletonNewsListItem>
-      <SkeletonNewsListItem>
-        <SkeletonNewsThumbnail />
-        <SkeletonNewsListItemText>News 3</SkeletonNewsListItemText>
-      </SkeletonNewsListItem>
-      <SkeletonNewsListItem>
-        <SkeletonNewsThumbnail />
-        <SkeletonNewsListItemText>News 4</SkeletonNewsListItemText>
-      </SkeletonNewsListItem>
-      <SkeletonNewsListItem>
-        <SkeletonNewsThumbnail />
-        <SkeletonNewsListItemText>News 5</SkeletonNewsListItemText>
-      </SkeletonNewsListItem>
-    </SkeletonNewsListContainer>
-  );
-};
-
-export { SkeletonNewsList };
-```
-
-**src/components/SkeletonPortfolio.jsx**
-```jsx
-import React from 'react';
-import { styled } from 'styled-components';
-
-const SkeletonPortfolioContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 20px;
-`;
-
-const SkeletonPortfolioItem = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-`;
-
-const SkeletonPortfolioHero = styled.div`
-  width: 120px;
-  height: 120px;
-  background-color: var(--bg2);
-  border-radius: 10px;
-  background-size: 200%;
-  animation: shimmer 2s infinite;
-  @keyframes shimmer {
-    0% {
-      background-position: -100%;
-    }
-    100% {
-      background-position: 100%;
-    }
-  }
-`;
-
-const SkeletonPortfolioListItemText = styled.div`
-  font-size: 14px;
-  color: var(--t1);
-`;
-
-const SkeletonPortfolio = () => {
-  return (
-    <SkeletonPortfolioContainer>
-      <SkeletonPortfolioItem>
-        <SkeletonPortfolioHero />
-        <SkeletonPortfolioListItemText>Portfolio 1</SkeletonPortfolioListItemText>
-      </SkeletonPortfolioItem>
-      <SkeletonPortfolioItem>
-        <SkeletonPortfolioHero />
-        <SkeletonPortfolioListItemText>Portfolio 2</SkeletonPortfolioListItemText>
-      </SkeletonPortfolioItem>
-      <SkeletonPortfolioItem>
-        <SkeletonPortfolioHero />
-        <SkeletonPortfolioListItemText>Portfolio 3</SkeletonPortfolioListItemText>
-      </SkeletonPortfolioItem>
-      <SkeletonPortfolioItem>
-        <SkeletonPortfolioHero />
-        <SkeletonPortfolioListItemText>Portfolio 4</SkeletonPortfolioListItemText>
-      </SkeletonPortfolioItem>
-    </SkeletonPortfolioContainer>
-  );
-};
-
-export { SkeletonPortfolio };
-```
-
-**src/components/SkeletonCard.jsx** (modifié pour utiliser les nouvelles propriétés CSS)
-```jsx
-import React from 'react';
-import { styled } from 'styled-components';
-
-const SkeletonCardContainer = styled.div`
-  width: 80px;
-  height: 80px;
-  background-color: var(--bg2);
-  border-radius: 10px;
-  background-size: 200%;
-  animation: shimmer 2s infinite;
-  @keyframes shimmer {
-    0% {
-      background-position: -100%;
-    }
-    100% {
-      background-position: 100%;
-    }
-  }
-`;
-
-const SkeletonCard = () => {
-  return (
-    <SkeletonCardContainer />
-  );
-};
-
-export { SkeletonCard };
-```
-
-**src/components/SkeletonStat.jsx** (modifié pour utiliser les nouvelles propriétés CSS)
-```jsx
-import React from 'react';
-import { styled } from 'styled-components';
-
-const SkeletonStatContainer = styled.div`
-  display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
-`;
-
-const SkeletonStatItem = styled.div`
-  width: 60px;
   height: 60px;
   background-color: var(--bg2);
   border-radius: 10px;
-  background-size: 200%;
   animation: shimmer 2s infinite;
-  @keyframes shimmer {
-    0% {
-      background-position: -100%;
-    }
-    100% {
-      background-position: 100%;
-    }
-  }
-`;
+}
 
-const SkeletonStat = () => {
-  return (
-    <SkeletonStatContainer>
-      <SkeletonStatItem />
-      <SkeletonStatItem />
-      <SkeletonStatItem />
-      <SkeletonStatItem />
-    </SkeletonStatContainer>
-  );
-};
+.news-text {
+  margin-left: 20px;
+}
 
-export { SkeletonStat };
-```
+.news-text-line {
+  width: 100%;
+  height: 20px;
+  background-color: var(--bg2);
+  animation: shimmer 2s infinite;
+}
 
-**src/components/SkeletonList.jsx** (modifié pour utiliser les nouvelles propriétés CSS)
-```jsx
-import React from 'react';
-import { styled } from 'styled-components';
-
-const SkeletonListContainer = styled.div`
+.skeleton-portfolio {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 20px;
-`;
-
-const SkeletonListItem = styled.div`
-  display: flex;
   align-items: center;
-  gap: 10px;
-`;
-
-const SkeletonAvatar = styled.div`
-  width: 40px;
-  height: 40px;
-  background-color: var(--bg2);
-  border-radius: 50%;
-  background-size: 200%;
-  animation: shimmer 2s infinite;
-  @keyframes shimmer {
-    0% {
-      background-position: -100%;
-    }
-    100% {
-      background-position: 100%;
-    }
-  }
-`;
-
-const SkeletonListItemText = styled.div`
-  font-size: 14px;
-  color: var(--t1);
-`;
-
-const SkeletonList = () => {
-  return (
-    <SkeletonListContainer>
-      <SkeletonListItem>
-        <SkeletonAvatar />
-        <SkeletonListItemText>Text 1</SkeletonListItemText>
-      </SkeletonListItem>
-      <SkeletonListItem>
-        <SkeletonAvatar />
-        <SkeletonListItemText>Text 2</SkeletonListItemText>
-      </SkeletonListItem>
-      <SkeletonListItem>
-        <SkeletonAvatar />
-        <SkeletonListItemText>Text 3</SkeletonListItemText>
-      </SkeletonListItem>
-      <SkeletonListItem>
-        <SkeletonAvatar />
-        <SkeletonListItemText>Text 4</SkeletonListItemText>
-      </SkeletonListItem>
-      <SkeletonListItem>
-        <SkeletonAvatar />
-        <SkeletonListItemText>Text 5</SkeletonListItemText>
-      </SkeletonListItem>
-    </SkeletonListContainer>
-  );
-};
-
-export { SkeletonList };
-```
-
-**src/components/SkeletonChart.jsx** (modifié pour utiliser les nouvelles propriétés CSS)
-```jsx
-import React from 'react';
-import { styled } from 'styled-components';
-
-const SkeletonChartContainer = styled.div`
-  width: 200px;
-  height: 200px;
-  background-color: var(--bg2);
+  justify-content: center;
+  padding: 20px;
+  background-color: var(--bg);
   border-radius: 10px;
-  background-size: 200%;
-  animation: shimmer 2s infinite;
-  @keyframes shimmer {
-    0% {
-      background-position: -100%;
-    }
-    100% {
-      background-position: 100%;
-    }
-  }
-`;
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+}
 
-const SkeletonChart = () => {
-  return (
-    <SkeletonChartContainer />
-  );
-};
-
-export { SkeletonChart };
-```
-
-**src/components/SkeletonNewsList.jsx** (modifié pour utiliser les nouvelles propriétés CSS)
-```jsx
-import React from 'react';
-import { styled } from 'styled-components';
-
-const SkeletonNewsListContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 20px;
-`;
-
-const SkeletonNewsListItem = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-`;
-
-const SkeletonNewsThumbnail = styled.div`
-  width: 80px;
-  height: 80px;
-  background-color: var(--bg2);
-  border-radius: 10px;
-  background-size: 200%;
-  animation: shimmer 2s infinite;
-  @keyframes shimmer {
-    0% {
-      background-position: -100%;
-    }
-    100% {
-      background-position: 100%;
-    }
-  }
-`;
-
-const SkeletonNewsListItemText = styled.div`
-  font-size: 14px;
-  color: var(--t1);
-`;
-
-const SkeletonNewsList = () => {
-  return (
-    <SkeletonNewsListContainer>
-      <SkeletonNewsListItem>
-        <SkeletonNewsThumbnail />
-        <SkeletonNewsListItemText>News 1</SkeletonNewsListItemText>
-      </SkeletonNewsListItem>
-      <SkeletonNewsListItem>
-        <SkeletonNewsThumbnail />
-        <SkeletonNewsListItemText>News 2</SkeletonNewsListItemText>
-      </SkeletonNewsListItem>
-      <SkeletonNewsListItem>
-        <SkeletonNewsThumbnail />
-        <SkeletonNewsListItemText>News 3</SkeletonNewsListItemText>
-      </SkeletonNewsListItem>
-      <SkeletonNewsListItem>
-        <SkeletonNewsThumbnail />
-        <SkeletonNewsListItemText>News 4</SkeletonNewsListItemText>
-      </SkeletonNewsListItem>
-      <SkeletonNewsListItem>
-        <SkeletonNewsThumbnail />
-        <SkeletonNewsListItemText>News 5</SkeletonNewsListItemText>
-      </SkeletonNewsListItem>
-    </SkeletonNewsListContainer>
-  );
-};
-
-export { SkeletonNewsList };
-```
-
-**src/components/SkeletonPortfolio.jsx** (modifié pour utiliser les nouvelles propriétés CSS)
-```jsx
-import React from 'react';
-import { styled } from 'styled-components';
-
-const SkeletonPortfolioContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 20px;
-`;
-
-const SkeletonPortfolioItem = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-`;
-
-const SkeletonPortfolioHero = styled.div`
-  width: 120px;
+.hero {
+  width: 100%;
   height: 120px;
   background-color: var(--bg2);
   border-radius: 10px;
-  background-size: 200%;
   animation: shimmer 2s infinite;
-  @keyframes shimmer {
-    0% {
-      background-position: -100%;
-    }
-    100% {
-      background-position: 100%;
-    }
-  }
-`;
+}
 
-const SkeletonPortfolioListItemText = styled.div`
-  font-size: 14px;
-  color: var(--t1);
-`;
+.holdings {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 20px;
+}
 
-const SkeletonPortfolio = () => {
-  return (
-    <SkeletonPortfolioContainer>
-      <SkeletonPortfolioItem>
-        <SkeletonPortfolioHero />
-        <SkeletonPortfolioListItemText>Portfolio 1</SkeletonPortfolioListItemText>
-      </SkeletonPortfolioItem>
-      <SkeletonPortfolioItem>
-        <SkeletonPortfolioHero />
-        <SkeletonPortfolioListItemText>Portfolio 2</SkeletonPortfolioListItemText>
-      </SkeletonPortfolioItem>
-      <SkeletonPortfolioItem>
-        <SkeletonPortfolioHero />
-        <SkeletonPortfolioListItemText>Portfolio 3</SkeletonPortfolioListItemText>
-      </SkeletonPortfolioItem>
-      <SkeletonPortfolioItem>
-        <SkeletonPortfolioHero />
-        <SkeletonPortfolioListItemText>Portfolio 4</SkeletonPortfolioListItemText>
-      </SkeletonPortfolioItem>
-    </SkeletonPortfolioContainer>
-  );
-};
-
-export { SkeletonPortfolio };
+.holding {
+  width: 25%;
+  height: 60px;
+  background-color: var(--bg2);
+  border-radius: 10px;
+  animation: shimmer 2s infinite;
+}
 ```
 
-**src/pages/Dashboard.jsx**
+**src/components/Dashboard.jsx**
 ```jsx
 import React from 'react';
-import { SkeletonLoader } from '../components/SkeletonLoader';
+import SkeletonLoader from './SkeletonLoader';
 
 const Dashboard = () => {
   return (
-    <div>
+    <div className="dashboard">
       <SkeletonLoader />
     </div>
   );
@@ -657,14 +351,14 @@ const Dashboard = () => {
 export default Dashboard;
 ```
 
-**src/pages/News.jsx**
+**src/components/News.jsx**
 ```jsx
 import React from 'react';
-import { SkeletonNewsList } from '../components/SkeletonNewsList';
+import SkeletonNewsList from './SkeletonLoader';
 
 const News = () => {
   return (
-    <div>
+    <div className="news">
       <SkeletonNewsList />
     </div>
   );
@@ -673,20 +367,17 @@ const News = () => {
 export default News;
 ```
 
-**src/pages/Markets.jsx**
+**src/components/Markets.jsx**
 ```jsx
 import React from 'react';
-import { SkeletonStat } from '../components/SkeletonStat';
+import SkeletonChart from './SkeletonLoader';
 
 const Markets = () => {
   return (
-    <div>
-      <SkeletonStat />
+    <div className="markets">
+      <SkeletonChart />
     </div>
   );
 };
 
 export default Markets;
-```
-
-Maintenant, vous pouvez utiliser les nouveaux composants de skeleton loader dans vos pages.
