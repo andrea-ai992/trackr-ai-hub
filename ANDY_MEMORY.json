@@ -1,20 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776536295578",
-      "timestamp": "2026-04-18T18:18:15.578Z",
-      "type": "brain_cycle",
-      "hour": 18,
-      "successRate": 0,
-      "agentsRan": 0,
-      "improved": false,
-      "improvedFile": null,
-      "focus": null,
-      "errors": 0,
-      "appHealthy": true,
-      "duration": 2
-    },
-    {
       "id": "mem_1776536296485",
       "timestamp": "2026-04-18T18:18:16.485Z",
       "type": "pattern_scan",
@@ -2723,6 +2709,23 @@
       "errors": 0,
       "appHealthy": true,
       "duration": 2
+    },
+    {
+      "id": "mem_1776541195046",
+      "timestamp": "2026-04-18T19:39:55.046Z",
+      "type": "pattern_scan",
+      "focus": "bugs",
+      "findings": [
+        {
+          "id": "sse_json_parse",
+          "file": "api/discord.js",
+          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
+          "severity": "critical"
+        }
+      ],
+      "count": 1,
+      "applied": false,
+      "note": "Patterns detected before Claude analysis — guiding fix priority"
     }
   ]
 }
