@@ -21,7 +21,7 @@ const fetchStocks = async () => {
 
 const fetchCryptoPrices = async () => {
   try {
-    const response = await fetch('https://trackr-app-nu.vercel.app/api/crypto-prices');
+    const response = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=true&price_change_percentage=24h');
     if (!response.ok) throw new Error('Failed to fetch crypto prices');
     return await response.json();
   } catch (error) {
@@ -49,30 +49,43 @@ export default function Markets() {
   const [data, setData] = useState({ stocks: [], crypto: [] });
   const [loading, setLoading] = useState(true);
   const [yfData, setYfData] = useState({});
+  const [cryptoData, setCryptoData] = useState([]);
+  const [cryptoLoading, setCryptoLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      const [stocks, crypto] = await Promise.all([
+      const [stocks] = await Promise.all([
         fetchStocks(),
-        fetchCryptoPrices(),
       ]);
-      setData({ stocks, crypto });
+      setData({ stocks, crypto: [] });
       setLoading(false);
     };
     loadData();
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'stocks') {
+    if (activeTab === 'crypto') {
+      const loadCrypto = async () => {
+        setCryptoLoading(true);
+        const crypto = await fetchCryptoPrices();
+        setCryptoData(crypto);
+        setCryptoLoading(false);
+      };
+      loadCrypto();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'stocks' && data.stocks.length) {
       const fetchYf = async () => {
-        const symbols = data.stocks.slice(0, 5).map(s => s.symbol);
+        const symbols = data.stocks.slice(0, 10).map(s => s.symbol);
         const results = await Promise.all(
           symbols.map(symbol => fetchYahooFinance(symbol))
         );
         setYfData(prev => ({ ...prev, [activeTab]: results }));
       };
-      if (data.stocks.length) fetchYf();
+      fetchYf();
     }
   }, [activeTab, data.stocks]);
 
@@ -83,11 +96,26 @@ export default function Markets() {
         stock.symbol.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    return data.crypto.filter(crypto =>
+    return cryptoData.filter(crypto =>
       crypto.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       crypto.symbol.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [activeTab, searchTerm, data]);
+  }, [activeTab, searchTerm, data.stocks, cryptoData]);
+
+  const sortedData = useMemo(() => {
+    if (activeTab === 'stocks') {
+      return [...filteredData].sort((a, b) => {
+        const changeA = a.price_change_percentage_24h || 0;
+        const changeB = b.price_change_percentage_24h || 0;
+        return changeB - changeA;
+      });
+    }
+    return [...filteredData].sort((a, b) => {
+      const changeA = a.price_change_percentage_24h || 0;
+      const changeB = b.price_change_percentage_24h || 0;
+      return changeB - changeA;
+    });
+  }, [filteredData, activeTab]);
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text-primary)] font-[JetBrains_Mono] p-4">
@@ -98,13 +126,16 @@ export default function Markets() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap relative ${
               activeTab === tab.id
                 ? 'bg-[var(--surface-high)] text-[var(--neon)] border border-[var(--border-bright)]'
                 : 'bg-[var(--surface-low)] text-[var(--text-secondary)] border border-[var(--border)] hover:bg-[var(--surface)]'
             }`}
           >
             {tab.label}
+            {activeTab === tab.id && (
+              <span className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-[var(--neon)] rounded-full"></span>
+            )}
           </button>
         ))}
       </div>
@@ -123,17 +154,21 @@ export default function Markets() {
       </div>
 
       <div className="mt-4 space-y-3">
-        {loading ? (
-          Array(5).fill(0).map((_, i) => (
-            <div key={i} className="h-16 bg-[var(--surface-low)] rounded-lg animate-pulse" />
+        {loading || cryptoLoading ? (
+          Array(10).fill(0).map((_, i) => (
+            <div key={i} className="h-16 bg-[var(--surface-low)] rounded-lg animate-pulse"></div>
           ))
         ) : (
-          filteredData.map((item, i) => (
+          sortedData.map((item, i) => (
             <MarketCard
               key={item.id || item.symbol}
               item={item}
               type={activeTab}
-              sparklineData={yfData[activeTab]?.[i] || Array(7).fill(null)}
+              sparklineData={
+                activeTab === 'stocks'
+                  ? yfData[activeTab]?.[i] || Array(7).fill(null)
+                  : item.sparkline_in_7d?.price || Array(7).fill(null)
+              }
             />
           ))
         )}
