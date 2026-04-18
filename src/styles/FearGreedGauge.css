@@ -1,0 +1,263 @@
+src/styles/FearGreedGauge.css
+```css
+:root {
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --border: rgba(255, 255, 255, 0.07);
+}
+
+.fear-greed-gauge {
+  font-family: 'Inter', sans-serif;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+  padding: 1rem;
+  background: var(--bg2);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.gauge-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.gauge-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--t1);
+}
+
+.gauge-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--green);
+}
+
+.gauge-container {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.gauge-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+
+.gauge-circle-bg {
+  fill: none;
+  stroke: var(--t3);
+  stroke-width: 8;
+}
+
+.gauge-circle-progress {
+  fill: none;
+  stroke: var(--green);
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-dasharray: 251.2;
+  stroke-dashoffset: 251.2;
+  transform-origin: 50% 50%;
+  animation: rotateGauge 2s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+}
+
+.gauge-needle {
+  position: absolute;
+  width: 4px;
+  height: 60px;
+  background: var(--green);
+  top: 50%;
+  left: 50%;
+  transform-origin: bottom center;
+  transform: translate(-50%, -100%) rotate(0deg);
+  transition: transform 0.5s ease-out;
+}
+
+.gauge-needle::after {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 20px;
+  height: 20px;
+  background: var(--green);
+  border-radius: 50%;
+  border: 2px solid var(--bg2);
+}
+
+.gauge-labels {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+}
+
+.gauge-label {
+  position: absolute;
+  font-size: 0.7rem;
+  color: var(--t2);
+  transform: translate(-50%, -50%);
+}
+
+.gauge-label.extreme-fear {
+  left: 10%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.gauge-label.fear {
+  left: 25%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(-22.5deg);
+}
+
+.gauge-label.neutral {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(0deg);
+}
+
+.gauge-label.greed {
+  left: 75%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(22.5deg);
+}
+
+.gauge-label.extreme-greed {
+  left: 90%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+@keyframes rotateGauge {
+  from {
+    stroke-dashoffset: 251.2;
+    transform: rotate(-90deg);
+  }
+  to {
+    stroke-dashoffset: calc(251.2 - (var(--progress) * 251.2 / 100));
+    transform: rotate(calc(var(--progress) * 1.8 - 90deg));
+  }
+}
+
+@media (min-width: 768px) {
+  .fear-greed-gauge {
+    max-width: 380px;
+    padding: 1.5rem;
+  }
+
+  .gauge-container {
+    height: 240px;
+  }
+
+  .gauge-title {
+    font-size: 1.4rem;
+  }
+
+  .gauge-value {
+    font-size: 1.8rem;
+  }
+
+  .gauge-label {
+    font-size: 0.8rem;
+  }
+}
+```
+
+src/components/FearGreedGauge.jsx
+```jsx
+import React, { useEffect, useState } from 'react';
+import './FearGreedGauge.css';
+
+const FearGreedGauge = ({ value = 50 }) => {
+  const [displayValue, setDisplayValue] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    setIsAnimating(true);
+    const timer = setTimeout(() => {
+      setDisplayValue(value);
+      setIsAnimating(false);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [value]);
+
+  const getColor = (val) => {
+    if (val <= 20) return '#007bff';
+    if (val <= 40) return '#ffc107';
+    if (val <= 60) return '#28a745';
+    if (val <= 80) return '#ffc107';
+    return '#dc3545';
+  };
+
+  const getLabel = (val) => {
+    if (val <= 20) return 'Extreme Fear';
+    if (val <= 40) return 'Fear';
+    if (val <= 60) return 'Neutral';
+    if (val <= 80) return 'Greed';
+    return 'Extreme Greed';
+  };
+
+  return (
+    <div className="fear-greed-gauge">
+      <div className="gauge-header">
+        <h3 className="gauge-title">Fear & Greed Index</h3>
+        <span className="gauge-value" style={{ color: getColor(displayValue) }}>
+          {displayValue}
+        </span>
+      </div>
+      <div className="gauge-container">
+        <svg className="gauge-svg" viewBox="0 0 200 100">
+          <circle
+            className="gauge-circle-bg"
+            cx="100"
+            cy="100"
+            r="90"
+            strokeWidth="8"
+            strokeDasharray="251.2"
+            strokeDashoffset="0"
+            strokeLinecap="round"
+          />
+          <circle
+            className="gauge-circle-progress"
+            cx="100"
+            cy="100"
+            r="90"
+            strokeWidth="8"
+            strokeDasharray="251.2"
+            strokeDashoffset={isAnimating ? '251.2' : `calc(251.2 - (${displayValue} * 251.2 / 100))`}
+            style={{ '--progress': displayValue }}
+          />
+        </svg>
+        <div className="gauge-needle" style={{ transform: `translate(-50%, -100%) rotate(${displayValue * 1.8 - 90}deg)` }} />
+        <div className="gauge-labels">
+          <div className="gauge-label extreme-fear">0</div>
+          <div className="gauge-label fear">20</div>
+          <div className="gauge-label neutral">50</div>
+          <div className="gauge-label greed">80</div>
+          <div className="gauge-label extreme-greed">100</div>
+        </div>
+      </div>
+      <div style={{ textAlign: 'center', marginTop: '0.5rem', color: getColor(displayValue), fontSize: '0.8rem' }}>
+        {getLabel(displayValue)}
+      </div>
+    </div>
+  );
+};
+
+export default FearGreedGauge;
