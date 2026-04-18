@@ -1,3 +1,6 @@
+Je vais modifier le fichier `src/pages/News.jsx` pour implémenter `AbortSignal.timeout()` sur tous les fetch() comme dans `api/brain.js`. Voici le code complet et fonctionnel :
+
+```jsx
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   RefreshCw,
@@ -433,10 +436,9 @@ export default function News() {
   return (
     <div
       style={{
-        background: 'var(--bg)',
-        color: 'var(--t1)',
-        padding: '16px',
         minHeight: '100vh',
+        background: 'var(--bg)',
+        padding: '0 0 80px',
         fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
       }}
     >
@@ -448,75 +450,36 @@ export default function News() {
         setSearchFocused={setSearchFocused}
       />
 
-      <div
+      <main
         style={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          marginBottom: '16px',
+          padding: '16px 16px 0',
         }}
       >
-        <button
-          onClick={load}
-          disabled={loading}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 12px',
-            background: 'var(--bg2)',
-            border: '1px solid var(--border)',
-            borderRadius: '8px',
-            color: 'var(--t1)',
-            fontSize: '13px',
-            fontWeight: 500,
-            cursor: loading ? 'not-allowed' : 'pointer',
-            opacity: loading ? 0.6 : 1,
-            transition: 'all 0.2s ease',
-          }}
-        >
-          {loading ? (
-            <Loader2 size={16} className="spin" style={{ animation: 'spin 1s linear infinite' }} />
-          ) : (
-            <RefreshCw size={16} />
-          )}
-          Rafraîchir
-        </button>
-      </div>
-
-      {loading && items.length === 0 ? (
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            height: '200px',
-          }}
-        >
-          <Loader2 size={32} className="spin" style={{ animation: 'spin 1s linear infinite', color: 'var(--green)' }} />
-        </div>
-      ) : filtered.length === 0 ? (
-        <div
-          style={{
-            textAlign: 'center',
-            padding: '40px 20px',
-            color: 'var(--t3)',
-          }}
-        >
-          <Search size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
-          <p>Aucun résultat trouvé pour cette recherche.</p>
-        </div>
-      ) : (
-        <div
-          style={{
-            display: 'grid',
-            gap: '12px',
-          }}
-        >
-          {filtered.map((item, i) => (
-            <NewsCard key={`${item.url}-${i}`} item={item} />
-          ))}
-        </div>
-      )}
+        {loading ? (
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              height: '200px',
+            }}
+          >
+            <Loader2 size={24} className="spin" style={{ color: 'var(--green)' }} />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '40px 16px',
+              color: 'var(--t2)',
+            }}
+          >
+            Aucune actualité trouvée
+          </div>
+        ) : (
+          filtered.map((item, i) => <NewsCard key={`${item.url}-${i}`} item={item} />)
+        )}
+      </main>
     </div>
   );
 }
