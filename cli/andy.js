@@ -148,16 +148,7 @@ async function glitch(text, color = _.cyan, passes = 4) {
 // ── Banner ────────────────────────────────────────────────────────────────────
 async function banner(quick = false) {
   clr()
-  if (!quick) {
-    const scanChars = '░▒▓█▓▒░'
-    for (let i = 0; i <= 48; i += 6) {
-      const bar = Array.from({length: 48}, (_, j) => j < i ? scanChars[Math.floor(Math.random() * scanChars.length)] : ' ').join('')
-      out(`\r${BG}  ${_.dark}[${_.search}${bar}${_.dark}]${R}`)
-      await sl(22)
-    }
-    out('\r\x1b[2K')
-    await sl(80)
-  }
+  if (!quick) await sl(60)
 
   const D = _.dark, S = _.success, T = _.think
   line()
@@ -174,7 +165,7 @@ async function banner(quick = false) {
   out(`\n`)
   line(`  ${D}│`)
   line(`  ${D}│   ${_.grey}PERSONAL INTELLIGENCE SYSTEM  ·  TRACKR AI`)
-  const model   = process.env._CLI_MODEL || 'claude-sonnet-4-6'
+  const model   = process.env._CLI_MODEL || 'claude-3-5-sonnet-20241022'
   const groqOk  = !!process.env.GROQ_API_KEY
   const claudeOk= !!process.env.ANTHROPIC_API_KEY
   line(`  ${D}│   ${groqOk ? S+'● GROQ' : D+'○ GROQ'}${R}   ${claudeOk ? T+'● CLAUDE' : D+'○ CLAUDE'}${R}   ${_.search}● GITHUB${R}   ${_.run}● DAEMON${R}`)
@@ -287,7 +278,7 @@ async function generateRaw(prompt, maxTokens = 4096) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: maxTokens, system: SYSTEM, stream: false, messages: [{ role: 'user', content: prompt }] }),
+    body: JSON.stringify({ model: 'claude-3-5-haiku-20241022', max_tokens: maxTokens, system: SYSTEM, stream: false, messages: [{ role: 'user', content: prompt }] }),
     signal: AbortSignal.timeout(120000),
   }).catch(() => null)
   if (!res?.ok) return null
@@ -315,7 +306,7 @@ async function chat(userMessage) {
 
   spinStart('réflexion…', _.think, 'think')
 
-  const model = process.env._CLI_MODEL || 'claude-sonnet-4-6'
+  const model = process.env._CLI_MODEL || 'claude-3-5-sonnet-20241022'
   const useThinking = THINKING_BUDGET > 0 && !model.includes('haiku')
 
   const body = {
