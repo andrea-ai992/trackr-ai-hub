@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // ─────────────────────────────────────────────────────────────────────────────
-//  AnDy Daemon — beast mode headless pour serveur Railway / VPS
-//  Usage: node cli/andy-daemon.js
-//  Env vars: ANTHROPIC_API_KEY, GITHUB_TOKEN, GITHUB_REPO, DISCORD_BOT_TOKEN…
+//  AnDy Daemon v3 — workers stables, Discord fiable, auto-amélioration
+//  Fixes: Discord lit .task-status.json (plus RAM), 2 workers (rate limit safe),
+//         semaphore API global, startup ping, heartbeat 4h, requeue .running
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { existsSync, readFileSync, writeFileSync, renameSync, readdirSync, mkdirSync } from 'fs'
@@ -31,26 +31,36 @@ const GITHUB_REPO  = process.env.GITHUB_REPO  || 'andrea-ai992/trackr-ai-hub'
 const GITHUB_API   = 'https://api.github.com'
 const BOT_TOKEN    = process.env.DISCORD_BOT_TOKEN || ''
 const CH_MORNING   = process.env.DISCORD_CH_MORNING || process.env.DISCORD_CH_BRAIN || ''
-const CH_UPDATES   = process.env.DISCORD_CH_UPDATES || CH_MORNING  // channel pour les notifs live
+const CH_UPDATES   = process.env.DISCORD_CH_UPDATES || CH_MORNING
 const DISCORD_API  = 'https://discord.com/api/v10'
 
-// ── Logging (stdout structuré — visible dans Railway logs) ────────────────────
+// ── Logging ───────────────────────────────────────────────────────────────────
+const _liveLog = []
 function log(msg) {
-  process.stdout.write('[' + new Date().toISOString() + '] ' + msg.replace(/\x1b\[[0-9;]*m/g, '') + '\n')
+  const clean = msg.replace(/\x1b\[[0-9;]*m/g, '')
+  process.stdout.write('[' + new Date().toISOString() + '] ' + clean + '\n')
+  _liveLog.push({ ts: new Date().toISOString(), msg: clean })
+  if (_liveLog.length > 100) _liveLog.shift()
 }
 
 const sl = ms => new Promise(r => setTimeout(r, ms))
 
 // ── Discord ───────────────────────────────────────────────────────────────────
 async function discordPost(channelId, content) {
-  if (!BOT_TOKEN || !channelId) return false
-  const r = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
-    method: 'POST',
-    headers: { Authorization: `Bot ${BOT_TOKEN}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content: content.slice(0, 1990) }),
-    signal: AbortSignal.timeout(10000),
-  }).catch(() => null)
-  return r?.ok || false
+  if (!BOT_TOKEN || !channelId) { log('Discord: BOT_TOKEN ou channelId manquant'); return false }
+  try {
+    const r = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+      method: 'POST',
+      headers: { Authorization: `Bot ${BOT_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: content.slice(0, 1990) }),
+      signal: AbortSignal.timeout(12000),
+    })
+    if (!r.ok) {
+      const body = await r.text().catch(() => '')
+      log(`Discord error ${r.status}: ${body.slice(0, 100)}`)
+    }
+    return r.ok
+  } catch (e) { log(`Discord exception: ${e.message}`); return false }
 }
 
 // ── Network ───────────────────────────────────────────────────────────────────
@@ -63,12 +73,8 @@ async function checkOnline() {
   } catch { return false }
 }
 
-function loadSyncQueue() {
-  try { return JSON.parse(readFileSync(SYNC_QUEUE_FILE, 'utf8')) } catch { return [] }
-}
-function saveSyncQueue(q) {
-  writeFileSync(SYNC_QUEUE_FILE, JSON.stringify(q, null, 2), 'utf8')
-}
+function loadSyncQueue()  { try { return JSON.parse(readFileSync(SYNC_QUEUE_FILE, 'utf8')) } catch { return [] } }
+function saveSyncQueue(q) { writeFileSync(SYNC_QUEUE_FILE, JSON.stringify(q, null, 2), 'utf8') }
 
 async function waitForOnline() {
   if (await checkOnline()) return
@@ -85,7 +91,7 @@ function ghHeaders() {
     Accept: 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
     'Content-Type': 'application/json',
-    'User-Agent': 'AnDy-Daemon',
+    'User-Agent': 'AnDy-Daemon/3',
   }
 }
 
@@ -100,7 +106,7 @@ async function ghWriteFile(filePath, content, message, sha) {
   const body = { message, content: Buffer.from(content).toString('base64'), ...(sha ? { sha } : {}) }
   const r = await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/contents/${filePath}`, {
     method: 'PUT', headers: ghHeaders(), body: JSON.stringify(body),
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(20000),
   }).catch(() => null)
   return r?.ok || false
 }
@@ -118,86 +124,186 @@ async function flushSyncQueue() {
   saveSyncQueue(remaining)
 }
 
-// ── Claude API ────────────────────────────────────────────────────────────────
-// Stratégie économique : Haiku (~20x moins cher) pour plan/review/autogen
-//                        Sonnet uniquement pour la génération de code
-const MODEL_SMART = 'claude-sonnet-4-6'               // ~$3/M in · $15/M out
-const MODEL_FAST  = 'claude-haiku-4-5-20251001'        // ~$0.8/M in · $4/M out
+// ── Claude API — avec semaphore global ───────────────────────────────────────
+// Stratégie économique: Haiku pour plan/review/autogen, Sonnet pour code
+const MODEL_SMART = 'claude-sonnet-4-6'
+const MODEL_FAST  = 'claude-haiku-4-5-20251001'
 
+// Semaphore: limite le nombre d'appels API simultanés pour éviter les 429
+const API_SEMAPHORE_LIMIT = 2   // max 2 appels Claude en même temps
+let   apiConcurrent = 0
+let   globalRateLimitUntil = 0  // si 429, tous les workers attendent
+
+async function generateRaw(prompt, maxTokens = 4096, model = MODEL_SMART) {
+  if (!API_KEY) throw new Error('ANTHROPIC_API_KEY manquante')
+
+  // Attendre si rate limit global
+  const now = Date.now()
+  if (globalRateLimitUntil > now) {
+    const wait = globalRateLimitUntil - now
+    log(`Rate limit global — attente ${Math.ceil(wait/1000)}s`)
+    await sl(wait)
+  }
+
+  // Attendre le semaphore
+  while (apiConcurrent >= API_SEMAPHORE_LIMIT) await sl(2000)
+  apiConcurrent++
+
+  try {
+    while (true) {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': API_KEY,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model, max_tokens: maxTokens,
+          system: SYSTEM, stream: false,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+        signal: AbortSignal.timeout(130000),
+      }).catch(err => { throw new Error(`Réseau: ${err.message}`) })
+
+      if (res.status === 429) {
+        const retryAfter = parseInt(res.headers?.get?.('retry-after') || '60') || 60
+        const waitMs = retryAfter * 1000
+        globalRateLimitUntil = Date.now() + waitMs
+        log(`429 rate limit — backoff global ${retryAfter}s`)
+        await sl(waitMs)
+        globalRateLimitUntil = 0
+        continue
+      }
+      if ([500, 503, 529].includes(res.status)) {
+        log(`API ${res.status} — retry dans 30s`)
+        await sl(30000)
+        continue
+      }
+      if (res.status === 400) {
+        const body = await res.json().catch(() => ({}))
+        const msg  = body?.error?.message || ''
+        if (msg.toLowerCase().includes('credit')) {
+          log(`Crédits épuisés — retry dans 5min`)
+          await sl(300000)
+          continue
+        }
+        throw new Error(`API 400: ${msg}`)
+      }
+      if (!res.ok) throw new Error(`API ${res.status}`)
+      const d = await res.json().catch(() => null)
+      const text = d?.content?.[0]?.text?.trim()
+      if (!text) throw new Error('Réponse vide')
+      return text
+    }
+  } finally {
+    apiConcurrent--
+  }
+}
+
+// ── System prompt ─────────────────────────────────────────────────────────────
 const SYSTEM = `Tu es AnDy, l'IA autonome d'Andrea Matlega.
 
 APPS ACTIVES:
 1. Trackr (app principale) — React 19 + Vite mobile-first, Vercel. Repo: ${GITHUB_REPO}. URL: ${APP_URL}
-   Pages: Dashboard, Sports (PSG/NFL/NBA), Markets (Stocks/Crypto), News (RSS multi-sources), More (modules), Andy (IA chat), Agents, Portfolio, Sneakers, Watches, FlightTracker
+   Pages: Dashboard, Sports (PSG/NFL/NBA/UFC), Markets (Stocks/Crypto), News (RSS), More, Andy (IA chat), Agents, Portfolio, CryptoTrader, Signals, BrainExplorer, FlightTracker, Sneakers, Watches, RealEstate, BusinessPlan, Patterns, ChartAnalysis
 2. Dashboard serveur — Node.js port 4000, /vibe (dev mobile), /chat (AnDy chat), /api/* (data)
 
 Tu travailles en mode autonome 24/7 — tu génères du code production-ready, tu le pousses sur GitHub.
-Règles:
-- Code complet et fonctionnel (pas de TODO, pas de placeholder)
+Règles ABSOLUES:
+- Code complet et fonctionnel (pas de TODO, pas de placeholder, pas de lorem ipsum)
 - Mobile-first, dark theme (#080808 fond, #00ff88 accent neon)
-- Design tokens CSS vars: --green, --bg, --bg2, --border, --t1, --t2, --t3
+- Design tokens CSS vars: --green, --bg, --bg2, --bg3, --border, --border-hi, --t1, --t2, --t3
 - Préfère améliorer ce qui existe plutôt que créer de zéro
-- Si tu modifies un fichier, tu gardes toute la logique existante`
+- Si tu modifies un fichier, tu gardes toute la logique existante
+- Imports: vérifie que les librairies sont dans package.json avant de les importer
+- Pas de librairies externes non installées (recharts, framer-motion, etc. ne sont pas disponibles)
+- Librairies disponibles: react, react-router-dom, lucide-react, @supabase/supabase-js`
 
-async function generateRaw(prompt, maxTokens = 4096, model = MODEL_SMART) {
-  if (!API_KEY) throw new Error('ANTHROPIC_API_KEY manquante')
-  while (true) {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      body: JSON.stringify({ model, max_tokens: maxTokens, system: SYSTEM, stream: false, messages: [{ role: 'user', content: prompt }] }),
-      signal: AbortSignal.timeout(120000),
-    }).catch(err => { throw new Error(`Réseau: ${err.message}`) })
+// ── Task status ───────────────────────────────────────────────────────────────
+const TASKS_DIR   = resolve(ROOT, 'andy-tasks')
+const STATUS_FILE = resolve(ROOT, 'andy-tasks', '.task-status.json')
+const LIVE_FILE   = resolve(ROOT, 'andy-tasks', '.live-state.json')
 
-    if ([429, 500, 503, 529].includes(res.status)) {
-      log(`API ${res.status} — retry dans 30s`)
-      await sl(30000)
-      continue
-    }
-    if (res.status === 400) {
-      const body = await res.json().catch(() => ({}))
-      const msg  = body?.error?.message || ''
-      if (msg.toLowerCase().includes('credit')) {
-        log(`Crédits épuisés — retry dans 60s (recharge sur console.anthropic.com)`)
-        await sl(60000)
-        continue
-      }
-      throw new Error(`API 400: ${msg}`)
-    }
-    if (!res.ok) throw new Error(`API ${res.status}`)
-    const d = await res.json().catch(() => null)
-    const text = d?.content?.[0]?.text?.trim()
-    if (!text) throw new Error('Réponse vide')
-    return text
+// ── Live state — écrit à chaque événement, lu par le dashboard ───────────────
+const liveWorkers = {}  // { [id]: { task, stage, since } }
+
+function writeLiveState() {
+  try {
+    const allStatus = readStatus()
+    const done   = allStatus.filter(t => t.status === 'DONE')
+    const errors = allStatus.filter(t => t.status === 'ERROR')
+    const queue  = readdirSync(TASKS_DIR).filter(f => f.endsWith('.txt'))
+    const running = readdirSync(TASKS_DIR).filter(f => f.endsWith('.running'))
+
+    writeFileSync(LIVE_FILE, JSON.stringify({
+      updatedAt:    new Date().toISOString(),
+      workers:      liveWorkers,
+      stats: {
+        done:    done.length,
+        errors:  errors.length,
+        queue:   queue.length,
+        running: running.length,
+        session: totalDoneSession,
+        cycles:  autoGenCount,
+        cost:    (done.length * 0.10).toFixed(2),
+      },
+      recentDone:  done.slice(-20).reverse(),
+      recentErrors: errors.slice(-10).reverse(),
+      log:         _liveLog.slice(-50),
+    }, null, 2), 'utf8')
+  } catch {}
+}
+
+function readStatus() {
+  try { return JSON.parse(readFileSync(STATUS_FILE, 'utf8')) } catch { return [] }
+}
+
+function updateTaskStatus(name, updates) {
+  mkdirSync(TASKS_DIR, { recursive: true })
+  const list = readStatus()
+  const idx  = list.findIndex(t => t.name === name)
+  if (idx >= 0) {
+    const e = list[idx]
+    if (updates.stages) e.stages = { ...e.stages, ...updates.stages }
+    Object.assign(e, { ...updates, stages: e.stages })
+  } else {
+    list.push({ name, stages: {}, ...updates })
   }
+  try { writeFileSync(STATUS_FILE, JSON.stringify(list.slice(-200), null, 2), 'utf8') } catch {}
 }
 
 // ── Execute task ──────────────────────────────────────────────────────────────
 async function executeTask(taskContent, taskName = '') {
-  const ts = () => new Date().toISOString()
+  const ts    = () => new Date().toISOString()
   const stage = (s, extra = {}) => {
-    if (taskName) updateTaskStatus(taskName, { stage: s, stages: { [s]: ts() }, ...extra })
+    if (taskName) {
+      updateTaskStatus(taskName, { stage: s, stages: { [s]: ts() }, ...extra })
+      if (liveWorkers._current) liveWorkers._current.stage = s
+      writeLiveState()
+    }
   }
 
   const planPrompt = [
     'TÂCHE: ' + taskContent.slice(0, 600),
     'Identifie les fichiers à créer ou modifier dans le projet Trackr (React+Vite).',
+    'IMPORTANT: utilise UNIQUEMENT des fichiers qui existent dans le projet ou des nouveaux fichiers JSX/JS.',
     'Format — une ligne par fichier:',
     'CREATE:chemin/fichier.jsx',
     'MODIFY:chemin/fichier.jsx',
-    'Max 3 fichiers, chemins relatifs. Rien d\'autre.',
+    'Max 2 fichiers, chemins relatifs. Rien d\'autre.',
   ].join('\n')
 
   stage('planning')
-  // Haiku pour le plan (pas besoin de Sonnet)
   const plan    = await generateRaw(planPrompt, 300, MODEL_FAST)
   const fileOps = plan.split('\n')
     .map(l => l.match(/^(CREATE|MODIFY):(.+\.[\w]+)/i))
     .filter(Boolean)
     .map(m => ({ action: m[1].toUpperCase(), path: m[2].trim().replace(/^\//, '') }))
-    .slice(0, 2)  // max 2 fichiers par tâche (économie)
+    .filter(o => o.path.startsWith('src/') || o.path.startsWith('api/') || o.path.startsWith('cli/') || o.path.startsWith('deploy/'))
+    .slice(0, 2)
 
-  if (!fileOps.length) throw new Error('Plan vide')
+  if (!fileOps.length) throw new Error('Plan vide ou chemins invalides')
 
   stage('generating', { files: fileOps.map(o => o.path) })
 
@@ -216,39 +322,47 @@ async function executeTask(taskContent, taskName = '') {
     const codePrompt = [
       'TÂCHE: ' + taskContent,
       op.action === 'MODIFY' && currentContent
-        ? 'FICHIER ACTUEL (' + op.path + '):\n' + currentContent.slice(0, 10000)
+        ? 'FICHIER ACTUEL (' + op.path + '):\n' + currentContent.slice(0, 12000)
         : 'Crée ' + op.path + ' from scratch.',
-      'Génère le code COMPLET et fonctionnel. Code uniquement, pas de backticks.',
+      '',
+      'RÈGLES:',
+      '- Code COMPLET et fonctionnel, pas de TODO, pas de placeholder',
+      '- Utilise CSS vars: --green #00ff88, --bg #080808, --bg2 #111, --t1 #f0f0f0, --t2 #888, --t3 #444, --border rgba(255,255,255,0.07)',
+      '- Mobile-first, dark theme, Inter font',
+      '- Pas de librairies non installées (pas de recharts, framer-motion, chart.js)',
+      'Code uniquement, pas de backticks.',
     ].filter(Boolean).join('\n')
 
-    // Sonnet pour la génération de code (qualité critique)
-    const newCode = await generateRaw(codePrompt, 5000, MODEL_SMART)
+    const newCode = await generateRaw(codePrompt, 6000, MODEL_SMART)
     let clean = newCode.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim()
 
-    // Review superviseur — Haiku suffit pour valider
+    // Validation de base
+    if (clean.includes('TODO') || clean.includes('placeholder') || clean.length < 100) {
+      throw new Error('Code invalide (TODO/placeholder/trop court)')
+    }
+
     stage('testing')
     const reviewPrompt = [
-      'Superviseur: vérifie ce code pour ' + op.path + ' (Trackr React+Vite).',
+      'Superviseur — vérifie ce code pour ' + op.path + ' (Trackr React+Vite).',
       'TÂCHE: ' + taskContent.slice(0, 200),
-      'CODE (extrait):\n' + clean.slice(0, 6000),
+      'CODE:\n' + clean.slice(0, 8000),
       'Vérifie: syntaxe valide, tâche accomplie, pas de TODO/placeholder.',
-      'Réponds APPROVED ou REJECTED\\nRAISON: ...\\nFIX: <code complet corrigé>',
+      'Réponds uniquement: APPROVED ou REJECTED\nRAISON: ...\nFIX: <code complet corrigé si REJECTED>',
     ].join('\n')
 
-    const review = await generateRaw(reviewPrompt, 5000, MODEL_FAST)
+    const review = await generateRaw(reviewPrompt, 6000, MODEL_FAST)
     if (review.trim().startsWith('REJECTED')) {
       const fixMatch = review.match(/FIX:([\s\S]+)/)
-      if (fixMatch) clean = fixMatch[1].replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim()
-      else throw new Error('Review rejeté sans fix')
-      log(`corrigé par superviseur: ${op.path}`)
-    } else {
-      log(`review OK: ${op.path}`)
+      if (fixMatch) {
+        clean = fixMatch[1].replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim()
+        log(`corrigé par superviseur: ${op.path}`)
+      } else throw new Error('Review rejeté sans fix')
     }
 
     stage('safe')
 
-    const msg = `[AnDy] ${op.action === 'CREATE' ? 'feat' : 'update'}: ${op.path}`
-    const ok  = await ghWriteFile(op.path, clean, msg, sha)
+    const commitMsg = `[AnDy] ${op.action === 'CREATE' ? 'feat' : 'update'}: ${op.path}`
+    const ok = await ghWriteFile(op.path, clean, commitMsg, sha)
     if (ok) {
       stage('live')
       log(`pushed: ${op.path} → Vercel deploying`)
@@ -256,126 +370,62 @@ async function executeTask(taskContent, taskName = '') {
       const online = await checkOnline()
       if (!online) {
         const q = loadSyncQueue()
-        q.push({ filePath: op.path, content: clean, message: msg, sha: sha || null })
+        q.push({ filePath: op.path, content: clean, message: commitMsg, sha: sha || null })
         saveSyncQueue(q)
         log(`offline — queued: ${op.path}`)
       } else {
-        throw new Error('Push échoué: ' + op.path)
+        throw new Error(`Push GitHub échoué: ${op.path}`)
       }
     }
   }
 }
 
-// ── Discord notifications — live updates ──────────────────────────────────────
-const NOTIF_EVERY_N   = 5              // notif toutes les N tâches terminées
-const NOTIF_EVERY_MS  = 30 * 60 * 1000 // ou toutes les 30 minutes
-const notifBuffer     = []             // { name, files, dur }
+// ── Run task ──────────────────────────────────────────────────────────────────
+let autoGenCount = 0
+let totalDoneSession = 0
+let totalErrorSession = 0
+
+// Buffer Discord notifs
+const notifBuffer     = []
 let   lastNotifTime   = Date.now()
+const NOTIF_EVERY_N   = 3
+const NOTIF_EVERY_MS  = 20 * 60 * 1000  // 20min
 
 async function flushDiscordNotif(force = false) {
   if (!notifBuffer.length) return
   if (!force && notifBuffer.length < NOTIF_EVERY_N && Date.now() - lastNotifTime < NOTIF_EVERY_MS) return
   if (!CH_UPDATES) { notifBuffer.length = 0; return }
 
-  const count  = notifBuffer.length
-  const since  = Math.round((Date.now() - lastNotifTime) / 60000)
-  const lines  = notifBuffer.map(t => {
-    const filesStr = (t.files || []).map(f => `\`${f.split('/').pop()}\``).join(', ') || `\`${t.name}\``
-    return `✅ ${filesStr}`
+  const count = notifBuffer.length
+  const since = Math.round((Date.now() - lastNotifTime) / 60000)
+  const lines = notifBuffer.map(t => {
+    const files = (t.files || []).map(f => `\`${f.split('/').pop()}\``).join(' ') || `\`${t.name}\``
+    return `✅ ${files}`
   }).join('\n')
 
   const msg = [
-    `🤖 **AnDy — ${count} tâche${count > 1 ? 's' : ''} terminée${count > 1 ? 's'  : ''}** _(${since}min)_`,
+    `🤖 **AnDy — ${count} tâche${count>1?'s':''} terminée${count>1?'s':''}** _(${since}min)_`,
     `━━━━━━━━━━━━━━━━━━━━`,
     lines,
     `━━━━━━━━━━━━━━━━━━━━`,
-    `🚀 Déployé sur Vercel · ${APP_URL}`,
+    `📱 ${APP_URL}`,
   ].join('\n')
 
-  const ok = await discordPost(CH_UPDATES, msg)
-  log(`Discord notif: ${ok ? 'envoyée' : 'échec'} (${count} tâches)`)
+  await discordPost(CH_UPDATES, msg)
   notifBuffer.length = 0
   lastNotifTime = Date.now()
 }
 
-// ── Task runner ───────────────────────────────────────────────────────────────
-const TASKS_DIR   = resolve(ROOT, 'andy-tasks')
-const STATUS_FILE = resolve(ROOT, 'andy-tasks', '.task-status.json')
-const taskLog     = []
-const errorLog    = []
-let   autoGenCount = 0
-
-function readStatus() {
-  try { return JSON.parse(readFileSync(STATUS_FILE, 'utf8')) } catch { return [] }
-}
-
-function updateTaskStatus(name, updates) {
-  mkdirSync(TASKS_DIR, { recursive: true })
-  const list = readStatus()
-  const idx  = list.findIndex(t => t.name === name)
-  if (idx >= 0) {
-    const e = list[idx]
-    if (updates.stages) e.stages = { ...e.stages, ...updates.stages }
-    Object.assign(e, { ...updates, stages: e.stages })
-  } else {
-    list.push({ name, stages: {}, ...updates })
-  }
-  try { writeFileSync(STATUS_FILE, JSON.stringify(list.slice(-100), null, 2), 'utf8') } catch {}
-}
-
-// Priorités ordonnées : qualité + design > features > infra
-const TASK_DOMAINS = [
-  // ── Trackr App — redesign mobile-first ─────────────────────────────────────
-  'Trackr/Dashboard — redesign complet: portfolio hero card neon vert, crypto movers horizontal scroll, news feed, Fear&Greed gauge, design tokens CSS vars --green --bg --t1',
-  'Trackr/Sports — scores live ESPN ESPN animés, team cards couleurs de club, scroll tabs horizontal, countdown prochains matchs PSG/NFL/NBA',
-  'Trackr/Markets — tab Stocks et Crypto propres, prix live pulsants couleur rouge/vert, sparklines, search bar sticky',
-  'Trackr/News — header sticky avec tabs catégories scroll, cards avec accent bar couleur source, badge NEW/BREAKING, search inline',
-  'Trackr/More — grille modules 2col dark, badges colorés, all-modules list avec chevron, settings tout en bas',
-  // ── Design system ───────────────────────────────────────────────────────────
-  'Trackr/CSS — design tokens propres dans index.css: --bg #080808 --green #00ff88 --t1 #f0f0f0 --border rgba(255,255,255,0.07), Inter font, press-scale, card, pill-up/down, scroll-row, tab-btn, page utility class',
-  'Trackr/BottomNav — pill animé neon, icônes 22px, labels uppercase 9px, safe area bottom, badge news rouge',
-  'Trackr/Animations — stagger fadeUp sur toutes les pages, page transitions slide 340ms, skeleton shimmer neon',
-  // ── Performance ─────────────────────────────────────────────────────────────
-  'Trackr/Performance — code splitting avec lazy/Suspense sur toutes les pages heavy (Sports, ChartAnalysis, FlightTracker), bundle target < 300kb',
-  'Trackr/PWA — service worker cache offline, manifest icons 192/512, add-to-homescreen prompt mobile',
-  // ── Crypto Trader ───────────────────────────────────────────────────────────
-  'CryptoTrader/Setup — crée src/pages/CryptoTrader.jsx: interface trading mobile, orderbook simplifié, position tracker, P&L live, dark bloomberg terminal style',
-  'CryptoTrader/Signals — crée src/pages/Signals.jsx: signaux IA de trading (RSI, MACD, volume), scoring bullish/bearish, alertes configurables',
-  'CryptoTrader/Portfolio — améliore src/pages/Portfolio.jsx: intègre crypto holdings, allocation pie chart, total P&L en USD et %, top gainer/loser',
-  // ── Dashboard serveur (/vibe) ───────────────────────────────────────────────
-  'Serveur/Vibe — améliore deploy/dashboard.js VIBE_HTML: onglet LIVE plus détaillé (pipeline par tâche, durée, status), stats uptime/coût estimé',
-  'Serveur/Logs — améliore onglet LOGS dans /vibe: filtre par niveau (info/error/warn), search, colors, auto-scroll to bottom',
-  // ── Features app ───────────────────────────────────────────────────────────
-  'Trackr/ChartAnalysis — améliore src/pages/ChartAnalysis.jsx: TradingView widget full width, bouton analyse IA avec prompt contextuel, résultats en card',
-  'Trackr/Patterns — améliore src/pages/Patterns.jsx: 16 patterns chartistes avec illustrations SVG, description, exemple, niveau de confiance',
-  'Trackr/Portfolio — améliore src/pages/Portfolio.jsx: ajout crypto positions, graphique allocation, stats avancées, export CSV',
-]
-
-const SECURITY_DOMAINS = [
-  'XSS — sanitisation inputs, dangerouslySetInnerHTML',
-  'CSRF — vérification tokens API routes serverless',
-  'auth — expiration sessions Supabase, refresh tokens',
-  'secrets — aucune clé API exposée côté client',
-  'headers — CSP, X-Frame-Options, HSTS sur /api/',
-  'rate-limiting — brute-force sur /api/auth',
-  'injections — validation paramètres query/body',
-  'npm audit — dépendances vulnérables',
-  'prompt-injection — manipulation du prompt système',
-  'outputs IA — valider code avant push',
-  'infra Vercel — env vars, pas de secrets dans vercel.json',
-  'GitHub token — permissions minimales, pas de push force',
-]
-
 async function runTask(filePath) {
   const name    = filePath.split('/').pop().replace(/\.txt$/, '')
   const content = readFileSync(filePath, 'utf8').trim()
-  if (!content) return
+  if (!content) { renameSync(filePath, filePath.replace(/\.txt$/, '.done')); return }
 
   const startTime = Date.now()
   log(`TASK START: ${name}`)
 
   updateTaskStatus(name, {
-    desc: content.slice(0, 80),
+    desc: content.slice(0, 100),
     startedAt: new Date().toISOString(),
     stage: 'started',
     stages: { started: new Date().toISOString() },
@@ -385,62 +435,84 @@ async function runTask(filePath) {
     error: null,
   })
 
-  taskLog.push({ name, desc: content.slice(0, 60), status: 'RUNNING', dur: 0 })
-  const entry = taskLog[taskLog.length - 1]
-
   const runningPath = filePath.replace(/\.txt$/, '.running')
   renameSync(filePath, runningPath)
 
   try {
     await executeTask(content, name)
     const dur = Math.round((Date.now() - startTime) / 1000)
-    entry.status = 'DONE'; entry.dur = dur
     const taskStatus = readStatus().find(t => t.name === name)
     updateTaskStatus(name, { status: 'DONE', dur })
     renameSync(runningPath, runningPath.replace(/\.running$/, '.done'))
-    log(`TASK DONE: ${name} (${dur}s)`)
+    totalDoneSession++
+    log(`TASK DONE: ${name} (${dur}s) [session: ${totalDoneSession}]`)
     notifBuffer.push({ name, files: taskStatus?.files || [], dur })
     await flushDiscordNotif()
   } catch (err) {
     const dur = Math.round((Date.now() - startTime) / 1000)
-    entry.status = 'ERROR'; entry.dur = dur
-    errorLog.push({ name, error: err.message, ts: new Date().toISOString() })
     updateTaskStatus(name, { status: 'ERROR', stage: 'error', dur, error: err.message })
     renameSync(runningPath, runningPath.replace(/\.running$/, '.error'))
+    totalErrorSession++
     log(`TASK ERROR: ${name} — ${err.message}`)
   }
 }
 
-// ── Smart dedup — évite de refaire ce qui a été fait récemment ───────────────
-function getRecentDomains(n = 15) {
-  // Retourne les domaines des N dernières tâches terminées
-  const done = taskLog.filter(t => t.status === 'DONE').slice(-n)
+// ── Auto-gen — génère de nouvelles tâches intelligemment ─────────────────────
+const TASK_DOMAINS = [
+  'Trackr/Dashboard — redesign: hero card portfolio neon vert, crypto movers scroll, Fear&Greed gauge SVG, news feed, quick actions 2x2',
+  'Trackr/Sports — ESPN live scores animés, team cards couleurs club, tabs PSG/NBA/NFL/UFC scroll horizontal',
+  'Trackr/Markets — Stocks et Crypto, prix live pulsants rouge/vert, sparklines SVG, search bar sticky',
+  'Trackr/News — header sticky tabs catégories, cards accent bar couleur source, badge BREAKING/NEW',
+  'Trackr/More — grille modules 2col, badges NEW/LIVE, settings dark mode toggle en bas',
+  'Trackr/CSS — design tokens index.css: variables CSS complètes, Inter font, animations fadeUp/ping/shimmer',
+  'Trackr/BottomNav — pill animé neon qui suit l onglet actif, safe area bottom, badge news rouge',
+  'Trackr/Performance — lazy/Suspense sur pages lourdes, bundle < 300kb',
+  'Trackr/PWA — service worker cache offline, manifest complet avec shortcuts',
+  'Trackr/CryptoTrader — interface trading bloomberg dark, orderbook, positions P&L live',
+  'Trackr/Signals — signaux IA (RSI/MACD/Volume), scoring bullish/bearish, alertes',
+  'Trackr/Portfolio — graphique performance SVG, pie chart allocation, total P&L',
+  'Trackr/Andy — chat premium: bulles messages, thinking animé, suggestions rapides',
+  'Trackr/BrainExplorer — arbre tâches infini, task detail panel, activité 24h',
+  'Trackr/Animations — stagger fadeUp, page transitions 340ms, skeleton shimmer neon',
+  'Serveur/Vibe — pipeline par tâche détaillée, stats uptime/coût, logs filtrables',
+  'Trackr/Security — sanitisation inputs, CSP headers, rate limiting, validation',
+  'Trackr/ChartAnalysis — TradingView widget full width, analyse IA contextuelle',
+  'Trackr/Patterns — 16 patterns chartistes SVG, description, niveau confiance',
+  'Trackr/FlightTracker — design premium, statut live, alertes perturbations',
+]
+
+const SECURITY_DOMAINS = [
+  'XSS — sanitisation inputs, dangerouslySetInnerHTML',
+  'auth — expiration sessions Supabase, refresh tokens',
+  'secrets — aucune clé API exposée côté client',
+  'rate-limiting — brute-force sur /api/auth',
+  'validation — paramètres query/body strictement validés',
+  'outputs IA — valider code avant push',
+]
+
+function getRecentDomains(n = 12) {
+  const all  = readStatus()
+  const done = all.filter(t => t.status === 'DONE').slice(-n)
   return done.map(t => (t.desc || t.name || '').split(/[—\-\/]/)[0].trim().toLowerCase())
 }
 
 function pickNextDomain() {
-  const recentDomains = getRecentDomains(15)
-  // Filtre les domaines récemment couverts pour tourner sur tout
+  const recentDomains = getRecentDomains(12)
   const fresh = TASK_DOMAINS.filter(d => {
     const key = d.split(/[—\-\/]/)[0].trim().toLowerCase()
-    return !recentDomains.some(r => r.includes(key.slice(0, 8)) || key.includes(r.slice(0, 8)))
+    return !recentDomains.some(r => r.slice(0, 8) === key.slice(0, 8))
   })
   const pool = fresh.length > 0 ? fresh : TASK_DOMAINS
-  // Round-robin sur le pool filtré
   return pool[autoGenCount % pool.length]
 }
 
-// Charge la mémoire AnDy pour contexte génération
 function loadMemoryContext() {
   try {
-    const mem = JSON.parse(readFileSync(MEMORY_FILE, 'utf8'))
-    const entries = (mem.entries || []).slice(-20)
-    const patterns = entries.filter(e => e.type === 'pattern_scan').flatMap(e => e.findings || []).slice(-8)
-    const errors   = entries.filter(e => e.type === 'error').slice(-5)
-    const lines = []
-    if (patterns.length) lines.push('Patterns/bugs connus: ' + patterns.map(p => `${p.file}: ${p.description}`).join(' | '))
-    if (errors.length)   lines.push('Erreurs récentes mémoire: ' + errors.map(e => e.error).join(' | '))
-    return lines.join('\n')
+    const mem  = JSON.parse(readFileSync(resolve(ROOT, 'ANDY_MEMORY.json'), 'utf8'))
+    const entries = (mem.entries || []).slice(-15)
+    const patterns = entries.filter(e => e.type === 'pattern_scan').flatMap(e => e.findings || []).slice(-5)
+    if (!patterns.length) return ''
+    return 'Bugs/patterns connus: ' + patterns.map(p => `${p.file}: ${p.description}`).join(' | ')
   } catch { return '' }
 }
 
@@ -449,38 +521,36 @@ async function generateNextTasks() {
   const domain    = pickNextDomain()
   const secDomain = SECURITY_DOMAINS[autoGenCount % SECURITY_DOMAINS.length]
   const prefix    = String(Date.now())
-  const totalDone = taskLog.filter(t => t.status === 'DONE').length
-  const recentDone = taskLog.filter(t => t.status === 'DONE').slice(-8).map(t => (t.desc || t.name).slice(0, 50))
-  const recentErrs = errorLog.slice(-4).map(e => e.name + ': ' + e.error.slice(0, 50))
+  const allStatus = readStatus()
+  const done      = allStatus.filter(t => t.status === 'DONE')
+  const errors    = allStatus.filter(t => t.status === 'ERROR')
+  const recentDone = done.slice(-6).map(t => (t.desc || t.name).slice(0, 45))
+  const recentErrs = errors.slice(-3).map(e => e.name + ': ' + (e.error || '').slice(0, 40))
   const memCtx    = loadMemoryContext()
 
-  log(`AUTO-GEN #${autoGenCount} — focus: ${domain.slice(0, 60)}`)
+  log(`AUTO-GEN #${autoGenCount} — focus: ${domain.slice(0, 55)}`)
 
   const prompt = [
-    'Projet Trackr — app React 19 + Vite mobile-first, repo: ' + GITHUB_REPO,
-    'OBJECTIF: rendre l app parfaitement fluide, rapide et visuellement impressionnante.',
-    'Chaque page doit ressembler à une vraie app pro dédiée (ESPN pour sports, Bloomberg pour markets).',
-    'Design: dark #080808, accent neon #00ff88, Inter font, CSS vars --green --bg --t1.',
+    'Projet Trackr — React 19 + Vite mobile-first, repo: ' + GITHUB_REPO,
+    'STACK: react, react-router-dom, lucide-react, @supabase/supabase-js (SEULEMENT ces librairies)',
+    'OBJECTIF: rendre chaque page visuellement impressionnante, fluide, pro.',
+    'Design: dark #080808, neon #00ff88, Inter, CSS vars --green --bg --bg2 --t1 --t2 --t3.',
     '',
-    memCtx ? 'CONTEXTE MÉMOIRE:\n' + memCtx : '',
-    'Tâches récentes terminées (' + totalDone + ' total): ' + (recentDone.join(' | ') || 'aucune'),
-    recentErrs.length ? 'Erreurs récentes: ' + recentErrs.join(' | ') : '',
+    memCtx || '',
+    'Tâches récentes terminées (' + done.length + ' total): ' + (recentDone.join(' · ') || 'aucune'),
+    recentErrs.length ? 'ERREURS À ÉVITER: ' + recentErrs.join(' · ') : '',
     '',
-    'FOCUS CE CYCLE: ' + domain,
+    'FOCUS: ' + domain,
     'FOCUS SÉCURITÉ: ' + secDomain,
     '',
-    'Génère 3 tâches concrètes NON DUPLIQUÉES avec les tâches récentes — impact visuel immédiat.',
-    'Sois précis: indique le fichier cible et ce qui doit changer exactement.',
-    'Format — exactement 3 lignes:',
-    'TASK: description complète et précise avec fichier(s) cible(s)',
-    'Pas de markdown, pas de numérotation.',
+    'Génère 3 tâches concrètes NON DUPLIQUÉES. Chaque tâche doit spécifier le fichier exact.',
+    'Format strict — exactement 3 lignes commençant par TASK:',
+    'TASK: <description précise avec fichier(s) cible(s)>',
   ].filter(Boolean).join('\n')
 
-  let attempts = 0
-  while (attempts < 3) {
-    attempts++
+  for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const raw   = await generateRaw(prompt, 700, MODEL_FAST)
+      const raw   = await generateRaw(prompt, 800, MODEL_FAST)
       const tasks = raw.split('\n').map(l => l.match(/^TASK:\s*(.+)/i)?.[1]?.trim()).filter(Boolean)
       if (!tasks.length) throw new Error('Aucune ligne TASK')
       tasks.slice(0, 3).forEach((desc, i) => {
@@ -490,47 +560,45 @@ async function generateNextTasks() {
       })
       return
     } catch (err) {
-      log(`auto-gen ${attempts}/3 failed: ${err.message}`)
-      if (attempts < 3) await sl(15000)
+      log(`auto-gen ${attempt}/3 failed: ${err.message}`)
+      if (attempt < 3) await sl(20000)
     }
   }
   // Fallback statique
-  const fallback = 'Audit sécurité Trackr — focus: ' + secDomain + '. Identifie et corrige les failles.'
-  writeFileSync(resolve(TASKS_DIR, `auto-${prefix}-sec.txt`), fallback, 'utf8')
+  const fallback = `Améliore src/index.css — ajoute/consolide les design tokens CSS vars (--bg #080808 --green #00ff88 --t1 #f0f0f0 --border rgba(255,255,255,0.07)), classes utilitaires .page .card .pill-up .pill-down .scroll-row .tab-btn .section-label .press-scale .live-dot, animations @keyframes fadeUp shimmer ping pulse. Mobile-first, Inter font.`
+  writeFileSync(resolve(TASKS_DIR, `auto-${prefix}-fallback.txt`), fallback, 'utf8')
   log('fallback task injected')
 }
 
-// ── Discord progress ping — toutes les 2h pendant la nuit ────────────────────
-let lastProgressPing = Date.now()
-const PROGRESS_PING_EVERY_MS = 2 * 60 * 60 * 1000  // 2h
+// ── Discord heartbeat + recap ─────────────────────────────────────────────────
+let lastHeartbeat = 0
+const HEARTBEAT_EVERY_MS = 4 * 60 * 60 * 1000  // toutes les 4h
 
-async function maybeProgressPing() {
-  if (!CH_UPDATES) return
-  if (Date.now() - lastProgressPing < PROGRESS_PING_EVERY_MS) return
-  lastProgressPing = Date.now()
+async function sendHeartbeat() {
+  if (Date.now() - lastHeartbeat < HEARTBEAT_EVERY_MS) return
+  lastHeartbeat = Date.now()
 
-  const done   = taskLog.filter(t => t.status === 'DONE')
-  const errors = taskLog.filter(t => t.status === 'ERROR')
-  const queue  = readdirSync(TASKS_DIR).filter(f => f.endsWith('.txt')).length
-  const cost   = (done.length * 0.10).toFixed(2)
-  const totalSec = done.reduce((s, t) => s + (t.dur || 0), 0)
+  const allStatus = readStatus()
+  const done      = allStatus.filter(t => t.status === 'DONE')
+  const errors    = allStatus.filter(t => t.status === 'ERROR')
+  const queue     = readdirSync(TASKS_DIR).filter(f => f.endsWith('.txt')).length
+  const cost      = (done.length * 0.10).toFixed(2)
   const recentFiles = [...new Set(
-    done.slice(-10).flatMap(t => (t.files || []).map(f => f.split('/').pop()))
-  )].slice(0, 6)
+    done.slice(-8).flatMap(t => (t.files || []).map(f => f.split('/').pop()))
+  )].slice(0, 5)
 
   const msg = [
-    `🔄 **AnDy — update ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}**`,
-    `✅ ${done.length} tâches · ❌ ${errors.length} erreurs · ⏳ ${queue} en queue`,
-    `💸 ~$${cost} · ⏱ ${Math.round(totalSec/60)}min · 🔁 cycle #${autoGenCount}`,
-    recentFiles.length ? `📁 Fichiers récents: ${recentFiles.map(f => `\`${f}\``).join(' ')}` : '',
-    `📱 ${APP_URL}`,
+    `💓 **AnDy — ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}**`,
+    `✅ ${done.length} terminées · ❌ ${errors.length} erreurs · ⏳ ${queue} en queue`,
+    `💸 ~$${cost} · 🔁 cycle #${autoGenCount} · ⚡ session: +${totalDoneSession} done`,
+    recentFiles.length ? `📁 ${recentFiles.map(f => `\`${f}\``).join(' ')}` : '',
+    `📱 ${APP_URL} | 🖥 http://62.238.12.221:4000/vibe`,
   ].filter(Boolean).join('\n')
 
   const ok = await discordPost(CH_UPDATES, msg)
-  log(`Discord progress ping: ${ok ? 'envoyé' : 'échec'}`)
+  log(`Heartbeat Discord: ${ok ? 'ok' : 'échec'}`)
 }
 
-// ── Discord morning recap — 7h00 ─────────────────────────────────────────────
 function scheduleDiscordRecap() {
   const now = new Date(), target = new Date(now)
   target.setHours(7, 0, 0, 0)
@@ -539,19 +607,20 @@ function scheduleDiscordRecap() {
   log(`Discord recap schedulé à ${target.toLocaleString('fr-FR')} (dans ${Math.round(ms/60000)}min)`)
 
   setTimeout(async () => {
-    const done    = taskLog.filter(t => t.status === 'DONE')
-    const errors  = taskLog.filter(t => t.status === 'ERROR')
-    const queue   = readdirSync(TASKS_DIR).filter(f => f.endsWith('.txt'))
+    // ← FIX CRITIQUE: lit .task-status.json PAS taskLog (RAM)
+    const allStatus = readStatus()
+    const midnight  = new Date(); midnight.setHours(0, 0, 0, 0)
+    const done      = allStatus.filter(t => t.status === 'DONE' && t.startedAt && new Date(t.startedAt) >= midnight)
+    const errors    = allStatus.filter(t => t.status === 'ERROR' && t.startedAt && new Date(t.startedAt) >= midnight)
+    const queue     = readdirSync(TASKS_DIR).filter(f => f.endsWith('.txt'))
 
-    // Domaines travaillés cette nuit
     const domains = {}
     for (const t of done) {
-      const d = (t.desc || '').split('—')[0].trim().replace(/^[A-Z0-9]+\//, '') || 'autre'
+      const d = (t.desc || '').split(/[—\/]/)[0].trim().replace(/^(Trackr|Serveur|CryptoTrader)\//, '') || 'autre'
       domains[d] = (domains[d] || 0) + 1
     }
     const topDomains = Object.entries(domains).sort((a,b) => b[1]-a[1]).slice(0, 5)
 
-    // Fichiers les plus modifiés
     const files = {}
     for (const t of done) {
       for (const f of (t.files || [])) {
@@ -561,178 +630,136 @@ function scheduleDiscordRecap() {
     }
     const topFiles = Object.entries(files).sort((a,b) => b[1]-a[1]).slice(0, 8)
 
-    // Durée totale de travail
     const totalSec = done.reduce((s, t) => s + (t.dur || 0), 0)
-    const totalMin = Math.round(totalSec / 60)
     const estimatedCost = (done.length * 0.10).toFixed(2)
-
     const dateFR = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
 
     const lines = [
-      `# 🤖 AnDy — Rapport du matin`,
+      `🤖 **AnDy — Rapport du matin**`,
       `**${dateFR} · 7h00**`,
       ``,
-      `## 📊 Stats nuit`,
-      `✅ **${done.length} tâches terminées** · ⏱ ${totalMin}min de travail · 💸 ~$${estimatedCost}`,
-      errors.length ? `❌ **${errors.length} erreur${errors.length>1?'s':''}**` : ``,
-      queue.length  ? `⏳ ${queue.length} en attente` : ``,
-      `🔄 ${autoGenCount} cycles auto-génération`,
+      `📊 **Stats nuit**`,
+      `✅ **${done.length} tâches terminées** · ⏱ ${Math.round(totalSec/60)}min · 💸 ~$${estimatedCost}`,
+      errors.length ? `❌ ${errors.length} erreur${errors.length>1?'s':''}` : '',
+      queue.length  ? `⏳ ${queue.length} en attente` : '',
+      `🔁 ${autoGenCount} cycles auto-génération`,
       ``,
-      topDomains.length ? `## 🎯 Domaines travaillés\n${topDomains.map(([d,n]) => `• **${d}** — ${n} tâche${n>1?'s':''}`).join('\n')}` : '',
+      topDomains.length ? `🎯 **Domaines**\n${topDomains.map(([d,n]) => `• **${d}** — ${n}`).join('\n')}` : '',
       ``,
-      topFiles.length ? `## 📁 Fichiers modifiés\n${topFiles.map(([f,n]) => `\`${f}\` ×${n}`).join(' · ')}` : '',
+      topFiles.length ? `📁 **Fichiers modifiés**\n${topFiles.map(([f,n]) => `\`${f}\` ×${n}`).join(' · ')}` : '',
       ``,
-      `## 🏆 Dernières réussites`,
-      ...done.slice(-8).map(t => `✔ \`${(t.desc||t.name).slice(0,70)}\``),
-      errors.length ? `\n## ⚠️ Erreurs\n${errors.slice(-3).map(t => `✘ \`${t.name}\` — ${(t.error||'').slice(0,60)}`).join('\n')}` : '',
+      `🏆 **Dernières tâches**`,
+      ...done.slice(-6).map(t => `✔ \`${(t.desc||t.name).slice(0,65)}\``),
+      errors.length ? `\n⚠️ **Erreurs**\n${errors.slice(-3).map(t => `✘ \`${t.name}\``).join('\n')}` : '',
       ``,
-      `## 🔗 Accès`,
-      `📱 App Trackr: ${APP_URL}`,
-      `🖥 Dashboard: http://62.238.12.221:4000/vibe`,
-      `💬 AnDy chat: http://62.238.12.221:4000/chat`,
-      `📦 Repo: https://github.com/${GITHUB_REPO}`,
+      `🔗 **Accès**`,
+      `📱 ${APP_URL}`,
+      `🖥 http://62.238.12.221:4000/vibe`,
+      `📦 https://github.com/${GITHUB_REPO}`,
     ].filter(l => l !== undefined).join('\n')
 
     const ok = await discordPost(CH_MORNING, lines.slice(0, 1990))
-    log(`Discord recap 7h: ${ok ? 'envoyé ✓' : 'échec ✗'}`)
+    log(`Discord recap 7h: ${ok ? 'envoyé ✓' : 'ÉCHEC ✗ — vérifier BOT_TOKEN et DISCORD_CH_MORNING'}`)
     scheduleDiscordRecap()
   }, ms)
 }
 
-// ── AI Data Export — snapshot portable de toute l'IA ─────────────────────────
-const AI_DATA_DIR   = resolve(ROOT, 'ai-data')
-const MEMORY_FILE   = resolve(ROOT, 'ANDY_MEMORY.json')
+// ── AI Data Export ────────────────────────────────────────────────────────────
+const AI_DATA_DIR     = resolve(ROOT, 'ai-data')
+const MEMORY_FILE     = resolve(ROOT, 'ANDY_MEMORY.json')
 let   lastExportCount = 0
-const EXPORT_EVERY_N  = 10  // exporte toutes les 10 tâches terminées
+const EXPORT_EVERY_N  = 8
 
 async function exportAIData() {
   try {
     mkdirSync(AI_DATA_DIR, { recursive: true })
-
     const allStatus = readStatus()
     const done   = allStatus.filter(t => t.status === 'DONE')
     const errors = allStatus.filter(t => t.status === 'ERROR')
     const files  = readdirSync(TASKS_DIR).filter(f => !f.startsWith('.'))
 
-    // Charge la mémoire Andy
     let memory = {}
     try { memory = JSON.parse(readFileSync(MEMORY_FILE, 'utf8')) } catch {}
 
-    // Stats agrégées
     const stats = {
-      exportedAt:   new Date().toISOString(),
-      totalDone:    done.length + files.filter(f => f.endsWith('.done')).length,
-      totalErrors:  errors.length + files.filter(f => f.endsWith('.error')).length,
-      totalQueue:   files.filter(f => f.endsWith('.txt')).length,
+      exportedAt: new Date().toISOString(),
+      totalDone: done.length,
+      totalErrors: errors.length,
+      totalQueue: files.filter(f => f.endsWith('.txt')).length,
       autoGenCycles: autoGenCount,
-      uptime:       process.uptime(),
-      repo:         GITHUB_REPO,
-      app:          APP_URL,
-      model:        { code: MODEL_SMART, fast: MODEL_FAST },
+      sessionDone: totalDoneSession,
+      uptime: process.uptime(),
+      repo: GITHUB_REPO,
+      app: APP_URL,
+      workers: WORKER_COUNT,
+      model: { code: MODEL_SMART, fast: MODEL_FAST },
     }
 
-    // Domaines les plus travaillés
     const domainCount = {}
     for (const t of done) {
       const d = (t.desc || '').split('/')[0].trim() || 'other'
       domainCount[d] = (domainCount[d] || 0) + 1
     }
-
-    // Fichiers les plus modifiés
     const fileCount = {}
     for (const t of done) {
-      for (const f of (t.files || [])) {
-        fileCount[f] = (fileCount[f] || 0) + 1
-      }
+      for (const f of (t.files || [])) fileCount[f] = (fileCount[f] || 0) + 1
     }
-    const topFiles = Object.entries(fileCount)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 20)
-      .map(([f, n]) => ({ file: f, times: n }))
 
-    // Écrit tous les fichiers d'export
-    writeFileSync(resolve(AI_DATA_DIR, 'stats.json'),
-      JSON.stringify(stats, null, 2), 'utf8')
-    writeFileSync(resolve(AI_DATA_DIR, 'task-history.json'),
-      JSON.stringify(allStatus.slice(-500), null, 2), 'utf8')
-    writeFileSync(resolve(AI_DATA_DIR, 'memory.json'),
-      JSON.stringify(memory, null, 2), 'utf8')
-    writeFileSync(resolve(AI_DATA_DIR, 'domains.json'),
-      JSON.stringify({ domains: domainCount, topFiles }, null, 2), 'utf8')
-    writeFileSync(resolve(AI_DATA_DIR, 'README.md'), [
-      '# AnDy AI Data Export',
-      '',
-      `> Généré automatiquement — ${new Date().toLocaleString('fr-FR')}`,
-      '',
-      '## Contenu',
-      '| Fichier | Description |',
-      '|---------|-------------|',
-      '| `stats.json` | Stats globales (tâches, uptime, modèles) |',
-      '| `task-history.json` | Historique des 500 dernières tâches |',
-      '| `memory.json` | Mémoire complète d\'AnDy (ANDY_MEMORY.json) |',
-      '| `domains.json` | Domaines travaillés + fichiers les plus modifiés |',
-      '',
-      '## Migration vers un nouveau serveur',
-      '```bash',
-      '# 1. Clone le repo',
-      `git clone https://github.com/${GITHUB_REPO}`,
-      '# 2. Copie ton .env',
-      'scp root@ancien-serveur:/root/trackr/.env /root/trackr/.env',
-      '# 3. Lance',
-      'pm2 start ecosystem.config.cjs && pm2 save && pm2 startup',
-      '```',
-      '',
-      `## Stats actuelles`,
-      `- **Tâches terminées :** ${stats.totalDone}`,
-      `- **Cycles auto-gen :** ${autoGenCount}`,
-      `- **Repo :** ${GITHUB_REPO}`,
-      `- **App :** ${APP_URL}`,
-    ].join('\n'), 'utf8')
+    writeFileSync(resolve(AI_DATA_DIR, 'stats.json'), JSON.stringify(stats, null, 2), 'utf8')
+    writeFileSync(resolve(AI_DATA_DIR, 'task-history.json'), JSON.stringify(allStatus.slice(-500), null, 2), 'utf8')
+    writeFileSync(resolve(AI_DATA_DIR, 'memory.json'), JSON.stringify(memory, null, 2), 'utf8')
+    writeFileSync(resolve(AI_DATA_DIR, 'domains.json'), JSON.stringify({ domains: domainCount, topFiles: Object.entries(fileCount).sort((a,b)=>b[1]-a[1]).slice(0,20).map(([f,n])=>({file:f,times:n})) }, null, 2), 'utf8')
 
-    // Push vers GitHub
     try {
-      execSync(`cd ${ROOT} && git add ai-data/ && git commit -m "[AnDy] export ai-data — ${stats.totalDone} tasks" && git pull origin main --no-rebase -X ours -q && git push origin main -q`, { stdio: 'pipe' })
-      log(`AI data exported & pushed — ${stats.totalDone} tasks total`)
+      execSync(`cd "${ROOT}" && git add ai-data/ && git diff --cached --quiet || git commit -m "[AnDy] export ai-data — ${done.length} tasks" && git pull origin main --no-rebase -X ours -q && git push origin main -q`, { stdio: 'pipe' })
+      log(`AI data exported: ${done.length} tasks total`)
     } catch (e) {
-      log(`AI export local OK, push skipped: ${e.message?.slice(0, 60)}`)
+      log(`AI export local OK, push skipped: ${(e.message || '').slice(0, 60)}`)
     }
   } catch (err) {
     log(`exportAIData error: ${err.message}`)
   }
 }
 
-// ── Self-update — pull le nouveau code depuis GitHub ─────────────────────────
+// ── Self-update ───────────────────────────────────────────────────────────────
 let lastSelfUpdate = Date.now()
-const SELF_UPDATE_EVERY_MS = 60 * 60 * 1000  // toutes les heures
+const SELF_UPDATE_EVERY_MS = 90 * 60 * 1000  // 90min
 
 async function selfUpdate() {
   if (Date.now() - lastSelfUpdate < SELF_UPDATE_EVERY_MS) return
   lastSelfUpdate = Date.now()
   try {
-    const out = execSync(`cd ${ROOT} && git pull origin main --no-rebase -X ours -q 2>&1`, { stdio: 'pipe' }).toString().trim()
-    if (out && !out.includes('Already up to date')) {
-      log(`Self-update: ${out.slice(0, 100)}`)
-    }
+    const out = execSync(`cd "${ROOT}" && git pull origin main --no-rebase -X ours -q 2>&1`, { stdio: 'pipe' }).toString().trim()
+    if (out && !out.includes('Already up to date')) log(`Self-update: ${out.slice(0, 100)}`)
   } catch {}
 }
 
 // ── Parallel workers ──────────────────────────────────────────────────────────
-// Coût estimé par tâche : ~$0.08-0.12 (Haiku plan+review, Sonnet code)
-// $20 de crédits ≈ 160-250 tâches
-// Avec 5 workers parallèles → 5x plus vite, même coût total
+// 2 workers (safe pour rate limit Anthropic) + semaphore API global (max 2 calls)
+// Coût: ~$0.08-0.12/tâche | $20 crédits ≈ 160-250 tâches
+const WORKER_COUNT     = 2
+const PAUSE_AFTER_TASK = 12   // secondes de pause entre tâches par worker
+const PAUSE_IDLE       = 40   // secondes si pas de tâche dispo
 
-const WORKER_COUNT     = 5    // agents parallèles (nuit: max throughput)
-const PAUSE_AFTER_TASK = 3    // secondes après chaque tâche par worker
-const PAUSE_IDLE       = 20   // secondes si pas de tâche dispo
-
-// Mutex en mémoire — évite que 2 workers prennent le même fichier
 const claimedTasks = new Set()
 
-// Tente de réclamer un fichier .txt de la queue (atomique via rename)
+function priorityScore(fname) {
+  let score = 0
+  if (fname.startsWith('critical-')) score += 100
+  if (fname.startsWith('fix-'))      score += 80
+  if (fname.startsWith('NUIT-'))     score += 70
+  if (fname.startsWith('v2-'))       score += 60
+  if (fname.startsWith('manual-'))   score += 50
+  if (fname.startsWith('auto-'))     score += 30
+  if (fname.includes('redesign'))    score += 15
+  if (fname.includes('perf'))        score += 10
+  return score
+}
+
 function claimNextTask() {
   const queue = readdirSync(TASKS_DIR)
     .filter(f => f.endsWith('.txt') && !claimedTasks.has(f))
-    .sort()  // priorité alphabétique (NUIT- avant auto-)
+    .sort((a, b) => priorityScore(b) - priorityScore(a))  // tri par priorité
   for (const f of queue) {
     if (claimedTasks.has(f)) continue
     claimedTasks.add(f)
@@ -741,84 +768,111 @@ function claimNextTask() {
   return null
 }
 
-// Un worker individuel — tourne indéfiniment
 async function worker(id) {
-  // Décalage de démarrage pour éviter le burst API
-  await sl(id * 4000)
+  await sl(id * 6000)
   log(`Worker #${id} démarré`)
+  liveWorkers[id] = { task: null, stage: 'idle', since: new Date().toISOString() }
+  writeLiveState()
 
   while (true) {
     const fp = claimNextTask()
     if (fp) {
       const fname = fp.split('/').pop()
+      liveWorkers[id] = { task: fname.replace(/\.txt$/, ''), stage: 'starting', since: new Date().toISOString() }
+      liveWorkers._current = liveWorkers[id]
+      writeLiveState()
       try {
         if (existsSync(fp)) await runTask(fp)
+        else claimedTasks.delete(fname)
       } catch (e) {
         log(`Worker #${id} erreur inattendue: ${e.message}`)
       } finally {
         claimedTasks.delete(fname)
+        liveWorkers[id] = { task: null, stage: 'idle', since: new Date().toISOString() }
+        writeLiveState()
       }
       await sl(PAUSE_AFTER_TASK * 1000)
     } else {
-      // Pas de tâche dispo — ce worker attend
+      liveWorkers[id] = { task: null, stage: 'idle', since: new Date().toISOString() }
+      writeLiveState()
       await sl(PAUSE_IDLE * 1000)
     }
   }
 }
 
-// Superviseur — tourne en fond, génère des tâches + maintenance
 async function supervisor() {
   mkdirSync(TASKS_DIR, { recursive: true })
+  mkdirSync(resolve(TASKS_DIR, '_archive'), { recursive: true })
+  mkdirSync(AI_DATA_DIR, { recursive: true })
 
-  // Nettoyage des .running/.error du démarrage précédent
-  const stale = readdirSync(TASKS_DIR).filter(f => f.endsWith('.running') || f.endsWith('.error'))
-  if (stale.length) {
-    const arch = resolve(TASKS_DIR, '_archive')
-    mkdirSync(arch, { recursive: true })
-    for (const f of stale) {
-      try { renameSync(resolve(TASKS_DIR, f), resolve(arch, f)) } catch {}
+  // Requeue les .running (tâches interrompues au restart précédent)
+  const running = readdirSync(TASKS_DIR).filter(f => f.endsWith('.running'))
+  if (running.length) {
+    for (const f of running) {
+      const src  = resolve(TASKS_DIR, f)
+      const dest = resolve(TASKS_DIR, f.replace(/\.running$/, '.txt'))
+      try { renameSync(src, dest); log(`Requeued: ${f} → .txt`) } catch {}
     }
-    log(`Archivé ${stale.length} fichier(s) stale`)
   }
 
+  // Archive les .error du run précédent
+  const errFiles = readdirSync(TASKS_DIR).filter(f => f.endsWith('.error'))
+  if (errFiles.length) {
+    const arch = resolve(TASKS_DIR, '_archive')
+    for (const f of errFiles) {
+      try { renameSync(resolve(TASKS_DIR, f), resolve(arch, Date.now() + '-' + f)) } catch {}
+    }
+    log(`Archivé ${errFiles.length} erreur(s) précédente(s)`)
+  }
+
+  // Ping startup Discord
+  const allStatus = readStatus()
+  const totalDone = allStatus.filter(t => t.status === 'DONE').length
+  const queueLen  = readdirSync(TASKS_DIR).filter(f => f.endsWith('.txt')).length
+  await discordPost(CH_UPDATES, [
+    `⚡ **AnDy v3 démarré** — ${new Date().toLocaleString('fr-FR')}`,
+    `📊 Historique: ${totalDone} tâches terminées | ${queueLen} en queue`,
+    `🔧 ${WORKER_COUNT} workers · semaphore ${API_SEMAPHORE_LIMIT} API calls max`,
+    `📱 ${APP_URL}`,
+  ].join('\n'))
+
   scheduleDiscordRecap()
+  lastHeartbeat = Date.now()  // reset pour ne pas envoyer juste après le startup
 
   while (true) {
     await waitForOnline()
     await flushSyncQueue()
     await selfUpdate()
+    await sendHeartbeat()
 
-    // Flush notif Discord si 30min sans envoi
     if (Date.now() - lastNotifTime > NOTIF_EVERY_MS) await flushDiscordNotif(true)
-    // Progress ping toutes les 2h
-    await maybeProgressPing()
 
     // Export AI data toutes les EXPORT_EVERY_N tâches
-    const doneSoFar = taskLog.filter(t => t.status === 'DONE').length
-    if (doneSoFar > 0 && doneSoFar % EXPORT_EVERY_N === 0 && doneSoFar !== lastExportCount) {
-      lastExportCount = doneSoFar
-      exportAIData()  // fire-and-forget, pas await
+    if (totalDoneSession > 0 && totalDoneSession % EXPORT_EVERY_N === 0 && totalDoneSession !== lastExportCount) {
+      lastExportCount = totalDoneSession
+      exportAIData()
     }
 
     // Génère de nouvelles tâches si la queue est faible
-    const queueLen = readdirSync(TASKS_DIR).filter(f => f.endsWith('.txt')).length
-    if (queueLen < WORKER_COUNT * 2) {
+    const queue = readdirSync(TASKS_DIR).filter(f => f.endsWith('.txt')).length
+    if (queue < WORKER_COUNT * 3) {
       await generateNextTasks()
     }
 
-    await sl(15000)  // check toutes les 15s
+    await sl(20000)
   }
 }
 
+// ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
-  log('=== AnDy Daemon démarré ===')
+  log('=== AnDy Daemon v3 démarré ===')
   log(`Repo: ${GITHUB_REPO} | App: ${APP_URL}`)
-  log(`Modèles: code=${MODEL_SMART} fast=${MODEL_FAST}`)
-  log(`Workers parallèles: ${WORKER_COUNT}`)
+  log(`API Key: ${API_KEY ? API_KEY.slice(0,20)+'...' : 'MANQUANTE ⚠'}`)
+  log(`Discord: BOT=${BOT_TOKEN ? 'ok' : 'MANQUANT'} | CH_MORNING=${CH_MORNING || 'MANQUANT'} | CH_UPDATES=${CH_UPDATES || 'MANQUANT'}`)
+  log(`Workers: ${WORKER_COUNT} | Semaphore API: ${API_SEMAPHORE_LIMIT}`)
 
   mkdirSync(TASKS_DIR, { recursive: true })
 
-  // Lance tous les workers + superviseur en parallèle
   const promises = [
     supervisor(),
     ...Array.from({ length: WORKER_COUNT }, (_, i) => worker(i + 1)),

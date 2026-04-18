@@ -32,6 +32,7 @@ import Admin from './pages/Admin'
 import Patterns from './pages/Patterns'
 import CryptoTrader from './pages/CryptoTrader'
 import Signals from './pages/Signals'
+import BrainExplorer from './pages/BrainExplorer'
 import { useAlerts } from './hooks/useAlerts'
 import { useNewsAlerts } from './hooks/useNewsAlerts'
 import { Search } from 'lucide-react'
@@ -63,7 +64,6 @@ const DETAIL_PREFIXES = ['/stocks/', '/crypto/', '/translator', '/settings', '/s
 
 // Module-level so it persists across PageTransition renders without remounting
 let _prevPath = '/'
-let _prevTabIdx = 0
 
 function PageTransition({ children }) {
   const location = useLocation()
@@ -89,8 +89,7 @@ function PageTransition({ children }) {
       animClass = 'page-enter-fade'
     }
 
-    _prevPath    = location.pathname
-    _prevTabIdx  = currTabIdx
+    _prevPath = location.pathname
   }
 
   return (
@@ -199,6 +198,7 @@ function AppInner() {
               <Route path="/brain" element={<ProtectedRoute><BrainStatus /></ProtectedRoute>} />
               <Route path="/crypto-trader" element={<ProtectedRoute><CryptoTrader /></ProtectedRoute>} />
               <Route path="/signals" element={<ProtectedRoute><Signals /></ProtectedRoute>} />
+              <Route path="/brain-explorer" element={<ProtectedRoute><BrainExplorer /></ProtectedRoute>} />
 
               {/* Admin only */}
               <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />

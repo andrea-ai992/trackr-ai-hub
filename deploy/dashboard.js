@@ -875,6 +875,226 @@ function parseCookies(req) {
   return Object.fromEntries((req.headers.cookie||'').split(';').map(c=>c.trim().split('=')).filter(([k])=>k))
 }
 
+const BRAIN_HTML = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AnDy Brain — Live</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#080808;color:#e0e0e0;font-family:'SF Mono',Menlo,monospace;min-height:100vh}
+:root{--g:#00ff88;--g2:#00cc66;--bg2:#111;--bg3:#161616;--bd:rgba(255,255,255,0.07);--red:#ff4d4d;--amber:#fbbf24;--blue:#38bdf8}
+header{position:sticky;top:0;z-index:99;background:#080808;border-bottom:1px solid var(--bd);padding:14px 20px;display:flex;align-items:center;gap:12px}
+.logo{color:var(--g);font-size:16px;font-weight:800;letter-spacing:.08em}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--g);box-shadow:0 0 8px var(--g);animation:ping 2s infinite}
+@keyframes ping{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.3)}}
+.htime{margin-left:auto;color:#333;font-size:11px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px}
+@media(max-width:640px){.grid{grid-template-columns:1fr}}
+.card{background:var(--bg2);border:1px solid var(--bd);border-radius:14px;padding:16px}
+.card-title{font-size:9px;color:#444;letter-spacing:.12em;text-transform:uppercase;font-weight:700;margin-bottom:12px}
+.stat-row{display:flex;gap:10px;flex-wrap:wrap}
+.stat{flex:1;min-width:60px;text-align:center;background:var(--bg3);border-radius:10px;padding:10px 8px}
+.stat-n{font-size:24px;font-weight:800;line-height:1}
+.stat-l{font-size:8px;color:#444;letter-spacing:.1em;text-transform:uppercase;margin-top:4px}
+.workers{display:flex;flex-direction:column;gap:8px}
+.worker{display:flex;align-items:center;gap:10px;background:var(--bg3);border-radius:10px;padding:10px 12px}
+.w-id{font-size:10px;color:#444;width:24px;flex-shrink:0}
+.w-bar{flex:1;height:4px;background:#1a1a1a;border-radius:2px;overflow:hidden}
+.w-fill{height:100%;border-radius:2px;transition:width .4s ease,background .3s}
+.w-label{font-size:10px;color:#555;flex-shrink:0;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stage-pill{font-size:8px;padding:2px 7px;border-radius:999px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;flex-shrink:0}
+.s-idle{background:#1a1a1a;color:#333}
+.s-planning{background:rgba(167,139,250,.15);color:#a78bfa}
+.s-generating{background:rgba(56,189,248,.15);color:var(--blue)}
+.s-testing{background:rgba(251,191,36,.15);color:var(--amber)}
+.s-safe{background:rgba(0,204,102,.15);color:var(--g2)}
+.s-live{background:rgba(0,255,136,.12);color:var(--g)}
+.log{font-size:10px;line-height:1.6;max-height:240px;overflow-y:auto;display:flex;flex-direction:column-reverse;gap:2px}
+.log-entry{display:flex;gap:8px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.log-ts{color:#2a2a2a;flex-shrink:0}
+.log-msg{color:#555;word-break:break-all}
+.log-msg.ok{color:#00cc66}
+.log-msg.err{color:var(--red)}
+.log-msg.start{color:var(--blue)}
+.log-msg.gen{color:var(--amber)}
+.tasks{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto}
+.task-item{padding:10px 12px;background:var(--bg3);border-radius:10px;border-left:3px solid var(--bd);display:flex;align-items:flex-start;gap:8px}
+.task-item.done{border-left-color:var(--g2)}
+.task-item.err{border-left-color:var(--red)}
+.task-item.run{border-left-color:var(--blue)}
+.task-desc{font-size:11px;color:#888;flex:1;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.task-dur{font-size:9px;color:#333;flex-shrink:0;margin-top:2px}
+.cost-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.15);border-radius:8px;padding:6px 12px;color:var(--g);font-size:13px;font-weight:700}
+.full{grid-column:1/-1}
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">⬡ AnDy Brain</span>
+  <span class="live-dot" id="dot"></span>
+  <span id="updAt" style="font-size:10px;color:#333;margin-left:4px">—</span>
+  <span class="htime" id="clock"></span>
+</header>
+
+<div class="grid" id="grid">
+  <!-- Stats -->
+  <div class="card">
+    <div class="card-title">Stats session</div>
+    <div class="stat-row" id="stats">
+      <div class="stat"><div class="stat-n" style="color:var(--g)" id="s-done">—</div><div class="stat-l">Done</div></div>
+      <div class="stat"><div class="stat-n" style="color:var(--red)" id="s-err">—</div><div class="stat-l">Errors</div></div>
+      <div class="stat"><div class="stat-n" style="color:var(--amber)" id="s-queue">—</div><div class="stat-l">Queue</div></div>
+      <div class="stat"><div class="stat-n" style="color:var(--blue)" id="s-run">—</div><div class="stat-l">Running</div></div>
+    </div>
+    <div style="margin-top:14px;display:flex;align-items:center;gap:10px">
+      <span class="cost-badge">💸 <span id="s-cost">$0</span></span>
+      <span style="font-size:10px;color:#333">🔁 cycle <span id="s-cycle">0</span></span>
+    </div>
+  </div>
+
+  <!-- Workers -->
+  <div class="card">
+    <div class="card-title">Workers</div>
+    <div class="workers" id="workers-list">
+      <div style="color:#333;font-size:11px">En attente de données…</div>
+    </div>
+  </div>
+
+  <!-- Live Log -->
+  <div class="card full">
+    <div class="card-title">Log en direct</div>
+    <div class="log" id="log-box">
+      <div class="log-entry"><span class="log-msg">En attente du daemon…</span></div>
+    </div>
+  </div>
+
+  <!-- Recent done -->
+  <div class="card">
+    <div class="card-title">Dernières tâches terminées</div>
+    <div class="tasks" id="done-list"><div style="color:#333;font-size:11px">Aucune</div></div>
+  </div>
+
+  <!-- Recent errors -->
+  <div class="card">
+    <div class="card-title">Erreurs récentes</div>
+    <div class="tasks" id="err-list"><div style="color:#333;font-size:11px">Aucune erreur</div></div>
+  </div>
+</div>
+
+<script>
+const STAGE_CLASS = {idle:'s-idle',planning:'s-planning',generating:'s-generating',testing:'s-testing',safe:'s-safe',live:'s-live',starting:'s-planning',started:'s-planning',error:'s-idle'}
+const STAGE_BAR   = {idle:0,starting:10,planning:25,generating:55,testing:75,safe:88,live:100,error:0}
+const STAGE_COL   = {idle:'#1a1a1a',planning:'#a78bfa',generating:'#38bdf8',testing:'#fbbf24',safe:'#00cc66',live:'#00ff88',starting:'#a78bfa',error:'#ff4d4d'}
+
+function timeAgo(ts){
+  if(!ts) return ''
+  const s = Math.floor((Date.now()-new Date(ts))/1000)
+  if(s<60) return s+'s'
+  if(s<3600) return Math.floor(s/60)+'min'
+  return Math.floor(s/3600)+'h'
+}
+
+function msgClass(msg){
+  const m = msg.toLowerCase()
+  if(m.includes('done')||m.includes('pushed')||m.includes('envoyé')) return 'ok'
+  if(m.includes('error')||m.includes('erreur')||m.includes('fatal')||m.includes('échec')) return 'err'
+  if(m.includes('start')||m.includes('démarré')||m.includes('worker')) return 'start'
+  if(m.includes('auto-gen')||m.includes('new task')||m.includes('generating')) return 'gen'
+  return ''
+}
+
+let lastUpdate = 0
+
+async function refresh(){
+  try {
+    const r = await fetch('/api/live', {headers:{Authorization:'Bearer trackr2024'}})
+    if(!r.ok) return
+    const d = await r.json()
+    if(!d.updatedAt) return
+
+    // Staleness indicator
+    const age = Math.floor((Date.now()-new Date(d.updatedAt))/1000)
+    document.getElementById('updAt').textContent = age < 10 ? '● live' : age+'s'
+    document.getElementById('updAt').style.color = age < 30 ? '#00ff88' : '#ff4d4d'
+
+    // Stats
+    const st = d.stats || {}
+    document.getElementById('s-done').textContent  = st.done   ?? '—'
+    document.getElementById('s-err').textContent   = st.errors ?? '—'
+    document.getElementById('s-queue').textContent = st.queue  ?? '—'
+    document.getElementById('s-run').textContent   = st.running?? '—'
+    document.getElementById('s-cost').textContent  = '$'+(st.cost||'0')
+    document.getElementById('s-cycle').textContent = st.cycles ?? '0'
+
+    // Workers
+    const ws = d.workers || {}
+    const wEl = document.getElementById('workers-list')
+    const ids = Object.keys(ws).filter(k=>k!=='_current').sort()
+    if(ids.length){
+      wEl.innerHTML = ids.map(id=>{
+        const w = ws[id]
+        const stg = w.stage || 'idle'
+        const pct = STAGE_BAR[stg] || 0
+        const col = STAGE_COL[stg] || '#1a1a1a'
+        const cls = STAGE_CLASS[stg] || 's-idle'
+        const desc = w.task ? w.task.replace(/^(auto|manual|chat|NUIT|v2)-[0-9]+-?/, '').replace(/-/g,' ').slice(0,40) : 'idle'
+        return \`<div class="worker">
+          <span class="w-id">#\${id}</span>
+          <div class="w-bar"><div class="w-fill" style="width:\${pct}%;background:\${col}"></div></div>
+          <span class="stage-pill \${cls}">\${stg}</span>
+          <span class="w-label">\${desc}</span>
+        </div>\`
+      }).join('')
+    } else {
+      wEl.innerHTML = '<div style="color:#333;font-size:11px">Daemon pas encore démarré</div>'
+    }
+
+    // Log (newest at top)
+    const logs = (d.log||[]).slice().reverse()
+    if(logs.length){
+      document.getElementById('log-box').innerHTML = logs.map(l=>{
+        const ts = l.ts ? l.ts.slice(11,19) : ''
+        const cls = msgClass(l.msg||'')
+        const msg = (l.msg||'').replace(/\[[\d\-T:.Z]+\]\s*/,'')
+        return \`<div class="log-entry"><span class="log-ts">\${ts}</span><span class="log-msg \${cls}">\${msg}</span></div>\`
+      }).join('')
+    }
+
+    // Done tasks
+    const doneEl = document.getElementById('done-list')
+    const done = (d.recentDone||[]).slice(0,12)
+    doneEl.innerHTML = done.length ? done.map(t=>\`<div class="task-item done">
+      <div style="flex:1"><div class="task-desc">\${t.desc||t.name||''}</div><div class="task-dur">\${timeAgo(t.startedAt)} · \${t.dur||0}s · \${(t.files||[]).map(f=>f.split('/').pop()).join(' ')}</div></div>
+    </div>\`).join('') : '<div style="color:#333;font-size:11px">Aucune tâche terminée</div>'
+
+    // Errors
+    const errEl = document.getElementById('err-list')
+    const errs = (d.recentErrors||[]).slice(0,8)
+    errEl.innerHTML = errs.length ? errs.map(t=>\`<div class="task-item err">
+      <div style="flex:1"><div class="task-desc">\${t.desc||t.name||''}</div><div class="task-dur" style="color:#ff4d4d">\${(t.error||'').slice(0,60)}</div></div>
+    </div>\`).join('') : '<div style="color:#333;font-size:11px">Aucune erreur ✓</div>'
+
+    lastUpdate = Date.now()
+  } catch(e){
+    document.getElementById('updAt').textContent = 'erreur réseau'
+    document.getElementById('updAt').style.color = '#ff4d4d'
+  }
+}
+
+// Clock
+setInterval(()=>{
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('fr-FR')
+}, 1000)
+
+// Refresh every 3s
+refresh()
+setInterval(refresh, 3000)
+</script>
+</body>
+</html>`
+
 http.createServer(async (req, res) => {
   const url  = new URL(req.url, 'http://localhost')
   const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Authorization,Content-Type' }
@@ -1034,6 +1254,26 @@ Tu peux aussi recevoir des commandes de tâche — si le message commence par /t
       return json(Array.isArray(data) ? data : [])
     } catch (e) { return json([]) }
   }
+
+  // API — Live state (daemon .live-state.json)
+  if (url.pathname === '/api/live') {
+    try {
+      const raw = readFileSync(resolve(TASKS, '.live-state.json'), 'utf8')
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS })
+      return res.end(raw)
+    } catch { return json({ updatedAt: null, stats: {}, workers: {}, recentDone: [], log: [] }) }
+  }
+
+  // API — Memory (ANDY_MEMORY.json entries)
+  if (url.pathname === '/api/memory') {
+    try {
+      const mem = JSON.parse(readFileSync(resolve(ROOT, 'ANDY_MEMORY.json'), 'utf8'))
+      return json({ entries: (mem.entries || []).slice(-30) })
+    } catch { return json({ entries: [] }) }
+  }
+
+  // Brain — live YouTube-style viewer
+  if (url.pathname === '/brain') return html(200, BRAIN_HTML)
 
   // Chat page
   if (url.pathname === '/chat') return html(200, CHAT_HTML)
