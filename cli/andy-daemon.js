@@ -329,7 +329,7 @@ async function generateRaw(prompt, maxTokens = 4096, hint = 'smart') {
     // 1. Cerebras — LE PLUS RAPIDE gratuit (~2000 tok/s), 30 RPM
     if (CEREBRAS_KEY && providerAvailable('cerebras')) {
       const text = await tryProvider('cerebras',
-        () => callOpenAI('https://api.cerebras.ai', CEREBRAS_KEY, 'llama3.3-70b', prompt, maxTokens))
+        () => callOpenAI('https://api.cerebras.ai', CEREBRAS_KEY, hint === 'fast' ? 'llama3.1-8b' : 'gpt-oss-120b', prompt, maxTokens))
       if (text) return text
     }
 
