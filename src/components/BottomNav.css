@@ -1,0 +1,111 @@
+src/components/BottomNav.css
+```css
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: rgba(8, 8, 8, 0.92);
+  backdrop-filter: blur(24px);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.bottom-nav .tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.bottom-nav .tab .icon {
+  font-size: 22px;
+  color: var(--t3);
+  transition: color 300ms ease;
+}
+
+.bottom-nav .tab .label {
+  font-size: 9px;
+  color: var(--t3);
+  margin-top: 4px;
+  transition: color 300ms ease;
+}
+
+.bottom-nav .tab.active .icon {
+  color: var(--green);
+}
+
+.bottom-nav .tab.active .label {
+  color: var(--green);
+}
+
+.bottom-nav .tab.active::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 255, 136, 0.12);
+  border-radius: 12px;
+  padding: 6px 16px;
+  transition: transform 300ms ease;
+}
+
+.bottom-nav .tab.badge::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -10px;
+  background: red;
+  border-radius: 50%;
+  width: 8px;
+  height: 8px;
+}
+
+.bottom-nav .tab:active {
+  transform: scale(0.92);
+}
+```
+src/components/BottomNav.jsx
+```jsx
+import React from 'react';
+import { Home, Sports, Markets, News, More } from 'lucide-react';
+
+const BottomNav = () => {
+  const [activeTab, setActiveTab] = React.useState('Home');
+  const [newsUnread, setNewsUnread] = React.useState(true);
+
+  const tabs = [
+    { id: 'Home', icon: <Home size={22} />, label: 'Home' },
+    { id: 'Sports', icon: <Sports size={22} />, label: 'Sports' },
+    { id: 'Markets', icon: <Markets size={22} />, label: 'Markets' },
+    { id: 'News', icon: <News size={22} />, label: 'News', badge: newsUnread },
+    { id: 'More', icon: <More size={22} />, label: 'More' },
+  ];
+
+  const handleTabChange = (id) => {
+    setActiveTab(id);
+  };
+
+  return (
+    <div className="bottom-nav">
+      {tabs.map((tab) => (
+        <div
+          key={tab.id}
+          className={`tab ${activeTab === tab.id ? 'active' : ''} ${tab.badge ? 'badge' : ''}`}
+          onClick={() => handleTabChange(tab.id)}
+        >
+          {tab.icon}
+          <span className="label">{tab.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export default BottomNav;
