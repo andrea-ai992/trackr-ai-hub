@@ -1,262 +1,126 @@
-Je vais ajouter le toggle dark mode dans le Footer et mettre à jour les styles globaux pour gérer le thème.
-
-D'abord, voici le code pour `src/layouts/Footer.jsx` :
-
-```jsx
-import React from 'react';
-import { Moon, Sun } from 'lucide-react';
-
-const Footer = () => {
-  const [isDarkMode, setIsDarkMode] = React.useState(() => {
-    if (typeof window !== 'undefined') {
-      const savedMode = localStorage.getItem('darkMode');
-      return savedMode ? JSON.parse(savedMode) : true;
-    }
-    return true;
-  });
-
-  React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
-      document.body.classList.toggle('dark-mode', isDarkMode);
-      document.body.classList.toggle('light-mode', !isDarkMode);
-    }
-  }, [isDarkMode]);
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-  };
-
-  return (
-    <footer className="footer">
-      <button
-        onClick={toggleTheme}
-        className="theme-toggle"
-        aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-      >
-        {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-      </button>
-    </footer>
-  );
-};
-
-export default Footer;
-```
-
-Ensuite, voici les modifications à apporter à `src/styles/globals.css` :
-
-```css
 :root {
-  --green: #00ff88;
+  --neon: #00ff88;
   --bg: #080808;
-  --bg2: #111;
-  --bg3: #1a1a1a;
-  --t1: #f0f0f0;
-  --t2: #888;
-  --t3: #444;
-  --border: rgba(255, 255, 255, 0.07);
-  --border-hi: rgba(0, 255, 136, 0.2);
-}
-
-body.dark-mode {
-  --green: #00ff88;
-  --bg: #080808;
-  --bg2: #111;
-  --bg3: #1a1a1a;
-  --t1: #f0f0f0;
-  --t2: #888;
-  --t3: #444;
-  --border: rgba(255, 255, 255, 0.07);
-  --border-hi: rgba(0, 255, 136, 0.2);
-}
-
-body.light-mode {
-  --green: #008855;
-  --bg: #f8f8f8;
-  --bg2: #e0e0e0;
-  --bg3: #d0d0d0;
-  --t1: #111;
-  --t2: #555;
-  --t3: #777;
-  --border: rgba(0, 0, 0, 0.1);
-  --border-hi: rgba(0, 136, 85, 0.2);
+  --surface: #0f0f0f;
+  --surface-low: #111;
+  --surface-high: #1a1a1a;
+  --text-primary: #e0e0e0;
+  --text-secondary: #aaa;
+  --text-muted: #555;
+  --border: rgba(0, 255, 136, 0.08);
+  --border-bright: rgba(0, 255, 136, 0.18);
 }
 
 body {
+  font-family: JetBrains Mono, monospace;
   background-color: var(--bg);
-  color: var(--t1);
-  font-family: 'Inter', sans-serif;
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-*,
-*:before,
-*:after {
-  box-sizing: inherit;
-}
-
-.layout-container {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  padding-bottom: 60px;
-}
-
-.main-content {
-  flex: 1;
-  padding: 16px;
-  max-width: 520px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-.footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background-color: var(--bg2);
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  padding: 12px 20px;
-  border-top: 1px solid var(--border);
-  z-index: 1000;
-  height: 60px;
-}
-
-.theme-toggle {
-  background: none;
-  border: none;
-  color: var(--t2);
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.theme-toggle:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: var(--t1);
-}
-
-.bottom-nav {
-  position: fixed;
-  bottom: 60px;
-  left: 0;
-  right: 0;
-  background-color: var(--bg2);
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  padding: 12px 0;
-  border-top: 1px solid var(--border);
-  z-index: 1000;
-}
-
-.nav-item {
-  color: var(--t2);
-  text-decoration: none;
-  padding: 8px 12px;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.nav-item:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: var(--t1);
-}
-
-.nav-item.active {
-  color: var(--green);
-  background-color: rgba(0, 255, 136, 0.1);
-  border: 1px solid var(--border-hi);
+  color: var(--text-primary);
 }
 
 .card {
   background-color: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border);
   backdrop-filter: blur(12px);
-  border-radius: 8px;
+  border: 1px solid var(--border);
   padding: 16px;
-  margin: 16px 0;
+  max-width: 520px;
+  margin: 16px auto;
+}
+
+.card-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+.card-content {
+  font-size: 18px;
+  color: var(--text-secondary);
+}
+
+.hero {
+  background-color: var(--bg);
+  padding: 24px;
+  text-align: center;
+}
+
+.hero-title {
+  font-size: 48px;
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+.hero-subtitle {
+  font-size: 24px;
+  color: var(--text-secondary);
+}
+
+.sparkline {
   width: 100%;
+  height: 100px;
+  margin: 16px auto;
 }
 
-.card h1 {
-  color: var(--t1);
-  font-size: 20px;
-  margin: 0 0 12px 0;
-  font-weight: 600;
+.sparkline svg {
+  width: 100%;
+  height: 100%;
 }
 
-.card h2 {
-  color: var(--t2);
-  font-size: 16px;
-  margin: 0 0 12px 0;
-  font-weight: 500;
+.top-movers {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.fade-up {
-  animation: fadeUp 0.6s ease-out forwards;
+.top-movers li {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
 }
 
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.top-movers li:last-child {
+  border-bottom: none;
 }
 
-.skeleton {
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 25%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.1) 75%);
-  background-size: 400% 100%;
-  animation: shimmer 1.5s infinite;
+.fear-and-greed {
+  width: 100%;
+  height: 100px;
+  margin: 16px auto;
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: 100% 0;
-  }
-  100% {
-    background-position: 0 0;
-  }
+.fear-and-greed svg {
+  width: 100%;
+  height: 100%;
 }
-```
 
-Enfin, voici les modifications à apporter à `src/components/Layout/Layout.jsx` pour inclure le Footer :
+.news-feed {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
 
-```jsx
-import React from 'react';
-import './globals.css';
-import BottomNav from '../BottomNav';
-import Footer from '../Footer';
+.news-feed li {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
 
-const Layout = ({ children }) => {
-  return (
-    <div className="layout-container">
-      <main className="main-content">
-        {children}
-      </main>
-      <BottomNav />
-      <Footer />
-    </div>
-  );
-};
+.news-feed li:last-child {
+  border-bottom: none;
+}
 
-export default Layout;
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.quick-actions button {
+  background-color: var(--bg);
+  border: none;
+  padding: 16px;
+  font-size: 18px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.quick-actions button:hover {
+  background-color: var(--surface-high);
+}
