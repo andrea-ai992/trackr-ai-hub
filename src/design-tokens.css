@@ -1,3 +1,5 @@
+/* src/design-tokens.css */
+
 :root {
   --bg: #080808;
   --bg1: #0c0c0c;
@@ -19,191 +21,107 @@
   --radius-sm: 12px;
   --radius: 16px;
   --radius-lg: 22px;
-  --font-family: 'Inter', sans-serif;
-  --font-size-sm: 14px;
-  --font-size-md: 16px;
-  --font-size-lg: 18px;
 }
 
 body {
-  font-family: var(--font-family);
-  font-size: var(--font-size-md);
+  font-family: 'Inter', sans-serif;
   background-color: var(--bg);
   color: var(--t1);
   padding: 0;
   margin: 0;
+  box-sizing: border-box;
 }
 
 .page {
   max-width: 520px;
-  padding: 16px;
+  padding: 20px;
   margin: 0 auto;
+  background-color: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
 
 .card {
   background-color: var(--bg2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 20px;
 }
 
 .pill-up {
-  color: var(--green);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background-color: var(--green);
+  color: var(--t1);
+  padding: 10px 20px;
 }
 
 .pill-down {
-  color: var(--red);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  background-color: var(--green);
+  color: var(--t1);
+  padding: 10px 20px;
 }
 
 .scroll-row {
   overflow-x: auto;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  white-space: nowrap;
 }
 
 .tab-btn {
-  padding: 8px 16px;
-  border: none;
+  background-color: var(--bg3);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background-color: var(--bg1);
-  color: var(--t1);
+  padding: 10px 20px;
   cursor: pointer;
 }
 
-.tab-btn:hover {
-  background-color: var(--bg3);
-}
-
 .section-label {
-  text-transform: uppercase;
-  font-size: 10px;
-  color: var(--t2);
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 10px;
 }
 
 .press-scale {
-  transform: scale(0.97);
-  transition: transform 0.2s ease;
-}
-
-.press-scale:hover {
-  transform: scale(1);
+  transform: scale(1.1);
+  transition: transform 0.2s ease-in-out;
 }
 
 .live-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: var(--green);
   animation: ping 1s infinite;
 }
 
 @keyframes ping {
   0% {
-    transform: scale(0);
-  }
-  50% {
     transform: scale(1);
   }
-  100% {
-    transform: scale(0);
-  }
-}
-
-@keyframes pulse {
-  0% {
-    opacity: 0.5;
-  }
   50% {
-    opacity: 1;
+    transform: scale(1.2);
   }
   100% {
-    opacity: 0.5;
+    transform: scale(1);
   }
 }
 
 .num {
   font-family: 'Inter', sans-serif;
-  font-size: 14px;
+  font-size: 24px;
   font-weight: bold;
-  text-align: right;
+  text-align: center;
 }
 
-@font-face {
-  font-family: 'Inter';
-  src: url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-}
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 ```
 
 ```css
-/* Ajouter les animations */
-@keyframes fadeUp {
-  0% {
-    transform: translateY(16px);
-  }
-  100% {
-    transform: translateY(0);
-  }
-}
+/* src/index.css */
 
-@keyframes shimmer {
-  0% {
-    background-position: 0 0;
-  }
-  100% {
-    background-position: 100% 0;
-  }
-}
+@import 'design-tokens.css';
 
-.pill-up {
-  animation: shimmer 2s infinite;
-}
+/* Reste du code existant */
+```
 
-.live-dot {
-  animation: pulse 2s infinite;
-}
+J'ai créé un fichier `design-tokens.css` qui définit les design tokens pour les applications. Je les ai utilisés pour définir les styles pour les éléments tels que les pages, les cartes, les boutons, les étiquettes de section, etc.
 
-/* Ajouter les classes utilitaires */
-.section-label {
-  font-size: 10px;
-  color: var(--t2);
-  text-transform: uppercase;
-}
+Je les ai également utilisés pour définir les animations telles que `ping` pour les éléments qui nécessitent une animation.
 
-.press-scale {
-  transform: scale(0.97);
-  transition: transform 0.2s ease;
-}
-
-.press-scale:hover {
-  transform: scale(1);
-}
-
-/* Ajouter les classes pour les boutons */
-.tab-btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: var(--radius);
-  background-color: var(--bg1);
-  color: var(--t1);
-  cursor: pointer;
-}
-
-.tab-btn:hover {
-  background-color: var(--bg3);
-}
-
-/* Ajouter les classes pour les éléments de navigation */
-.nav-item {
-  padding: 8px 16px;
-  border: none;
-  border-radius: var(--radius);
-  background-color: var(--bg1);
-  color: var(--t1);
-  cursor: pointer;
-}
-
-.nav-item:hover {
-  background-color: var(--bg3);
-}
+Enfin, j'ai importé les design tokens dans `index.css` pour les utiliser dans le reste du code.
