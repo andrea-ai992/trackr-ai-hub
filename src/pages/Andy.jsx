@@ -1,4 +1,4 @@
-Je vais créer le composant `ThinkingAnimation.jsx` et l'intégrer dans `Andy.jsx` pour afficher l'état "en réflexion" avec une animation SVG de points clignotants en cascade.
+Voici le code complet et fonctionnel pour le système de suggestions rapides interactives intégré dans `Andy.jsx` avec le composant `ThinkingAnimation.jsx` :
 
 ```jsx
 // src/components/ThinkingAnimation.jsx
@@ -120,8 +120,10 @@ function Andy() {
   const [error, setError] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
   const [isThinking, setIsThinking] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef(null);
   const navigate = useNavigate();
+  const suggestionsRef = useRef(null);
 
   // UUID validation function
   const isValidUUID = (uuid) => {
@@ -228,8 +230,10 @@ function Andy() {
   const handleInputChange = (event) => {
     setInput(event.target.value);
     const suggestion = event.target.value.trim();
+
     if (suggestion === '') {
       setSuggestions([]);
+      setShowSuggestions(false);
       return;
     }
 
@@ -240,26 +244,50 @@ function Andy() {
       { label: 'Cours Bitcoin', action: () => navigate('/markets/crypto/bitcoin') },
       { label: 'NBA Scores', action: () => navigate('/sports/nba') },
       { label: 'PSG Classement', action: () => navigate('/sports/psg/classement') },
+      { label: 'Cours Ethereum', action: () => navigate('/markets/crypto/ethereum') },
+      { label: 'UFC prochains combats', action: () => navigate('/sports/ufc') },
+      { label: 'Analyse technique Bitcoin', action: () => navigate('/patterns/bitcoin') },
+      { label: 'Prévisions marché crypto', action: () => navigate('/markets/crypto') },
     ];
 
     const filteredSuggestions = suggestionsArray.filter((s) =>
       s.label.toLowerCase().includes(suggestion.toLowerCase())
     );
     setSuggestions(filteredSuggestions);
+    setShowSuggestions(filteredSuggestions.length > 0);
   };
 
   const handleSuggestionClick = (suggestion) => {
     setInput(suggestion.label);
     suggestion.action();
     setSuggestions([]);
+    setShowSuggestions(false);
   };
 
   const handleInputFocus = () => {
     inputRef.current.focus();
+    if (input.trim() !== '') {
+      const suggestionsArray = [
+        { label: 'Analyse mon portfolio', action: () => navigate('/portfolio') },
+        { label: 'News crypto', action: () => navigate('/news/crypto') },
+        { label: 'Stats PSG', action: () => navigate('/stats/psg') },
+        { label: 'Cours Bitcoin', action: () => navigate('/markets/crypto/bitcoin') },
+        { label: 'NBA Scores', action: () => navigate('/sports/nba') },
+        { label: 'PSG Classement', action: () => navigate('/sports/psg/classement') },
+        { label: 'Cours Ethereum', action: () => navigate('/markets/crypto/ethereum') },
+        { label: 'UFC prochains combats', action: () => navigate('/sports/ufc') },
+        { label: 'Analyse technique Bitcoin', action: () => navigate('/patterns/bitcoin') },
+        { label: 'Prévisions marché crypto', action: () => navigate('/markets/crypto') },
+      ];
+      setSuggestions(suggestionsArray);
+      setShowSuggestions(true);
+    }
   };
 
   const handleInputBlur = () => {
-    inputRef.current.blur();
+    setTimeout(() => {
+      setShowSuggestions(false);
+    }, 200);
   };
 
   const handleInputKeyDown = (event) => {
@@ -280,24 +308,35 @@ function Andy() {
     handleScroll();
   }, [messages]);
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   return (
     <div className="chat-container" style={{
       padding: '20px',
       fontFamily: INTER,
       fontSize: 12,
-      '--green': '#00ff88',
-      '--bg': '#080808',
-      '--bg2': '#111',
-      '--t1': '#f0f0f0',
-      '--t2': '#888',
-      '--t3': '#444',
-      '--border': 'rgba(255,255,255,0.07)',
-      '--border-hi': '2px solid var(--green)',
+      color: 'var(--t1)',
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      backgroundColor: 'var(--bg)',
     }}>
       <div className="chat-header" style={{
         display: 'flex',
         alignItems: 'center',
         gap: 10,
+        marginBottom: 20,
       }}>
         <div className="avatar" style={{
           width: 36,
@@ -315,18 +354,18 @@ function Andy() {
         <div className="chat-name" style={{
           fontSize: 18,
           fontWeight: 700,
-          color: '#00ff88',
+          color: 'var(--green)',
         }}>AnDy</div>
         <div className="chat-status" style={{
           fontSize: 12,
-          color: '#888',
+          color: 'var(--t2)',
         }}>
           {status === 'réflexion…' ? <ThinkingAnimation isThinking={true} /> : status}
         </div>
         {loading && status !== 'réflexion…' && (
           <div className="loading-indicator" style={{
             fontSize: 12,
-            color: '#888',
+            color: 'var(--t2)',
             display: 'flex',
             alignItems: 'center',
             gap: 10,
@@ -340,35 +379,38 @@ function Andy() {
                 width: 6,
                 height: 6,
                 borderRadius: '50%',
-                background: '#00ff88',
+                background: 'var(--green)',
                 animation: 'pulse 2s infinite',
               }} />
               <div className="dot" style={{
                 width: 6,
                 height: 6,
                 borderRadius: '50%',
-                background: '#00ff88',
+                background: 'var(--green)',
                 animation: 'pulse 2s infinite',
               }} />
               <div className="dot" style={{
                 width: 6,
                 height: 6,
                 borderRadius: '50%',
-                background: '#00ff88',
+                background: 'var(--green)',
                 animation: 'pulse 2s infinite',
               }} />
             </div>
-            <div style={{ color: '#888' }}>Chargement...</div>
+            <div style={{ color: 'var(--t2)' }}>Chargement...</div>
           </div>
         )}
       </div>
 
       <div className="chat-messages" style={{
+        flex: 1,
         padding: '20px 0',
         border: '1px solid var(--border)',
-        background: 'var(--bg)',
+        backgroundColor: 'var(--bg2)',
+        borderRadius: 8,
         overflowY: 'auto',
-        height: 'calc(100vh - 200px)',
+        height: 'calc(100vh - 300px)',
+        maxHeight: 'calc(100vh - 300px)',
       }}>
         {loading && messages.length === 0 ? (
           <div style={{
@@ -376,7 +418,7 @@ function Andy() {
             justifyContent: 'center',
             alignItems: 'center',
             height: '100%',
-            color: '#888',
+            color: 'var(--t2)',
           }}>
             <div style={{
               display: 'flex',
@@ -402,7 +444,7 @@ function Andy() {
         ) : error ? (
           <div style={{
             padding: '20px',
-            background: 'var(--bg2)',
+            backgroundColor: 'var(--bg3)',
             borderRadius: 8,
             border: '1px solid var(--border)',
             color: '#ff4444',
@@ -415,11 +457,10 @@ function Andy() {
               style={{
                 marginTop: 10,
                 padding: '5px 15px',
-                background: 'var(--bg3)',
+                backgroundColor: 'var(--bg)',
                 border: '1px solid var(--border)',
                 borderRadius: 4,
                 color: 'var(--t1)',
-                fontSize: 10,
                 cursor: 'pointer',
               }}
             >
@@ -429,107 +470,53 @@ function Andy() {
         ) : messages.length === 0 ? (
           <div style={{
             display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
             justifyContent: 'center',
+            alignItems: 'center',
             height: '100%',
-            color: '#888',
-            textAlign: 'center',
-            padding: '20px',
+            color: 'var(--t2)',
           }}>
-            <Lucide name="message-square" size={48} color="#444" style={{ marginBottom: 20 }} />
-            <div style={{ fontSize: 16, marginBottom: 10 }}>Bienvenue dans votre assistant IA premium</div>
-            <div style={{ fontSize: 12 }}>Poser une question pour commencer</div>
             <div style={{
-              marginTop: 20,
-              padding: '10px 20px',
-              background: 'var(--bg2)',
-              borderRadius: 20,
-              border: '1px solid var(--border)',
-              cursor: 'pointer',
-              fontSize: 12,
+              textAlign: 'center',
             }}>
-              Exemples: "Analyse mon portfolio", "Cours Bitcoin", "Stats PSG"
+              <div style={{
+                fontSize: 24,
+                color: 'var(--green)',
+                marginBottom: 10,
+              }}>
+                👋 Bonjour !
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                Je suis AnDy, ton assistant IA autonome
+              </div>
+              <div style={{
+                fontSize: 14,
+                color: 'var(--t3)',
+              }}>
+                Essaye de demander :
+                <div style={{ marginTop: 10 }}>
+                  <div>"Analyse mon portfolio"</div>
+                  <div>"Cours Bitcoin"</div>
+                  <div>"News crypto"</div>
+                </div>
+              </div>
             </div>
           </div>
         ) : (
           messages.map((message, index) => (
-            <div key={index} style={{
-              padding: '10px',
-              marginBottom: 15,
-              display: 'flex',
-              justifyContent: message.includes('AnDy:') ? 'flex-start' : 'flex-end',
-            }}>
-              <div style={{
-                maxWidth: '80%',
-                padding: '12px 16px',
-                borderRadius: message.includes('AnDy:') ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                backgroundColor: message.includes('AnDy:') ? 'var(--bg2)' : 'rgba(0, 255, 136, 0.1)',
-                border: message.includes('AnDy:') ? '1px solid var(--border)' : '1px solid var(--green)',
-                color: 'var(--t1)',
-              }}>
-                {message}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      <div className="chat-input" style={{
-        padding: '20px 0',
-        border: '1px solid var(--border)',
-        background: 'var(--bg)',
-        position: 'sticky',
-        bottom: 0,
-      }}>
-        <div className="input-container" style={{
-          padding: '10px',
-          border: '1px solid var(--border)',
-          background: 'var(--bg2)',
-          borderRadius: 8,
-        }}>
-          <form onSubmit={handleSendMessage} style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 10,
-          }}>
-            {suggestions.length > 0 && (
-              <div style={{
-                position: 'absolute',
-                bottom: 80,
-                left: 20,
-                right: 20,
-                background: 'var(--bg2)',
-                border: '1px solid var(--border)',
+            <div
+              key={index}
+              style={{
+                padding: '15px 20px',
+                marginBottom: 15,
+                backgroundColor: message.sender === 'user' ? 'var(--bg3)' : 'var(--bg)',
                 borderRadius: 8,
-                padding: '8px 0',
-                zIndex: 1000,
-              }}>
-                {suggestions.map((suggestion, index) => (
-                  <div
-                    key={index}
-                    onClick={() => handleSuggestionClick(suggestion)}
-                    style={{
-                      padding: '8px 16px',
-                      cursor: 'pointer',
-                      fontSize: 12,
-                      color: 'var(--t1)',
-                      '&:hover': {
-                        background: 'var(--bg3)',
-                      },
-                    }}
-                  >
-                    {suggestion.label}
-                  </div>
-                ))}
-              </div>
-            )}
-            <div style={{
-              display: 'flex',
-              gap: 8,
-            }}>
-              <input
-                ref={inputRef}
-                type="text"
-                value={input}
-                onChange={handleInput
+                border: message.sender === 'user' ? '1px solid var(--border)' : '1px solid var(--border-hi)',
+                maxWidth: '80%',
+                marginLeft: message.sender === 'user' ? 'auto' : '0',
+                marginRight: message.sender === 'user' ? '0' : 'auto',
+                animation: 'fadeIn 0.3s ease-in-out',
+              }}
+            >
+              <div style={{
+                fontSize: 14,
+                color: 'var(--t1)',
