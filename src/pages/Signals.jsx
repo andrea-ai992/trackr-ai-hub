@@ -1,90 +1,118 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { supabase } from '../utils/supabase';
-import { useQuery } from '../hooks/useQuery';
-import { getAssets, getSignals } from '../api/signals';
+// src/pages/Signals.jsx
+
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { Container, Row, Col } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 
 const Signals = () => {
-  const query = useQuery();
-  const assets = getAssets();
-  const signals = getSignals();
+  const [signals, setSignals] = useState([
+    { ticker: 'BTC', name: 'Bitcoin', score: 80, indicators: { rsi: 90, macd: 20, volume: 100 }, signal: 'BUY' },
+    { ticker: 'ETH', name: 'Ethereum', score: 60, indicators: { rsi: 50, macd: 10, volume: 50 }, signal: 'HOLD' },
+    { ticker: 'NVDA', name: 'NVIDIA', score: 40, indicators: { rsi: 30, macd: 5, volume: 20 }, signal: 'SELL' },
+    { ticker: 'SOL', name: 'Solana', score: 90, indicators: { rsi: 95, macd: 25, volume: 150 }, signal: 'BUY' },
+    { ticker: 'AAPL', name: 'Apple', score: 70, indicators: { rsi: 80, macd: 15, volume: 70 }, signal: 'HOLD' },
+    { ticker: 'SPY', name: 'S&P 500', score: 50, indicators: { rsi: 40, macd: 10, volume: 40 }, signal: 'SELL' },
+  ]);
+
+  const [filter, setFilter] = useState('Tous');
+
+  useEffect(() => {
+    const getSignals = async () => {
+      const { data, error } = await supabase
+        .from('signals')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) console.error(error);
+      setSignals(data);
+    };
+    getSignals();
+  }, []);
+
+  const handleFilterChange = (event) => {
+    setFilter(event.target.value);
+  };
 
   const filteredSignals = signals.filter((signal) => {
-    const filter = query.get('filter');
-    if (filter === 'BUY' || filter === 'SELL' || filter === 'HOLD') {
-      return signal.signal === filter;
-    }
-    return true;
+    if (filter === 'Tous') return true;
+    if (filter === 'BUY' && signal.signal === 'BUY') return true;
+    if (filter === 'SELL' && signal.signal === 'SELL') return true;
+    if (filter === 'HOLD' && signal.signal === 'HOLD') return true;
+    return false;
   });
 
-  const renderSignalCard = (signal) => {
-    const asset = assets.find((asset) => asset.id === signal.asset_id);
-    const rsi = Math.floor(Math.random() * 60 + 20);
-    const macd = rsi > 50 ? 'bullish' : rsi < 50 ? 'bearish' : 'neutral';
-    const volume = Math.floor(Math.random() * 100 + 50);
-    const signalGlobal = rsi < 30 || rsi > 70 ? (rsi < 30 ? 'BUY' : 'SELL') : 'HOLD';
-
-    return (
-      <div key={signal.id} className="signal-card">
-        <div className="asset-info">
-          <span className="ticker">{asset.ticker}</span>
-          <span className="name">{asset.name}</span>
-          <span className="price">{signal.price.toFixed(2)}</span>
-        </div>
-        <div className="score-bar">
-          <div
-            className="score-bar-inner"
-            style={{
-              width: `${signal.score}%`,
-              backgroundColor: signal.score > 50 ? 'var(--green)' : 'var(--t2)',
-            }}
-          />
-        </div>
-        <div className="badges">
-          <div className="badge rsi">
-            <span className="value">{rsi}</span>
-            <span className="indicator">
-              {rsi < 30 ? 'oversold' : rsi > 70 ? 'overbought' : 'neutral'}
-            </span>
-          </div>
-          <div className="badge macd">
-            <span className="value">{macd}</span>
-            <span className="indicator">
-              {macd === 'bullish' ? 'bullish' : macd === 'bearish' ? 'bearish' : 'neutral'}
-            </span>
-          </div>
-          <div className="badge volume">
-            <span className="value">{volume}</span>
-            <span className="indicator">
-              {volume > 80 ? 'high' : volume < 20 ? 'low' : 'normal'}
-            </span>
-          </div>
-        </div>
-        <div className="signal">
-          <span className="badge">
-            {signalGlobal}
-            <i className={`icon-${signalGlobal.toLowerCase()}`} />
-          </span>
-        </div>
-      </div>
-    );
+  const handleRefresh = () => {
+    const getSignals = async () => {
+      const { data, error } = await supabase
+        .from('signals')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) console.error(error);
+      setSignals(data);
+    };
+    getSignals();
   };
 
   return (
-    <div className="page" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: 12 }}>
-      <div style={{ fontSize: 32 }}>⚡</div>
-      <p style={{ color: 'var(--t1)', fontWeight: 700, fontSize: 18 }}>Signaux IA</p>
-      <p style={{ color: 'var(--t3)', fontSize: 13 }}>Dernière mise à jour : {new Date().toLocaleString()}</p>
-      <div className="filter-container">
-        <Link to={`/signals?filter=Tous`}>Tous</Link>
-        <Link to={`/signals?filter=BUY`}>BUY</Link>
-        <Link to={`/signals?filter=SELL`}>SELL</Link>
-        <Link to={`/signals?filter=HOLD`}>HOLD</Link>
-      </div>
-      <div className="signal-cards">
-        {filteredSignals.map(renderSignalCard)}
-      </div>
-    </div>
+    <BrowserRouter>
+      <Container className="max-w-7xl mx-auto p-4">
+        <Row className="flex justify-between mb-4">
+          <Col xs={12} md={6} className="text-lg font-bold text--t1">
+            Signaux IA Trading
+          </Col>
+          <Col xs={12} md={6} className="flex justify-end">
+            <select value={filter} onChange={handleFilterChange} className="bg--bg2 p-2 text--t1 border--border">
+              <option value="Tous">Tous</option>
+              <option value="BUY">BUY</option>
+              <option value="SELL">SELL</option>
+              <option value="HOLD">HOLD</option>
+            </select>
+            <button onClick={handleRefresh} className="bg--green p-2 text--t1 border--border">
+              Rafraîchir
+            </button>
+          </Col>
+        </Row>
+        <Row className="flex flex-wrap -mx-4">
+          {filteredSignals.map((signal, index) => (
+            <Col key={index} xs={12} sm={6} md={4} lg={3} className="mb-4">
+              <div className="bg--bg p-4 rounded-lg shadow-md">
+                <Row className="flex justify-between mb-2">
+                  <Col xs={12} md={6} className="text-lg font-bold text--t1">
+                    {signal.ticker} - {signal.name}
+                  </Col>
+                  <Col xs={12} md={6} className="text-lg font-bold text--t1 text-right">
+                    Score : {signal.score}%
+                  </Col>
+                </Row>
+                <Row className="flex justify-between mb-2">
+                  <Col xs={12} md={6} className="text-lg font-bold text--t1 text-right">
+                    RSI : {signal.indicators.rsi}%
+                  </Col>
+                  <Col xs={12} md={6} className="text-lg font-bold text--t1 text-right">
+                    MACD : {signal.indicators.macd}%
+                  </Col>
+                  <Col xs={12} md={6} className="text-lg font-bold text--t1 text-right">
+                    Volume : {signal.indicators.volume}%
+                  </Col>
+                </Row>
+                <Row className="flex justify-between mb-2">
+                  <Col xs={12} md={6} className="text-lg font-bold text--t1 text-right">
+                    <span className={`bg--green p-2 text--t1 rounded-lg ${signal.score > 50 ? 'bg--green' : 'bg--red'}`}>
+                      {signal.score > 50 ? 'Bullish' : 'Bearish'}
+                    </span>
+                  </Col>
+                  <Col xs={12} md={6} className="text-lg font-bold text--t1 text-right">
+                    <span className={`bg--green p-2 text--t1 rounded-lg ${signal.signal === 'BUY' ? 'bg--green' : signal.signal === 'SELL' ? 'bg--red' : 'bg--yellow'}`}>
+                      {signal.signal}
+                    </span>
+                  </Col>
+                </Row>
+              </div>
+            </Col>
+          ))}
+        </Row>
+      </Container>
+    </BrowserRouter>
   );
 };
 
@@ -92,175 +120,1003 @@ export default Signals;
 ```
 
 ```css
-.signal-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
+/* src/pages/Signals.css */
+
+.bg--green {
+  background-color: var(--green);
+}
+
+.bg--red {
+  background-color: #ff0000;
+}
+
+.bg--yellow {
+  background-color: #ffff00;
+}
+
+.bg--bg {
+  background-color: var(--bg);
+}
+
+.bg--bg2 {
   background-color: var(--bg2);
-  width: 300px;
-  margin: 20px;
 }
 
-.asset-info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 20px;
-}
-
-.ticker {
-  font-size: 24px;
-  font-weight: 700;
+.text--t1 {
   color: var(--t1);
 }
 
-.name {
-  font-size: 18px;
-  font-weight: 400;
+.text--t2 {
   color: var(--t2);
 }
 
-.price {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--t1);
+.text--t3 {
+  color: var(--t3);
 }
 
-.score-bar {
-  width: 100%;
-  height: 10px;
-  background-color: var(--t2);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.score-bar-inner {
-  height: 100%;
-  background-color: var(--green);
-  transition: width 0.2s ease-in-out;
-}
-
-.badges {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 20px;
-}
-
-.badge {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  padding: 10px;
+.border--border {
   border: 1px solid var(--border);
+}
+
+.border--border-hi {
+  border: 2px solid var(--border-hi);
+}
+
+.rounded-lg {
   border-radius: 10px;
-  background-color: var(--bg2);
-  margin-right: 20px;
 }
 
-.rsi {
-  background-color: var(--t2);
+.shadow-md {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.rsi .value {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--t1);
+.max-w-7xl {
+  max-width: 1400px;
 }
 
-.rsi .indicator {
-  font-size: 14px;
-  font-weight: 400;
-  color: var(--t3);
+.mx-auto {
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.macd {
-  background-color: var(--t2);
+.p-4 {
+  padding: 1rem;
 }
 
-.macd .value {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--t1);
+.p-2 {
+  padding: 0.5rem;
 }
 
-.macd .indicator {
-  font-size: 14px;
-  font-weight: 400;
-  color: var(--t3);
+.text-lg {
+  font-size: 1.125rem;
 }
 
-.volume {
-  background-color: var(--t2);
+.font-bold {
+  font-weight: bold;
 }
 
-.volume .value {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--t1);
+.text-right {
+  text-align: right;
 }
 
-.volume .indicator {
-  font-size: 14px;
-  font-weight: 400;
-  color: var(--t3);
-}
-
-.signal {
+.flex {
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background-color: var(--bg2);
-  margin-top: 20px;
 }
 
-.signal .badge {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--t1);
-}
-
-.signal .icon {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--t1);
-}
-
-.filter-container {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 20px;
-}
-
-.filter-container a {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--t1);
-  text-decoration: none;
-  margin-right: 20px;
-}
-
-.filter-container a:hover {
-  color: var(--green);
-}
-
-.signal-cards {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
+.flex-wrap {
   flex-wrap: wrap;
 }
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.mb-4 {
+  margin-bottom: 1rem;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+
+.mt-4 {
+  margin-top: 1rem;
+}
+
+.mt-2 {
+  margin-top: 0.5rem;
+}
+
+.mr-4 {
+  margin-right: 1rem;
+}
+
+.mr-2 {
+  margin-right: 0.5rem;
+}
+
+.ml-4 {
+  margin-left: 1rem;
+}
+
+.ml-2 {
+  margin-left: 0.5rem;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-0 {
+  margin-left: 0;
+}
+
+.ml-1 {
+  margin-left: 0.25rem;
+}
+
+.ml-2 {
+  margin-left: 0.5rem;
+}
+
+.ml-3 {
+  margin-left: 0.75rem;
+}
+
+.ml-4 {
+  margin-left: 1rem;
+}
+
+.ml-5 {
+  margin-left: 1.25rem;
+}
+
+.ml-6 {
+  margin-left: 1.5rem;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-auto
