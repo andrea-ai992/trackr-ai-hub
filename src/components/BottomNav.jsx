@@ -1,13 +1,13 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
-import { Home, Trophy, TrendingUp, Newspaper, Grid2X2 } from 'lucide-react';
+import { Home, Trophy, TrendingUp, Newspaper, MoreHorizontal, Activity } from 'lucide-react';
 
 const TABS = [
   { to: '/', icon: Home, label: 'Hub', matches: ['^/$'] },
-  { to: '/sports', icon: Trophy, label: 'Sports', matches: ['^/sports'] },
+  { to: '/sports', icon: Activity, label: 'Sports', matches: ['^/sports'] },
   { to: '/markets', icon: TrendingUp, label: 'Markets', matches: ['^/markets', '^/stocks'] },
   { to: '/news', icon: Newspaper, label: 'Pulse', matches: ['^/news'] },
-  { to: '/more', icon: Grid2X2, label: 'More', matches: ['^/more', '^/translator', '^/settings', '^/sneakers', '^/portfolio', '^/category', '^/flights'] },
+  { to: '/more', icon: MoreHorizontal, label: 'More', matches: ['^/more', '^/translator', '^/settings', '^/sneakers', '^/portfolio', '^/category', '^/flights'] },
 ];
 
 export { TABS };
@@ -77,7 +77,7 @@ export default function BottomNav() {
         pointerEvents: 'none',
         fontFamily: 'JetBrains Mono, monospace',
         fontSize: 14,
-        color: '#e0e0e0',
+        color: 'var(--text-primary)',
       }}
     >
       <nav
@@ -89,35 +89,34 @@ export default function BottomNav() {
           gap: 2,
           width: '100%',
           maxWidth: 380,
-          background: 'rgba(8, 8, 8, 0.92)',
+          background: 'var(--surface)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
-          border: '1px solid rgba(0, 255, 136, 0.10)',
+          border: '1px solid var(--border)',
           borderRadius: 999,
           padding: '5px 6px',
-          boxShadow: '0 8px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(0, 255, 136, 0.04) inset',
+          boxShadow: '0 8px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--border-bright) inset',
           position: 'relative',
-          height: 60,
+          height: 56,
           pointerEvents: 'auto',
           WebkitTapHighlightColor: 'transparent',
         }}
       >
-        {/* Animated sliding pill background */}
+        {/* Animated sliding pill indicator */}
         {pillStyle.width > 0 && (
           <div
             aria-hidden
             style={{
               position: 'absolute',
-              top: 5,
-              bottom: 5,
+              top: 4,
+              bottom: 4,
               left: pillStyle.left,
               width: pillStyle.width,
-              background: 'rgba(0, 255, 136, 0.12)',
-              border: '1px solid rgba(0, 255, 136, 0.22)',
-              borderRadius: 12,
-              padding: '6px 16px',
-              boxShadow: '0 0 16px rgba(0, 255, 136, 0.12)',
-              transition: 'left 300ms ease, width 300ms ease',
+              background: 'var(--neon)',
+              opacity: 0.12,
+              border: '1px solid var(--neon)',
+              borderRadius: 999,
+              transition: 'left 250ms ease, width 250ms ease',
               pointerEvents: 'none',
             }}
           />
@@ -142,7 +141,7 @@ export default function BottomNav() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 3,
-                minHeight: 54,
+                minHeight: 56,
                 padding: '8px 4px',
                 position: 'relative',
                 background: 'transparent',
@@ -166,7 +165,7 @@ export default function BottomNav() {
                   size={22}
                   strokeWidth={active ? 2.2 : 1.6}
                   style={{
-                    color: active ? '#00ff88' : '#333333',
+                    color: active ? 'var(--neon)' : 'var(--text-secondary)',
                     transition: 'color 250ms cubic-bezier(0.32, 0.72, 0, 1)',
                     filter: active ? 'drop-shadow(0 0 5px rgba(0, 255, 136, 0.7))' : 'none',
                     transform: active ? 'scale(1.08)' : 'scale(1)',
@@ -204,13 +203,13 @@ export default function BottomNav() {
 
               <span
                 style={{
-                  fontSize: 9,
+                  fontSize: 8,
                   fontWeight: active ? 700 : 500,
-                  color: active ? '#00ff88' : '#333333',
+                  color: active ? 'var(--neon)' : 'var(--text-secondary)',
                   transition: 'color 250ms ease, font-weight 250ms ease',
-                  letterSpacing: '0.1em',
+                  letterSpacing: '0.08em',
                   textTransform: 'uppercase',
-                  fontFamily: "'Space Grotesk', system-ui, sans-serif",
+                  fontFamily: 'JetBrains Mono, monospace',
                 }}
               >
                 {tab.label}
