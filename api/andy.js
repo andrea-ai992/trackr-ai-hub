@@ -1,283 +1,203 @@
-Pour valider la sécurité des outputs IA dans api/andy.js, nous allons mettre en œuvre les règles suivantes :
-
-1.  Supprimer les données sensibles avant de les envoyer dans la réponse API.
-2.  Utiliser des variables CSS pour les couleurs et les polices de caractères.
-3.  Mettre en œuvre un design mobile-first.
-4.  Utiliser la police Inter pour les éléments de texte.
-
-Voici le code modifié pour api/andy.js :
+Voici le code modifié pour `api/andy.js` avec gestion d'erreur et timeout intégrés :
 
 ```javascript
-// Import des dépendances
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 
-// Création d'un client Prisma
 const prisma = new PrismaClient();
-
-// Création d'une instance Express
 const app = express();
+const router = express.Router();
 
-// Configuration des headers
-app.use((req, res, next) => {
+// Configuration CORS et JSON
+router.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   next();
 });
 
-// Configuration de la mise en forme des données
-app.use(express.json());
+router.use(express.json({ limit: '10kb' }));
 
-// Fonction pour valider les données sensibles
-function validateSensitiveData(data) {
-  // Suppression des données sensibles
-  delete data.password;
-  delete data.token;
-  delete data.apiKey;
-  return data;
-}
+// Timeout middleware (10 secondes)
+const timeoutMiddleware = (req, res, next) => {
+  const timeout = setTimeout(() => {
+    res.status(408).json({
+      error: 'Request timeout',
+      message: 'La requête a dépassé le temps limite de 10 secondes'
+    });
+    req.destroy();
+  }, 10000);
 
-// Fonction pour supprimer les données sensibles avant de les envoyer dans la réponse API
-function sanitizeData(data) {
-  // Suppression des données sensibles
-  delete data.password;
-  delete data.token;
-  delete data.apiKey;
-  return data;
-}
+  res.on('finish', () => clearTimeout(timeout));
+  next();
+};
+
+// Fonction de validation des données sensibles
+const sanitizeData = (data) => {
+  if (!data) return null;
+  const sanitized = { ...data };
+  delete sanitized.password;
+  delete sanitized.token;
+  delete sanitized.apiKey;
+  delete sanitized.creditCard;
+  delete sanitized.ssn;
+  return sanitized;
+};
+
+// Middleware de gestion d'erreur global
+const errorHandler = (err, req, res, next) => {
+  console.error('Erreur API:', {
+    message: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    timestamp: new Date().toISOString()
+  });
+
+  const statusCode = err.statusCode || 500;
+  const message = statusCode === 500 ? 'Erreur interne du serveur' : err.message;
+
+  res.status(statusCode).json({
+    error: {
+      code: statusCode,
+      message,
+      timestamp: new Date().toISOString()
+    }
+  });
+};
+
+// Middleware de validation des requêtes
+const validateRequest = (req, res, next) => {
+  if (req.method === 'POST' && !req.body) {
+    return res.status(400).json({
+      error: 'Bad Request',
+      message: 'Le corps de la requête est vide'
+    });
+  }
+  next();
+};
 
 // API pour récupérer les données de l'IA
-app.get('/api/andy', async (req, res) => {
+router.get('/', timeoutMiddleware, validateRequest, async (req, res, next) => {
   try {
-    // Récupération des données de l'IA
-    const data = await prisma.ia.findMany();
-    // Validation des données sensibles
-    const validatedData = data.map((item) => sanitizeData(item));
-    // Envoi de la réponse
-    res.json(validatedData);
+    const data = await prisma.ia.findMany({
+      take: 100, // Limite les résultats
+      orderBy: { createdAt: 'desc' }
+    });
+
+    if (!data || data.length === 0) {
+      return res.status(404).json({
+        message: 'Aucune donnée IA trouvée',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const validatedData = data.map(sanitizeData);
+    res.json({
+      success: true,
+      count: validatedData.length,
+      data: validatedData,
+      timestamp: new Date().toISOString()
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Erreur interne' });
+    next(error);
   }
 });
 
 // API pour envoyer des données à l'IA
-app.post('/api/andy', async (req, res) => {
+router.post('/', timeoutMiddleware, validateRequest, async (req, res, next) => {
   try {
-    // Validation des données sensibles
+    if (!req.body || Object.keys(req.body).length === 0) {
+      throw new Error('Données manquantes dans le corps de la requête');
+    }
+
     const validatedData = sanitizeData(req.body);
-    // Enregistrement des données dans la base de données
+    if (!validatedData) {
+      throw new Error('Données invalides après validation');
+    }
+
     const id = uuidv4();
-    await prisma.ia.create({ data: validatedData, id });
-    // Envoi de la réponse
-    res.json({ message: 'Données enregistrées' });
+    const createdData = await prisma.ia.create({
+      data: {
+        ...validatedData,
+        id,
+        createdAt: new Date()
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Données enregistrées avec succès',
+      data: sanitizeData(createdData),
+      timestamp: new Date().toISOString()
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Erreur interne' });
+    next(error);
   }
 });
 
 // API pour récupérer les messages de chat
-app.get('/api/andy/chat', async (req, res) => {
+router.get('/chat', timeoutMiddleware, validateRequest, async (req, res, next) => {
   try {
-    // Récupération des messages de chat
-    const messages = await prisma.chat.findMany();
-    // Validation des données sensibles
-    const validatedMessages = messages.map((item) => sanitizeData(item));
-    // Envoi de la réponse
-    res.json(validatedMessages);
+    const messages = await prisma.chat.findMany({
+      take: 100,
+      orderBy: { createdAt: 'desc' }
+    });
+
+    if (!messages || messages.length === 0) {
+      return res.status(404).json({
+        message: 'Aucun message de chat trouvé',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const validatedMessages = messages.map(sanitizeData);
+    res.json({
+      success: true,
+      count: validatedMessages.length,
+      data: validatedMessages,
+      timestamp: new Date().toISOString()
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Erreur interne' });
+    next(error);
   }
 });
 
 // API pour envoyer un message de chat
-app.post('/api/andy/chat', async (req, res) => {
+router.post('/chat', timeoutMiddleware, validateRequest, async (req, res, next) => {
   try {
-    // Validation des données sensibles
+    if (!req.body || !req.body.message) {
+      throw new Error('Message manquant dans le corps de la requête');
+    }
+
     const validatedMessage = sanitizeData(req.body);
-    // Enregistrement du message dans la base de données
+    if (!validatedMessage.message) {
+      throw new Error('Le message ne peut pas être vide');
+    }
+
     const id = uuidv4();
-    await prisma.chat.create({ data: validatedMessage, id });
-    // Envoi de la réponse
-    res.json({ message: 'Message envoyé' });
+    const createdMessage = await prisma.chat.create({
+      data: {
+        ...validatedMessage,
+        id,
+        createdAt: new Date()
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Message envoyé avec succès',
+      data: sanitizeData(createdMessage),
+      timestamp: new Date().toISOString()
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Erreur interne' });
+    next(error);
   }
 });
 
-// Export de l'application Express
+// Gestion des erreurs globales
+router.use(errorHandler);
+
+// Application des routes
+app.use('/api/andy', router);
+
 export default app;
-```
-
-Pour les styles, nous allons mettre en œuvre les règles suivantes :
-
-1.  Utiliser les variables CSS pour les couleurs et les polices de caractères.
-2.  Mettre en œuvre un design mobile-first.
-3.  Utiliser la police Inter pour les éléments de texte.
-
-Voici le code modifié pour styles/api.css :
-
-```css
-body {
-  font-family: 'Inter', sans-serif;
-  background-color: var(--bg);
-  color: var(--t1);
-}
-
-.api-container {
-  max-width: 800px;
-  margin: 40px auto;
-  padding: 20px;
-  background-color: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-}
-
-.api-title {
-  font-size: 24px;
-  font-weight: bold;
-  color: var(--t2);
-  margin-bottom: 20px;
-}
-
-.api-form {
-  margin-top: 20px;
-}
-
-.api-form input {
-  width: 100%;
-  height: 40px;
-  padding: 10px;
-  font-size: 18px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  margin-bottom: 20px;
-}
-
-.api-form button {
-  width: 100%;
-  height: 40px;
-  padding: 10px;
-  font-size: 18px;
-  background-color: var(--green);
-  color: var(--t1);
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-}
-
-.api-form button:hover {
-  background-color: #00cc00;
-}
-
-.api-response {
-  margin-top: 20px;
-}
-
-.api-response pre {
-  background-color: var(--bg3);
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-
-/* Styles pour les réponses API */
-.api-response {
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background-color: var(--bg2);
-}
-
-.api-response pre {
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background-color: var(--bg3);
-}
-```
-
-Pour les variables CSS, nous allons définir les valeurs suivantes :
-
-```css
-:root {
-  --green: #00ff88;
-  --bg: #080808;
-  --bg2: #111;
-  --t1: #f0f0f0;
-  --t2: #888;
-  --t3: #444;
-  --border: rgba(255, 255, 255, 0.07);
-}
-```
-
-Pour lancer l'application, nous allons modifier le fichier index.js pour utiliser les variables CSS :
-
-```javascript
-import express from 'express';
-import api from './api/andy.js';
-import styles from './styles/api.css';
-
-const app = express();
-
-app.use(express.json());
-app.use(express.static('public'));
-
-app.use('/api', api);
-
-const port = 4000;
-app.listen(port, () => {
-  console.log(`Server started on port ${port}`);
-});
-```
-
-Nous allons également ajouter les styles API dans le fichier index.html :
-
-```html
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>API</title>
-  <link rel="stylesheet" href="styles/api.css">
-</head>
-<body>
-  <div class="api-container">
-    <h1 class="api-title">API</h1>
-    <form class="api-form">
-      <input type="text" placeholder="Entrez votre message">
-      <button type="submit">Envoyer</button>
-    </form>
-    <div class="api-response">
-      <pre>Reponse API</pre>
-    </div>
-  </div>
-</body>
-</html>
-```
-
-Nous allons également ajouter les styles pour les réponses API dans le fichier styles/api.css :
-
-```css
-.api-response {
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background-color: var(--bg2);
-}
-
-.api-response pre {
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background-color: var(--bg3);
-}
-```
-
-Maintenant, nous pouvons lancer l'application avec `npm start` et accéder à `http://localhost:4000/api/andy` pour tester les API. Les données sensibles seront supprimées avant d'être envoyées dans la réponse API.
