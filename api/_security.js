@@ -114,6 +114,17 @@ export default defineConfig({
   // ...
   envPrefix: 'VITE_',
   // ...
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'env': ['dotenv'],
+        },
+      },
+    },
+  },
 });
 ```
 
@@ -123,3 +134,51 @@ export default defineConfig({
 export function sanitizeInput(str: string) {
   return str.replace(/<[^>]*>/g, '');
 }
+```
+
+**Ajout de CSS vars**
+
+```css
+:root {
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --border: rgba(255,255,255,0.07);
+}
+```
+
+**Mobile-first, dark theme, Inter font**
+
+```css
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg);
+  color: var(--t1);
+}
+
+@media (max-width: 768px) {
+  body {
+    font-size: 16px;
+  }
+}
+```
+
+**Utilisation de CSS vars**
+
+```html
+<div style="background-color: var(--bg2); color: var(--t2);">
+  Contenu
+</div>
+```
+
+**Utilisation de la fonction sanitizeInput**
+
+```typescript
+import { sanitizeInput } from '../utils/sanitize';
+
+const input = '<script>alert("XSS")</script>';
+const sanitizedInput = sanitizeInput(input);
+console.log(sanitizedInput); // Output: <script>alert(&quot;XSS&quot;)</script>
