@@ -1,0 +1,314 @@
+// src/components/PortfolioPerformanceGraph.jsx
+import { useEffect, useRef, useState } from 'react';
+import './PortfolioPerformanceGraph.css';
+
+const PortfolioPerformanceGraph = ({ data, currency = '$' }) => {
+  const svgRef = useRef(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (svgRef.current) {
+      const { width, height } = svgRef.current.getBoundingClientRect();
+      setDimensions({ width, height });
+      setIsLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isLoaded || !data || data.length === 0) return;
+
+    const svg = svgRef.current;
+    const width = svg.clientWidth;
+    const height = svg.clientHeight;
+
+    // Clear previous elements
+    while (svg.firstChild) {
+      svg.removeChild(svg.firstChild);
+    }
+
+    // Calculate max value for scaling
+    const maxValue = Math.max(...data.map(item => item.value), 1);
+    const minValue = Math.min(...data.map(item => item.value), 0);
+
+    // Calculate path points
+    const points = data.map((item, index) => {
+      const x = (index / (data.length - 1)) * (width - 40) + 20;
+      const y = height - 20 - ((item.value - minValue) / (maxValue - minValue)) * (height - 40);
+      return { x, y };
+    });
+
+    // Create SVG elements
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+    gradient.setAttribute('id', 'performanceGradient');
+    gradient.setAttribute('x1', '0%');
+    gradient.setAttribute('y1', '0%');
+    gradient.setAttribute('x2', '0%');
+    gradient.setAttribute('y2', '100%');
+
+    const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+    stop1.setAttribute('offset', '0%');
+    stop1.setAttribute('stop-color', 'rgba(0, 255, 136, 0.8)');
+
+    const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+    stop2.setAttribute('offset', '100%');
+    stop2.setAttribute('stop-color', 'rgba(0, 255, 136, 0.2)');
+
+    gradient.appendChild(stop1);
+    gradient.appendChild(stop2);
+    defs.appendChild(gradient);
+    svg.appendChild(defs);
+
+    // Create grid lines
+    const gridGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    gridGroup.setAttribute('class', 'grid-lines');
+
+    const horizontalLines = 5;
+    for (let i = 0; i <= horizontalLines; i++) {
+      const y = height - 20 - (i / horizontalLines) * (height - 40);
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', '20');
+      line.setAttribute('y1', y);
+      line.setAttribute('x2', width - 20);
+      line.setAttribute('y2', y);
+      line.setAttribute('stroke', 'var(--border)');
+      line.setAttribute('stroke-width', '1');
+      line.setAttribute('stroke-dasharray', '2,2');
+      gridGroup.appendChild(line);
+    }
+
+    const verticalLines = 10;
+    for (let i = 0; i <= verticalLines; i++) {
+      const x = (i / verticalLines) * (width - 40) + 20;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x);
+      line.setAttribute('y1', '20');
+      line.setAttribute('x2', x);
+      line.setAttribute('y2', height - 20);
+      line.setAttribute('stroke', 'var(--border)');
+      line.setAttribute('stroke-width', '1');
+      line.setAttribute('stroke-dasharray', '2,2');
+      gridGroup.appendChild(line);
+    }
+
+    svg.appendChild(gridGroup);
+
+    // Create path
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    let pathData = `M ${points[0].x} ${points[0].y}`;
+
+    for (let i = 1; i < points.length; i++) {
+      const xc = (points[i - 1].x + points[i].x) / 2;
+      const yc = (points[i - 1].y + points[i].y) / 2;
+      pathData += ` Q ${xc} ${points[i - 1].y}, ${xc} ${yc}`;
+    }
+
+    pathData += ` L ${points[points.length - 1].x} ${height - 20}`;
+    pathData += ` L ${points[0].x} ${height - 20} Z`;
+
+    path.setAttribute('d', pathData);
+    path.setAttribute('fill', 'url(#performanceGradient)');
+    path.setAttribute('stroke', 'var(--green)');
+    path.setAttribute('stroke-width', '2');
+    path.setAttribute('opacity', '0');
+    path.setAttribute('class', 'performance-path');
+
+    svg.appendChild(path);
+
+    // Create dots
+    const dotsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    dotsGroup.setAttribute('class', 'performance-dots');
+
+    data.forEach((item, index) => {
+      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('cx', points[index].x);
+      dot.setAttribute('cy', points[index].y);
+      dot.setAttribute('r', '4');
+      dot.setAttribute('fill', 'var(--green)');
+      dot.setAttribute('opacity', '0');
+      dot.setAttribute('class', 'performance-dot');
+      dotsGroup.appendChild(dot);
+    });
+
+    svg.appendChild(dotsGroup);
+
+    // Create labels
+    const labelsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    labelsGroup.setAttribute('class', 'performance-labels');
+
+    // Y-axis labels
+    for (let i = 0; i <= horizontalLines; i++) {
+      const y = height - 20 - (i / horizontalLines) * (height - 40);
+      const value = (maxValue - (i / horizontalLines) * (maxValue - minValue)).toFixed(2);
+      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      label.setAttribute('x', '10');
+      label.setAttribute('y', y + 4);
+      label.setAttribute('fill', 'var(--t2)');
+      label.setAttribute('font-size', '12');
+      label.setAttribute('font-family', 'Inter, sans-serif');
+      label.textContent = `${currency}${value}`;
+      labelsGroup.appendChild(label);
+    }
+
+    // X-axis labels
+    data.forEach((item, index) => {
+      const x = (index / (data.length - 1)) * (width - 40) + 20;
+      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      label.setAttribute('x', x);
+      label.setAttribute('y', height - 5);
+      label.setAttribute('fill', 'var(--t2)');
+      label.setAttribute('font-size', '10');
+      label.setAttribute('font-family', 'Inter, sans-serif');
+      label.setAttribute('text-anchor', 'middle');
+      label.textContent = item.label;
+      labelsGroup.appendChild(label);
+    });
+
+    svg.appendChild(labelsGroup);
+
+    // Animate path
+    const animatePath = () => {
+      const duration = 1000;
+      const startTime = performance.now();
+
+      const animate = (currentTime) => {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        path.setAttribute('opacity', progress);
+
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        }
+      };
+
+      requestAnimationFrame(animate);
+    };
+
+    // Animate dots
+    const animateDots = () => {
+      const duration = 1000;
+      const delayBetweenDots = 100;
+      const startTime = performance.now();
+
+      const animate = (currentTime) => {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        const dots = dotsGroup.querySelectorAll('circle');
+        const activeDots = Math.floor(progress * dots.length);
+
+        dots.forEach((dot, index) => {
+          const dotDelay = index * delayBetweenDots;
+          if (elapsed >= dotDelay) {
+            dot.setAttribute('opacity', '1');
+          }
+        });
+
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        }
+      };
+
+      requestAnimationFrame(animate);
+    };
+
+    // Start animations after a small delay
+    setTimeout(() => {
+      animatePath();
+      animateDots();
+    }, 100);
+
+  }, [data, isLoaded, currency]);
+
+  return (
+    <div className="portfolio-performance-graph">
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${dimensions.width || 400} ${dimensions.height || 200}`}
+        preserveAspectRatio="none"
+      />
+    </div>
+  );
+};
+
+export default PortfolioPerformanceGraph;
+```
+
+```css
+/* src/components/PortfolioPerformanceGraph.css */
+.portfolio-performance-graph {
+  width: 100%;
+  height: 200px;
+  font-family: 'Inter', sans-serif;
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  background-color: var(--bg2);
+  border: 1px solid var(--border);
+  padding: 16px;
+}
+
+.portfolio-performance-graph svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.grid-lines line {
+  stroke: var(--border);
+  stroke-width: 1;
+  stroke-dasharray: 2,2;
+}
+
+.performance-path {
+  transition: opacity 0.3s ease;
+}
+
+.performance-dot {
+  transition: opacity 0.2s ease;
+}
+
+.performance-labels text {
+  fill: var(--t2);
+  font-size: 12px;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Animation classes */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.performance-path {
+  animation: fadeIn 1s ease-out forwards;
+}
+
+.performance-dot {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .portfolio-performance-graph {
+    height: 180px;
+    padding: 12px;
+  }
+
+  .performance-labels text {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .portfolio-performance-graph {
+    height: 160px;
+    padding: 8px;
+  }
+
+  .performance-labels text {
+    font-size: 8px;
+  }
+}
