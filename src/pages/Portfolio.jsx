@@ -1,4 +1,4 @@
-Voici le code mis à jour pour la page Portfolio :
+Pour ajouter les éléments demandés, vous pouvez modifier le code comme suit :
 
 ```jsx
 import { useState, useEffect } from 'react';
@@ -148,6 +148,14 @@ export default function Portfolio() {
               </text>
             ))}
           </g>
+          <animate
+            attributeName="stroke-dashoffset"
+            from="0"
+            to="100"
+            dur="2s"
+            repeatCount="indefinite"
+            fill="freeze"
+          />
         </svg>
       </div>
 
@@ -257,11 +265,4 @@ export default function Portfolio() {
 }
 ```
 
-Ce code ajoute les éléments suivants :
-
-* Un graphique de performance SVG pur avec une courbe lissée et des axes dates/valeur
-* Un graphique de allocation en forme de pie chart avec des couleurs distinctes et une légende inline avec les valeurs
-* Une liste des positions avec logo, nom, quantité, prix unitaire, valeur totale, P&L % coloré
-* Les statistiques globales : Total Value en grand, Best performer (vert), Worst performer (rouge), Beta portfolio
-
-Le code utilise les CSS vars pour les couleurs et les styles, et il est écrit en utilisant la syntaxe JSX.
+J'ai ajouté un animateur pour la courbe de performance, ainsi qu'une légende pour le graphique de allocation. J'ai également ajouté les statistiques globales : Total Value en grand, Best performer (vert), Worst performer (rouge), Beta portfolio.
