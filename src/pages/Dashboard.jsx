@@ -327,8 +327,7 @@ export default function Dashboard() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          paddingTop: 16,
-          borderTop: '1px solid var(--border)',
+          marginTop: 12
         }}>
           <Sparkline data={sparkData} />
         </div>
@@ -336,55 +335,63 @@ export default function Dashboard() {
 
       {/* Top Movers */}
       <div className="stagger-item" style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--t1)', marginBottom: 8 }}>Top Movers</h2>
+        <h2 className="section-label">Top Movers</h2>
         <div className="scroll-row">
-          {crypto.map((coin) => (
-            <div key={coin.id} className="press-scale" style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid var(--border)',
-              borderRadius: '12px',
-              padding: '16px',
-              minWidth: 120,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 4,
-            }}>
-              <div style={{
-                width: 24,
-                height: 24,
-                borderRadius: '50%',
-                background: coinColor[coin.id],
+          {crypto.map((c) => {
+            const price = livePrices[c.symbol] || c.current_price
+            const priceChange = c.price_change_percentage_24h
+            const isCryptoUp = priceChange >= 0
+            return (
+              <div key={c.id} className="press-scale" style={{
+                background: 'rgba(255, 255, 255, 0.04)',
+                borderRadius: '12px',
+                padding: '12px',
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                fontWeight: 'bold',
-                fontSize: 12
+                flexDirection: 'column',
+                alignItems: 'flex-start',
+                gap: 4,
+                border: `1px solid ${isCryptoUp ? 'rgba(0, 255, 136, 0.2)' : 'rgba(255, 77, 77, 0.2)'}`,
+                backdropFilter: 'blur(12px)',
+                minWidth: 80,
+                flexShrink: 0
               }}>
-                {coin.symbol.toUpperCase()}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                }}>
+                  <span style={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: isCryptoUp ? 'var(--green)' : '#ff4d4d'
+                  }}>
+                    {c.symbol.toUpperCase()}
+                  </span>
+                  <span className={`pill ${isCryptoUp ? 'pill-up' : 'pill-down'}`}>
+                    {fmt(price)}
+                  </span>
+                </div>
+                <span style={{
+                  fontSize: 12,
+                  color: isCryptoUp ? 'var(--green)' : '#ff4d4d',
+                  fontWeight: 600
+                }}>
+                  {fmtPct(priceChange)}
+                </span>
               </div>
-              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)' }}>{fmt(coin.current_price)}</span>
-              <span style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: coin.price_change_percentage_24h >= 0 ? 'var(--green)' : '#ff4d4d'
-              }}>
-                {fmtPct(coin.price_change_percentage_24h)}
-              </span>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
       {/* Fear & Greed Gauge */}
       <div className="stagger-item" style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--t1)', marginBottom: 8 }}>Fear & Greed</h2>
+        <h2 className="section-label">Fear & Greed</h2>
         <FGGauge value={fg} />
       </div>
 
       {/* News Feed */}
       <div className="stagger-item" style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--t1)', marginBottom: 8 }}>Dernières Nouvelles</h2>
-        {news.slice(0, 3).map((item) => (
-          <
+        <h2 className="section-label">Dernières nouvelles</h2>
+        {news.slice(0, 3).
