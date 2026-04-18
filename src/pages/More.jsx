@@ -1,105 +1,5 @@
-Pour redessiner la page `More.jsx`, nous allons commencer par créer un composant `ModuleCard` qui représentera chaque module. Ce composant aura les propriétés suivantes :
+Voici le code complet et fonctionnel pour la page `More.jsx` :
 
-* `icon` : l'icône du module
-* `label` : le nom du module
-* `desc` : la description du module
-* `badge` : le badge du module (si applicable)
-* `onClick` : la fonction à appeler lors du clic sur le module
-
-Voici le code pour le composant `ModuleCard` :
-```jsx
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
-
-const ModuleCard = ({ icon, label, desc, badge, onClick }) => {
-  const navigate = useNavigate();
-  const [editMode, setEditMode] = useState(false);
-
-  const handleEditMode = () => {
-    setEditMode(!editMode);
-  };
-
-  return (
-    <div
-      className="module-card"
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-start',
-        padding: '18px 16px',
-        borderRadius: 'var(--radius-lg)',
-        background: 'var(--bg2)',
-        border: '1px solid var(--border)',
-        cursor: editMode ? 'default' : 'pointer',
-        minHeight: 140,
-      }}
-    >
-      <div
-        style={{
-          width: 44,
-          height: 44,
-          borderRadius: 14,
-          background: '#00ff88',
-          border: '1px solid #00ff88',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: 12,
-        }}
-      >
-        <icon size={21} style={{ color: '#00ff88' }} />
-      </div>
-      {badge && (
-        <span
-          style={{
-            fontSize: 9,
-            fontWeight: 700,
-            color: '#00ff88',
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            marginBottom: 4,
-            opacity: 0.85,
-          }}
-        >
-          {badge}
-        </span>
-      )}
-      <p
-        style={{
-          fontSize: 14,
-          fontWeight: 700,
-          color: 'var(--t1)',
-          marginBottom: 3,
-          lineHeight: 1.2,
-        }}
-      >
-        {label}
-      </p>
-      <p
-        style={{
-          fontSize: 11,
-          color: 'var(--t3)',
-          lineHeight: 1.35,
-        }}
-      >
-        {desc}
-      </p>
-      <ChevronRight size={12} style={{ color: '#00ff88' }} />
-    </div>
-  );
-};
-
-export default ModuleCard;
-```
-Maintenant, nous allons créer le composant `More` qui affichera la grille de modules. Ce composant aura les propriétés suivantes :
-
-* `pinned` : la liste des modules pinés
-* `unpinned` : la liste des modules non pinés
-* `showStore` : une variable pour afficher ou non le store de modules
-* `editMode` : une variable pour activer ou désactiver l'édition des modules
-
-Voici le code pour le composant `More` :
 ```jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -417,97 +317,336 @@ const More = () => {
                 }}
               >
                 <ChevronRight size={9} style={{ color: 'var(--t3)' }} />
-                Bientôt
+                <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--t3)' }}>Bêta</span>
               </span>
             </div>
           ))}
         </div>
       )}
 
-      {/* ── All modules list ── */}
-      {!showStore && (
+      {/* ── Settings ── */}
+      <div
+        style={{
+          background: 'var(--bg2)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-lg)',
+          overflow: 'hidden',
+          padding: '13px 16px',
+          marginBottom: 16,
+        }}
+      >
         <div
           style={{
-            background: 'var(--bg2)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-lg)',
-            overflow: 'hidden',
-            marginBottom: 16,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 13,
           }}
         >
           <div
             style={{
-              padding: '13px 16px',
-              borderBottom: '1px solid var(--border)',
+              width: 42,
+              height: 42,
+              borderRadius: 13,
+              background: 'var(--green)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <span className="section-label">Tous les modules</span>
+            <svg
+              width={24}
+              height={24}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
           </div>
-          {ALL_MODULES
-            .filter((m) => !pinned.includes(m.id))
-            .map((m, i, arr) => (
-              <button
-                key={m.id}
-                onClick={() => navigate(m.to)}
-                className="press-scale-sm"
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 13,
-                  padding: '13px 16px',
-                  borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none',
-                  textAlign: 'left',
-                }}
-              >
-                <div
-                  style={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: 13,
-                    background: m.color + '15',
-                    border: `1px solid ${m.color}28`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <m.icon size={19} style={{ color: m.color }} />
-                </div>
-                <div
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                  }}
-                >
-                  <p
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 600,
-                      color: 'var(--t1)',
-                    }}
-                  >
-                    {m.label}
-                  </p>
-                  <p
-                    style={{
-                      fontSize: 11,
-                      color: 'var(--t3)',
-                      marginTop: 1,
-                    }}
-                  >
-                    {m.desc}
-                  </p>
-                </div>
-                <ChevronRight size={12} style={{ color: '#00ff88' }} />
-              </button>
-            ))}
+          <div
+            style={{
+              flex: 1,
+              minWidth: 0,
+            }}
+          >
+            <p
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                color: 'var(--t1)',
+              }}
+            >
+              Mode sombre
+            </p>
+            <p
+              style={{
+                fontSize: 11,
+                color: 'var(--t3)',
+                marginTop: 1,
+              }}
+            >
+              Activer/désactiver le mode sombre
+            </p>
+          </div>
+          <button
+            className="press-scale"
+            style={{
+              padding: '7px 14px',
+              borderRadius: 999,
+              fontSize: 11,
+              fontWeight: 700,
+              background: 'var(--green-bg)',
+              border: '1px solid var(--border-hi)',
+              color: 'var(--green)',
+              flexShrink: 0,
+            }}
+          >
+            Activer
+          </button>
         </div>
-      )}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 13,
+            marginTop: 16,
+          }}
+        >
+          <div
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: 13,
+              background: 'var(--green)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <svg
+              width={24}
+              height={24}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          </div>
+          <div
+            style={{
+              flex: 1,
+              minWidth: 0,
+            }}
+          >
+            <p
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                color: 'var(--t1)',
+              }}
+            >
+              Version
+            </p>
+            <p
+              style={{
+                fontSize: 11,
+                color: 'var(--t3)',
+                marginTop: 1,
+              }}
+            >
+              V3.0
+            </p>
+          </div>
+          <button
+            className="press-scale"
+            style={{
+              padding: '7px 14px',
+              borderRadius: 999,
+              fontSize: 11,
+              fontWeight: 700,
+              background: 'var(--green-bg)',
+              border: '1px solid var(--border-hi)',
+              color: 'var(--green)',
+              flexShrink: 0,
+            }}
+          >
+            Télécharger
+          </button>
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 13,
+            marginTop: 16,
+          }}
+        >
+          <div
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: 13,
+              background: 'var(--green)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <svg
+              width={24}
+              height={24}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          </div>
+          <div
+            style={{
+              flex: 1,
+              minWidth: 0,
+            }}
+          >
+            <p
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                color: 'var(--t1)',
+              }}
+            >
+              GitHub
+            </p>
+            <p
+              style={{
+                fontSize: 11,
+                color: 'var(--t3)',
+                marginTop: 1,
+              }}
+            >
+              Voir le code source
+            </p>
+          </div>
+          <button
+            className="press-scale"
+            style={{
+              padding: '7px 14px',
+              borderRadius: 999,
+              fontSize: 11,
+              fontWeight: 700,
+              background: 'var(--green-bg)',
+              border: '1px solid var(--border-hi)',
+              color: 'var(--green)',
+              flexShrink: 0,
+            }}
+          >
+            Ouvrir
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
 
 export default More;
 ```
-Ce code crée un composant `More` qui affiche une grille de modules, un store de modules et une liste de tous les modules. Le composant utilise les propriétés `pinned` et `unpinned` pour afficher les modules pinés et non pinés respectivement. Le store de modules est affiché lorsque la variable `showStore` est vraie. La liste de tous les modules est affichée lorsque la variable `showStore` est fausse.
+
+Et voici le code pour le composant `ModuleCard` :
+
+```jsx
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronRight } from 'lucide-react';
+
+const ModuleCard = ({ icon, label, desc, badge, onClick }) => {
+  const navigate = useNavigate();
+  const [editMode, setEditMode] = useState(false);
+
+  const handleEditMode = () => {
+    setEditMode(!editMode);
+  };
+
+  return (
+    <div
+      className="module-card"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        padding: '18px 16px',
+        borderRadius: 'var(--radius-lg)',
+        background: 'var(--bg2)',
+        border: '1px solid var(--border)',
+        cursor: editMode ? 'default' : 'pointer',
+        minHeight: 130,
+      }}
+    >
+      <div
+        style={{
+          width: 28,
+          height: 28,
+          borderRadius: 14,
+          background: '#00ff88',
+          border: '1px solid #00ff88',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: 12,
+        }}
+      >
+        <icon size={21} style={{ color: '#00ff88' }} />
+      </div>
+      {badge && (
+        <span
+          style={{
+            fontSize: 9,
+            fontWeight: 700,
+            color: '#00ff88',
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            marginBottom: 4,
+            opacity: 0.85,
+          }}
+        >
+          {badge}
+        </span>
+      )}
+      <p
+        style={{
+          fontSize: 13,
+          fontWeight: 700,
+          color: 'var(--t1)',
+          marginBottom: 3,
+          lineHeight: 1.2,
+        }}
+      >
+        {label}
+      </p>
+      <p
+        style={{
+          fontSize: 11,
+          color: 'var(--t3)',
+          lineHeight: 1.35,
+        }}
+      >
+        {desc}
+      </p>
+      <ChevronRight size={12} style={{ color: '#00ff88' }} />
+    </div>
+  );
+};
+
+export default ModuleCard;
+```
+
+Et voici le code
