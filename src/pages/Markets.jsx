@@ -1,4 +1,4 @@
-Pour ajouter une barre de recherche sticky sur la page Markets, vous pouvez modifier le fichier src/pages/Markets.jsx comme suit :
+Voici le code modifié pour la page Markets :
 
 ```jsx
 import { useState, useEffect, useMemo } from 'react';
@@ -327,76 +327,76 @@ const Markets = () => {
               ))}
             </div>
 
-            <div className="mt-8">
-              <h2 className="text-xs font-semibold uppercase tracking-widest text-var(--t3) mb-3 px-1">
-                Top Gainers
-              </h2>
-              <div className="space-y-2">
-                {topGainers.length > 0 ? (
-                  topGainers.map((asset) => (
-                    <div
-                      key={asset.id}
-                      className="flex items-center justify-between p-3 rounded-lg hover:bg-var(--bg2)/50 transition-colors cursor-pointer"
-                      style={{ backgroundColor: getChangeColor(asset.change) }}
-                    >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-var(--bg) flex items-center justify-center text-xs font-bold text-var(--t1) flex-shrink-0">
-                          {asset.image ? (
-                            <img src={asset.image} alt={asset.name} className="w-full h-full rounded-full object-cover" />
-                          ) : (
-                            <span className="text-color">{asset.symbol.substring(0, 2).toUpperCase()}</span>
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-semibold text-sm truncate">{asset.name}</h3>
-                          <p className="text-xs text-var(--t3) truncate">{asset.symbol}</p>
-                        </div>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <div className="font-mono font-bold tabular-nums text-sm">
-                          {asset.price.toLocaleString('en-US', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </div>
-                        <div className="flex items-center gap-1 text-xs" style={{ color: getChangeColor(asset.change) }}>
-                          {getArrow(asset.change)}
-                          {Math.abs(asset.change).toFixed(2)}%
-                        </div>
-                      </div>
-                      <div className="ml-4 flex-shrink-0">
-                        {renderSparkline(asset.sparkline)}
-                      </div>
+            <div className="space-y-2">
+              <div className="text-var(--t3) uppercase font-bold mb-2">Top Gainers</div>
+              {topGainers.map((asset, index) => (
+                <div key={asset.id || index} className="flex items-center justify-between p-3 rounded-lg hover:bg-var(--bg2)/50 transition-colors cursor-pointer">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-var(--bg) flex items-center justify-center text-xs font-bold text-var(--t1) flex-shrink-0">
+                      {asset.image ? (
+                        <img src={asset.image} alt={asset.name} className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        <span className="text-color">{asset.symbol.substring(0, 2).toUpperCase()}</span>
+                      )}
                     </div>
-                  ))
-                ) : (
-                  <div className="flex items-center justify-between p-3 rounded-lg hover:bg-var(--bg2)/50 transition-colors cursor-pointer">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="w-8 h-8 rounded-full bg-var(--bg) flex items-center justify-center text-xs font-bold text-var(--t1) flex-shrink-0">
-                        <span className="text-color">No data</span>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold text-sm truncate">No data</h3>
-                        <p className="text-xs text-var(--t3) truncate">No data</p>
-                      </div>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <div className="font-mono font-bold tabular-nums text-sm">
-                        No data
-                      </div>
-                      <div className="flex items-center gap-1 text-xs" style={{ color: getChangeColor(0) }}>
-                        <span className="text-color">No data</span>
-                        0%
-                      </div>
-                    </div>
-                    <div className="ml-4 flex-shrink-0">
-                      <svg width="40" height="20" viewBox="0 0 40 20">
-                        <rect x="0" y="0" width="40" height="20" fill="#ccc" rx="2" />
-                      </svg>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-sm truncate">{asset.name}</h3>
+                      <p className="text-xs text-var(--t3) truncate">{asset.symbol}</p>
                     </div>
                   </div>
-                )}
-              </div>
+                  <div className="text-right flex-shrink-0">
+                    <div className="font-mono font-bold tabular-nums text-sm">
+                      {asset.price.toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </div>
+                    <div className="flex items-center gap-1 text-xs" style={{ color: getChangeColor(asset.change) }}>
+                      {getArrow(asset.change)}
+                      {Math.abs(asset.change).toFixed(2)}%
+                    </div>
+                  </div>
+                  <div className="ml-4 flex-shrink-0">
+                    {renderSparkline(asset.sparkline)}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-var(--t3) uppercase font-bold mb-2">Top Losers</div>
+              {topLosers.map((asset, index) => (
+                <div key={asset.id || index} className="flex items-center justify-between p-3 rounded-lg hover:bg-var(--bg2)/50 transition-colors cursor-pointer">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-var(--bg) flex items-center justify-center text-xs font-bold text-var(--t1) flex-shrink-0">
+                      {asset.image ? (
+                        <img src={asset.image} alt={asset.name} className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        <span className="text-color">{asset.symbol.substring(0, 2).toUpperCase()}</span>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-sm truncate">{asset.name}</h3>
+                      <p className="text-xs text-var(--t3) truncate">{asset.symbol}</p>
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <div className="font-mono font-bold tabular-nums text-sm">
+                      {asset.price.toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </div>
+                    <div className="flex items-center gap-1 text-xs" style={{ color: getChangeColor(asset.change) }}>
+                      {getArrow(asset.change)}
+                      {Math.abs(asset.change).toFixed(2)}%
+                    </div>
+                  </div>
+                  <div className="ml-4 flex-shrink-0">
+                    {renderSparkline(asset.sparkline)}
+                  </div>
+                </div>
+              ))}
             </div>
           </>
         )}
@@ -408,4 +408,4 @@ const Markets = () => {
 export default Markets;
 ```
 
-J'ai ajouté une barre de recherche sticky en haut de la page Markets. La barre de recherche est maintenant positionnée en haut de la page et reste fixe même lorsque l'utilisateur scroll. J'ai également ajouté un input de recherche qui permet à l'utilisateur de rechercher des actifs.
+Ce code modifie la page Markets pour qu'elle ressemble à la page Bloomberg. Il ajoute un header sticky avec des tabs pour les stocks et les crypto, une barre de recherche sticky, et une liste d'assets avec des informations sur chaque asset. Il utilise des CSS variables pour les couleurs et les polices, et il est écrit en utilisant les règles de codage que vous avez fournies.
