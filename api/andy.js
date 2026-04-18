@@ -1,4 +1,11 @@
-Création de `api/andy.js` from scratch :
+Pour valider la sécurité des outputs IA dans api/andy.js, nous allons mettre en œuvre les règles suivantes :
+
+1.  Supprimer les données sensibles avant de les envoyer dans la réponse API.
+2.  Utiliser des variables CSS pour les couleurs et les polices de caractères.
+3.  Mettre en œuvre un design mobile-first.
+4.  Utiliser la police Inter pour les éléments de texte.
+
+Voici le code modifié pour api/andy.js :
 
 ```javascript
 // Import des dépendances
@@ -31,13 +38,22 @@ function validateSensitiveData(data) {
   return data;
 }
 
+// Fonction pour supprimer les données sensibles avant de les envoyer dans la réponse API
+function sanitizeData(data) {
+  // Suppression des données sensibles
+  delete data.password;
+  delete data.token;
+  delete data.apiKey;
+  return data;
+}
+
 // API pour récupérer les données de l'IA
 app.get('/api/andy', async (req, res) => {
   try {
     // Récupération des données de l'IA
     const data = await prisma.ia.findMany();
     // Validation des données sensibles
-    const validatedData = data.map((item) => validateSensitiveData(item));
+    const validatedData = data.map((item) => sanitizeData(item));
     // Envoi de la réponse
     res.json(validatedData);
   } catch (error) {
@@ -50,7 +66,7 @@ app.get('/api/andy', async (req, res) => {
 app.post('/api/andy', async (req, res) => {
   try {
     // Validation des données sensibles
-    const validatedData = validateSensitiveData(req.body);
+    const validatedData = sanitizeData(req.body);
     // Enregistrement des données dans la base de données
     const id = uuidv4();
     await prisma.ia.create({ data: validatedData, id });
@@ -62,49 +78,13 @@ app.post('/api/andy', async (req, res) => {
   }
 });
 
-// Export de l'application Express
-export default app;
-```
-
-Création de `api/andy.js` pour les requêtes chat :
-
-```javascript
-// Import des dépendances
-import express from 'express';
-import { PrismaClient } from '@prisma/client';
-
-// Création d'un client Prisma
-const prisma = new PrismaClient();
-
-// Création d'une instance Express
-const app = express();
-
-// Configuration des headers
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-  next();
-});
-
-// Configuration de la mise en forme des données
-app.use(express.json());
-
-// Fonction pour valider les données sensibles
-function validateSensitiveData(data) {
-  // Suppression des données sensibles
-  delete data.password;
-  delete data.token;
-  delete data.apiKey;
-  return data;
-}
-
 // API pour récupérer les messages de chat
 app.get('/api/andy/chat', async (req, res) => {
   try {
     // Récupération des messages de chat
     const messages = await prisma.chat.findMany();
     // Validation des données sensibles
-    const validatedMessages = messages.map((item) => validateSensitiveData(item));
+    const validatedMessages = messages.map((item) => sanitizeData(item));
     // Envoi de la réponse
     res.json(validatedMessages);
   } catch (error) {
@@ -117,7 +97,7 @@ app.get('/api/andy/chat', async (req, res) => {
 app.post('/api/andy/chat', async (req, res) => {
   try {
     // Validation des données sensibles
-    const validatedMessage = validateSensitiveData(req.body);
+    const validatedMessage = sanitizeData(req.body);
     // Enregistrement du message dans la base de données
     const id = uuidv4();
     await prisma.chat.create({ data: validatedMessage, id });
@@ -133,7 +113,13 @@ app.post('/api/andy/chat', async (req, res) => {
 export default app;
 ```
 
-Création de `styles/api.css` pour les styles :
+Pour les styles, nous allons mettre en œuvre les règles suivantes :
+
+1.  Utiliser les variables CSS pour les couleurs et les polices de caractères.
+2.  Mettre en œuvre un design mobile-first.
+3.  Utiliser la police Inter pour les éléments de texte.
+
+Voici le code modifié pour styles/api.css :
 
 ```css
 body {
@@ -199,13 +185,43 @@ body {
   border: 1px solid var(--border);
   border-radius: 10px;
 }
+
+/* Styles pour les réponses API */
+.api-response {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background-color: var(--bg2);
+}
+
+.api-response pre {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background-color: var(--bg3);
+}
 ```
 
-Création de `index.js` pour lancer l'application :
+Pour les variables CSS, nous allons définir les valeurs suivantes :
+
+```css
+:root {
+  --green: #00ff88;
+  --bg: #080808;
+  --bg2: #111;
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --border: rgba(255, 255, 255, 0.07);
+}
+```
+
+Pour lancer l'application, nous allons modifier le fichier index.js pour utiliser les variables CSS :
 
 ```javascript
 import express from 'express';
 import api from './api/andy.js';
+import styles from './styles/api.css';
 
 const app = express();
 
@@ -220,42 +236,48 @@ app.listen(port, () => {
 });
 ```
 
-Création de `package.json` :
+Nous allons également ajouter les styles API dans le fichier index.html :
 
-```json
-{
-  "name": "andy-api",
-  "version": "1.0.0",
-  "scripts": {
-    "start": "node index.js"
-  },
-  "dependencies": {
-    "express": "^4.17.1",
-    "@prisma/client": "^4.0.0",
-    "uuid": "^8.3.2"
-  }
+```html
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API</title>
+  <link rel="stylesheet" href="styles/api.css">
+</head>
+<body>
+  <div class="api-container">
+    <h1 class="api-title">API</h1>
+    <form class="api-form">
+      <input type="text" placeholder="Entrez votre message">
+      <button type="submit">Envoyer</button>
+    </form>
+    <div class="api-response">
+      <pre>Reponse API</pre>
+    </div>
+  </div>
+</body>
+</html>
+```
+
+Nous allons également ajouter les styles pour les réponses API dans le fichier styles/api.css :
+
+```css
+.api-response {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background-color: var(--bg2);
+}
+
+.api-response pre {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background-color: var(--bg3);
 }
 ```
 
-Création de `prisma/schema.prisma` :
-
-```prisma
-model IA {
-  id       String   @id @default(cuid())
-  name     String
-  data     String
-}
-
-model Chat {
-  id       String   @id @default(cuid())
-  message  String
-}
-```
-
-Création de `prisma/.env` :
-
-```makefile
-DATABASE_URL="postgresql://user:password@localhost:5432/database"
-```
-
-Lancer l'application avec `npm start` et accéder à `http://localhost:4000/api/andy` pour tester les API.
+Maintenant, nous pouvons lancer l'application avec `npm start` et accéder à `http://localhost:4000/api/andy` pour tester les API. Les données sensibles seront supprimées avant d'être envoyées dans la réponse API.
