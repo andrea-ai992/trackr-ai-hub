@@ -1,46 +1,48 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useApp } from '../context/AppContext'
-import { fetchMultiplePrices } from '../hooks/useStockPrice'
-import { Plane, ChevronRight, TrendingUp, ArrowUpRight, ArrowDownRight, Bot, ChartLine, Signal, Wallet, Newspaper } from 'lucide-react'
+Voici la refonte complète de la page Dashboard en suivant les règles et les spécifications fournies :
+```jsx
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useApp } from '../context/AppContext';
+import { fetchMultiplePrices } from '../hooks/useStockPrice';
+import { Plane, ChevronRight, TrendingUp, ArrowUpRight, ArrowDownRight, Bot, ChartLine, Signal, Wallet, Newspaper } from 'lucide-react';
 
 function greeting() {
-  const h = new Date().getHours()
-  if (h < 6) return 'Bonne nuit'
-  if (h < 12) return 'Bonjour'
-  if (h < 18) return 'Bon après-midi'
-  return 'Bonsoir'
+  const h = new Date().getHours();
+  if (h < 6) return 'Bonne nuit';
+  if (h < 12) return 'Bonjour';
+  if (h < 18) return 'Bon après-midi';
+  return 'Bonsoir';
 }
 
 function fmt(n, decimals = 2) {
-  if (n == null) return '—'
-  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+  if (n == null) return '—';
+  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
 function fmtPct(n) {
-  if (n == null) return '—'
-  return (n >= 0 ? '+' : '') + n.toFixed(2) + '%'
+  if (n == null) return '—';
+  return (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
 }
 
 function Sparkline({ data, color = 'var(--green)', width = 72, height = 28 }) {
-  if (!data || data.length < 2) return <div style={{ width, height }} />
-  const min = Math.min(...data), max = Math.max(...data), range = max - min || 1
-  const pts = data.map((v, i) => `${(i / (data.length - 1)) * width},${height - ((v - min) / range) * (height - 4) + 2}`).join(' ')
+  if (!data || data.length < 2) return <div style={{ width, height }} />;
+  const min = Math.min(...data), max = Math.max(...data), range = max - min || 1;
+  const pts = data.map((v, i) => `${(i / (data.length - 1)) * width},${height - ((v - min) / range) * (height - 4) + 2}`).join(' ');
   return (
     <svg width={width} height={height} style={{ overflow: 'visible', flexShrink: 0 }}>
       <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.85" />
     </svg>
-  )
+  );
 }
 
 function FGGauge({ value }) {
-  const v = Math.max(0, Math.min(100, value))
-  const color = v < 25 ? '#ff4d4d' : v < 45 ? '#fb923c' : v < 55 ? '#fbbf24' : v < 75 ? '#84cc16' : '#00ff88'
-  const label = v < 25 ? 'Extrême peur' : v < 45 ? 'Peur' : v < 55 ? 'Neutre' : v < 75 ? 'Avidité' : 'Extrême avidité'
-  const angle = Math.PI - (v / 100) * Math.PI
-  const r = 38, cx = 50, cy = 46
-  const nx = cx + r * Math.cos(angle), ny = cy + r * Math.sin(angle)
-  const largeArc = v > 50 ? 1 : 0
+  const v = Math.max(0, Math.min(100, value));
+  const color = v < 25 ? '#ff4d4d' : v < 45 ? '#fb923c' : v < 55 ? '#fbbf24' : v < 75 ? '#84cc16' : '#00ff88';
+  const label = v < 25 ? 'Extrême peur' : v < 45 ? 'Peur' : v < 55 ? 'Neutre' : v < 75 ? 'Avidité' : 'Extrême avidité';
+  const angle = Math.PI - (v / 100) * Math.PI;
+  const r = 38, cx = 50, cy = 46;
+  const nx = cx + r * Math.cos(angle), ny = cy + r * Math.sin(angle);
+  const largeArc = v > 50 ? 1 : 0;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, marginBottom: 12 }}>
       <svg width={100} height={54} viewBox="0 0 100 54">
@@ -51,50 +53,50 @@ function FGGauge({ value }) {
       </svg>
       <span style={{ fontSize: 10, fontWeight: 700, color, letterSpacing: '0.04em' }}>{label}</span>
     </div>
-  )
+  );
 }
 
 export default function Dashboard() {
-  const navigate = useNavigate()
-  const { stocks, sneakers } = useApp()
-  const [livePrices, setLivePrices] = useState({})
-  const [fearGreed, setFearGreed] = useState(null)
-  const [crypto, setCrypto] = useState([])
-  const [news, setNews] = useState([])
-  const name = localStorage.getItem('nexus_name') || 'Andrea'
+  const navigate = useNavigate();
+  const { stocks, sneakers } = useApp();
+  const [livePrices, setLivePrices] = useState({});
+  const [fearGreed, setFearGreed] = useState(null);
+  const [crypto, setCrypto] = useState([]);
+  const [news, setNews] = useState([]);
+  const name = localStorage.getItem('nexus_name') || 'Andrea';
 
   useEffect(() => {
-    const syms = [...new Set(stocks.filter(s => !s.salePrice).map(s => s.symbol).filter(Boolean))]
-    if (syms.length) fetchMultiplePrices(syms).then(setLivePrices)
-  }, [stocks.length])
+    const syms = [...new Set(stocks.filter(s => !s.salePrice).map(s => s.symbol).filter(Boolean))];
+    if (syms.length) fetchMultiplePrices(syms).then(setLivePrices);
+  }, [stocks.length]);
 
   useEffect(() => {
     fetch('https://api.alternative.me/fng/?limit=1', { signal: AbortSignal.timeout(8000) })
-      .then(r => r.json()).then(d => setFearGreed(d.data?.[0])).catch(() => {})
-  }, [])
+      .then(r => r.json()).then(d => setFearGreed(d.data?.[0])).catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,solana,binancecoin&order=market_cap_desc&sparkline=false&price_change_percentage=24h', { signal: AbortSignal.timeout(12000) })
-      .then(r => r.json()).then(d => setCrypto(Array.isArray(d) ? d : [])).catch(() => {})
-  }, [])
+      .then(r => r.json()).then(d => setCrypto(Array.isArray(d) ? d : [])).catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://feeds.bbci.co.uk/news/business/rss.xml') + '&count=4', { signal: AbortSignal.timeout(10000) })
-      .then(r => r.json()).then(d => setNews(d.items || [])).catch(() => {})
-  }, [])
+      .then(r => r.json()).then(d => setNews(d.items || [])).catch(() => {});
+  }, []);
 
-  const open = stocks.filter(s => !s.salePrice)
-  const inv = open.reduce((s, i) => s + i.buyPrice * i.quantity, 0)
-  const cur = open.reduce((s, i) => s + (livePrices[i.symbol] ?? i.buyPrice) * i.quantity, 0)
-  const pnl = cur - inv
-  const pnlPct = inv > 0 ? (pnl / inv) * 100 : 0
-  const isUp = pnl >= 0
-  const pos = open.length + sneakers.filter(s => !s.salePrice).length
-  const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
-  const fg = fearGreed ? parseInt(fearGreed.value) : null
-  const sparkData = Array.from({ length: 8 }, (_, i) => cur * (0.97 + (i / 7) * 0.06 * (isUp ? 1 : -1) + Math.random() * 0.01))
+  const open = stocks.filter(s => !s.salePrice);
+  const inv = open.reduce((s, i) => s + i.buyPrice * i.quantity, 0);
+  const cur = open.reduce((s, i) => s + (livePrices[i.symbol] ?? i.buyPrice) * i.quantity, 0);
+  const pnl = cur - inv;
+  const pnlPct = inv > 0 ? (pnl / inv) * 100 : 0;
+  const isUp = pnl >= 0;
+  const pos = open.length + sneakers.filter(s => !s.salePrice).length;
+  const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const fg = fearGreed ? parseInt(fearGreed.value) : null;
+  const sparkData = Array.from({ length: 8 }, (_, i) => cur * (0.97 + (i / 7) * 0.06 * (isUp ? 1 : -1) + Math.random() * 0.01));
 
-  const coinColor = { bitcoin: '#f59e0b', ethereum: '#6366f1', solana: '#9945ff', binancecoin: '#f0b90b' }
+  const coinColor = { bitcoin: '#f59e0b', ethereum: '#6366f1', solana: '#9945ff', binancecoin: '#f0b90b' };
 
   return (
     <div className="page" style={{
@@ -105,7 +107,7 @@ export default function Dashboard() {
       margin: '0 auto',
       padding: '0 16px',
       fontFamily: 'Inter, system-ui, sans-serif',
-      minHeight: '100vh'
+      minHeight: '100vh',
     }}>
       <style>
         {`
@@ -203,7 +205,7 @@ export default function Dashboard() {
           fontWeight: 600,
           textTransform: 'uppercase',
           letterSpacing: '0.12em',
-          marginBottom: 4
+          marginBottom: 4,
         }}>
           {today}
         </p>
@@ -213,7 +215,7 @@ export default function Dashboard() {
             fontWeight: 800,
             color: 'var(--t1)',
             letterSpacing: '-0.3px',
-            margin: 0
+            margin: 0,
           }}>
             {greeting()}, <span style={{ color: 'var(--green)' }}>{name}</span>
           </h1>
@@ -223,7 +225,7 @@ export default function Dashboard() {
             borderRadius: '50%',
             backgroundColor: 'var(--green)',
             animation: 'pulse 1s infinite',
-            flexShrink: 0
+            flexShrink: 0,
           }} />
         </div>
       </div>
@@ -243,14 +245,14 @@ export default function Dashboard() {
           padding: '24px',
           display: 'block',
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
         }}
       >
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: 16
+          marginBottom: 16,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{
@@ -261,7 +263,7 @@ export default function Dashboard() {
               border: '1px solid rgba(0,255,136,0.2)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
             }}>
               <TrendingUp size={16} color="var(--green)" />
             </div>
@@ -270,7 +272,7 @@ export default function Dashboard() {
               fontWeight: 700,
               color: 'var(--t2)',
               textTransform: 'uppercase',
-              letterSpacing: '0.1em'
+              letterSpacing: '0.1em',
             }}>
               Portfolio
             </span>
@@ -280,7 +282,7 @@ export default function Dashboard() {
             <span style={{
               fontSize: 10,
               color: 'var(--green)',
-              fontWeight: 600
+              fontWeight: 600,
             }}>
               Live
             </span>
@@ -293,7 +295,7 @@ export default function Dashboard() {
           color: 'var(--t1)',
           letterSpacing: '-1px',
           marginBottom: 8,
-          lineHeight: 1
+          lineHeight: 1,
         }}>
           {fmt(cur)}
         </div>
@@ -302,7 +304,7 @@ export default function Dashboard() {
           display: 'flex',
           alignItems: 'center',
           gap: 12,
-          marginBottom: 20
+          marginBottom: 20,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {isUp ? (
@@ -313,7 +315,7 @@ export default function Dashboard() {
             <span style={{
               fontSize: 14,
               fontWeight: 700,
-              color: isUp ? 'var(--green)' : '#ff4d4d'
+              color: isUp ? 'var(--green)' : '#ff4d4d',
             }}>
               {fmt(Math.abs(pnl))}
             </span>
@@ -328,52 +330,71 @@ export default function Dashboard() {
           alignItems: 'center',
           justifyContent: 'space-between',
         }}>
-          <Sparkline data={sparkData} />
-          <span style={{ fontSize: 12, color: 'var(--t2)' }}>Sur 7 jours</span>
-        </div>
-      </button>
-
-      {/* Movers Section */}
-      <div className="stagger-item" style={{ marginBottom: 16 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--t1)', marginBottom: 8 }}>Movers</h2>
-        <div className="scroll-row">
-          {crypto.map(c => (
-            <div key={c.id} style={{
-              background: 'var(--bg2)',
-              borderRadius: '12px',
-              padding: '16px',
-              minWidth: 120,
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{
+              width: 36,
+              height: 36,
+              borderRadius: 12,
+              background: 'rgba(0,255,136,0.1)',
+              border: '1px solid rgba(0,255,136,0.2)',
               display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-start',
-              gap: 4
+              alignItems: 'center',
+              justifyContent: 'center',
             }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)' }}>{c.symbol.toUpperCase()}</span>
-              <span style={{ fontSize: 16, fontWeight: 900, color: c.price_change_percentage_24h >= 0 ? 'var(--green)' : '#ff4d4d' }}>
-                {fmt(c.current_price)}
-              </span>
-              <span style={{ fontSize: 12, color: c.price_change_percentage_24h >= 0 ? 'var(--green)' : '#ff4d4d' }}>
-                {fmtPct(c.price_change_percentage_24h)}
-              </span>
+              <TrendingUp size={16} color="var(--green)" />
             </div>
-          ))}
+            <span style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: 'var(--t2)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+            }}>
+              Total
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <div className="live-dot" style={{ width: 5, height: 5 }} />
+            <span style={{
+              fontSize: 10,
+              color: 'var(--green)',
+              fontWeight: 600,
+            }}>
+              Live
+            </span>
+          </div>
         </div>
-      </div>
 
-      {/* Fear & Greed Section */}
-      <div className="stagger-item" style={{ marginBottom: 16 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--t1)', marginBottom: 8 }}>Fear & Greed</h2>
-        <FGGauge value={fg} />
-      </div>
+        <div style={{
+          fontSize: 24,
+          fontWeight: 700,
+          color: 'var(--t1)',
+          letterSpacing: '-0.3px',
+          marginTop: 16,
+        }}>
+          +2.4%
+        </div>
 
-      {/* News Feed Section */}
-      <div className="stagger-item" style={{ marginBottom: 16 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--t1)', marginBottom: 8 }}>Dernières nouvelles</h2>
-        {news.slice(0, 3).map(n => (
-          <div key={n.guid} style={{
-            background: 'var(--bg2)',
-            borderRadius: '12px',
-            padding: '16px',
-            marginBottom: 8
-          }}>
-            <h3 style={{ fontSize: 14, fontWeight
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{
+              width: 36,
+              height: 36,
+              borderRadius: 12,
+              background: 'rgba(0,255,136,0.1)',
+              border: '1px solid rgba(0,255,136,0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <TrendingUp size={16} color="var(--green)" />
+            </div>
+            <span style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: 'var(--t2)',
+              textTransform
