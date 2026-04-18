@@ -5,10 +5,12 @@
 
 import http from 'http'
 import { fileURLToPath } from 'url'
-import { dirname } from 'path'
-import { readFileSync } from 'fs'
+import { dirname, resolve } from 'path'
+import { readFileSync, writeFileSync, mkdirSync } from 'fs'
 
-const __dir = dirname(fileURLToPath(import.meta.url))
+const __dir   = dirname(fileURLToPath(import.meta.url))
+const TASKS_DIR = resolve(__dir, '..', 'andy-tasks')
+try { mkdirSync(TASKS_DIR, { recursive: true }) } catch {}
 
 // Parse .env manually — avoids dotenvx quote/encoding issues
 try {
@@ -254,14 +256,16 @@ async function handleAdmin(text, userId) {
   if (!isAdmin(userId)) return null
   const lower = text.toLowerCase().trim()
 
-  if (lower.startsWith('!task ')) {
-    const desc = text.slice(6).trim()
-    await fetch(`${APP_URL}/api/memory`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'admin_task', status: 'pending', source: 'discord-admin', description: desc, createdAt: new Date().toISOString() }),
-    }).catch(() => {})
-    return `✅ **Tâche créée**: ${desc}`
+  if (lower.startsWith('!task ') || lower.startsWith('!urgent ')) {
+    const isUrgent = lower.startsWith('!urgent ')
+    const desc = text.slice(isUrgent ? 8 : 6).trim()
+    if (!desc) return isUrgent ? '❌ Usage: `!urgent description`' : '❌ Usage: `!task description`'
+    const priority = isUrgent ? 'urgent' : 'manual'
+    const fname = `${priority}-${Date.now()}.txt`
+    try { writeFileSync(resolve(TASKS_DIR, fname), desc, 'utf8') } catch (e) { return `❌ Erreur: ${e.message}` }
+    return isUrgent
+      ? `🚨 **URGENT** — AnDy interrompt tout\n\`${fname}\`\n> ${desc.slice(0, 100)}`
+      : `✅ **Tâche créée** — AnDy va l'exécuter\n\`${fname}\`\n> ${desc.slice(0, 100)}`
   }
 
   if (lower.startsWith('!run ')) {
@@ -330,7 +334,13 @@ async function processMessage(msg, channelName) {
     return
   }
 
-  // Admin commands
+  // !task et !urgent — ouverts à tous depuis n'importe quel channel
+  if ((content.toLowerCase().startsWith('!task ') || content.toLowerCase().startsWith('!urgent ')) && isAdmin(userId)) {
+    const r = await handleAdmin(content, userId)
+    if (r) { await sendReply(msg.channel_id, msg.id, r); return }
+  }
+
+  // Autres commandes admin
   if (content.startsWith('!') && isAdmin(userId)) {
     const adminReply = await handleAdmin(content, userId)
     if (adminReply) { await sendReply(msg.channel_id, msg.id, adminReply); return }
