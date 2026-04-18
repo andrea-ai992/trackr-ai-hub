@@ -1,185 +1,91 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
-import { useFetchPortfolio, useFetchTopMovers, useFetchNews } from '../hooks';
 import Header from '../components/Header';
-import './Dashboard.css';
+import { fetchPortfolio, fetchTopMovers, fetchNews, fetchFearGreed } from '../api'; // Assurez-vous que ces fonctions existent
 
 const Dashboard = () => {
-  const { portfolioValue, portfolioChange } = useFetchPortfolio();
-  const topMovers = useFetchTopMovers();
-  const news = useFetchNews();
-  const [currentTime, setCurrentTime] = useState('');
+    const [portfolioValue, setPortfolioValue] = useState(null);
+    const [topMovers, setTopMovers] = useState([]);
+    const [news, setNews] = useState([]);
+    const [fearGreed, setFearGreed] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(format(new Date(), 'HH:mm'));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            const portfolio = await fetchPortfolio();
+            const movers = await fetchTopMovers();
+            const newsData = await fetchNews();
+            const fearGreedData = await fetchFearGreed();
 
-  return (
-    <div className="dashboard" style={{ backgroundColor: 'var(--bg)', padding: '16px' }}>
-      <Header currentTime={currentTime} />
-      <div className="hero-card">
-        <h2 className="portfolio-value">
-          ${portfolioValue.toLocaleString()}
-          <span className={`change ${portfolioChange >= 0 ? 'positive' : 'negative'}`}>
-            {portfolioChange >= 0 ? `+${portfolioChange}%` : `${portfolioChange}%`}
-          </span>
-        </h2>
-        <svg className="sparkline" width="100%" height="20">
-          {/* SVG sparkline implementation here */}
-        </svg>
-      </div>
-      <div className="top-movers">
-        {topMovers.map((mover) => (
-          <div key={mover.symbol} className="mover-card">
-            <div className="logo" style={{ backgroundColor: mover.color }}>
-              {mover.symbol}
+            setPortfolioValue(portfolio);
+            setTopMovers(movers);
+            setNews(newsData);
+            setFearGreed(fearGreedData);
+            setLoading(false);
+        };
+
+        fetchData();
+    }, []);
+
+    return (
+        <div style={{ backgroundColor: 'var(--bg)', color: 'var(--t1)', padding: '16px', maxWidth: '520px', margin: '0 auto' }}>
+            <Header />
+            {loading ? (
+                <div className="skeleton shimmer" style={{ height: '200px', marginBottom: '20px' }}></div>
+            ) : (
+                <div className="hero-card" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', backdropFilter: 'blur(12px)', padding: '20px', borderRadius: '8px' }}>
+                    <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 'bold', fontSize: '2rem' }}>${portfolioValue?.total}</h2>
+                    <span style={{ color: portfolioValue?.variation > 0 ? 'var(--green)' : 'red' }}>
+                        {portfolioValue?.variation}%
+                        <span className={`arrow ${portfolioValue?.variation > 0 ? 'up' : 'down'}`}></span>
+                    </span>
+                    <svg width="100" height="20">
+                        {/* Mini sparkline SVG 7 jours */}
+                    </svg>
+                </div>
+            )}
+            <div className="top-movers" style={{ overflowX: 'auto', display: 'flex', margin: '20px 0' }}>
+                {topMovers.map((mover) => (
+                    <div key={mover.id} className="mover-card" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', backdropFilter: 'blur(12px)', marginRight: '10px', padding: '10px', borderRadius: '8px' }}>
+                        <div style={{ color: mover.change > 0 ? 'var(--green)' : 'red' }}>{mover.symbol}</div>
+                        <div>${mover.price}</div>
+                        <div>{mover.change}%</div>
+                    </div>
+                ))}
             </div>
-            <div className="price">
-              ${mover.price}
-              <span className={`price-change ${mover.change >= 0 ? 'positive' : 'negative'}`}>
-                {mover.change >= 0 ? `+${mover.change}%` : `${mover.change}%`}
-              </span>
+            <div className="fear-greed" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '20px', textAlign: 'center' }}>
+                <svg width="100" height="100">
+                    {/* SVG semicircular gauge */}
+                </svg>
+                <div>{fearGreed?.value}</div>
             </div>
-          </div>
-        ))}
-      </div>
-      <div className="fear-greed-gauge">
-        {/* SVG gauge implementation here */}
-      </div>
-      <div className="news-feed">
-        {news.map((item) => (
-          <div key={item.id} className="news-item">
-            <span className={`source-badge ${item.sourceColor}`}>{item.source}</span>
-            <span className="news-title">{item.title}</span>
-            <span className="time-ago">{item.timeAgo}</span>
-          </div>
-        ))}
-      </div>
-      <div className="quick-actions">
-        <div className="action-card">Markets</div>
-        <div className="action-card">Portfolio</div>
-        <div className="action-card">Signals</div>
-        <div className="action-card">AnDy</div>
-      </div>
-    </div>
-  );
+            <div className="news-feed" style={{ margin: '20px 0' }}>
+                {news.map((item) => (
+                    <div key={item.id} className="news-item" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '10px', marginBottom: '10px' }}>
+                        <span style={{ color: item.sourceColor }}>{item.source}</span>
+                        <h4>{item.title}</h4>
+                        <span>{item.timeAgo}</span>
+                    </div>
+                ))}
+            </div>
+            <div className="quick-actions" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                <div className="action-card" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '20px', textAlign: 'center' }}>
+                    <i className="lucide lucide-market" /> Markets
+                </div>
+                <div className="action-card" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '20px', textAlign: 'center' }}>
+                    <i className="lucide lucide-portfolio" /> Portfolio
+                </div>
+                <div className="action-card" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '20px', textAlign: 'center' }}>
+                    <i className="lucide lucide-signal" /> Signals
+                </div>
+                <div className="action-card" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', backdropFilter: 'blur(12px)', borderRadius: '8px', padding: '20px', textAlign: 'center' }}>
+                    <i className="lucide lucide-ai" /> AnDy
+                </div>
+            </div>
+        </div>
+    );
 };
 
-export default Dashboard; 
-
-// src/components/Header.jsx
-import React from 'react';
-
-const Header = ({ currentTime }) => {
-  return (
-    <header className="header">
-      <h1>Bonjour Andrea</h1>
-      <div className="time-badge">
-        <span>{currentTime}</span>
-        <span className="live-badge">LIVE</span>
-      </div>
-    </header>
-  );
-};
-
-export default Header;
-
-// Dashboard.css
-.dashboard {
-  max-width: 520px;
-  margin: 0 auto;
-  padding: 16px;
-}
-
-.hero-card {
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.portfolio-value {
-  font-family: 'Inter', sans-serif;
-  font-weight: bold;
-  color: var(--t1);
-}
-
-.change {
-  margin-left: 8px;
-}
-
-.positive {
-  color: var(--green);
-}
-
-.negative {
-  color: red;
-}
-
-.top-movers {
-  display: flex;
-  overflow-x: auto;
-  margin-bottom: 16px;
-}
-
-.mover-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  padding: 16px;
-  margin-right: 12px;
-}
-
-.logo {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: bold;
-}
-
-.price {
-  font-size: 1.2em;
-}
-
-.price-change {
-  margin-left: 8px;
-}
-
-.fear-greed-gauge {
-  margin-bottom: 16px;
-}
-
-.news-feed {
-  margin-bottom: 16px;
-}
-
-.news-item {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.source-badge {
-  padding: 4px 8px;
-  border-radius: 4px;
-}
-
-.quick-actions {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-}
-
-.action-card {
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  padding: 16px;
-  text-align: center;
-}
+export default Dashboard;
