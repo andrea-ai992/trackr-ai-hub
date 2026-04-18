@@ -247,18 +247,36 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
 
   <!-- TASK -->
   <div class="view pad" id="v-task">
+    <!-- Chips -->
     <div class="chips">
-      <button class="chip" onclick="setTask('Redesign page Sports style ESPN dark stadium, scores animés')">🏟 Sports ESPN</button>
-      <button class="chip" onclick="setTask('Redesign page Markets style Bloomberg terminal, candlestick charts')">📈 Bloomberg</button>
+      <button class="chip" onclick="setTask('Redesign page Sports style ESPN dark stadium, scores animés')">🏟 Sports</button>
+      <button class="chip" onclick="setTask('Redesign page Markets style Bloomberg terminal, candlestick charts')">📈 Markets</button>
+      <button class="chip" onclick="setTask('Redesign Dashboard — hero portfolio neon, movers scroll, Fear&Greed gauge')">🏠 Dashboard</button>
       <button class="chip" onclick="setTask('Optimiser les performances — code splitting, LCP < 1.5s')">⚡ Perf</button>
       <button class="chip" onclick="setTask('Redesign page News style Apple News, cards avec image cover')">📰 News</button>
       <button class="chip" onclick="setTask('Audit sécurité complet — XSS, CSRF, headers HTTP')">🔒 Sécu</button>
-      <button class="chip" onclick="setTask('Améliore le design global — dark neon #00ff88, glassmorphism, animations fluides')">✨ Design</button>
+      <button class="chip" onclick="setTask('Améliore le design global — dark neon #00ff88, animations fluides')">✨ Design</button>
     </div>
+
+    <!-- Form -->
     <div class="task-card">
       <div class="card-hd" style="margin-bottom:10px">Nouvelle tâche pour AnDy</div>
       <textarea id="task-txt" placeholder="Décris ce qu'AnDy doit développer ou améliorer…"></textarea>
       <button class="send-btn" id="send-btn" onclick="submitTask()">Envoyer à AnDy →</button>
+      <!-- Confirmation réception -->
+      <div id="task-confirm" style="display:none;margin-top:10px;padding:10px 14px;border-radius:12px;font-size:12px;text-align:center"></div>
+    </div>
+
+    <!-- Statut des tâches reçues -->
+    <div class="card" style="margin-top:4px">
+      <div class="card-hd">Statut des tâches <button class="rbtn" onclick="loadTaskStatus()">↺</button></div>
+      <div id="task-status-list"><div class="empty" style="padding:16px 0">Chargement…</div></div>
+    </div>
+
+    <!-- Logs en dessous -->
+    <div class="card" style="margin-top:4px">
+      <div class="card-hd">Logs daemon <button class="rbtn" onclick="loadTaskLogs()">↺</button></div>
+      <div class="log-wrap" id="task-logs-list" style="max-height:220px"><div style="color:var(--dim2);font-size:10px;font-family:monospace">Chargement…</div></div>
     </div>
   </div>
 
@@ -284,17 +302,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
 <script>
 let curTab = 'live'
 const STAGES = ['planning','generating','testing','safe','live']
-
-function tab(name) {
-  curTab = name
-  document.querySelectorAll('.btab').forEach(b => b.classList.remove('on'))
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('on'))
-  document.getElementById('bt-'+name).classList.add('on')
-  document.getElementById('v-'+name).classList.add('on')
-  if (name==='live') loadLive()
-  else if (name==='commits') loadCommits()
-  else if (name==='logs') loadLogs()
-}
 
 async function loadLive() {
   try {
@@ -381,23 +388,87 @@ async function submitTask() {
   const v = document.getElementById('task-txt').value.trim()
   if (!v) return
   const btn = document.getElementById('send-btn')
-  btn.textContent = '…'
-  btn.disabled = true
+  const confirm = document.getElementById('task-confirm')
+  btn.textContent = '…'; btn.disabled = true
   try {
-    await fetch('/api/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({desc:v})})
+    const r = await fetch('/api/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({desc:v})})
     document.getElementById('task-txt').value = ''
-    btn.textContent = '✅ Tâche envoyée !'
-    btn.style.background = '#00cc66'
-    setTimeout(()=>{ btn.textContent='Envoyer à AnDy →'; btn.style.background='var(--green)'; btn.disabled=false; tab('live') }, 1600)
+    btn.textContent = '✅ Envoyée !'; btn.style.background = '#00cc66'
+    confirm.style.display = 'block'
+    confirm.style.background = 'rgba(0,255,136,.08)'
+    confirm.style.color = 'var(--green)'
+    confirm.style.border = '1px solid rgba(0,255,136,.2)'
+    confirm.textContent = r.ok ? '✅ Tâche reçue par le serveur — AnDy va la traiter en priorité' : '⚠ Serveur a répondu avec une erreur'
+    setTimeout(()=>{ btn.textContent='Envoyer à AnDy →'; btn.style.background='var(--green)'; btn.disabled=false; confirm.style.display='none'; loadTaskStatus() }, 2500)
   } catch(e) {
-    btn.textContent = '⚠ Erreur'
-    btn.disabled = false
-    setTimeout(()=>{ btn.textContent='Envoyer à AnDy →' }, 2000)
+    btn.textContent = '⚠ Serveur inaccessible'; btn.disabled = false
+    confirm.style.display = 'block'
+    confirm.style.background = 'rgba(239,68,68,.08)'
+    confirm.style.color = 'var(--red)'
+    confirm.style.border = '1px solid rgba(239,68,68,.2)'
+    confirm.textContent = '❌ Serveur inaccessible — vérifie que le daemon tourne'
+    setTimeout(()=>{ btn.textContent='Envoyer à AnDy →'; confirm.style.display='none' }, 3000)
   }
 }
 
+function sIcon(s){ return s==='DONE'?'✅':s==='ERROR'?'❌':s==='RUNNING'?'⟳':s==='QUEUED'?'⏳':'·' }
+function sColor(s){ return s==='DONE'?'var(--green)':s==='ERROR'?'var(--red)':s==='RUNNING'?'var(--amber)':'var(--dim2)' }
+
+async function loadTaskStatus() {
+  const el = document.getElementById('task-status-list')
+  try {
+    const r = await fetch('/api/tasks')
+    const d = await r.json()
+    const f = d.files||{}, s = d.status||[]
+    const running = (f.running||[]).map(n=>s.find(x=>x.name===n.replace('.running',''))||{name:n.replace('.running',''),status:'RUNNING'})
+    const queued  = (f.queue||[]).map(n=>({name:n.replace('.txt',''),status:'QUEUED'}))
+    const done    = s.filter(x=>x.status==='DONE'||x.status==='ERROR').slice(-8).reverse()
+    const all = [...running,...queued,...done]
+    if (!all.length) { el.innerHTML='<div class="empty" style="padding:12px 0">Aucune tâche</div>'; return }
+    el.innerHTML = all.map(t=>\`<div style="display:flex;align-items:flex-start;gap:8px;padding:9px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px;flex-shrink:0;margin-top:1px">\${sIcon(t.status)}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;color:var(--text);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\${t.name}</div>
+        \${t.desc?\`<div style="font-size:10px;color:var(--dim2);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\${t.desc.slice(0,60)}</div>\`:''}
+        \${(t.files||[]).length?\`<div style="margin-top:3px">\${t.files.map(f=>\`<span style="font-size:9px;background:rgba(0,212,255,.07);color:#00d4ff;padding:1px 5px;border-radius:4px;margin-right:3px">\${f.split('/').pop()}</span>\`).join('')}</div>\`:''}
+      </div>
+      <div style="font-size:10px;font-weight:700;color:\${sColor(t.status)};letter-spacing:.04em;flex-shrink:0">\${t.status}\${t.dur>0?' '+t.dur+'s':''}</div>
+    </div>\`).join('')
+  } catch(e){ el.innerHTML='<div class="empty" style="padding:12px 0;color:var(--red)">Serveur inaccessible</div>' }
+}
+
+async function loadTaskLogs() {
+  const el = document.getElementById('task-logs-list')
+  try {
+    const r = await fetch('/api/logs?which=daemon')
+    const d = await r.json()
+    const lines = (d.lines||[]).slice(-30).reverse()
+    el.innerHTML = lines.map(l=>{
+      const col=l.includes('DONE')||l.includes('pushed')?'var(--green)':l.includes('ERROR')?'var(--red)':l.includes('TASK')||l.includes('tâche')?'var(--purple)':l.includes('build')?'var(--cyan)':'var(--dim2)'
+      return \`<div class="log-line" style="color:\${col}">\${l.replace(/</g,'&lt;').slice(0,100)}</div>\`
+    }).join('')
+  } catch(e){ el.innerHTML='<div style="font-size:10px;color:var(--red);font-family:monospace">Logs inaccessibles</div>' }
+}
+
 loadLive()
-setInterval(()=>{ if(curTab==='live') loadLive() }, 8000)
+setInterval(()=>{
+  if(curTab==='live') loadLive()
+  else if(curTab==='task'){ loadTaskStatus(); loadTaskLogs() }
+}, 6000)
+
+// Charge le statut quand on ouvre l'onglet tâche
+const _origTab = tab
+function tab(name) {
+  curTab = name
+  document.querySelectorAll('.btab').forEach(b => b.classList.remove('on'))
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('on'))
+  document.getElementById('bt-'+name).classList.add('on')
+  document.getElementById('v-'+name).classList.add('on')
+  if (name==='live') loadLive()
+  else if (name==='commits') loadCommits()
+  else if (name==='logs') loadLogs()
+  else if (name==='task') { loadTaskStatus(); loadTaskLogs() }
+}
 </script>
 </body>
 </html>`
