@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, TrendingUp, TrendingDown, Minus, Zap, RefreshCw, ChevronDown } from 'lucide-react'
+import { ArrowLeft, TrendingUp, TrendingDown, Minus, Zap, RefreshCw, ChevronDown, CheckCircle, AlertCircle, Info } from 'lucide-react'
 
 // ─── Assets ───────────────────────────────────────────────────────────────────
 const ASSETS = [
@@ -19,10 +19,12 @@ const TIMEFRAMES = [
   { label: '1H',  tv: '60',  api: '1h'  },
   { label: '4H',  tv: '240', api: '4h'  },
   { label: '1D',  tv: 'D',   api: '1d'  },
-  { label: '1W',  tv: 'W',   api: '1d'  },
+  { label: '1W',  tv: 'W',   api: '1w'  },
 ]
 
 const TYPE_COLOR = { crypto: '#f59e0b', stock: '#6366f1', index: '#10b981', commo: '#fcd34d' }
+const RECOMMENDATION_COLORS = { BUY: '#10b981', SELL: '#ef4444', HOLD: '#f59e0b' }
+const RECOMMENDATION_ICONS = { BUY: CheckCircle, SELL: AlertCircle, HOLD: Info }
 
 // ─── TradingView Chart ────────────────────────────────────────────────────────
 let tvReady = false
@@ -103,17 +105,17 @@ function TVChart({ tvSymbol, tvInterval, uid }) {
 function AnalysisCard({ data, loading, onRefresh, symbol, interval }) {
   if (loading) return (
     <div style={{ padding: '20px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-      <div style={{ width: 36, height: 36, borderRadius: '50%', border: '3px solid rgba(99,102,241,0.2)', borderTopColor: '#6366f1', animation: 'spin 0.8s linear infinite' }} />
-      <p style={{ fontSize: 13, color: '#4b5563' }}>AnDy analyse {symbol}…</p>
+      <div style={{ width: 36, height: 36, borderRadius: '50%', border: '3px solid var(--green)', borderTopColor: 'var(--green)', animation: 'spin 0.8s linear infinite' }} />
+      <p style={{ fontSize: 13, color: 'var(--t3)' }}>AnDy analyse {symbol}…</p>
     </div>
   )
 
   if (!data) return (
     <div style={{ padding: '16px 0', textAlign: 'center' }}>
-      <p style={{ fontSize: 13, color: '#4b5563', marginBottom: 12 }}>Lance l'analyse IA pour voir le setup du jour</p>
+      <p style={{ fontSize: 13, color: 'var(--t3)', marginBottom: 12 }}>Lance l'analyse IA pour voir le setup du jour</p>
       <button onClick={onRefresh} style={{
         padding: '10px 24px', borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700,
-        background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: 'white',
+        background: 'linear-gradient(135deg, var(--green), #00cc88)', color: 'var(--bg)',
         display: 'inline-flex', alignItems: 'center', gap: 8,
       }}>
         <Zap size={14} /> Analyser avec AnDy
@@ -121,261 +123,242 @@ function AnalysisCard({ data, loading, onRefresh, symbol, interval }) {
     </div>
   )
 
-  // Parse signals, setup, levels from the analysis text
-  const text = data
-  const lines = text.split('\n').filter(Boolean)
+  // Parse analysis data
+  const parseAnalysis = (text) => {
+    const lines = text.split('\n').filter(Boolean)
+    const result = {
+      recommendation: 'HOLD',
+      levels: { supports: [], resistances: [] },
+      patterns: [],
+      sentiment: 0,
+      setup: null,
+      analysis: []
+    }
 
-  // Detect trend from text
-  const isHaussier = /haussier|bullish|achat|hausse|montée/i.test(text)
-  const isBaissier = /baissier|bearish|vente|baisse|descente/i.test(text)
-  const trend = isHaussier ? 'bullish' : isBaissier ? 'bearish' : 'neutral'
-  const TrendIcon = trend === 'bullish' ? TrendingUp : trend === 'bearish' ? TrendingDown : Minus
-  const trendColor = trend === 'bullish' ? '#10b981' : trend === 'bearish' ? '#ef4444' : '#f59e0b'
+    let currentSection = null
+
+    lines.forEach(line => {
+      const cleanLine = line.replace(/^[-•]\s*/, '').trim()
+
+      // Detect sections
+      if (cleanLine.match(/^(SUPPORTS|RÉSISTANCES|NIVEAUX)/i)) {
+        currentSection = 'levels'
+        return
+      }
+      if (cleanLine.match(/^(PATTERNS|FIGURES)/i)) {
+        currentSection = 'patterns'
+        return
+      }
+      if (cleanLine.match(/^(SETUP|CONFIGURATION)/i)) {
+        currentSection = 'setup'
+        return
+      }
+      if (cleanLine.match(/^(SENTIMENT|SCORE)/i)) {
+        currentSection = 'sentiment'
+        return
+      }
+
+      // Parse levels
+      if (currentSection === 'levels') {
+        const levelMatch = cleanLine.match(/(\d+\.?\d*)\s*(support|résistance|support clé|résistance clé)/i)
+        if (levelMatch) {
+          result.levels[levelMatch[2].includes('clé') ? 'supports' : levelMatch[2].includes('résistance') ? 'resistances' : 'supports'].push(parseFloat(levelMatch[1]))
+        }
+      }
+
+      // Parse patterns
+      if (currentSection === 'patterns') {
+        const patternMatch = cleanLine.match(/^(🟢|🔴|⚡|🟡)\s*(.+)/)
+        if (patternMatch) {
+          result.patterns.push({
+            type: patternMatch[2],
+            bullish: patternMatch[1] === '🟢' || patternMatch[1] === '⚡'
+          })
+        }
+      }
+
+      // Parse setup
+      if (currentSection === 'setup') {
+        if (cleanLine.includes('Entrée:')) result.setup = { ...result.setup, entry: cleanLine.split(':')[1].trim() }
+        if (cleanLine.includes('Stop:')) result.setup = { ...result.setup, stop: cleanLine.split(':')[1].trim() }
+        if (cleanLine.includes('Objectif:')) result.setup = { ...result.setup, target: cleanLine.split(':')[1].trim() }
+        if (cleanLine.includes('R:')) result.setup = { ...result.setup, rr: cleanLine.split(':')[1].trim() }
+      }
+
+      // Parse sentiment
+      if (currentSection === 'sentiment') {
+        const sentimentMatch = cleanLine.match(/(\d+\.?\d*)\s*(sur|out of|/i)
+        if (sentimentMatch) {
+          result.sentiment = parseFloat(sentimentMatch[1])
+        }
+      }
+
+      // Parse recommendation
+      if (cleanLine.match(/^(RECOMMANDATION|REC)/i)) {
+        const recMatch = cleanLine.match(/(BUY|SELL|HOLD)/i)
+        if (recMatch) {
+          result.recommendation = recMatch[1].toUpperCase()
+        }
+      }
+
+      result.analysis.push(cleanLine)
+    })
+
+    return result
+  }
+
+  const analysisData = parseAnalysis(data)
+  const RecommendationIcon = RECOMMENDATION_ICONS[analysisData.recommendation]
 
   return (
-    <div>
-      {/* Trend badge */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+    <div style={{
+      background: 'var(--bg2)',
+      borderRadius: 12,
+      padding: 16,
+      border: '1px solid var(--border)',
+      marginTop: 16
+    }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, color: trendColor, background: trendColor + '15', border: `1px solid ${trendColor}30`, display: 'flex', alignItems: 'center', gap: 5 }}>
-            <TrendIcon size={12} />
-            {trend === 'bullish' ? 'Haussier' : trend === 'bearish' ? 'Baissier' : 'Neutre'}
+          <div style={{
+            padding: '6px 12px',
+            borderRadius: 8,
+            fontSize: 12,
+            fontWeight: 700,
+            color: RECOMMENDATION_COLORS[analysisData.recommendation],
+            background: RECOMMENDATION_COLORS[analysisData.recommendation] + '15',
+            border: `1px solid ${RECOMMENDATION_COLORS[analysisData.recommendation]}30`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6
+          }}>
+            <RecommendationIcon size={14} />
+            {analysisData.recommendation}
           </div>
-          <span style={{ fontSize: 11, color: '#4b5563' }}>{symbol} · {interval}</span>
+          <span style={{ fontSize: 11, color: 'var(--t3)' }}>{symbol} · {interval}</span>
         </div>
-        <button onClick={onRefresh} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4b5563', padding: 4, display: 'flex' }}>
+        <button onClick={onRefresh} style={{
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          color: 'var(--t3)',
+          padding: 4,
+          display: 'flex'
+        }}>
           <RefreshCw size={14} />
         </button>
       </div>
 
-      {/* Analysis text — formatted */}
-      <div style={{ fontSize: 13, color: '#d1d5db', lineHeight: 1.7 }}>
-        {lines.map((line, i) => {
-          const isBullet = line.startsWith('- ') || line.startsWith('• ') || /^[🟢🔴🟡⚡]/.test(line)
-          const isTitle = line.startsWith('##') || line.startsWith('**') || /^[A-Z][A-ZÀ-Ÿ\s]{3,}:/.test(line)
-          const cleanLine = line.replace(/^#+\s*/, '').replace(/\*\*/g, '')
-
-          if (isTitle) return (
-            <div key={i} style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', letterSpacing: '0.08em', marginTop: 10, marginBottom: 4 }}>
-              {cleanLine.toUpperCase()}
-            </div>
-          )
-          if (isBullet) return (
-            <div key={i} style={{ paddingLeft: 8, borderLeft: '2px solid rgba(99,102,241,0.3)', marginBottom: 4, color: '#c4c9d4' }}>
-              {cleanLine.replace(/^[-•]\s*/, '')}
-            </div>
-          )
-          return <div key={i} style={{ marginBottom: 3 }}>{cleanLine}</div>
-        })}
-      </div>
-    </div>
-  )
-}
-
-// ─── Main Page ────────────────────────────────────────────────────────────────
-export default function ChartAnalysis() {
-  const navigate = useNavigate()
-  const [asset, setAsset]         = useState(ASSETS[0])
-  const [tf, setTf]               = useState(TIMEFRAMES[3])   // 1D default
-  const [analysis, setAnalysis]   = useState(null)
-  const [loading, setLoading]     = useState(false)
-  const [showAssets, setShowAssets] = useState(false)
-  const chartUid = useRef(`tv_${Date.now()}`)
-
-  // Reset analysis on asset/TF change
-  useEffect(() => { setAnalysis(null) }, [asset, tf])
-
-  const runAnalysis = useCallback(async () => {
-    setLoading(true)
-    setAnalysis(null)
-    try {
-      const res = await fetch('/api/andy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [{
-            role: 'user',
-            content: `Fais une analyse technique complète de ${asset.symbol} sur le timeframe ${tf.api}. Donne-moi : la tendance actuelle, les niveaux clés (supports/résistances), les signaux RSI/MACD/EMA, le setup de trading pour aujourd'hui/demain (entrée, stop loss, objectif, R/R), et ta conclusion en 1 phrase.`,
-          }],
-          portfolio: [], crypto: [], sneakers: [], alerts: [], watchlist: [],
-        }),
-      })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buf = '', text = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buf += decoder.decode(value, { stream: true })
-        const lines = buf.split('\n')
-        buf = lines.pop()
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          try {
-            const ev = JSON.parse(line.slice(6))
-            if (ev.type === 'token') {
-              text += ev.text
-              setAnalysis(text.replace(/\[CHART:[^\]]+\]/g, '').trim())
-            }
-          } catch {}
-        }
-      }
-    } catch (e) {
-      setAnalysis(`Erreur: ${e.message}`)
-    }
-    setLoading(false)
-  }, [asset, tf])
-
-  return (
-    <div style={{ minHeight: '100dvh', background: '#060a16', color: 'white', display: 'flex', flexDirection: 'column' }}>
-
-      {/* Header */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        padding: '0 14px', paddingTop: 'max(12px, env(safe-area-inset-top, 0px))', paddingBottom: 10,
-        borderBottom: '1px solid rgba(255,255,255,0.05)',
-        background: 'rgba(6,10,22,0.95)', backdropFilter: 'blur(20px)',
-        position: 'sticky', top: 0, zIndex: 100,
-      }}>
-        <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: 4, display: 'flex' }}>
-          <ArrowLeft size={20} />
-        </button>
-
-        {/* Asset selector */}
-        <button onClick={() => setShowAssets(s => !s)} style={{
-          display: 'flex', alignItems: 'center', gap: 6,
-          background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: 10, padding: '6px 12px', cursor: 'pointer',
-        }}>
-          <span style={{ fontSize: 11, color: TYPE_COLOR[asset.type], fontWeight: 700 }}>●</span>
-          <span style={{ fontSize: 15, fontWeight: 800, color: 'white' }}>{asset.label}</span>
-          <ChevronDown size={13} color="#6b7280" />
-        </button>
-
-        {/* Timeframes */}
-        <div style={{ display: 'flex', gap: 4, flex: 1, justifyContent: 'flex-end' }}>
-          {TIMEFRAMES.map(t => (
-            <button key={t.label} onClick={() => setTf(t)} style={{
-              padding: '5px 9px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none',
-              background: tf.label === t.label ? 'rgba(99,102,241,0.25)' : 'transparent',
-              color: tf.label === t.label ? '#818cf8' : '#4b5563',
-            }}>
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Asset dropdown */}
-      {showAssets && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 200,
-          background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end',
-        }} onClick={() => setShowAssets(false)}>
+      {/* Key Levels */}
+      {(analysisData.levels.supports.length > 0 || analysisData.levels.resistances.length > 0) && (
+        <div style={{ marginBottom: 16 }}>
           <div style={{
-            width: '100%', background: '#0d0d1a', borderRadius: '20px 20px 0 0',
-            border: '1px solid rgba(255,255,255,0.08)', padding: '16px 0 32px',
-          }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#4b5563', letterSpacing: '0.08em', padding: '0 16px 12px' }}>CHOISIR UN ACTIF</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, padding: '0 16px' }}>
-              {ASSETS.map(a => (
-                <button key={a.label} onClick={() => { setAsset(a); setShowAssets(false) }} style={{
-                  padding: '12px 0', borderRadius: 14, border: asset.label === a.label ? `1px solid ${TYPE_COLOR[a.type]}40` : '1px solid rgba(255,255,255,0.07)',
-                  background: asset.label === a.label ? TYPE_COLOR[a.type] + '15' : 'rgba(255,255,255,0.03)',
-                  cursor: 'pointer', textAlign: 'center',
-                }}>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: asset.label === a.label ? TYPE_COLOR[a.type] : 'white' }}>{a.label}</div>
-                  <div style={{ fontSize: 10, color: '#4b5563', marginTop: 2 }}>{a.type}</div>
-                </button>
-              ))}
-            </div>
+            fontSize: 11,
+            fontWeight: 700,
+            color: 'var(--t3)',
+            letterSpacing: '0.08em',
+            marginBottom: 8
+          }}>
+            NIVEAUX CLÉS
+          </div>
+          <div style={{ display: 'flex', gap: 16 }}>
+            {analysisData.levels.supports.length > 0 && (
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>Supports</div>
+                {analysisData.levels.supports.map((level, i) => (
+                  <div key={i} style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: 'var(--t1)',
+                    marginBottom: 2
+                  }}>
+                    {level.toFixed(2)}
+                  </div>
+                ))}
+              </div>
+            )}
+            {analysisData.levels.resistances.length > 0 && (
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>Résistances</div>
+                {analysisData.levels.resistances.map((level, i) => (
+                  <div key={i} style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: 'var(--t1)',
+                    marginBottom: 2
+                  }}>
+                    {level.toFixed(2)}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Chart */}
-      <div style={{ height: 380, flexShrink: 0, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-        <TVChart tvSymbol={asset.tv} tvInterval={tf.tv} uid={`${chartUid.current}_${asset.label}_${tf.label}`} />
-      </div>
-
-      {/* AI Analysis panel */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 100px' }}>
-
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: 'white' }}>Analyse IA · {asset.label}</div>
-            <div style={{ fontSize: 11, color: '#4b5563', marginTop: 1 }}>Setup du jour · {tf.label}</div>
+      {/* Patterns */}
+      {analysisData.patterns.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: 'var(--t3)',
+            letterSpacing: '0.08em',
+            marginBottom: 8
+          }}>
+            PATTERNS DÉTECTÉS
           </div>
-          {!loading && (
-            <button onClick={runAnalysis} style={{
-              padding: '8px 16px', borderRadius: 12, border: 'none', cursor: 'pointer',
-              background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: 'white',
-              fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6,
-            }}>
-              <Zap size={12} />
-              {analysis ? 'Actualiser' : 'Analyser'}
-            </button>
-          )}
-        </div>
-
-        {/* Analysis content */}
-        <div style={{
-          background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)',
-          borderRadius: 16, padding: 16,
-        }}>
-          <AnalysisCard data={analysis} loading={loading} onRefresh={runAnalysis} symbol={asset.label} interval={tf.label} />
-        </div>
-
-        {/* Quick actions */}
-        {!loading && !analysis && (
-          <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            {[
-              { label: '📊 Setup aujourd\'hui', msg: `Donne-moi le setup de trading pour ${asset.symbol} aujourd'hui — entrée, stop, cible, R/R.` },
-              { label: '🔮 Scénario demain',    msg: `Quels sont les scénarios probables pour ${asset.symbol} demain ? Haussier si..., Baissier si...` },
-              { label: '🎯 Niveaux clés',       msg: `Quels sont les niveaux de support et résistance les plus importants sur ${asset.symbol} en ce moment ?` },
-              { label: '⚡ Signal RSI/MACD',    msg: `Analyse le RSI et le MACD de ${asset.symbol} sur ${tf.api}. Y a-t-il un signal d'achat ou de vente ?` },
-            ].map(q => (
-              <button key={q.label} onClick={async () => {
-                setLoading(true); setAnalysis(null)
-                try {
-                  const res = await fetch('/api/andy', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ messages: [{ role: 'user', content: q.msg }], portfolio: [], crypto: [], sneakers: [], alerts: [], watchlist: [] }),
-                  })
-                  const reader = res.body.getReader()
-                  const decoder = new TextDecoder()
-                  let buf = '', text = ''
-                  while (true) {
-                    const { done, value } = await reader.read()
-                    if (done) break
-                    buf += decoder.decode(value, { stream: true })
-                    const lines = buf.split('\n'); buf = lines.pop()
-                    for (const line of lines) {
-                      if (!line.startsWith('data: ')) continue
-                      try { const ev = JSON.parse(line.slice(6)); if (ev.type === 'token') { text += ev.text; setAnalysis(text.replace(/\[CHART:[^\]]+\]/g, '').trim()) } } catch {}
-                    }
-                  }
-                } catch (e) { setAnalysis(`Erreur: ${e.message}`) }
-                setLoading(false)
-              }} style={{
-                padding: '12px 10px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.07)',
-                background: 'rgba(255,255,255,0.03)', cursor: 'pointer', textAlign: 'left',
-                fontSize: 12, fontWeight: 600, color: '#9ca3af',
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {analysisData.patterns.map((pattern, i) => (
+              <div key={i} style={{
+                padding: '4px 12px',
+                borderRadius: 8,
+                fontSize: 11,
+                fontWeight: 600,
+                color: pattern.bullish ? 'var(--green)' : '#ef4444',
+                background: pattern.bullish ? 'rgba(0, 255, 136, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                border: `1px solid ${pattern.bullish ? 'rgba(0, 255, 136, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
               }}>
-                {q.label}
-              </button>
+                {pattern.type}
+              </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      <style>{`
-        @keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
-      `}</style>
-    </div>
-  )
-}
+      {/* Setup */}
+      {analysisData.setup && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: 'var(--t3)',
+            letterSpacing: '0.08em',
+            marginBottom: 8
+          }}>
+            SETUP DE TRADING
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {analysisData.setup.entry && (
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 2 }}>Entrée</div>
+                <div style={{ fontSize: 13, color: 'var(--t1)', fontWeight: 600 }}>{analysisData.setup.entry}</div>
+              </div>
+            )}
+            {analysisData.setup.stop && (
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 2 }}>Stop</div>
+                <div style={{ fontSize: 13, color: 'var(--t1)', fontWeight: 600 }}>{analysisData.setup.stop}</div>
+              </div>
+            )}
+            {analysisData.setup.target && (
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 2 }}>Objectif</div>
+                <div style={{ fontSize: 13, color: 'var(--t1)', fontWeight: 600 }}>{analysisData.setup.target}</div>
+              </div>
+            )}
+            {analysisData.setup.rr && (
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 2 }}>R:R</div>
+                <div style={{ fontSize: 13, color: 'var(--t1
