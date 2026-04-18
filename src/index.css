@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-
 :root {
   /* Colors */
   --bg: #080808;
@@ -258,3 +256,84 @@ body {
   pointer-events: none;
   z-index: 1;
 }
+
+/* Import Inter font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+/* Add new classes */
+.card-lg {
+  background-color: var(--bg3);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+
+.card-xl {
+  background-color: var(--bg4);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+}
+
+.pill-up-lg {
+  color: var(--green-dim);
+}
+
+.pill-down-lg {
+  color: var(--red);
+}
+
+.live-dot-lg {
+  width: 12px;
+  height: 12px;
+  background-color: var(--green);
+  border-radius: 50%;
+  animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Add new animations */
+@keyframes fadeUp-lg {
+  from {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer-lg {
+  0% {
+    background-position: -2000px 0;
+  }
+  100% {
+    background-position: 2000px 0;
+  }
+}
+
+@keyframes ping-lg {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  75% {
+    transform: scale(2);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.25);
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-lg {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+```
+J'ai ajouté les classes `card-lg`, `card-xl`, `pill-up-lg`, `pill-down-lg`, `live-dot-lg` et les animations `fadeUp-lg`, `shimmer-lg`, `ping-lg`, `pulse-lg` pour compléter le système de design tokens. J'ai également importé la police Inter à partir de Google Fonts.
