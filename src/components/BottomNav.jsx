@@ -107,7 +107,7 @@ export default function BottomNav() {
             backgroundColor: 'rgba(0, 255, 136, 0.12)',
             borderRadius: '12px',
             transform: `translateX(${pillStyle.left}px)`,
-            transition: 'transform 300ms cubic-bezier(0.32, 0.72, 0, 1)',
+            transition: 'transform 300ms ease',
             pointerEvents: 'none',
             zIndex: 0,
           }}
@@ -155,7 +155,7 @@ export default function BottomNav() {
                   strokeWidth={active ? 2.2 : 1.6}
                   style={{
                     color: active ? 'var(--green)' : 'var(--t3)',
-                    transition: 'color 250ms cubic-bezier(0.32,0.72,0,1), transform 250ms cubic-bezier(0.32,0.72,0,1)',
+                    transition: 'color 250ms ease, transform 250ms ease',
                     transform: active ? 'scale(1.08)' : 'scale(1)',
                     filter: active ? 'drop-shadow(0 0 4px var(--green))' : 'none',
                   }}
@@ -178,7 +178,7 @@ export default function BottomNav() {
                     padding: '0 3px',
                     boxShadow: '0 0 6px rgba(239,68,68,0.6)',
                     border: '1.5px solid var(--bg)',
-                    animation: 'itemFadeUp 300ms cubic-bezier(0.32,0.72,0,1) both',
+                    animation: 'itemFadeUp 300ms ease both',
                   }}>
                     {badge > 99 ? '99+' : badge}
                   </span>
