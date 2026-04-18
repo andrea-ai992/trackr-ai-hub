@@ -1,124 +1,180 @@
 **src/pages/Andy.jsx**
 ```jsx
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ChatContext } from '../context/ChatContext';
-import AvatarIA from '../components/AvatarIA';
+import { Link, useNavigate } from 'react-router-dom';
+import { supabase } from '../utils/supabase';
+import AvatarIA from './AvatarIA';
 import Chip from './Chip';
-import { supabase } from '../supabase';
-import { useUser } from '../hooks/useUser';
+import { Inter } from '@next/font/google';
+import { useTheme } from '../hooks/useTheme';
+
+const inter = Inter({ subsets: ['latin'] });
 
 const Andy = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const theme = useTheme();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [newMessage, setNewMessage] = useState('');
-  const user = useUser();
+  const [inputValue, setInputValue] = useState('');
 
   useEffect(() => {
-    const fetchMessages = async () => {
+    const getMessages = async () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('messages')
-        .select('content, user_id, created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      setMessages(data);
+        .select()
+        .order('id', { ascending: false });
+      if (error) {
+        console.error(error);
+      } else {
+        setMessages(data);
+      }
       setLoading(false);
     };
-    fetchMessages();
-  }, [user.id]);
+    getMessages();
+  }, []);
 
   const handleSendMessage = async () => {
-    if (newMessage.trim() === '') return;
-    const { data, error } = await supabase
-      .from('messages')
-      .insert([{ content: newMessage, user_id: user.id }]);
-    if (error) console.error(error);
-    setNewMessage('');
-    const fetchMessages = async () => {
-      setLoading(true);
+    if (inputValue.trim() !== '') {
       const { data, error } = await supabase
         .from('messages')
-        .select('content, user_id, created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      setMessages(data);
-      setLoading(false);
-    };
-    fetchMessages();
+        .insert([{ user: 'AnDy', message: inputValue, timestamp: new Date() }]);
+      if (error) {
+        console.error(error);
+      } else {
+        setInputValue('');
+        const newMessages = [...messages, data[0]];
+        setMessages(newMessages);
+      }
+    }
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') handleSendMessage();
+  const handleInput = (e) => {
+    setInputValue(e.target.value);
   };
 
-  const suggestions = [
-    { label: 'Analyse mon portfolio', onClick: () => navigate('/portfolio') },
-    { label: 'News crypto', onClick: () => navigate('/news/crypto') },
-    { label: 'Stats PSG', onClick: () => navigate('/stats/psg') },
-    { label: 'Prévision marché', onClick: () => navigate('/market/forecast') },
-  ];
+  const handleScroll = () => {
+    const chatContainer = document.getElementById('chat-container');
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  };
 
   return (
-    <div className="h-screen flex flex-col">
-      <header className="flex justify-between items-center p-4">
-        <h1 className="text-lg font-bold">AnDy</h1>
+    <div className={theme.className}>
+      <header className="header">
         <AvatarIA />
+        <h1>Chat AnDy</h1>
+        <p>Indicateur : <span className="loading">AnDy pense…</span></p>
       </header>
-      <main className="flex-1 overflow-y-auto p-4">
-        <div className="flex flex-col">
-          {loading ? (
-            <div className="flex justify-center items-center h-20">
-              <div className="animate-pulse w-4 h-4 bg--green rounded-full mr-2" />
-              <div className="animate-pulse w-4 h-4 bg--green rounded-full mr-2" />
-              <div className="animate-pulse w-4 h-4 bg--green rounded-full" />
+      <main className="main">
+        <div className="chat-container" id="chat-container">
+          {messages.map((message, index) => (
+            <div key={index} className={`message ${message.user === 'AnDy' ? 'left' : 'right'}`}>
+              <p className={`text ${message.user === 'AnDy' ? 'bg2' : 'green-bg'}`}>
+                {message.message}
+              </p>
             </div>
-          ) : (
-            messages.map((message, index) => (
-              <div
-                key={index}
-                className={`flex justify-${message.user_id === user.id ? 'end' : 'start'} items-center mb-4`}
-              >
-                {message.user_id === user.id ? (
-                  <div className="bg--green-bg p-2 rounded-lg border--border-hi">
-                    <p className="text--t1">{message.content}</p>
-                  </div>
-                ) : (
-                  <div className="bg--bg2 p-2 rounded-lg border--border-hi">
-                    <p className="text--t1">{message.content}</p>
-                  </div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-        <div className="flex justify-center items-center mb-4">
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="w-full p-2 rounded-lg border--border"
-          />
-          <button
-            onClick={handleSendMessage}
-            className="bg--green p-2 rounded-lg border--border-hi hover:bg--green-hover"
-          >
-            Envoyer
-          </button>
-        </div>
-        <div className="flex justify-center items-center">
-          {suggestions.map((suggestion, index) => (
-            <Chip
-              key={index}
-              label={suggestion.label}
-              onClick={suggestion.onClick}
-            />
           ))}
         </div>
+        <div className="input-container">
+          <input
+            type="text"
+            value={inputValue}
+            onChange={handleInput}
+            placeholder="Envoyer un message"
+            className="input"
+          />
+          <button className="send-button" onClick={handleSendMessage}>
+            Envoyer
+          </button>
+          <div className="suggestions">
+            <Chip label="Analyse mon portfolio" onClick={() => navigate('/portfolio')} />
+            <Chip label="News crypto" onClick={() => navigate('/news-crypto')} />
+            <Chip label="Stats PSG" onClick={() => navigate('/stats-psg')} />
+            <Chip label="Prévision marché" onClick={() => navigate('/market-prediction')} />
+          </div>
+        </div>
       </main>
+      <style jsx>{`
+        .header {
+          background-color: ${theme.vars.bg};
+          padding: 1rem;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .header h1 {
+          color: ${theme.vars.t1};
+        }
+        .header p {
+          color: ${theme.vars.t2};
+        }
+        .loading {
+          color: ${theme.vars.t3};
+        }
+        .main {
+          padding: 1rem;
+        }
+        .chat-container {
+          height: 80vh;
+          overflow-y: auto;
+          padding: 1rem;
+          background-color: ${theme.vars.bg2};
+          border: 1px solid ${theme.vars.border};
+        }
+        .message {
+          margin-bottom: 1rem;
+        }
+        .message.left {
+          align-items: flex-end;
+        }
+        .message.right {
+          align-items: flex-start;
+        }
+        .text {
+          padding: 0.5rem;
+          border-radius: 0.5rem;
+          font-family: ${inter.style.fontFamily};
+        }
+        .text.bg2 {
+          background-color: ${theme.vars.bg2};
+        }
+        .text.green-bg {
+          background-color: ${theme.vars.green};
+          border: 1px solid ${theme.vars.borderHi};
+        }
+        .input-container {
+          padding: 1rem;
+          display: flex;
+          align-items: center;
+        }
+        .input {
+          padding: 0.5rem;
+          border: none;
+          border-radius: 0.5rem;
+          font-family: ${inter.style.fontFamily};
+        }
+        .send-button {
+          padding: 0.5rem 1rem;
+          border: none;
+          border-radius: 0.5rem;
+          background-color: ${theme.vars.green};
+          color: ${theme.vars.t1};
+          cursor: pointer;
+        }
+        .suggestions {
+          display: flex;
+          align-items: center;
+          margin-left: 1rem;
+        }
+        .chip {
+          padding: 0.5rem 1rem;
+          border: none;
+          border-radius: 0.5rem;
+          background-color: ${theme.vars.bg2};
+          color: ${theme.vars.t2};
+          cursor: pointer;
+        }
+      `}</style>
     </div>
   );
 };
@@ -129,14 +185,16 @@ export default Andy;
 **src/components/AvatarIA.jsx**
 ```jsx
 import React from 'react';
+import { Inter } from '@next/font/google';
+
+const inter = Inter({ subsets: ['latin'] });
 
 const AvatarIA = () => {
   return (
-    <div className="relative w-12 h-12 rounded-full overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-full bg--green rounded-full animate-pulse" />
-      <div className="absolute top-0 left-0 w-full h-full bg--green rounded-full animate-pulse delay-100" />
-      <div className="absolute top-0 left-0 w-full h-full bg--green rounded-full animate-pulse delay-200" />
-      <div className="absolute top-0 left-0 w-full h-full bg--green rounded-full" />
+    <div className="avatar">
+      <div className="circle">
+        <div className="pulse" />
+      </div>
     </div>
   );
 };
@@ -147,145 +205,62 @@ export default AvatarIA;
 **src/components/Chip.jsx**
 ```jsx
 import React from 'react';
+import { Inter } from '@next/font/google';
+
+const inter = Inter({ subsets: ['latin'] });
 
 const Chip = ({ label, onClick }) => {
   return (
-    <button
-      onClick={onClick}
-      className="bg--bg p-2 rounded-lg border--border-hi hover:bg--bg-hover"
-    >
-      <p className="text--t1">{label}</p>
-    </button>
+    <div className="chip" onClick={onClick}>
+      <p>{label}</p>
+    </div>
   );
 };
 
 export default Chip;
 ```
 
-**styles.css**
-```css
-:root {
-  --green: #00ff88;
-  --bg: #080808;
-  --bg2: #111;
-  --border: rgba(255, 255, 255, 0.07);
-  --border-hi: rgba(255, 255, 255, 0.2);
-  --t1: #f0f0f0;
-  --t2: #888;
-  --t3: #444;
-}
+**src/utils/supabase.js**
+```javascript
+import { createClient } from '@supabase/supabase-js';
 
-body {
-  font-family: 'Inter', sans-serif;
-  background-color: var(--bg);
-  color: var(--t1);
-}
+const supabaseUrl = 'https://your-supabase-url.supabase.co';
+const supabaseKey = 'your-supabase-key';
 
-header {
-  background-color: var(--bg2);
-  color: var(--t1);
-}
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-main {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px;
-}
+export default supabase;
+```
 
-input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background-color: var(--bg);
-  color: var(--t1);
-}
+**src/hooks/useTheme.js**
+```javascript
+import { useState, useEffect } from 'react';
 
-button {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  background-color: var(--green);
-  color: var(--t1);
-  cursor: pointer;
-}
+const useTheme = () => {
+  const [theme, setTheme] = useState({
+    className: '',
+    vars: {
+      bg: '#080808',
+      bg2: '#111',
+      t1: '#f0f0f0',
+      t2: '#888',
+      t3: '#444',
+      border: 'rgba(255,255,255,0.07)',
+      borderHi: 'rgba(255,255,255,0.2)',
+      green: '#00ff88',
+    },
+  });
 
-button:hover {
-  background-color: var(--green-hover);
-}
+  useEffect(() => {
+    const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (prefersDarkMode) {
+      setTheme((prevTheme) => ({ ...prevTheme, className: 'dark', vars: { ...prevTheme.vars, bg: '#000', bg2: '#111', t1: '#fff', t2: '#888', t3: '#444' } }));
+    } else {
+      setTheme((prevTheme) => ({ ...prevTheme, className: 'light', vars: { ...prevTheme.vars, bg: '#f0f0f0', bg2: '#fff', t1: '#333', t2: '#666', t3: '#999' } }));
+    }
+  }, []);
 
-.chip {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  background-color: var(--bg);
-  color: var(--t1);
-  cursor: pointer;
-}
+  return theme;
+};
 
-.chip:hover {
-  background-color: var(--bg-hover);
-}
-
-.animate-pulse {
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-.bg--green {
-  background-color: var(--green);
-}
-
-.bg--green-bg {
-  background-color: var(--bg);
-  border: 1px solid var(--border-hi);
-}
-
-.bg--bg2 {
-  background-color: var(--bg2);
-  border: 1px solid var(--border-hi);
-}
-
-.bg--bg {
-  background-color: var(--bg);
-}
-
-.bg--bg-hover {
-  background-color: var(--bg-hover);
-}
-
-.text--t1 {
-  color: var(--t1);
-}
-
-.text--t2 {
-  color: var(--t2);
-}
-
-.text--t3 {
-  color: var(--t3);
-}
-
-.border--border {
-  border: 1px solid var(--border);
-}
-
-.border--border-hi {
-  border: 1px solid var(--border-hi);
-}
-
-.border--border-hi-hover {
-  border: 1px solid var(--border-hi-hover);
-}
+export default useTheme;
