@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
-import { Home, Trophy, TrendingUp, Newspaper, MoreHorizontal, Activity } from 'lucide-react';
+import { Home, Trophy, TrendingUp, Newspaper, MoreHorizontal } from 'lucide-react';
 
 const TABS = [
   { to: '/', icon: Home, label: 'Home' },
@@ -69,8 +69,6 @@ export default function BottomNav() {
         display: 'flex',
         justifyContent: 'center',
         paddingBottom: 'max(20px, env(safe-area-inset-bottom, 0px))',
-        paddingLeft: 20,
-        paddingRight: 20,
         pointerEvents: 'none',
         fontFamily: 'JetBrains Mono, monospace',
         fontSize: 14,
@@ -111,7 +109,7 @@ export default function BottomNav() {
               backgroundColor: 'rgba(0, 255, 136, 0.12)',
               border: '1px solid var(--neon)',
               borderRadius: 12,
-              transition: 'left 300ms ease, width 300ms ease',
+              transition: 'left 300ms cubic-bezier(0.4, 0, 0.2, 1), width 300ms cubic-bezier(0.4, 0, 0.2, 1)',
               pointerEvents: 'none',
               zIndex: 0,
             }}
@@ -157,6 +155,9 @@ export default function BottomNav() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  padding: active ? '6px 16px' : '0',
+                  borderRadius: 12,
+                  transition: 'padding 200ms ease',
                 }}
               >
                 <Icon
