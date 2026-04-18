@@ -1,148 +1,188 @@
 // src/components/PortfolioChart.jsx
 import React, { useEffect, useRef } from 'react';
 
-const PortfolioChart = ({ data, width = 300, height = 120 }) => {
+const PortfolioChart = ({ data, width = 375, height = 200 }) => {
   const svgRef = useRef(null);
 
   useEffect(() => {
-    if (!data || data.length === 0) return;
-
     const svg = svgRef.current;
-    svg.innerHTML = '';
-
-    const margin = { top: 20, right: 20, bottom: 30, left: 40 };
-    const chartWidth = width - margin.left - margin.right;
-    const chartHeight = height - margin.top - margin.bottom;
-
-    const minValue = Math.min(...data.map(d => d.value));
-    const maxValue = Math.max(...data.map(d => d.value));
-    const range = maxValue - minValue;
-    const padding = range * 0.1;
-    const yMin = minValue - padding;
-    const yMax = maxValue + padding;
-
-    const xScale = d => (d / (data.length - 1)) * chartWidth;
-    const yScale = d => chartHeight - ((d - yMin) / (yMax - yMin)) * chartHeight;
-
-    const pathData = data.map((d, i) => `${i === 0 ? 'M' : 'L'} ${xScale(i)} ${yScale(d.value)}`).join(' ');
-
-    const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-    gradient.setAttribute('id', 'chartGradient');
-    gradient.setAttribute('x1', '0%');
-    gradient.setAttribute('y1', '0%');
-    gradient.setAttribute('x2', '0%');
-    gradient.setAttribute('y2', '100%');
-
-    const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-    stop1.setAttribute('offset', '0%');
-    stop1.setAttribute('stop-color', '#00ff88');
-    stop1.setAttribute('stop-opacity', '0.3');
-
-    const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-    stop2.setAttribute('offset', '100%');
-    stop2.setAttribute('stop-color', '#00ff88');
-    stop2.setAttribute('stop-opacity', '0');
-
-    gradient.appendChild(stop1);
-    gradient.appendChild(stop2);
-
-    svg.appendChild(gradient);
-
-    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    defs.appendChild(gradient);
-    svg.appendChild(defs);
-
-    const chartGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    chartGroup.setAttribute('transform', `translate(${margin.left}, ${margin.top})`);
-    svg.appendChild(chartGroup);
-
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', pathData);
-    path.setAttribute('fill', 'url(#chartGradient)');
-    path.setAttribute('stroke', '#00ff88');
-    path.setAttribute('stroke-width', '1.5');
-    path.setAttribute('stroke-linecap', 'round');
-    path.setAttribute('stroke-linejoin', 'round');
-    path.setAttribute('opacity', '0');
-    chartGroup.appendChild(path);
+    if (!svg) return;
 
     const animatePath = () => {
-      path.style.transition = 'opacity 0.8s ease-out';
-      path.style.opacity = '1';
+      const path = svg.querySelector('path');
+      if (path) {
+        path.style.strokeDasharray = path.getTotalLength();
+        path.style.strokeDashoffset = path.getTotalLength();
+        path.style.transition = 'stroke-dashoffset 1.5s ease-in-out';
+        path.style.strokeDashoffset = '0';
+      }
     };
 
-    setTimeout(animatePath, 100);
+    animatePath();
+  }, [data]);
 
-    const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    xAxis.setAttribute('transform', `translate(0, ${chartHeight})`);
-    xAxis.setAttribute('stroke', '#555');
-    xAxis.setAttribute('stroke-width', '0.5');
+  const maxValue = Math.max(...data.map(d => d.value), 1);
+  const padding = 20;
+  const chartWidth = width - padding * 2;
+  const chartHeight = height - padding * 2;
 
-    const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    yAxis.setAttribute('stroke', '#555');
-    yAxis.setAttribute('stroke-width', '0.5');
+  const scaleX = (index) => padding + (index / (data.length - 1)) * chartWidth;
+  const scaleY = (value) => padding + chartHeight - (value / maxValue) * chartHeight;
 
-    const xTicks = 5;
-    for (let i = 0; i <= xTicks; i++) {
-      const x = (i / xTicks) * chartWidth;
-      const date = data[Math.round((i / xTicks) * (data.length - 1))].date;
-      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      text.setAttribute('x', x);
-      text.setAttribute('y', 20);
-      text.setAttribute('fill', '#aaa');
-      text.setAttribute('font-size', '8');
-      text.setAttribute('font-family', 'JetBrains Mono, monospace');
-      text.textContent = date;
-      xAxis.appendChild(text);
-
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', x);
-      line.setAttribute('y1', 0);
-      line.setAttribute('x2', x);
-      line.setAttribute('y2', chartHeight);
-      line.setAttribute('stroke', 'rgba(0,255,136,0.08)');
-      line.setAttribute('stroke-width', '0.5');
-      xAxis.appendChild(line);
-    }
-
-    const yTicks = 5;
-    for (let i = 0; i <= yTicks; i++) {
-      const y = (i / yTicks) * chartHeight;
-      const value = yMin + ((yMax - yMin) * (1 - i / yTicks));
-      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      text.setAttribute('x', -5);
-      text.setAttribute('y', y + 4);
-      text.setAttribute('fill', '#aaa');
-      text.setAttribute('font-size', '8');
-      text.setAttribute('font-family', 'JetBrains Mono, monospace');
-      text.setAttribute('text-anchor', 'end');
-      text.textContent = value.toFixed(2);
-      yAxis.appendChild(text);
-
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', 0);
-      line.setAttribute('y1', y);
-      line.setAttribute('x2', chartWidth);
-      line.setAttribute('y2', y);
-      line.setAttribute('stroke', 'rgba(0,255,136,0.08)');
-      line.setAttribute('stroke-width', '0.5');
-      yAxis.appendChild(line);
-    }
-
-    chartGroup.appendChild(xAxis);
-    chartGroup.appendChild(yAxis);
-  }, [data, width, height]);
+  const linePath = data.map((point, i) =>
+    i === 0 ? `M${scaleX(i)},${scaleY(point.value)}` : `L${scaleX(i)},${scaleY(point.value)}`
+  ).join(' ');
 
   return (
-    <svg
-      ref={svgRef}
-      width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      preserveAspectRatio="none"
-      style={{ fontFamily: 'JetBrains Mono, monospace' }}
-    />
+    <div className="portfolio-chart" style={{ width: '100%', height: height }}>
+      <svg
+        ref={svgRef}
+        width={width}
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        fill="none"
+        stroke="#00ff88"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <defs>
+          <linearGradient id="chartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#00ff88" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#00ff88" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+
+        <path d={`${linePath} V${chartHeight + padding} H${padding} Z`} fill="url(#chartGradient)" />
+        <path d={linePath} fill="none" />
+
+        {/* Axe X */}
+        <line
+          x1={padding}
+          y1={chartHeight + padding}
+          x2={width - padding}
+          y2={chartHeight + padding}
+          stroke="var(--border)"
+          strokeWidth="1"
+        />
+
+        {/* Axe Y */}
+        <line
+          x1={padding}
+          y1={padding}
+          x2={padding}
+          y2={chartHeight + padding}
+          stroke="var(--border)"
+          strokeWidth="1"
+        />
+
+        {/* Graduations X */}
+        {data.map((point, i) => (
+          <g key={`x-${i}`}>
+            <line
+              x1={scaleX(i)}
+              y1={chartHeight + padding}
+              x2={scaleX(i)}
+              y2={chartHeight + padding + 4}
+              stroke="var(--border)"
+              strokeWidth="1"
+            />
+            <text
+              x={scaleX(i)}
+              y={chartHeight + padding + 16}
+              fontFamily="JetBrains Mono, monospace"
+              fontSize="10"
+              fill="var(--text-secondary)"
+              textAnchor="middle"
+            >
+              {point.date}
+            </text>
+          </g>
+        ))}
+
+        {/* Graduations Y */}
+        {Array.from({ length: 5 }).map((_, i) => {
+          const value = (maxValue * (1 - i / 4)).toFixed(2);
+          return (
+            <g key={`y-${i}`}>
+              <line
+                x1={padding - 4}
+                y1={scaleY(maxValue * (1 - i / 4))}
+                x2={padding}
+                y2={scaleY(maxValue * (1 - i / 4))}
+                stroke="var(--border)"
+                strokeWidth="1"
+              />
+              <text
+                x={padding - 8}
+                y={scaleY(maxValue * (1 - i / 4)) + 4}
+                fontFamily="JetBrains Mono, monospace"
+                fontSize="10"
+                fill="var(--text-secondary)"
+                textAnchor="end"
+              >
+                ${value}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
   );
 };
 
-export default PortfolioChart;
+export const PortfolioAllocation = ({ data, size = 150 }) => {
+  const total = data.reduce((sum, item) => sum + item.value, 0);
+  const center = size / 2;
+  const radius = size / 2 - 10;
+
+  let cumulativeAngle = 0;
+  const segments = data.map((item, index) => {
+    const angle = (item.value / total) * 360;
+    const largeArcFlag = angle > 180 ? 1 : 0;
+
+    const x1 = center + radius * Math.cos((cumulativeAngle * Math.PI) / 180);
+    const y1 = center + radius * Math.sin((cumulativeAngle * Math.PI) / 180);
+    const x2 = center + radius * Math.cos(((cumulativeAngle + angle) * Math.PI) / 180);
+    const y2 = center + radius * Math.sin(((cumulativeAngle + angle) * Math.PI) / 180);
+
+    cumulativeAngle += angle;
+
+    return {
+      path: `M${center},${center} L${x1},${y1} A${radius},${radius} 0 ${largeArcFlag},1 ${x2},${y2} Z`,
+      color: item.color,
+      label: item.label,
+      value: item.value,
+    };
+  });
+
+  return (
+    <div className="portfolio-allocation" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ alignSelf: 'center' }}>
+        {segments.map((segment, index) => (
+          <path key={`segment-${index}`} d={segment.path} fill={segment.color} />
+        ))}
+      </svg>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
+        {segments.map((segment, index) => (
+          <div key={`legend-${index}`} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{
+              width: 12,
+              height: 12,
+              backgroundColor: segment.color,
+              borderRadius: 2,
+            }} />
+            <span style={{
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: 12,
+              color: 'var(--text-primary)',
+            }}>
+              {segment.label} ({((segment.value / total) * 100).toFixed(1)}%)
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
