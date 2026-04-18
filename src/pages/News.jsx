@@ -1,25 +1,11 @@
-Voici le code mis à jour pour les fichiers `src/pages/News.jsx` et `src/components/NewsCard.jsx` :
-
-```jsx
-// src/pages/News.jsx
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   RefreshCw,
   Loader2,
   ExternalLink,
-  TrendingUp,
-  Bitcoin,
-  Flame,
-  Cpu,
-  Globe,
-  Shield,
   Search,
   X,
-  Zap,
 } from 'lucide-react';
-import { usePullToRefresh } from '../hooks/usePullToRefresh';
-import { PullIndicator } from '../components/Skeleton';
-import { requestNotificationPermission } from '../utils/smartNotify';
 
 // ─── Sources ──────────────────────────────────────────────────────────────────
 const SOURCES = [
@@ -147,7 +133,6 @@ function NewsCard({ item }) {
         borderLeft: `3px solid ${item.sourceColor}`,
         borderRadius: '8px',
         transition: 'background 0.2s ease',
-        WebkitTapHighlightColor: 'transparent',
         position: 'relative',
         marginBottom: '12px',
       }}
@@ -421,170 +406,30 @@ export default function News() {
                     bottom: '-8px',
                     left: '50%',
                     transform: 'translateX(-50%)',
+                    width: '100%',
+                    height: '3px',
                     background: 'var(--green)',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    color: '#fff',
+                    borderRadius: '2px',
                   }}
-                >
-                  Sélectionné
-                </div>
+                />
               )}
             </button>
           ))}
         </div>
       </header>
-      <div
-        style={{
-          padding: '16px',
-          maxHeight: 'calc(100vh - 64px)',
-          overflowY: 'auto',
-          background: 'var(--bg)',
-        }}
-      >
-        {loading ? (
-          <PullIndicator />
-        ) : (
-          filtered.map((item) => (
-            <NewsCard key={item.url} item={item} />
-          ))
-        )}
-      </div>
+      {loading ? (
+        <div style={{ display: 'grid', gap: '12px' }}>
+          {[...Array(6)].map((_, index) => (
+            <div key={index} className="skeleton-loader" style={{ height: '100px', background: 'var(--bg2)', borderRadius: '8px' }} />
+          ))}
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: '12px' }}>
+          {filtered.map((item, index) => (
+            <NewsCard key={index} item={item} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
-```
-
-```jsx
-// src/components/NewsCard.jsx
-import { useState, useEffect } from 'react';
-import {
-  RefreshCw,
-  Loader2,
-  ExternalLink,
-  TrendingUp,
-  Bitcoin,
-  Flame,
-  Cpu,
-  Globe,
-  Shield,
-  Search,
-  X,
-  Zap,
-} from 'lucide-react';
-
-function NewsCard({ item }) {
-  const breaking = isBreaking(item.time);
-  const newItem = isNew(item.time) && !breaking;
-
-  return (
-    <a
-      href={item.url}
-      target="_blank"
-      rel="noreferrer"
-      className="news-card"
-      style={{
-        display: 'block',
-        textDecoration: 'none',
-        padding: '16px 16px 16px 20px',
-        background: 'var(--bg2)',
-        border: '1px solid var(--border)',
-        borderLeft: `3px solid ${item.sourceColor}`,
-        borderRadius: '8px',
-        transition: 'background 0.2s ease',
-        WebkitTapHighlightColor: 'transparent',
-        position: 'relative',
-        marginBottom: '12px',
-      }}
-    >
-      {breaking && (
-        <span
-          style={{
-            position: 'absolute',
-            top: 12,
-            left: 12,
-            fontSize: '10px',
-            fontWeight: 800,
-            color: '#ff0000',
-            background: 'rgba(255,0,0,0.15)',
-            padding: '4px 8px',
-            borderRadius: '6px',
-          }}
-        >
-          BREAKING
-        </span>
-      )}
-      {newItem && !breaking && (
-        <span
-          style={{
-            position: 'absolute',
-            top: 12,
-            left: 12,
-            fontSize: '10px',
-            fontWeight: 800,
-            color: '#00ff88',
-            background: 'rgba(0,255,136,0.15)',
-            padding: '4px 8px',
-            borderRadius: '6px',
-          }}
-        >
-          NEW
-        </span>
-      )}
-      <div
-        style={{
-          display: 'flex',
-          gap: 8,
-          marginBottom: 8,
-          alignItems: 'center',
-        }}
-      >
-        <span
-          style={{
-            fontSize: '12px',
-            fontWeight: 700,
-            color: item.sourceColor,
-            background: item.sourceColor === '#1a1a1a' ? 'rgba(255,255,255,0.1)' : 'transparent',
-            padding: item.sourceColor === '#1a1a1a' ? '2px 6px' : 0,
-            borderRadius: item.sourceColor === '#1a1a1a' ? '4px' : 0,
-          }}
-        >
-          {item.sourceEmoji} {item.source}
-        </span>
-        <span
-          style={{
-            fontSize: '11px',
-            color: 'var(--t3)',
-          }}
-        >
-          · {ago(item.time)}
-        </span>
-        <ExternalLink size={14} style={{ color: 'var(--t3)', marginLeft: 'auto', flexShrink: 0 }} />
-      </div>
-      <h3
-        style={{
-          fontSize: '15px',
-          lineHeight: 1.45,
-          color: 'var(--t1)',
-          fontWeight: 500,
-          margin: 0,
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-        }}
-      >
-        {item.title}
-      </h3>
-      {item.thumbnail && (
-        <img
-          src={item.thumbnail}
-          alt=""
-          style={{
-            width: '72px',
-            height: '72px',
-            objectFit: 'cover',
-            borderRadius: '6px',
-            marginLeft: 'auto',
-            marginTop: '12px',
-          }}
