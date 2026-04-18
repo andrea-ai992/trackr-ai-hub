@@ -180,13 +180,14 @@ export default function Dashboard() {
           }
 
           .action-button {
-            background: var(--bg2);
+            background: rgba(255, 255, 255, 0.04);
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 16px;
             text-align: center;
             color: var(--t1);
             transition: background 0.3s;
+            backdrop-filter: blur(12px);
           }
           .action-button:hover {
             background: rgba(255, 255, 255, 0.1);
@@ -327,54 +328,63 @@ export default function Dashboard() {
           alignItems: 'center',
           justifyContent: 'space-between',
           paddingTop: 16,
-          borderTop: '1px solid var(--border)'
+          borderTop: '1px solid var(--border)',
         }}>
-          <span style={{
-            fontSize: 12,
-            color: 'var(--t3)'
-          }}>
-            {pos} position{pos !== 1 ? 's' : ''}
-          </span>
-          <Sparkline
-            data={sparkData}
-            color={isUp ? 'var(--green)' : '#ff4d4d'}
-            width={80}
-            height={32}
-          />
+          <Sparkline data={sparkData} />
         </div>
       </button>
 
-      {/* Movers Section */}
-      {crypto.length > 0 && (
-        <div className="stagger-item" style={{ marginBottom: 16 }}>
-          <h2 className="section-label">Movers</h2>
-          <div className="scroll-row">
-            {crypto.map((c) => (
-              <div key={c.id} style={{ background: 'var(--bg2)', borderRadius: '8px', padding: '12px', minWidth: '120px', textAlign: 'center' }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: coinColor[c.id] }}>{c.name}</div>
-                <div style={{ fontSize: 12, color: 'var(--t2)' }}>{fmt(c.current_price)}</div>
-                <div style={{ fontSize: 12, color: c.price_change_percentage_24h >= 0 ? 'var(--green)' : '#ff4d4d' }}>
-                  {fmtPct(c.price_change_percentage_24h)}
-                </div>
-                <Sparkline data={Array.from({ length: 7 }, (_, i) => c.current_price * (1 + (Math.random() - 0.5) * 0.1))} color={coinColor[c.id]} width={72} height={24} />
+      {/* Top Movers */}
+      <div className="stagger-item" style={{ marginBottom: 24 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--t1)', marginBottom: 8 }}>Top Movers</h2>
+        <div className="scroll-row">
+          {crypto.map((coin) => (
+            <div key={coin.id} className="press-scale" style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid var(--border)',
+              borderRadius: '12px',
+              padding: '16px',
+              minWidth: 120,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 4,
+            }}>
+              <div style={{
+                width: 24,
+                height: 24,
+                borderRadius: '50%',
+                background: coinColor[coin.id],
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: 12
+              }}>
+                {coin.symbol.toUpperCase()}
               </div>
-            ))}
-          </div>
+              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)' }}>{fmt(coin.current_price)}</span>
+              <span style={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: coin.price_change_percentage_24h >= 0 ? 'var(--green)' : '#ff4d4d'
+              }}>
+                {fmtPct(coin.price_change_percentage_24h)}
+              </span>
+            </div>
+          ))}
         </div>
-      )}
+      </div>
 
       {/* Fear & Greed Gauge */}
-      {fg !== null && (
-        <div className="stagger-item" style={{ marginBottom: 24 }}>
-          <h2 className="section-label">Fear & Greed</h2>
-          <FGGauge value={fg} />
-        </div>
-      )}
+      <div className="stagger-item" style={{ marginBottom: 24 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--t1)', marginBottom: 8 }}>Fear & Greed</h2>
+        <FGGauge value={fg} />
+      </div>
 
-      {/* News Section */}
-      {news.length > 0 && (
-        <div className="stagger-item" style={{ marginBottom: 24 }}>
-          <h2 className="section-label">Dernières nouvelles</h2>
-          {news.slice(0, 3).map((item, index) => (
-            <div key={index} style={{ marginBottom: 12, color: 'var(--t2)' }}>
-              <a href={item.link} style={{ color: 'var(--t1)', textDecoration: 'none',
+      {/* News Feed */}
+      <div className="stagger-item" style={{ marginBottom: 24 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--t1)', marginBottom: 8 }}>Dernières Nouvelles</h2>
+        {news.slice(0, 3).map((item) => (
+          <
