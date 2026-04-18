@@ -1,0 +1,14 @@
+PRIORITÉ ABSOLUE — Redesign complet src/pages/Dashboard.jsx, c'est la page principale de Trackr.
+
+Design premium dark finance app:
+- Header : "Bonjour Andrea" + heure locale, badge LIVE vert pulsant
+- Hero card portfolio : valeur totale grande (ex $24,830) avec Inter font bold, variation +2.4% vert ou rouge avec flèche, mini sparkline SVG 7 jours inline dessiné en SVG pur
+- Section "Top Movers" : scroll horizontal, cards crypto/stock avec logo (2 lettres colorées), prix, % coloré vert/rouge, animation pulse sur les prix
+- Fear & Greed gauge : SVG semicirculaire, aiguille animée, zones colorées (rouge → vert), valeur 0-100 et label
+- News feed : 3 dernières nouvelles, titre tronqué, badge source coloré, temps relatif "2min"
+- Quick actions 2x2 grid : Markets, Portfolio, Signals, AnDy — cards avec icône lucide-react, background glassmorphism, hover effect
+- Fond #080808, cards rgba(255,255,255,0.04) avec backdrop-filter blur(12px), border rgba(255,255,255,0.07), accent #00ff88
+- Animations : fadeUp stagger au mount (chaque section décalée de 60ms), skeleton shimmer pendant le chargement
+- Mobile-first, Inter font, max-width 520px, safe area padding
+- Garde tous les hooks et fetch de données existants, améliore uniquement le rendu JSX/CSS
+- Pas de librairies externes — SVG pur pour les graphiques
