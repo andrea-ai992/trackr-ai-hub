@@ -1,7 +1,5 @@
 Pour mettre en place les animations de scores en direct pour ESPN sur la page Trackr/Sports, nous allons modifier le code existant pour ajouter les animations nécessaires.
 
-Tout d'abord, nous allons ajouter les animations pour les scores en direct. Nous allons utiliser la bibliothèque Lucide React pour créer les animations.
-
 ```jsx
 import React, { useState, useEffect } from 'react';
 import './Sports.css';
@@ -48,6 +46,21 @@ const Sports = () => {
 
   // ...
 
+  const getTeamColor = (teamName) => {
+    switch (teamName) {
+      case 'PSG':
+        return '#00ff88'; // Bleu clair
+      case 'NBA':
+        return '#f0f0f0'; // Blanc
+      case 'NFL':
+        return '#111'; // Noir
+      case 'UFC':
+        return '#888'; // Gris clair
+      default:
+        return '#444'; // Gris foncé
+    }
+  };
+
   return (
     <div className="sports-container">
       // ...
@@ -58,11 +71,15 @@ const Sports = () => {
               <div key={index} className="match-info">
                 // ...
                 <div className="match-details">
-                  <span className="team home">{match.homeTeam.name}</span>
+                  <span className="team home" style={{ backgroundColor: getTeamColor(match.homeTeam.name) }}>
+                    {match.homeTeam.name}
+                  </span>
                   {animateScore()}
                   <span className="vs">vs</span>
                   {animateScore()}
-                  <span className="team away">{match.awayTeam.name}</span>
+                  <span className="team away" style={{ backgroundColor: getTeamColor(match.awayTeam.name) }}>
+                    {match.awayTeam.name}
+                  </span>
                 </div>
                 // ...
               </div>
@@ -95,6 +112,36 @@ export default Sports;
   animation: fadeIn 0.3s ease-out;
 }
 
+.team {
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: var(--t1);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.team.home {
+  background-color: var(--green);
+  border: 1px solid var(--border);
+}
+
+.team.away {
+  background-color: var(--bg2);
+  border: 1px solid var(--border);
+}
+
+.status-live {
+  color: var(--green);
+}
+
+.status-final {
+  color: var(--t3);
+}
+
+.status-scheduled {
+  color: var(--t2);
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -107,10 +154,8 @@ export default Sports;
 }
 ```
 
-Nous avons ajouté une fonction `animateScore` qui crée une animation pour les scores en direct. Nous avons également ajouté une variable `animated` pour contrôler l'animation.
+Nous avons ajouté une fonction `getTeamColor` pour récupérer la couleur du club en fonction du nom du club. Nous avons également ajouté une classe `team` pour les noms des clubs et une classe `home` et `away` pour les couleurs des clubs.
 
-Nous avons également ajouté une classe `animate-score` pour les scores en direct et une classe `score-value` pour les valeurs des scores.
+Nous avons également ajouté des styles pour les classes `status-live`, `status-final` et `status-scheduled` pour les statuts des matchs.
 
-Enfin, nous avons ajouté une animation pour les scores en direct en utilisant la fonction `animateScore` et la variable `animated`.
-
-Cela devrait mettre en place les animations de scores en direct pour ESPN sur la page Trackr/Sports.
+Cela devrait mettre en place les animations de scores en direct pour ESPN sur la page Trackr/Sports avec les couleurs des clubs.
