@@ -2,7 +2,7 @@
 // Spécialisé: tâches IA, queue, logs, commits, code review
 // Token: DISCORD_DEV_BOT_TOKEN dans bot/.env
 
-import { writeFileSync, readFileSync, readdirSync, existsSync } from 'fs'
+import { writeFileSync, readFileSync, readdirSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -290,7 +290,6 @@ const lastSeen = new Map()
 
 async function discoverChannels() {
   try {
-    const guild = await dGet(`/guilds/${GUILD_ID}`)
     const channels = await dGet(`/guilds/${GUILD_ID}/channels`)
     for (const ch of channels) {
       if (ch.type !== 0) continue
@@ -336,12 +335,176 @@ async function poll() {
   }
 }
 
+// ─── Live Guide ───────────────────────────────────────────────────────────────
+const GUIDE_STATE_FILE = resolve(__dir, '.guide-state.json')
+
+function loadGuideState() {
+  try { return JSON.parse(readFileSync(GUIDE_STATE_FILE, 'utf8')) } catch { return {} }
+}
+
+function saveGuideState(state) {
+  try { writeFileSync(GUIDE_STATE_FILE, JSON.stringify(state), 'utf8') } catch {}
+}
+
+function getLiveStatus() {
+  try {
+    const t = getTasks()
+    const isRunning = t.running.length > 0
+    const logLines = getLogs(5)
+    const lastLog = logLines[logLines.length - 1] || ''
+    const lastLogAge = (() => {
+      const m = lastLog.match(/\[(\d{4}-\d{2}-\d{2}T[\d:.Z]+)\]/)
+      if (!m) return 999
+      return Math.floor((Date.now() - new Date(m[1]).getTime()) / 1000 / 60)
+    })()
+
+    const daemonAlive = lastLogAge < 15
+    return {
+      daemon:   daemonAlive ? '🟢 ONLINE' : '🔴 OFFLINE',
+      running:  isRunning ? `⚡ \`${t.running[0].replace('.running', '').slice(0, 40)}\`` : '💤 Idle',
+      queue:    t.queue.length,
+      done:     t.done.length,
+      errors:   t.error.length,
+      lastLog:  lastLog.slice(0, 80).replace(/\[[\dT:.Z-]+\]\s*/, '') || '—',
+    }
+  } catch { return { daemon: '❓ INCONNU', running: '—', queue: 0, done: 0, errors: 0, lastLog: '—' } }
+}
+
+function buildGuideContent() {
+  const s = getLiveStatus()
+  const now = new Date().toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+
+  return [
+    `# ⟨◈⟩ AnDy — Guide & Statut Live`,
+    ``,
+    `## ${s.daemon} — Daemon IA`,
+    `> **En cours :** ${s.running}`,
+    `> **Queue :** ${s.queue} tâche(s) · **Done :** ${s.done} · **Erreurs :** ${s.errors}`,
+    `> **Dernier log :** \`${s.lastLog}\``,
+    ``,
+    `---`,
+    ``,
+    `## 🧠 AnDy (bot principal) — Chat IA`,
+    `Parle normalement dans n'importe quel canal — AnDy répond à tout.`,
+    ``,
+    `| Commande | Action |`,
+    `|---------|--------|`,
+    `| \`!think <question>\` | Analyse approfondie (mode réflexion) |`,
+    `| \`!web <question>\` | Infos récentes, actualités |`,
+    `| \`!task <desc>\` | Créer une tâche IA (admin) |`,
+    `| \`!status\` | Statut du bot (admin) |`,
+    `| \`!help\` | Afficher l'aide |`,
+    ``,
+    `---`,
+    ``,
+    `## 🔧 AnDy Dev (bot développement)`,
+    `Actif dans : \`#dev\` \`#deployments\` \`#tasks\` \`#build\` \`#code-review\` \`#bugs\``,
+    ``,
+    `| Commande | Action |`,
+    `|---------|--------|`,
+    `| \`!task <desc>\` | Crée une tâche manuelle (priorité haute) |`,
+    `| \`!urgent <desc>\` | Tâche urgente — interruption immédiate |`,
+    `| \`!status\` | DONE / QUEUE / RUNNING / ERROR |`,
+    `| \`!queue\` | Liste complète de la queue |`,
+    `| \`!logs [n]\` | Derniers logs daemon (défaut 15 lignes) |`,
+    `| \`!deploy\` | Derniers commits GitHub |`,
+    `| \`!help\` | Afficher cette aide |`,
+    ``,
+    `---`,
+    ``,
+    `## 📡 Channels`,
+    `| Canal | Rôle |`,
+    `|-------|------|`,
+    `| \`#andy-chat\` | 🧠 Chat IA général |`,
+    `| \`#crypto\` \`#trading\` | 📊 Analyses marché & crypto |`,
+    `| \`#dev\` \`#tasks\` | 🔧 Développement & tâches |`,
+    `| \`#deployments\` | 🚀 Déploiements & commits |`,
+    `| \`#brain-cycles\` | 🤖 IA autonome en action |`,
+    `| \`#bugs\` \`#performance\` | 🐛 Issues & perf |`,
+    ``,
+    `---`,
+    `*Mis à jour le ${now} · Se rafraîchit toutes les 5 min*`,
+  ].join('\n')
+}
+
+async function findOrCreateGuideChannel() {
+  try {
+    const channels = await dGet(`/guilds/${GUILD_ID}/channels`)
+    // Cherche un channel "guide" ou "guides" existant
+    let guideChannel = channels.find(c => c.type === 0 && ['guide', 'guides', 'guide-commandes', 'guide-andy'].includes(c.name.toLowerCase()))
+
+    if (!guideChannel) {
+      // Cherche la catégorie "Guide" ou "Guides"
+      let catId = channels.find(c => c.type === 4 && c.name.toLowerCase().includes('guide'))?.id
+
+      // Sinon crée la catégorie
+      if (!catId) {
+        const cat = await dPost(`/guilds/${GUILD_ID}/channels`, { name: 'Guide', type: 4 })
+        catId = cat.id
+        console.log(`📁 Catégorie "Guide" créée`)
+      }
+
+      // Crée le channel guide
+      guideChannel = await dPost(`/guilds/${GUILD_ID}/channels`, {
+        name: 'guide-andy',
+        type: 0,
+        parent_id: catId,
+        topic: 'Guide complet AnDy — commandes & statut live',
+      })
+      console.log(`📋 Canal #guide-andy créé`)
+    }
+
+    return guideChannel
+  } catch (e) { console.error('findOrCreateGuideChannel:', e.message); return null }
+}
+
+async function updateGuide() {
+  const state = loadGuideState()
+  const content = buildGuideContent()
+
+  try {
+    // Essaie de mettre à jour le message existant
+    if (state.channelId && state.messageId) {
+      const r = await dFetch(`/channels/${state.channelId}/messages/${state.messageId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ content }),
+      })
+      if (r.ok) {
+        console.log('📋 Guide mis à jour')
+        return
+      }
+      // Message plus dispo → recréer
+      console.log('📋 Guide message perdu, recréation…')
+    }
+
+    // Trouve ou crée le channel
+    const ch = state.channelId
+      ? { id: state.channelId }
+      : await findOrCreateGuideChannel()
+
+    if (!ch?.id) return
+
+    // Poste le nouveau message
+    const msg = await dPost(`/channels/${ch.id}/messages`, { content })
+    if (msg?.id) {
+      // Pin le message
+      await dFetch(`/channels/${ch.id}/pins/${msg.id}`, { method: 'PUT' }).catch(() => {})
+      saveGuideState({ channelId: ch.id, messageId: msg.id })
+      console.log(`📋 Guide posté et épinglé dans #${ch.name || ch.id}`)
+    }
+  } catch (e) { console.error('updateGuide:', e.message) }
+}
+
 // ─── Start ────────────────────────────────────────────────────────────────────
 await discoverChannels()
 
 if (!monitoredChannels.size) {
   console.warn('⚠️ Aucun canal dev trouvé — le bot attend quand même.')
 }
+
+// Guide initial + refresh toutes les 5min
+await updateGuide()
+setInterval(updateGuide, 5 * 60 * 1000)
 
 // Redécouverte toutes les 5min
 setInterval(discoverChannels, 5 * 60 * 1000)
