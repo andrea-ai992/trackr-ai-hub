@@ -1,4 +1,4 @@
-Je vais modifier le fichier `src/pages/News.jsx` pour implémenter `AbortSignal.timeout()` sur tous les fetch() comme dans `api/brain.js`. Voici le code complet et fonctionnel :
+Je vais implémenter le hook `useAbortableFetch` dans `src/pages/News.jsx` pour gérer les timeouts sur tous les appels fetch(). Voici le code complet et fonctionnel :
 
 ```jsx
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -91,19 +91,36 @@ function parseXML(text) {
   }
 }
 
-async function fetchSource(src) {
+function useAbortableFetch() {
+  const fetchWithTimeout = useCallback(async (url, options = {}) => {
+    const { timeout = 7000, ...fetchOptions } = options;
+    try {
+      const response = await fetch(url, {
+        ...fetchOptions,
+        signal: AbortSignal.timeout(timeout),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.text();
+    } catch (error) {
+      if (error.name === 'TimeoutError') {
+        console.warn('Fetch timeout:', url);
+        return null;
+      }
+      throw error;
+    }
+  }, []);
+
+  return { fetchWithTimeout };
+}
+
+async function fetchSource(src, fetchWithTimeout) {
   const cached = CACHE[src.id];
   if (cached && Date.now() - cached.ts < TTL) return cached.data;
   const encoded = encodeURIComponent(src.url);
   let items = [];
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 7000);
-    const r = await fetch(`https://corsproxy.io/?${encoded}`, {
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-    if (r.ok) items = parseXML(await r.text());
+    const text = await fetchWithTimeout(`https://corsproxy.io/?${encoded}`, { timeout: 7000 });
+    if (text) items = parseXML(text);
   } catch {
     // Silent catch
   }
@@ -391,10 +408,12 @@ export default function News() {
   const [searchFocused, setSearchFocused] = useState(false);
   const timerRef = useRef(null);
 
+  const { fetchWithTimeout } = useAbortableFetch();
+
   const load = useCallback(async () => {
     setLoading(true);
     const results = await Promise.allSettled(
-      SOURCES.map((s) => fetchSource(s).then((rows) =>
+      SOURCES.map((s) => fetchSource(s, fetchWithTimeout).then((rows) =>
         rows.map((r) => ({
           ...r,
           source: s.label,
@@ -410,7 +429,7 @@ export default function News() {
     });
     setItems(merged.sort((a, b) => b.time - a.time));
     setLoading(false);
-  }, []);
+  }, [fetchWithTimeout]);
 
   useEffect(() => {
     load();
@@ -425,10 +444,9 @@ export default function News() {
   const filtered = items
     .filter((item) => {
       const matchesSearch = search
-        ? item.title?.toLowerCase().includes(search.toLowerCase()) ||
-          item.source?.toLowerCase().includes(search.toLowerCase())
+        ? item.title?.toLowerCase().includes(search.toLowerCase())
         : true;
-      const matchesTab = tab === 'all' || item.category === tab;
+      const matchesTab = tab === 'all' ? true : item.category === tab;
       return matchesSearch && matchesTab;
     })
     .sort((a, b) => b.time - a.time);
@@ -438,8 +456,8 @@ export default function News() {
       style={{
         minHeight: '100vh',
         background: 'var(--bg)',
-        padding: '0 0 80px',
         fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
+        padding: '0 0 80px',
       }}
     >
       <Header
@@ -452,34 +470,63 @@ export default function News() {
 
       <main
         style={{
-          padding: '16px 16px 0',
+          padding: '20px 16px',
+          maxWidth: '100%',
+          margin: '0 auto',
         }}
       >
-        {loading ? (
+        {loading && (
           <div
             style={{
               display: 'flex',
               justifyContent: 'center',
-              alignItems: 'center',
-              height: '200px',
+              padding: '40px 0',
             }}
           >
-            <Loader2 size={24} className="spin" style={{ color: 'var(--green)' }} />
+            <Loader2 size={28} className="spin" style={{ color: 'var(--green)' }} />
           </div>
-        ) : filtered.length === 0 ? (
+        )}
+
+        {!loading && items.length === 0 && (
           <div
             style={{
               textAlign: 'center',
-              padding: '40px 16px',
+              padding: '60px 20px',
               color: 'var(--t2)',
             }}
           >
-            Aucune actualité trouvée
+            <RefreshCw
+              size={32}
+              style={{
+                color: 'var(--t3)',
+                marginBottom: '16px',
+                animation: 'spin 1s linear infinite',
+              }}
+            />
+            <p style={{ fontSize: '14px' }}>Aucune actualité disponible</p>
+            <button
+              onClick={load}
+              style={{
+                marginTop: '20px',
+                padding: '10px 20px',
+                background: 'var(--green)',
+                color: '#080808',
+                border: 'none',
+                borderRadius: '8px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontSize: '13px',
+              }}
+            >
+              Recharger
+            </button>
           </div>
-        ) : (
-          filtered.map((item, i) => <NewsCard key={`${item.url}-${i}`} item={item} />)
         )}
-      </main>
-    </div>
-  );
-}
+
+        <div
+          style={{
+            display: 'grid',
+            gap: '12px',
+          }}
+        >
+          {filtered.map((item,
