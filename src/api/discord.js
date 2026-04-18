@@ -1,4 +1,4 @@
-Voici le fichier `src/api/discord.js` complet et fonctionnel, avec une lecture ligne par ligne du stream SSE :
+Voici la version corrigée de `src/api/discord.js` avec une lecture directe du stream SSE utilisant `ReadableStream` et `TextDecoderStream` :
 
 ```javascript
 // src/api/discord.js
@@ -20,17 +20,21 @@ export const getDiscordMessages = async (channelId) => {
       throw new Error(`Discord API error: ${response.status}`);
     }
 
-    // Lecture ligne par ligne du stream SSE
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder('utf-8');
+    if (!response.body) {
+      throw new Error('No response body');
+    }
+
+    // Lecture directe du stream avec ReadableStream et TextDecoderStream
+    const reader = response.body
+      .pipeThrough(new TextDecoderStream())
+      .getReader();
+
     let result = '';
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-
-      const chunk = decoder.decode(value, { stream: true });
-      result += chunk;
+      result += value;
     }
 
     try {
@@ -68,46 +72,4 @@ export const sendDiscordMessage = async (channelId, content) => {
 };
 ```
 
-Et voici le fichier CSS associé `src/api/discord.css` :
-
-```css
-/* src/api/discord.css */
-.discord-messages {
-  font-family: 'Inter', sans-serif;
-  color: var(--t1);
-  background-color: var(--bg);
-  padding: 1rem;
-  border-radius: 0.5rem;
-  border: 1px solid var(--border);
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.discord-message {
-  margin-bottom: 0.75rem;
-  padding: 0.5rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.discord-message:last-child {
-  border-bottom: none;
-}
-
-.discord-message-author {
-  color: var(--green);
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-}
-
-.discord-message-content {
-  color: var(--t2);
-  font-size: 0.9rem;
-  line-height: 1.4;
-}
-
-.discord-message-time {
-  color: var(--t3);
-  font-size: 0.75rem;
-  margin-top: 0.25rem;
-  text-align: right;
-}
+Le fichier `src/api/discord.css` reste inchangé car il est déjà conforme aux règles demandées.
