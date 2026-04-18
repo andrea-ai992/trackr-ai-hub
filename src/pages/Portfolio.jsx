@@ -201,6 +201,18 @@ export default function Portfolio() {
               </text>
             </g>
           ))}
+          <g>
+            {allocationData.map((d, i) => (
+              <rect
+                key={i}
+                x={100 - 20}
+                y={100 - (d.value / 100) * 90}
+                width={40}
+                height={(d.value / 100) * 90}
+                fill={d.label === 'Stocks' ? '#00ff88' : d.label === 'Crypto' ? '#ff8800' : d.label === 'Cash' ? '#ffff00' : '#ff0000'}
+              />
+            ))}
+          </g>
         </svg>
       </div>
 
@@ -259,6 +271,23 @@ export default function Portfolio() {
       <div style={{ padding: '16px 16px 24px' }}>
         <div style={{ fontSize: 11, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 12 }}>Beta du portfolio</div>
         <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t1)' }}>0.5</div>
+      </div>
+
+      {/* Total Value */}
+      <div style={{ padding: '16px 16px 24px' }}>
+        <div style={{ fontSize: 11, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 12 }}>Total Value</div>
+        <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--t1)' }}>{fmt(totalValue)}</div>
+      </div>
+
+      {/* Legend */}
+      <div style={{ padding: '16px 16px 24px' }}>
+        <div style={{ fontSize: 11, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 12 }}>Légende</div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{ background: '#00ff88', width: 20, height: 20, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Stocks</div>
+          <div style={{ background: '#ff8800', width: 20, height: 20, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Crypto</div>
+          <div style={{ background: '#ffff00', width: 20, height: 20, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Cash</div>
+          <div style={{ background: '#ff0000', width: 20, height: 20, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Autres</div>
+        </div>
       </div>
     </div>
   );
