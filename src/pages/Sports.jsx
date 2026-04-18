@@ -1,6 +1,6 @@
-Je vais implémenter un système de scores en direct avec des animations CSS pour rendre l'affichage dynamique et fluide. Voici les modifications nécessaires :
+Pour ajouter un système de tabs défilants horizontalement pour les sections PSG/NBA/NFL/UFC, nous allons modifier le fichier `src/pages/Sports.jsx` et `src/pages/Sports.css`.
 
-Fichier modifié : src/pages/Sports.jsx
+**src/pages/Sports.jsx**
 
 ```jsx
 import React, { useEffect, useState } from 'react';
@@ -254,7 +254,7 @@ const Sports = () => {
 export default Sports;
 ```
 
-Fichier modifié : src/pages/Sports.css
+**src/pages/Sports.css**
 
 ```css
 .sports-container {
@@ -436,39 +436,43 @@ Fichier modifié : src/pages/Sports.css
 .teams-container {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 12px;
 }
 
 .team-score {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
+  gap: 8px;
+  padding: 8px;
   border-bottom: 1px solid var(--border);
 }
 
 .team-name {
+  font-size: 0.9rem;
   font-weight: 500;
 }
 
 .team-score-value {
+  font-size: 1rem;
   font-weight: 700;
-  color: var(--t1);
 }
 
 .game-info {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: var(--t2);
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
 }
 
 .game-period {
-  background-color: rgba(0, 255, 136, 0.1);
-  padding: 2px 6px;
-  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.game-time {
+  font-size: 0.8rem;
 }
 
 .event-card {
@@ -486,77 +490,69 @@ Fichier modifié : src/pages/Sports.css
 
 .event-name {
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .event-date {
   font-size: 0.8rem;
-  color: var(--t2);
 }
 
 .fight {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 8px;
-  padding: 12px;
-  background-color: rgba(0, 255, 136, 0.05);
-  border-radius: 6px;
-  margin-top: 8px;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
 }
 
 .fighter {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 8px;
 }
 
 .fighter-name {
+  font-size: 0.9rem;
   font-weight: 500;
 }
 
 .fighter-score {
+  font-size: 1rem;
   font-weight: 700;
-  color: var(--t1);
-  min-width: 24px;
-  text-align: center;
 }
 
 .fight-vs {
-  text-align: center;
-  color: var(--t2);
-  font-weight: 300;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .fight-status {
-  text-align: center;
-  padding: 4px 8px;
+  padding: 2px 6px;
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  margin-top: 8px;
 }
 
-@media (min-width: 768px) {
-  .match-details {
-    font-size: 1.2rem;
-  }
-
-  .team-score {
-    padding: 12px 0;
-  }
-
-  .fight {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .fighter {
-    flex: 1;
-  }
-
-  .fight-vs {
-    flex: 0 0 auto;
-    padding: 0 16px;
-  }
+.fight-status-live {
+  background-color: rgba(0, 255, 136, 0.2);
+  color: var(--green);
 }
+
+.fight-status-final {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--t2);
+}
+
+.fight-status-scheduled {
+  background-color: rgba(255, 255, 0, 0.1);
+  color: var(--t2);
+}
+```
+
+Pour ajouter un système de tabs défilants horizontalement, nous avons ajouté un élément `<div>` avec la classe `tabs` dans le fichier `src/pages/Sports.css`. Nous avons également ajouté les classes `tab` et `active` pour les éléments `<div>` qui représentent les tabs.
+
+Nous avons également ajouté les classes `team-score` et `team-name` pour les éléments `<span>` qui représentent les scores et les noms des équipes dans les fichiers `src/pages/Sports.css` et `src/pages/Sports.jsx`.
+
+Enfin, nous avons ajouté les classes `event-card` et `event-header` pour les éléments `<div>` qui représentent les cartes des événements dans les fichiers `src/pages/Sports.css` et `src/pages/Sports.jsx`.
+
+Cela devrait ajouter un système de tabs défilants horizontalement pour les sections PSG/NBA/NFL/UFC.
