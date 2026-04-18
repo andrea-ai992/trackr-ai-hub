@@ -1,4 +1,4 @@
-Création de src/pages/Signals.jsx
+Je vais améliorer le système de scoring visuel pour les signaux IA dans `Signals.jsx` avec des indicateurs colorés et des alertes dynamiques. Voici les modifications :
 
 ```jsx
 import React, { useState, useEffect } from 'react';
@@ -19,35 +19,114 @@ const assets = [
 ];
 
 const getRSI = (data) => {
-  const gains = data.map((item, index) => item.close - item.open);
-  const gainsAboveMA = gains.filter((gain, index) => gain > gains[index - 1]);
-  const gainsBelowMA = gains.filter((gain, index) => gain < gains[index - 1]);
-  const averageGain = gainsAboveMA.reduce((a, b) => a + b, 0) / gainsAboveMA.length;
-  const averageLoss = gainsBelowMA.reduce((a, b) => a + b, 0) / gainsBelowMA.length;
-  const rs = averageGain / averageLoss;
+  if (data.length < 14) return 50;
+  const gains = [];
+  const losses = [];
+
+  for (let i = 1; i < data.length; i++) {
+    const change = data[i].close - data[i-1].close;
+    if (change > 0) gains.push(change);
+    else losses.push(Math.abs(change));
+  }
+
+  if (gains.length === 0 || losses.length === 0) return 50;
+
+  const avgGain = gains.reduce((a, b) => a + b, 0) / gains.length;
+  const avgLoss = losses.reduce((a, b) => a + b, 0) / losses.length;
+
+  const rs = avgGain / avgLoss;
   const rsi = 100 - (100 / (1 + rs));
+
   return rsi;
 };
 
 const getMACD = (data) => {
+  if (data.length < 26) return 0;
+
   const ema12 = data.slice(-12).reduce((a, b, index) => {
     if (index === 0) return b.close;
-    return (0.12 * b.close + 0.88 * a);
+    return (0.152 * b.close + 0.848 * a);
   }, 0);
+
   const ema26 = data.slice(-26).reduce((a, b, index) => {
     if (index === 0) return b.close;
-    return (0.26 * b.close + 0.74 * a);
+    return (0.074 * b.close + 0.926 * a);
   }, 0);
+
+  const signalLine = data.slice(-9).reduce((a, b, index) => {
+    if (index === 0) return ema12;
+    return (0.2 * ema12 + 0.8 * a);
+  }, 0);
+
   const macd = ema12 - ema26;
-  return macd;
+  return { macd, signalLine };
+};
+
+const getVolumeAnalysis = (data) => {
+  if (data.length < 20) return { volume: 0, trend: 'neutral' };
+
+  const volumeChanges = [];
+  for (let i = 1; i < data.length; i++) {
+    volumeChanges.push(data[i].volume - data[i-1].volume);
+  }
+
+  const avgVolume = volumeChanges.reduce((a, b) => a + b, 0) / volumeChanges.length;
+  const currentVolume = data[data.length-1].volume || 0;
+
+  let trend;
+  if (currentVolume > avgVolume * 1.5) trend = 'high';
+  else if (currentVolume < avgVolume * 0.7) trend = 'low';
+  else trend = 'normal';
+
+  return { volume: currentVolume, trend };
 };
 
 const getSignal = (data) => {
   const rsi = getRSI(data);
-  const macd = getMACD(data);
-  if (rsi < 30 && macd > 0) return 'BUY';
-  if (rsi > 70 && macd < 0) return 'SELL';
+  const { macd, signalLine } = getMACD(data);
+  const { trend } = getVolumeAnalysis(data);
+
+  const isOversold = rsi < 30;
+  const isOverbought = rsi > 70;
+  const isBullish = macd > signalLine;
+  const isBearish = macd < signalLine;
+
+  if (isOversold && isBullish && trend === 'high') return 'STRONG_BUY';
+  if (isOversold && isBullish) return 'BUY';
+  if (isOverbought && isBearish && trend === 'low') return 'STRONG_SELL';
+  if (isOverbought && isBearish) return 'SELL';
   return 'HOLD';
+};
+
+const getSignalSeverity = (signal) => {
+  if (signal === 'STRONG_BUY') return { color: '#00ff88', icon: 'trending-up', text: 'Strong Buy' };
+  if (signal === 'BUY') return { color: '#00ffaa', icon: 'arrow-up', text: 'Buy' };
+  if (signal === 'SELL') return { color: '#ff4444', icon: 'arrow-down', text: 'Sell' };
+  if (signal === 'STRONG_SELL') return { color: '#ff0000', icon: 'trending-down', text: 'Strong Sell' };
+  return { color: '#888888', icon: 'minus', text: 'Hold' };
+};
+
+const getRSIStatus = (rsi) => {
+  if (rsi < 30) return { color: '#00ff88', label: 'Oversold', severity: 'low' };
+  if (rsi > 70) return { color: '#ff4444', label: 'Overbought', severity: 'high' };
+  if (rsi < 40) return { color: '#00ffaa', label: 'Bullish', severity: 'medium' };
+  if (rsi > 60) return { color: '#ffaa44', label: 'Bearish', severity: 'medium' };
+  return { color: '#888888', label: 'Neutral', severity: 'low' };
+};
+
+const getMACDStatus = (macd, signalLine) => {
+  const diff = macd - signalLine;
+  if (diff > 0.1 * signalLine) return { color: '#00ff88', label: 'Bullish', severity: 'high' };
+  if (diff > 0) return { color: '#00ffaa', label: 'Bullish', severity: 'medium' };
+  if (diff < -0.1 * signalLine) return { color: '#ff4444', label: 'Bearish', severity: 'high' };
+  if (diff < 0) return { color: '#ffaa44', label: 'Bearish', severity: 'medium' };
+  return { color: '#888888', label: 'Neutral', severity: 'low' };
+};
+
+const getVolumeStatus = (trend) => {
+  if (trend === 'high') return { color: '#00ff88', label: 'High Volume', severity: 'high' };
+  if (trend === 'low') return { color: '#ff4444', label: 'Low Volume', severity: 'high' };
+  return { color: '#888888', label: 'Normal Volume', severity: 'low' };
 };
 
 const Signals = () => {
@@ -59,17 +138,33 @@ const Signals = () => {
     const fetchData = async () => {
       const { data: historicalData } = await supabase
         .from('historical_data')
-        .select('close, open')
-        .order('id', { ascending: false });
+        .select('close, open, volume')
+        .order('id', { ascending: false })
+        .limit(100);
+
       const processedData = historicalData.map((item, index) => ({
         ...item,
         close: parseFloat(item.close),
         open: parseFloat(item.open),
+        volume: parseInt(item.volume) || Math.floor(Math.random() * 10000),
       }));
-      const signals = processedData.map((item, index) => ({
-        ...item,
-        signal: getSignal(processedData.slice(0, index + 1)),
-      }));
+
+      const signals = processedData.map((item, index) => {
+        const rsi = getRSI(processedData.slice(0, index + 1));
+        const { macd, signalLine } = getMACD(processedData.slice(0, index + 1));
+        const { trend } = getVolumeAnalysis(processedData.slice(0, index + 1));
+        const signal = getSignal(processedData.slice(0, index + 1));
+
+        return {
+          ...item,
+          rsi,
+          macd,
+          signalLine,
+          volumeTrend: trend,
+          signal,
+        };
+      });
+
       setData(signals);
       setLastUpdated(new Date().toLocaleTimeString());
     };
@@ -81,29 +176,45 @@ const Signals = () => {
       const fetchData = async () => {
         const { data: historicalData } = await supabase
           .from('historical_data')
-          .select('close, open')
-          .order('id', { ascending: false });
+          .select('close, open, volume')
+          .order('id', { ascending: false })
+          .limit(100);
+
         const processedData = historicalData.map((item, index) => ({
           ...item,
           close: parseFloat(item.close),
           open: parseFloat(item.open),
+          volume: parseInt(item.volume) || Math.floor(Math.random() * 10000),
         }));
-        const signals = processedData.map((item, index) => ({
-          ...item,
-          signal: getSignal(processedData.slice(0, index + 1)),
-        }));
+
+        const signals = processedData.map((item, index) => {
+          const rsi = getRSI(processedData.slice(0, index + 1));
+          const { macd, signalLine } = getMACD(processedData.slice(0, index + 1));
+          const { trend } = getVolumeAnalysis(processedData.slice(0, index + 1));
+          const signal = getSignal(processedData.slice(0, index + 1));
+
+          return {
+            ...item,
+            rsi,
+            macd,
+            signalLine,
+            volumeTrend: trend,
+            signal,
+          };
+        });
+
         setData(signals);
         setLastUpdated(new Date().toLocaleTimeString());
       };
       fetchData();
-    }, 60000);
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 
   const filteredData = data.filter((item) => {
     if (filter === 'Tous') return true;
-    if (filter === 'BUY' && item.signal === 'BUY') return true;
-    if (filter === 'SELL' && item.signal === 'SELL') return true;
+    if (filter === 'BUY' && (item.signal === 'BUY' || item.signal === 'STRONG_BUY')) return true;
+    if (filter === 'SELL' && (item.signal === 'SELL' || item.signal === 'STRONG_SELL')) return true;
     if (filter === 'HOLD' && item.signal === 'HOLD') return true;
     return false;
   });
@@ -133,224 +244,117 @@ const Signals = () => {
         </button>
       </header>
       <main className="main">
-        {filteredData.map((item, index) => (
-          <div key={index} className="asset-card">
-            <h2>
-              {item.ticker} - {item.name}
-            </h2>
-            <p>
-              Prix simulé : {item.price}
-            </p>
-            <div className="score-bar">
-              <div
-                className="score-bar-bullish"
-                style={{
-                  width: `${item.signal === 'BUY' ? 100 : 0}%`,
-                  backgroundColor: item.signal === 'BUY' ? '#00ff88' : '#ff0000',
-                }}
-              />
-              <div
-                className="score-bar-bearish"
-                style={{
-                  width: `${item.signal === 'SELL' ? 100 : 0}%`,
-                  backgroundColor: item.signal === 'SELL' ? '#00ff88' : '#ff0000',
-                }}
-              />
-            </div>
-            <div className="badges">
-              <div className="badge rsi-badge">
-                <p>RSI : {getRSI(data.slice(0, index + 1)).toFixed(2)}</p>
-                <p
-                  style={{
-                    color: getRSI(data.slice(0, index + 1)) < 30 ? '#00ff88' : getRSI(data.slice(0, index + 1)) > 70 ? '#ff0000' : '#888',
-                  }}
-                >
-                  {getRSI(data.slice(0, index + 1)) < 30 ? 'Oversold' : getRSI(data.slice(0, index + 1)) > 70 ? 'Overbought' : 'Neutral'}
-                </p>
+        {filteredData.map((item, index) => {
+          const rsiStatus = getRSIStatus(item.rsi);
+          const macdStatus = getMACDStatus(item.macd, item.signalLine);
+          const volumeStatus = getVolumeStatus(item.volumeTrend);
+          const signalSeverity = getSignalSeverity(item.signal);
+
+          return (
+            <div key={index} className="asset-card">
+              <div className="asset-header">
+                <h2>
+                  {item.ticker} - {item.name}
+                </h2>
+                <div className="price-container">
+                  <span className="price">${item.price.toFixed(2)}</span>
+                  <span className="price-change">
+                    {Math.random() > 0.5 ? '▲' : '▼'} {Math.random() * 5 + 0.5}%
+                  </span>
+                </div>
               </div>
-              <div className="badge macd-badge">
-                <p>MACD : {getMACD(data.slice(0, index + 1)).toFixed(2)}</p>
-                <p
-                  style={{
-                    color: getMACD(data.slice(0, index + 1)) > 0 ? '#00ff88' : getMACD(data.slice(0, index + 1)) < 0 ? '#ff0000' : '#888',
-                  }}
-                >
-                  {getMACD(data.slice(0, index + 1)) > 0 ? 'Bullish' : getMACD(data.slice(0, index + 1)) < 0 ? 'Bearish' : 'Neutral'}
-                </p>
+
+              <div className="score-container">
+                <div className="score-indicator">
+                  <div className="score-label">Signal Global</div>
+                  <div className="score-value" style={{ color: signalSeverity.color }}>
+                    <Lucide icon={signalSeverity.icon} size={16} />
+                    {signalSeverity.text}
+                  </div>
+                </div>
+
+                <div className="score-gauge">
+                  <div className="gauge-bar">
+                    <div
+                      className="gauge-fill bullish-fill"
+                      style={{ width: `${Math.min(rsiStatus.severity === 'high' ? 100 : rsiStatus.severity === 'medium' ? 70 : 40, 100)}%` }}
+                    />
+                    <div
+                      className="gauge-fill bearish-fill"
+                      style={{ width: `${Math.min(macdStatus.severity === 'high' ? 100 : macdStatus.severity === 'medium' ? 70 : 40, 100)}%` }}
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="badge volume-badge">
-                <p>Volume : {Math.random() * 1000}</p>
-                <p
-                  style={{
-                    color: Math.random() * 1000 > 500 ? '#00ff88' : Math.random() * 1000 < 250 ? '#ff0000' : '#888',
-                  }}
-                >
-                  {Math.random() * 1000 > 500 ? 'High' : Math.random() * 1000 < 250 ? 'Low' : 'Normal'}
-                </p>
-              </div>
-            </div>
-            <div className="signal-badge">
-              <p>
-                Signal : {item.signal}
-              </p>
-              <p
-                style={{
-                  color: item.signal === 'BUY' ? '#00ff88' : item.signal === 'SELL' ? '#ff0000' : '#888',
-                }}
-              >
-                <Lucide icon={item.signal === 'BUY' ? 'arrow-up' : item.signal === 'SELL' ? 'arrow-down' : 'arrow-right'} />
-              </p>
-            </div>
-          </div>
-        ))}
-      </main>
-    </div>
-  );
-};
 
-export default Signals;
-```
+              <div className="indicators-grid">
+                <div className="indicator-card rsi-card">
+                  <div className="indicator-header">
+                    <div className="indicator-title">RSI</div>
+                    <div className="indicator-value" style={{ color: rsiStatus.color }}>
+                      {item.rsi.toFixed(2)}
+                    </div>
+                  </div>
+                  <div className="indicator-status" style={{ color: rsiStatus.color }}>
+                    <Lucide icon={rsiStatus.severity === 'high' ? 'alert-triangle' : rsiStatus.severity === 'medium' ? 'info' : 'check'} size={14} />
+                    {rsiStatus.label}
+                  </div>
+                  <div className="indicator-gauge">
+                    <div className="gauge-scale">
+                      <span style={{ color: rsiStatus.severity === 'high' ? '#ff4444' : '#888' }}>70</span>
+                      <span style={{ color: rsiStatus.severity === 'medium' ? '#ffaa44' : '#888' }}>50</span>
+                      <span style={{ color: rsiStatus.severity === 'low' ? '#00ffaa' : '#888' }}>30</span>
+                    </div>
+                    <div className="gauge-bar rsi-gauge">
+                      <div
+                        className="gauge-fill"
+                        style={{
+                          width: `${Math.min(item.rsi, 100)}%`,
+                          backgroundColor: rsiStatus.color,
+                          opacity: 0.7
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
 
-```css
-.signals-page {
-  font-family: 'Inter', sans-serif;
-  background-color: var(--bg);
-  color: var(--t1);
-}
+                <div className="indicator-card macd-card">
+                  <div className="indicator-header">
+                    <div className="indicator-title">MACD</div>
+                    <div className="indicator-value" style={{ color: macdStatus.color }}>
+                      {item.macd.toFixed(2)}
+                    </div>
+                  </div>
+                  <div className="indicator-status" style={{ color: macdStatus.color }}>
+                    <Lucide icon={macdStatus.severity === 'high' ? 'alert-triangle' : macdStatus.severity === 'medium' ? 'info' : 'check'} size={14} />
+                    {macdStatus.label}
+                  </div>
+                  <div className="indicator-gauge">
+                    <div className="macd-line">
+                      <div
+                        className="macd-bar bullish-bar"
+                        style={{
+                          width: `${Math.min(item.macd > 0 ? item.macd * 2 : 0, 100)}%`,
+                          backgroundColor: item.macd > 0 ? '#00ff88' : 'transparent'
+                        }}
+                      />
+                      <div
+                        className="macd-bar bearish-bar"
+                        style={{
+                          width: `${Math.min(item.macd < 0 ? Math.abs(item.macd) * 2 : 0, 100)}%`,
+                          backgroundColor: item.macd < 0 ? '#ff4444' : 'transparent'
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
 
-.header {
-  background-color: var(--bg2);
-  padding: 1rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header nav ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-}
-
-.header nav ul li {
-  margin-right: 1rem;
-}
-
-.header nav a {
-  color: var(--t1);
-  text-decoration: none;
-}
-
-.header nav a:hover {
-  color: var(--green);
-}
-
-.refresh-button {
-  background-color: var(--bg2);
-  border: none;
-  padding: 0.5rem 1rem;
-  font-size: 1rem;
-  cursor: pointer;
-}
-
-.refresh-button:hover {
-  background-color: var(--bg3);
-}
-
-.main {
-  padding: 2rem;
-}
-
-.asset-card {
-  background-color: var(--bg);
-  padding: 1rem;
-  margin-bottom: 1rem;
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-}
-
-.asset-card h2 {
-  font-size: 1.5rem;
-  margin-top: 0;
-}
-
-.asset-card p {
-  font-size: 1rem;
-  margin-bottom: 1rem;
-}
-
-.score-bar {
-  height: 10px;
-  background-color: var(--bg);
-  border-radius: 0.5rem;
-  overflow: hidden;
-  margin-bottom: 1rem;
-}
-
-.score-bar-bullish {
-  height: 100%;
-  background-color: var(--green);
-}
-
-.score-bar-bearish {
-  height: 100%;
-  background-color: var(--green);
-}
-
-.badges {
-  display: flex;
-  margin-bottom: 1rem;
-}
-
-.badge {
-  background-color: var(--bg);
-  padding: 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  margin-right: 1rem;
-}
-
-.rsi-badge p {
-  font-size: 1rem;
-  margin-bottom: 0.5rem;
-}
-
-.rsi-badge p:last-child {
-  font-size: 0.8rem;
-}
-
-.macd-badge p {
-  font-size: 1rem;
-  margin-bottom: 0.5rem;
-}
-
-.macd-badge p:last-child {
-  font-size: 0.8rem;
-}
-
-.volume-badge p {
-  font-size: 1rem;
-  margin-bottom: 0.5rem;
-}
-
-.volume-badge p:last-child {
-  font-size: 0.8rem;
-}
-
-.signal-badge {
-  background-color: var(--bg);
-  padding: 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.signal-badge p {
-  font-size: 1rem;
-  margin-bottom: 0.5rem;
-}
-
-.signal-badge p:last-child {
-  font-size: 1.5rem;
-}
+                <div className="indicator-card volume-card">
+                  <div className="indicator-header">
+                    <div className="indicator-title">Volume</div>
+                    <div className="indicator-value" style={{ color: volumeStatus.color }}>
+                      {item.volumeTrend === 'high' ? 'High' : item.volumeTrend === 'low' ? 'Low' : 'Normal'}
+                    </div>
+                  </div>
+                  <div className="indicator-status" style={{ color: volumeStatus.color }}>
+                    <Lucide icon={volumeStatus.severity === 'high' ? 'alert-triangle' : volumeStatus.severity === 'medium' ? 'info' : 'check
