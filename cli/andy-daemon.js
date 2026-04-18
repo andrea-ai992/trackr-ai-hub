@@ -297,7 +297,7 @@ function updateTaskStatus(name, updates) {
 }
 
 // ── Execute task ──────────────────────────────────────────────────────────────
-async function executeTask(taskContent, taskName = '') {
+async function executeTask(taskContent, taskName = '', isManual = false) {
   const ts    = () => new Date().toISOString()
   const stage = (s, extra = {}) => {
     if (taskName) {
@@ -305,6 +305,11 @@ async function executeTask(taskContent, taskName = '') {
       if (liveWorkers._current) liveWorkers._current.stage = s
       writeLiveState()
     }
+  }
+
+  // Vérifie si on doit céder la place à une tâche manuelle urgente
+  const checkInterrupt = () => {
+    if (!isManual && urgentPending()) throw new InterruptError()
   }
 
   const planPrompt = [
@@ -318,6 +323,7 @@ async function executeTask(taskContent, taskName = '') {
   ].join('\n')
 
   stage('planning')
+  checkInterrupt()
   const plan    = await generateRaw(planPrompt, 300, MODEL_FAST)
   const fileOps = plan.split('\n')
     .map(l => l.match(/^(CREATE|MODIFY):(.+\.[\w]+)/i))
@@ -356,6 +362,7 @@ async function executeTask(taskContent, taskName = '') {
       'Code uniquement, pas de backticks.',
     ].filter(Boolean).join('\n')
 
+    checkInterrupt()
     const newCode = await generateRaw(codePrompt, 6000, MODEL_SMART)
     let clean = newCode.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim()
 
@@ -373,6 +380,7 @@ async function executeTask(taskContent, taskName = '') {
       'Réponds uniquement: APPROVED ou REJECTED\nRAISON: ...\nFIX: <code complet corrigé si REJECTED>',
     ].join('\n')
 
+    checkInterrupt()
     const review = await generateRaw(reviewPrompt, 6000, MODEL_FAST)
     if (review.trim().startsWith('REJECTED')) {
       const fixMatch = review.match(/FIX:([\s\S]+)/)
@@ -461,8 +469,9 @@ async function runTask(filePath) {
   const runningPath = filePath.replace(/\.txt$/, '.running')
   renameSync(filePath, runningPath)
 
+  const isManual = name.startsWith('manual-') || name.startsWith('urgent-')
   try {
-    await executeTask(content, name)
+    await executeTask(content, name, isManual)
     const dur = Math.round((Date.now() - startTime) / 1000)
     const taskStatus = readStatus().find(t => t.name === name)
     updateTaskStatus(name, { status: 'DONE', dur })
@@ -472,6 +481,14 @@ async function runTask(filePath) {
     notifBuffer.push({ name, files: taskStatus?.files || [], dur })
     await flushDiscordNotif()
   } catch (err) {
+    if (err.isInterrupt) {
+      // Requeue — une tâche manuelle a la priorité
+      renameSync(runningPath, runningPath.replace(/\.running$/, '.txt'))
+      claimedTasks.delete(name + '.txt')
+      updateTaskStatus(name, { status: 'QUEUED', stage: 'queued' })
+      log(`TASK INTERRUPTED (requeued): ${name} — tâche manuelle prioritaire`)
+      return
+    }
     const dur = Math.round((Date.now() - startTime) / 1000)
     updateTaskStatus(name, { status: 'ERROR', stage: 'error', dur, error: err.message })
     renameSync(runningPath, runningPath.replace(/\.running$/, '.error'))
@@ -768,15 +785,30 @@ const claimedTasks = new Set()
 
 function priorityScore(fname) {
   let score = 0
+  if (fname.startsWith('urgent-'))   score += 2000  // interruption immédiate
+  if (fname.startsWith('manual-'))   score += 1000  // tâches utilisateur — toujours en premier
   if (fname.startsWith('critical-')) score += 100
   if (fname.startsWith('fix-'))      score += 80
   if (fname.startsWith('NUIT-'))     score += 70
   if (fname.startsWith('v2-'))       score += 60
-  if (fname.startsWith('manual-'))   score += 50
   if (fname.startsWith('auto-'))     score += 30
   if (fname.includes('redesign'))    score += 15
   if (fname.includes('perf'))        score += 10
   return score
+}
+
+// Vérifie si une tâche manuelle/urgente attend en queue
+function urgentPending() {
+  try {
+    return readdirSync(TASKS_DIR).some(f =>
+      (f.startsWith('manual-') || f.startsWith('urgent-')) && f.endsWith('.txt')
+    )
+  } catch { return false }
+}
+
+// Throw this to interrupt a running auto task and requeue it
+class InterruptError extends Error {
+  constructor() { super('INTERRUPTED'); this.isInterrupt = true }
 }
 
 function claimNextTask() {
