@@ -56,8 +56,9 @@ const STRUCTURE = [
   {
     name: '🤖 AnDy',
     channels: [
-      { name: 'chat',         topic: 'Parle à AnDy — questions, idées, conseils, n\'importe quoi' },
-      { name: 'tâches',       topic: '!task <desc> · !urgent <desc> · !status · !queue — Donner des tâches à AnDy' },
+      { name: 'aide',         topic: '🧠 Décris ce que tu veux faire — AnDy comprend et crée la tâche automatiquement' },
+      { name: 'chat',         topic: 'Chat libre avec AnDy — questions, conseils, analyses' },
+      { name: 'tâches',       topic: '!task <desc> · !urgent <desc> · !status · !queue · !logs · !deploy' },
       { name: 'mémoire',      topic: 'Ce qu\'AnDy a appris et retenu — log automatique' },
     ]
   },

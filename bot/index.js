@@ -150,11 +150,61 @@ Montre ton raisonnement structuré, identifie les risques, donne une conclusion 
 
   web: () => `Tu es AnDy en MODE INFO. Donne les infos les plus récentes que tu as.
 Dis clairement si quelque chose pourrait avoir changé depuis ta date de coupure.`,
+
+  aide: () => `Tu es AnDy, l'assistant IA d'Andrea Matlega pour son app Trackr.
+
+SYSTÈME COMPLET:
+- App Trackr (React/Vite) déployée sur Vercel: https://trackr-app-nu.vercel.app
+- Daemon IA (andy-daemon) sur VPS 62.238.12.221 — exécute des tâches en autonomie
+- Dashboard dev: http://62.238.12.221:4000/vibe
+- Bot Discord principal (AnDy) + Bot Dev (AnDy Dev)
+- CLI: node cli/task.js sur le repo local
+
+CANAUX DISCORD:
+- #chat → questions générales, conseils, analyses
+- #tâches → donner des tâches au daemon IA (!task, !urgent, !status, !queue)
+- #crypto #trading → analyses financières
+- #déploiements → voir les commits et déploiements
+- #bugs → signaler des bugs
+- #idées → suggestions de features
+- #live → statut daemon en direct
+- #aide → CE CANAL — tu guides Andrea
+
+COMMANDES DISPONIBLES:
+- !task <description> → crée une tâche normale (le daemon l'exécute en quelques minutes)
+- !urgent <description> → tâche urgente (interrompt tout immédiatement)
+- !status → voir ce qu'AnDy fait en ce moment
+- !queue → voir toutes les tâches en attente
+- !logs → voir les derniers logs du daemon
+- !deploy → voir les derniers commits GitHub
+- !think <question> → analyse approfondie
+- !web <question> → infos récentes
+
+DEPUIS LE CLI:
+- node cli/task.js "description" → soumet une tâche
+- node cli/task.js urgent "description" → tâche urgente
+- node cli/task.js status → statut
+
+TON RÔLE DANS #aide:
+1. Andrea décrit ce qu'elle veut faire en langage naturel
+2. Tu comprends l'intention
+3. Tu réponds avec: le canal exact + la commande exacte à copier-coller
+4. Format de réponse:
+   📍 Va dans **#canal**
+   \`\`\`
+   commande exacte à copier-coller
+   \`\`\`
+   ⏱️ Ce qui va se passer: [description courte]
+
+Si la demande est une TÂCHE à exécuter → tu la crées DIRECTEMENT (pas besoin qu'Andrea aille ailleurs) et tu confirmes.
+Si c'est une QUESTION → tu réponds directement.
+Si c'est ambigu → tu demandes une clarification en 1 phrase max.`,
 }
 
 async function callClaude(message, { channelName = '', mode = 'default', systemNote = null, onChunk = null } = {}) {
   const isTrading = TRADING_CHANNELS.has(channelName)
-  const systemKey = systemNote ? null : (mode === 'think' ? 'think' : mode === 'web' ? 'web' : isTrading ? 'trading' : 'default')
+  const isAide    = channelName === 'aide' || channelName === 'assistant' || channelName === 'help'
+  const systemKey = systemNote ? null : (mode === 'think' ? 'think' : mode === 'web' ? 'web' : isAide ? 'aide' : isTrading ? 'trading' : 'default')
   const system = systemNote || SYSTEM[systemKey](channelName)
   const maxTokens = mode === 'think' ? 2000 : 600
 
@@ -347,6 +397,7 @@ async function processMessage(msg, channelName) {
   }
 
   // Mode parsing
+  const isAideChannel = ['aide', 'assistant', 'help'].includes(chName)
   let mode = 'default', cleanContent = content
   if (/^!think\s+/i.test(content))  { mode = 'think'; cleanContent = content.replace(/^!think\s+/i, '') }
   else if (/^!web\s+/i.test(content)) { mode = 'web';   cleanContent = content.replace(/^!web\s+/i, '') }
@@ -354,7 +405,46 @@ async function processMessage(msg, channelName) {
 
   console.log(`💬 [#${channelName}] ${username}: ${cleanContent.slice(0, 80)}`)
 
-  // Intent routing
+  // ── #aide : l'IA crée la tâche directement si elle le juge pertinent ──────────
+  if (isAideChannel && isAdmin(userId) && mode === 'default') {
+    const ph = await sendReply(msg.channel_id, msg.id, '⟨◈⟩ …').catch(() => null)
+    const onChunk = ph?.id ? p => editMessage(msg.channel_id, ph.id, p) : null
+
+    // Demande à l'IA d'analyser + éventuellement générer une commande !task
+    const aidePrompt = `Andrea dit: "${cleanContent}"
+
+Analyse et réponds selon le format de ton system prompt.
+Si c'est une tâche à exécuter, inclus dans ta réponse une ligne au format exact:
+CRÉER_TÂCHE: <description complète et précise de la tâche pour le daemon IA>
+ou si urgent:
+CRÉER_URGENT: <description>
+Sinon, réponds normalement.`
+
+    const reply = await callClaude(aidePrompt, { channelName, onChunk })
+
+    // Extrait et crée la tâche si l'IA l'a décidé
+    if (reply) {
+      const taskMatch = reply.match(/CRÉER_TÂCHE:\s*(.+)/i)
+      const urgentMatch = reply.match(/CRÉER_URGENT:\s*(.+)/i)
+      const match = urgentMatch || taskMatch
+      if (match) {
+        const desc = match[1].trim()
+        const priority = urgentMatch ? 'urgent' : 'manual'
+        const fname = `${priority}-${Date.now()}.txt`
+        try { writeFileSync(resolve(TASKS_DIR, fname), desc, 'utf8') } catch {}
+        const clean = reply.replace(/CRÉER_(TÂCHE|URGENT):\s*.+/gi, '').trim()
+        const confirmation = `${clean}\n\n${urgentMatch ? '🚨 **URGENT créé**' : '✅ **Tâche créée**'} → \`${fname}\``
+        if (ph?.id) await editMessage(msg.channel_id, ph.id, confirmation)
+        else await sendReply(msg.channel_id, msg.id, confirmation)
+        return
+      }
+      if (ph?.id) await editMessage(msg.channel_id, ph.id, reply)
+      else await sendReply(msg.channel_id, msg.id, reply)
+    }
+    return
+  }
+
+  // Intent routing standard
   const intent = mode === 'default' ? detectIntent(cleanContent) : 'chat'
 
   if (intent === 'lost') {
@@ -365,11 +455,8 @@ async function processMessage(msg, channelName) {
   // "Je veux développer X" → save task + explain steps
   if (intent === 'develop' && isAdmin(userId)) {
     const taskDesc = cleanContent.replace(/^(je veux|j'aimerais|développe|crée|ajoute)\s+/i, '').trim()
-    await fetch(`${APP_URL}/api/memory`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'admin_task', status: 'pending', source: `discord-${username}`, description: taskDesc, createdAt: new Date().toISOString() }),
-    }).catch(() => {})
+    const fname = `manual-${Date.now()}.txt`
+    try { writeFileSync(resolve(TASKS_DIR, fname), taskDesc, 'utf8') } catch {}
 
     let ph
     try { ph = await sendReply(msg.channel_id, msg.id, `✅ **Tâche**: ${taskDesc}\n> 🧠 Analyse en cours...`) } catch {}
