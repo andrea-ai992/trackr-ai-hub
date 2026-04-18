@@ -221,6 +221,9 @@ self.addEventListener('fetch', e => {
   <link rel="icon" type="image/png" href="/icon-192.png">
   <link rel="apple-touch-icon" type="image/png" href="/apple-touch-icon.png">
   <link rel="stylesheet" href="/styles.css">
+  <meta name="theme-color" content="#00ff88">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="display" content="standalone">
 </head>
 <body>
   <!-- Contenu de la page -->
@@ -246,6 +249,74 @@ body {
 
 ```javascript
 // Ajoutez vos scripts ici
+```
+
+**package.json**
+
+```json
+{
+  "name": "trackr",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-router-dom": "^6.3.0",
+    "lucide-react": "^1.0.0",
+    "@supabase/supabase-js": "^1.4.0"
+  },
+  "devDependencies": {
+    "vite": "^4.1.0"
+  }
+}
+```
+
+**Vite configuration**
+
+```javascript
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    outDir: 'public',
+    manifest: true,
+    rollupOptions: {
+      input: 'src/index.html',
+    },
+  },
+});
+```
+
+**service worker registration**
+
+```javascript
+// src/index.js
+import { register } from 'register-service-worker';
+
+register('/sw.js', {
+  ready() {
+    console.log('Service worker ready');
+  },
+  registered() {
+    console.log('Service worker registered');
+  },
+  cached() {
+    console.log('Service worker cached');
+  },
+  updated() {
+    console.log('Service worker updated');
+  },
+  offline() {
+    console.log('Service worker offline');
+  },
+  error(error) {
+    console.error('Service worker error:', error);
+  },
+});
 ```
 
 Assurez-vous de mettre à jour votre fichier `package.json` pour inclure les dépendances nécessaires pour le service worker et les manifestes.
