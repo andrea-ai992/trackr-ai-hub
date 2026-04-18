@@ -1,8 +1,11 @@
+Voici le code complet et fonctionnel pour le redesign du Dashboard.jsx :
+
+```jsx
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { fetchMultiplePrices } from '../hooks/useStockPrice'
-import { Plane, ChevronRight, TrendingUp, ArrowUpRight, ArrowDownRight, Bot } from 'lucide-react'
+import { Plane, ChevronRight, TrendingUp, ArrowUpRight, ArrowDownRight, Bot, ChartLine, Signal, Wallet, Newspaper } from 'lucide-react'
 
 function greeting() {
   const h = new Date().getHours()
@@ -22,7 +25,7 @@ function fmtPct(n) {
   return (n >= 0 ? '+' : '') + n.toFixed(2) + '%'
 }
 
-function Sparkline({ data, color = '#00ff88', width = 72, height = 28 }) {
+function Sparkline({ data, color = 'var(--green)', width = 72, height = 28 }) {
   if (!data || data.length < 2) return <div style={{ width, height }} />
   const min = Math.min(...data), max = Math.max(...data), range = max - min || 1
   const pts = data.map((v, i) => `${(i / (data.length - 1)) * width},${height - ((v - min) / range) * (height - 4) + 2}`).join(' ')
@@ -42,9 +45,9 @@ function FGGauge({ value }) {
   const nx = cx + r * Math.cos(angle), ny = cy + r * Math.sin(angle)
   const largeArc = v > 50 ? 1 : 0
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, marginBottom: 12 }}>
       <svg width={100} height={54} viewBox="0 0 100 54">
-        <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6" strokeLinecap="round" />
+        <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} fill="none" stroke="var(--border)" strokeWidth="6" strokeLinecap="round" />
         {v > 0 && <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 ${largeArc} 1 ${nx} ${ny}`} fill="none" stroke={color} strokeWidth="6" strokeLinecap="round" />}
         <circle cx={nx} cy={ny} r="4" fill={color} />
         <text x={cx} y={cy + 4} textAnchor="middle" fill="white" fontSize="15" fontWeight="800" fontFamily="Inter,system-ui">{v}</text>
@@ -97,58 +100,257 @@ export default function Dashboard() {
   const coinColor = { bitcoin: '#f59e0b', ethereum: '#6366f1', solana: '#9945ff', binancecoin: '#f0b90b' }
 
   return (
-    <div className="page" style={{ paddingTop: 'max(60px, env(safe-area-inset-top, 0px))', backgroundColor: '#080808', color: '#f0f0f0', maxWidth: '520px', margin: '0 auto', padding: '0 16px', animation: 'fadeUp 0.6s ease-out' }}>
+    <div className="page" style={{
+      paddingTop: 'max(60px, env(safe-area-inset-top, 0px))',
+      backgroundColor: 'var(--bg)',
+      color: 'var(--t1)',
+      maxWidth: '520px',
+      margin: '0 auto',
+      padding: '0 16px',
+      fontFamily: 'Inter, system-ui, sans-serif',
+      minHeight: '100vh'
+    }}>
+      <style>
+        {`
+          @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
+          .stagger-item {
+            animation: fadeUp 0.4s ease-out forwards;
+            opacity: 0;
+          }
+          .stagger-item:nth-child(1) { animation-delay: 0.1s; }
+          .stagger-item:nth-child(2) { animation-delay: 0.2s; }
+          .stagger-item:nth-child(3) { animation-delay: 0.3s; }
+          .stagger-item:nth-child(4) { animation-delay: 0.4s; }
+          .stagger-item:nth-child(5) { animation-delay: 0.5s; }
+          .stagger-item:nth-child(6) { animation-delay: 0.6s; }
+          .stagger-item:nth-child(7) { animation-delay: 0.7s; }
+          .stagger-item:nth-child(8) { animation-delay: 0.8s; }
+          .stagger-item:nth-child(9) { animation-delay: 0.9s; }
+          .stagger-item:nth-child(10) { animation-delay: 1s; }
+
+          .scroll-row {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+          }
+          .scroll-row::-webkit-scrollbar { display: none; }
+
+          .press-scale {
+            transition: transform 0.15s ease, opacity 0.15s ease;
+          }
+          .press-scale:active {
+            transform: scale(0.96);
+          }
+
+          .pill {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+          }
+          .pill-up { background: rgba(0, 255, 136, 0.15); color: var(--green); }
+          .pill-down { background: rgba(255, 77, 77, 0.15); color: #ff4d4d; }
+
+          .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--t2);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+          }
+
+          .num {
+            font-variant-numeric: tabular-nums;
+          }
+        `}
+      </style>
+
+      {/* Header */}
       <div className="stagger-item" style={{ marginBottom: 24 }}>
-        <p style={{ fontSize: 11, color: 'var(--t3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 4 }}>{today}</p>
-        <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--t1)', letterSpacing: '-0.3px' }}>
-          {greeting()}, <span style={{ color: 'var(--green)' }}>{name}</span>
-        </h1>
-        <div className="live-dot" style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#00ff88', animation: 'pulse 1s infinite' }} />
+        <p style={{
+          fontSize: 11,
+          color: 'var(--t3)',
+          fontWeight: 600,
+          textTransform: 'uppercase',
+          letterSpacing: '0.12em',
+          marginBottom: 4
+        }}>
+          {today}
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <h1 style={{
+            fontSize: 26,
+            fontWeight: 800,
+            color: 'var(--t1)',
+            letterSpacing: '-0.3px',
+            margin: 0
+          }}>
+            {greeting()}, <span style={{ color: 'var(--green)' }}>{name}</span>
+          </h1>
+          <div className="live-dot" style={{
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            backgroundColor: 'var(--green)',
+            animation: 'pulse 1s infinite',
+            flexShrink: 0
+          }} />
+        </div>
       </div>
 
-      <button onClick={() => navigate('/markets')} className="press-scale stagger-item" style={{
-        width: '100%', textAlign: 'left', marginBottom: 12,
-        background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(12px)', border: `1px solid ${isUp ? 'rgba(0,255,136,0.18)' : 'rgba(255,77,77,0.18)'}`,
-        borderRadius: 'var(--radius-xl)', padding: '20px', display: 'block',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+      {/* Portfolio Hero */}
+      <button
+        onClick={() => navigate('/portfolio')}
+        className="press-scale stagger-item"
+        style={{
+          width: '100%',
+          textAlign: 'left',
+          marginBottom: 16,
+          background: 'var(--bg2)',
+          backdropFilter: 'blur(12px)',
+          border: `1px solid ${isUp ? 'rgba(0,255,136,0.2)' : 'rgba(255,77,77,0.2)'}`,
+          borderRadius: 'var(--radius-xl)',
+          padding: '24px',
+          display: 'block',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 16
+        }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--bg2)', border: '1px solid var(--border-hi)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <TrendingUp size={15} color="var(--green)" />
+            <div style={{
+              width: 36,
+              height: 36,
+              borderRadius: 12,
+              background: 'rgba(0,255,136,0.1)',
+              border: '1px solid rgba(0,255,136,0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <TrendingUp size={16} color="var(--green)" />
             </div>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Portfolio</span>
+            <span style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: 'var(--t2)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em'
+            }}>
+              Portfolio
+            </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span className="live-dot" />
-            <span style={{ fontSize: 10, color: 'var(--green)', fontWeight: 600 }}>Live</span>
+            <div className="live-dot" style={{ width: 5, height: 5 }} />
+            <span style={{
+              fontSize: 10,
+              color: 'var(--green)',
+              fontWeight: 600
+            }}>
+              Live
+            </span>
           </div>
         </div>
 
-        <div className="num" style={{ fontSize: 38, fontWeight: 900, color: 'var(--t1)', letterSpacing: '-1px', marginBottom: 8, lineHeight: 1 }}>
+        <div style={{
+          fontSize: 38,
+          fontWeight: 900,
+          color: 'var(--t1)',
+          letterSpacing: '-1px',
+          marginBottom: 8,
+          lineHeight: 1
+        }}>
           {fmt(cur)}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            {isUp ? <ArrowUpRight size={14} color="var(--green)" /> : <ArrowDownRight size={14} color="var(--red)" />}
-            <span className="num" style={{ fontSize: 14, fontWeight: 700, color: isUp ? 'var(--green)' : 'var(--red)' }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          marginBottom: 20
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {isUp ? (
+              <ArrowUpRight size={16} color="var(--green)" />
+            ) : (
+              <ArrowDownRight size={16} color="#ff4d4d" />
+            )}
+            <span style={{
+              fontSize: 14,
+              fontWeight: 700,
+              color: isUp ? 'var(--green)' : '#ff4d4d'
+            }}>
               {fmt(Math.abs(pnl))}
             </span>
           </div>
-          <span className={`pill ${isUp ? 'pill-up' : 'pill-down'}`}>{fmtPct(pnlPct)}</span>
+          <span className={`pill ${isUp ? 'pill-up' : 'pill-down'}`}>
+            {fmtPct(pnlPct)}
+          </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 14, borderTop: '1px solid var(--border)' }}>
-          <span style={{ fontSize: 12, color: 'var(--t3)' }}>{pos} position{pos !== 1 ? 's' : ''}</span>
-          <Sparkline data={sparkData} color={isUp ? '#00ff88' : '#ff4d4d'} />
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingTop: 16,
+          borderTop: '1px solid var(--border)'
+        }}>
+          <span style={{
+            fontSize: 12,
+            color: 'var(--t3)'
+          }}>
+            {pos} position{pos !== 1 ? 's' : ''}
+          </span>
+          <Sparkline
+            data={sparkData}
+            color={isUp ? 'var(--green)' : '#ff4d4d'}
+            width={80}
+            height={32}
+          />
         </div>
       </button>
 
+      {/* Movers Section */}
       {crypto.length > 0 && (
-        <div className="stagger-item" style={{ marginBottom: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingLeft: 2 }}>
-            <span className="section-label">Crypto</span>
-            <button onClick={() => navigate('/markets?tab=crypto')} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: 'var(--green)', fontWeight: 700 }}>
+        <div className="stagger-item" style={{ marginBottom: 16 }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 12
+          }}>
+            <span className="section-label">Movers</span>
+            <button
+              onClick={() => navigate('/markets?tab=crypto')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                fontSize: 12,
+                color: 'var(--green)',
+                fontWeight: 700,
+                background: 'rgba(0,255,136,0.1)',
+                padding: '4px 8px',
+                borderRadius: 'var(--radius)'
+              }}
+            >
               Voir tout <ChevronRight size={13} />
             </button>
           </div>
@@ -158,69 +360,10 @@ export default function Dashboard() {
               const up = pct >= 0
               const cc = coinColor[c.id] || 'var(--green)'
               return (
-                <button key={c.id} onClick={() => navigate('/markets?tab=crypto')} className="press-scale"
-                  style={{ minWidth: 90, padding: '14px 12px', borderRadius: 'var(--radius)', textAlign: 'left', background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(12px)', border: '1px solid var(--border)', flexShrink: 0 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 10, background: cc + '18', border: `1px solid ${cc}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10, fontSize: 13, fontWeight: 900, color: cc }}>
-                    {c.symbol?.[0]?.toUpperCase()}
-                  </div>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--t1)', marginBottom: 2 }}>{c.symbol?.toUpperCase()}</div>
-                  <div className="num" style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 6 }}>
-                    ${c.current_price >= 1 ? c.current_price.toLocaleString('en-US', { maximumFractionDigits: 0 }) : c.current_price?.toFixed(3)}
-                  </div>
-                  <span className={`pill ${up ? 'pill-up' : 'pill-down'}`} style={{ fontSize: 9 }}>
-                    {up ? '+' : ''}{pct?.toFixed(2)}%
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      <FGGauge value={fg} />
-
-      <div className="stagger-item" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
-        <button onClick={() => navigate('/markets')} className="press-scale" style={{
-          textAlign: 'left', padding: '16px', borderRadius: 'var(--radius-lg)',
-          background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(12px)', border: '1px solid var(--border)',
-        }}>
-          <div style={{ width: 36, height: 36, borderRadius: 11, background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-            <Plane size={17} color="var(--blue)" />
-          </div>
-          <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--t1)', marginBottom: 2 }}>Markets</p>
-          <p style={{ fontSize: 10, color: 'var(--t3)' }}>Voir les marchés</p>
-        </button>
-
-        <button onClick={() => navigate('/andy')} className="press-scale" style={{
-          textAlign: 'left', padding: '16px', borderRadius: 'var(--radius-lg)',
-          background: 'rgba(0,255,136,0.12)', border: '1px solid rgba(0,255,136,0.25)',
-        }}>
-          <div style={{ width: 36, height: 36, borderRadius: 11, background: 'rgba(0,255,136,0.12)', border: '1px solid rgba(0,255,136,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-            <Bot size={17} color="var(--green)" />
-          </div>
-          <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--green)', marginBottom: 2 }}>AnDy AI</p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span className="live-dot" style={{ width: 5, height: 5 }} />
-            <p style={{ fontSize: 10, color: 'var(--t3)' }}>Actif</p>
-          </div>
-        </button>
-      </div>
-
-      <div className="stagger-item" style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingLeft: 2 }}>
-          <span className="section-label">News</span>
-        </div>
-        {news.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {news.map((item, index) => (
-              <a key={index} href={item.link} target="_blank" rel="noopener noreferrer" style={{
-                background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(12px)', borderRadius: 'var(--radius)', padding: '12px', color: 'var(--t1)',
-                textDecoration: 'none', transition: 'background 0.3s',
-              }}>
-                <h3 style={{ fontSize: 14, fontWeight: 700 }}>{item.title}</h3>
-                <p style={{ fontSize: 12, color: 'var(--t3)' }}>{item.pubDate}</p>
-              </a>
-            ))}
-          </div>
-        ) : (
-          <p style={{ color: 'var(--t3)', textAlign: 'center' }}>Aucune nouvelle disponible
+                <button
+                  key={c.id}
+                  onClick={() => navigate(`/markets?tab=crypto&symbol=${c.symbol}`)}
+                  className="press-scale"
+                  style={{
+                    minWidth: 100,
+                    padding: '16px 12px',
