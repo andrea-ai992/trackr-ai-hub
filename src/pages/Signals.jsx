@@ -3,207 +3,203 @@ Création de src/pages/Signals.jsx
 ```jsx
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Route, Routes, Link } from 'react-router-dom';
-import { SupabaseClient } from '@supabase/supabase-js';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowUp, faArrowDown, faCircle } from '@fortawesome/free-solid-svg-icons';
-import Lucide from 'lucide-react';
-
-const supabase = new SupabaseClient('https://trackr-app-nu.vercel.app/.supabase', {
-  key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
-});
+import { supabase } from '../supabaseClient';
+import { Inter } from '@fontsource/inter';
+import { Lucide } from 'lucide-react';
 
 const assets = [
   { ticker: 'BTC', name: 'Bitcoin', price: 45000 },
-  { ticker: 'ETH', name: 'Ethereum', price: 2500 },
-  { ticker: 'NVDA', name: 'NVIDIA', price: 550 },
-  { ticker: 'SOL', name: 'Solana', price: 120 },
+  { ticker: 'ETH', name: 'Ethereum', price: 3500 },
+  { ticker: 'NVDA', name: 'NVIDIA', price: 250 },
+  { ticker: 'SOL', name: 'Solana', price: 20 },
   { ticker: 'AAPL', name: 'Apple', price: 150 },
-  { ticker: 'SPY', name: 'S&P 500', price: 450 },
+  { ticker: 'SPY', name: 'SPDR S&P 500', price: 450 },
   { ticker: 'TSLA', name: 'Tesla', price: 1000 },
   { ticker: 'LINK', name: 'Chainlink', price: 20 },
 ];
 
+const getRSI = (data) => {
+  const gains = data.map((item, index) => item.close - item.open);
+  const gainsAboveMA = gains.filter((gain, index) => gain > gains[index - 1]);
+  const gainsBelowMA = gains.filter((gain, index) => gain < gains[index - 1]);
+  const averageGain = gainsAboveMA.reduce((a, b) => a + b, 0) / gainsAboveMA.length;
+  const averageLoss = gainsBelowMA.reduce((a, b) => a + b, 0) / gainsBelowMA.length;
+  const rs = averageGain / averageLoss;
+  const rsi = 100 - (100 / (1 + rs));
+  return rsi;
+};
+
+const getMACD = (data) => {
+  const ema12 = data.slice(-12).reduce((a, b, index) => {
+    if (index === 0) return b.close;
+    return (0.12 * b.close + 0.88 * a);
+  }, 0);
+  const ema26 = data.slice(-26).reduce((a, b, index) => {
+    if (index === 0) return b.close;
+    return (0.26 * b.close + 0.74 * a);
+  }, 0);
+  const macd = ema12 - ema26;
+  return macd;
+};
+
+const getSignal = (data) => {
+  const rsi = getRSI(data);
+  const macd = getMACD(data);
+  if (rsi < 30 && macd > 0) return 'BUY';
+  if (rsi > 70 && macd < 0) return 'SELL';
+  return 'HOLD';
+};
+
 const Signals = () => {
-  const [signals, setSignals] = useState([]);
-  const [filter, setFilter] = useState('Tous');
+  const [data, setData] = useState([]);
   const [lastUpdated, setLastUpdated] = useState('');
+  const [filter, setFilter] = useState('Tous');
 
   useEffect(() => {
-    const fetchSignals = async () => {
-      const { data, error } = await supabase
-        .from('signals')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) {
-        console.error(error);
-      } else {
-        setSignals(data);
-      }
+    const fetchData = async () => {
+      const { data: historicalData } = await supabase
+        .from('historical_data')
+        .select('close, open')
+        .order('id', { ascending: false });
+      const processedData = historicalData.map((item, index) => ({
+        ...item,
+        close: parseFloat(item.close),
+        open: parseFloat(item.open),
+      }));
+      const signals = processedData.map((item, index) => ({
+        ...item,
+        signal: getSignal(processedData.slice(0, index + 1)),
+      }));
+      setData(signals);
+      setLastUpdated(new Date().toLocaleTimeString());
     };
-    fetchSignals();
+    fetchData();
   }, []);
 
   useEffect(() => {
-    const intervalId = setInterval(() => {
-      const fetchSignals = async () => {
-        const { data, error } = await supabase
-          .from('signals')
-          .select('*')
-          .order('created_at', { ascending: false });
-        if (error) {
-          console.error(error);
-        } else {
-          setSignals(data);
-          setLastUpdated(new Date().toLocaleTimeString());
-        }
+    const interval = setInterval(() => {
+      const fetchData = async () => {
+        const { data: historicalData } = await supabase
+          .from('historical_data')
+          .select('close, open')
+          .order('id', { ascending: false });
+        const processedData = historicalData.map((item, index) => ({
+          ...item,
+          close: parseFloat(item.close),
+          open: parseFloat(item.open),
+        }));
+        const signals = processedData.map((item, index) => ({
+          ...item,
+          signal: getSignal(processedData.slice(0, index + 1)),
+        }));
+        setData(signals);
+        setLastUpdated(new Date().toLocaleTimeString());
       };
-      fetchSignals();
+      fetchData();
     }, 60000);
-    return () => clearInterval(intervalId);
+    return () => clearInterval(interval);
   }, []);
 
-  const rsi = (price, period = 14) => {
-    const gains = [];
-    for (let i = 0; i < period; i++) {
-      const gain = price[i] - price[i - 1];
-      gains.push(gain > 0 ? gain : 0);
-    }
-    const averageGain = gains.reduce((a, b) => a + b, 0) / gains.length;
-    const losses = [];
-    for (let i = 0; i < period; i++) {
-      const loss = price[i - 1] - price[i];
-      losses.push(loss > 0 ? 0 : loss);
-    }
-    const averageLoss = losses.reduce((a, b) => a + b, 0) / losses.length;
-    const rs = averageGain / averageLoss;
-    return 100 - (100 / (1 + rs));
-  };
-
-  const macd = (price, period = 12) => {
-    const ema12 = [];
-    const ema26 = [];
-    for (let i = 0; i < price.length; i++) {
-      if (i < period) {
-        ema12.push(price[i]);
-        ema26.push(price[i]);
-      } else {
-        const ema12Last = ema12[i - 1];
-        const ema26Last = ema26[i - 1];
-        const ema12New = (price[i] + (period - 1) * ema12Last) / period;
-        const ema26New = (price[i] + (period - 1) * ema26Last) / period;
-        ema12.push(ema12New);
-        ema26.push(ema26New);
-      }
-    }
-    const macdLine = ema12[ema12.length - 1] - ema26[ema26.length - 1];
-    const signalLine = ema12[ema12.length - 1];
-    return macdLine > signalLine ? 'Bullish' : macdLine < signalLine ? 'Bearish' : 'Neutral';
-  };
-
-  const calculateSignal = (price, rsiValue, macdValue) => {
-    if (rsiValue < 30 && macdValue === 'Bullish') {
-      return 'BUY';
-    } else if (rsiValue > 70 && macdValue === 'Bearish') {
-      return 'SELL';
-    } else {
-      return 'HOLD';
-    }
-  };
-
-  const filteredSignals = signals.filter((signal) => {
-    if (filter === 'Tous') {
-      return true;
-    } else if (filter === 'BUY') {
-      return signal.signal === 'BUY';
-    } else if (filter === 'SELL') {
-      return signal.signal === 'SELL';
-    } else {
-      return signal.signal === 'HOLD';
-    }
+  const filteredData = data.filter((item) => {
+    if (filter === 'Tous') return true;
+    if (filter === 'BUY' && item.signal === 'BUY') return true;
+    if (filter === 'SELL' && item.signal === 'SELL') return true;
+    if (filter === 'HOLD' && item.signal === 'HOLD') return true;
+    return false;
   });
 
   return (
-    <div className="container">
-      <header>
-        <div className="filter">
-          <button
-            className={filter === 'Tous' ? 'active' : ''}
-            onClick={() => setFilter('Tous')}
-          >
-            Tous
-          </button>
-          <button
-            className={filter === 'BUY' ? 'active' : ''}
-            onClick={() => setFilter('BUY')}
-          >
-            BUY
-          </button>
-          <button
-            className={filter === 'SELL' ? 'active' : ''}
-            onClick={() => setFilter('SELL')}
-          >
-            SELL
-          </button>
-          <button
-            className={filter === 'HOLD' ? 'active' : ''}
-            onClick={() => setFilter('HOLD')}
-          >
-            HOLD
-          </button>
-        </div>
-        <button className="refresh" onClick={() => window.location.reload()}>
-          <FontAwesomeIcon icon={faArrowUp} />
-          <span>Refresh</span>
-          <span>{lastUpdated}</span>
+    <div className="signals-page">
+      <header className="header">
+        <nav>
+          <ul>
+            <li>
+              <Link to="#" onClick={() => setFilter('Tous')}>Tous</Link>
+            </li>
+            <li>
+              <Link to="#" onClick={() => setFilter('BUY')}>BUY</Link>
+            </li>
+            <li>
+              <Link to="#" onClick={() => setFilter('SELL')}>SELL</Link>
+            </li>
+            <li>
+              <Link to="#" onClick={() => setFilter('HOLD')}>HOLD</Link>
+            </li>
+          </ul>
+        </nav>
+        <button className="refresh-button" onClick={() => window.location.reload()}>
+          <Lucide icon="refresh" />
+          {lastUpdated}
         </button>
       </header>
-      <main>
-        {filteredSignals.map((signal, index) => (
-          <div key={index} className="card">
+      <main className="main">
+        {filteredData.map((item, index) => (
+          <div key={index} className="asset-card">
             <h2>
-              {signal.asset.ticker} - {signal.asset.name}
+              {item.ticker} - {item.name}
             </h2>
             <p>
-              Prix simulé : {signal.price}
+              Prix simulé : {item.price}
             </p>
-            <div className="score">
-              <div className="bar">
-                <div
-                  className="fill"
-                  style={{
-                    width: `${signal.score}%`,
-                    backgroundColor: signal.score < 50 ? '#ff0000' : '#00ff00',
-                  }}
-                />
-              </div>
-              <span>{signal.score}%</span>
+            <div className="score-bar">
+              <div
+                className="score-bar-bullish"
+                style={{
+                  width: `${item.signal === 'BUY' ? 100 : 0}%`,
+                  backgroundColor: item.signal === 'BUY' ? '#00ff88' : '#ff0000',
+                }}
+              />
+              <div
+                className="score-bar-bearish"
+                style={{
+                  width: `${item.signal === 'SELL' ? 100 : 0}%`,
+                  backgroundColor: item.signal === 'SELL' ? '#00ff88' : '#ff0000',
+                }}
+              />
             </div>
             <div className="badges">
-              <div className="badge">
-                <span>RSI</span>
-                <span style={{ color: signal.rsi < 30 ? '#ff0000' : signal.rsi > 70 ? '#00ff00' : '#000' }}>
-                  {signal.rsi}
-                </span>
+              <div className="badge rsi-badge">
+                <p>RSI : {getRSI(data.slice(0, index + 1)).toFixed(2)}</p>
+                <p
+                  style={{
+                    color: getRSI(data.slice(0, index + 1)) < 30 ? '#00ff88' : getRSI(data.slice(0, index + 1)) > 70 ? '#ff0000' : '#888',
+                  }}
+                >
+                  {getRSI(data.slice(0, index + 1)) < 30 ? 'Oversold' : getRSI(data.slice(0, index + 1)) > 70 ? 'Overbought' : 'Neutral'}
+                </p>
               </div>
-              <div className="badge">
-                <span>MACD</span>
-                <span style={{ color: signal.macd === 'Bullish' ? '#00ff00' : signal.macd === 'Bearish' ? '#ff0000' : '#000' }}>
-                  {signal.macd}
-                </span>
+              <div className="badge macd-badge">
+                <p>MACD : {getMACD(data.slice(0, index + 1)).toFixed(2)}</p>
+                <p
+                  style={{
+                    color: getMACD(data.slice(0, index + 1)) > 0 ? '#00ff88' : getMACD(data.slice(0, index + 1)) < 0 ? '#ff0000' : '#888',
+                  }}
+                >
+                  {getMACD(data.slice(0, index + 1)) > 0 ? 'Bullish' : getMACD(data.slice(0, index + 1)) < 0 ? 'Bearish' : 'Neutral'}
+                </p>
               </div>
-              <div className="badge">
-                <span>Volumen</span>
-                <span style={{ color: signal.volume === 'High' ? '#00ff00' : signal.volume === 'Normal' ? '#000' : '#ff0000' }}>
-                  {signal.volume}
-                </span>
+              <div className="badge volume-badge">
+                <p>Volume : {Math.random() * 1000}</p>
+                <p
+                  style={{
+                    color: Math.random() * 1000 > 500 ? '#00ff88' : Math.random() * 1000 < 250 ? '#ff0000' : '#888',
+                  }}
+                >
+                  {Math.random() * 1000 > 500 ? 'High' : Math.random() * 1000 < 250 ? 'Low' : 'Normal'}
+                </p>
               </div>
             </div>
-            <div className="signal">
-              <span>{signal.signal}</span>
-              <FontAwesomeIcon
-                icon={signal.signal === 'BUY' ? faArrowUp : signal.signal === 'SELL' ? faArrowDown : faCircle}
-                style={{ color: signal.signal === 'BUY' ? '#00ff00' : signal.signal === 'SELL' ? '#ff0000' : '#000' }}
-              />
+            <div className="signal-badge">
+              <p>
+                Signal : {item.signal}
+              </p>
+              <p
+                style={{
+                  color: item.signal === 'BUY' ? '#00ff88' : item.signal === 'SELL' ? '#ff0000' : '#888',
+                }}
+              >
+                <Lucide icon={item.signal === 'BUY' ? 'arrow-up' : item.signal === 'SELL' ? 'arrow-down' : 'arrow-right'} />
+              </p>
             </div>
           </div>
         ))}
@@ -216,129 +212,145 @@ export default Signals;
 ```
 
 ```css
-.container {
-  max-width: 800px;
-  margin: 40px auto;
-  padding: 20px;
+.signals-page {
+  font-family: 'Inter', sans-serif;
   background-color: var(--bg);
   color: var(--t1);
 }
 
 .header {
+  background-color: var(--bg2);
+  padding: 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px;
-  background-color: var(--bg2);
-  border-bottom: 1px solid var(--border);
 }
 
-.filter {
+.header nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
-  gap: 10px;
 }
 
-.filter button {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  background-color: var(--bg2);
+.header nav ul li {
+  margin-right: 1rem;
+}
+
+.header nav a {
   color: var(--t1);
+  text-decoration: none;
+}
+
+.header nav a:hover {
+  color: var(--green);
+}
+
+.refresh-button {
+  background-color: var(--bg2);
+  border: none;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
   cursor: pointer;
 }
 
-.filter button.active {
-  background-color: var(--green);
-  color: var(--bg);
-}
-
-.refresh {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  background-color: var(--bg2);
-  color: var(--t1);
-  cursor: pointer;
-}
-
-.refresh span {
-  margin-left: 10px;
+.refresh-button:hover {
+  background-color: var(--bg3);
 }
 
 .main {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
+  padding: 2rem;
 }
 
-.card {
-  padding: 20px;
+.asset-card {
   background-color: var(--bg);
+  padding: 1rem;
+  margin-bottom: 1rem;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  border-radius: 0.5rem;
 }
 
-.card h2 {
+.asset-card h2 {
+  font-size: 1.5rem;
   margin-top: 0;
 }
 
-.score {
-  display: flex;
-  align-items: center;
-  padding: 10px;
-  background-color: var(--bg2);
-  border-radius: 5px;
-  border: 1px solid var(--border);
+.asset-card p {
+  font-size: 1rem;
+  margin-bottom: 1rem;
 }
 
-.bar {
-  width: 100%;
+.score-bar {
   height: 10px;
   background-color: var(--bg);
-  border-radius: 5px;
+  border-radius: 0.5rem;
   overflow: hidden;
+  margin-bottom: 1rem;
 }
 
-.fill {
+.score-bar-bullish {
   height: 100%;
-  background-color: var(--t1);
+  background-color: var(--green);
+}
+
+.score-bar-bearish {
+  height: 100%;
+  background-color: var(--green);
 }
 
 .badges {
   display: flex;
-  gap: 10px;
+  margin-bottom: 1rem;
 }
 
 .badge {
-  padding: 10px;
-  background-color: var(--bg2);
+  background-color: var(--bg);
+  padding: 0.5rem;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: 0.5rem;
+  margin-right: 1rem;
 }
 
-.badge span {
-  margin-bottom: 5px;
+.rsi-badge p {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
 }
 
-.signal {
-  display: flex;
-  align-items: center;
-  padding: 10px;
-  background-color: var(--bg2);
-  border-radius: 5px;
+.rsi-badge p:last-child {
+  font-size: 0.8rem;
+}
+
+.macd-badge p {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.macd-badge p:last-child {
+  font-size: 0.8rem;
+}
+
+.volume-badge p {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.volume-badge p:last-child {
+  font-size: 0.8rem;
+}
+
+.signal-badge {
+  background-color: var(--bg);
+  padding: 0.5rem;
   border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
 }
 
-.signal span {
-  margin-right: 10px;
+.signal-badge p {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
 }
-```
 
-```json
-"dependencies": {
-  "react": "^18.2.0",
-  "react-router-dom": "^6.4.3",
-  "lucide-react": "^0.1.0",
-  "supabase-js": "^1.32.0"
+.signal-badge p:last-child {
+  font-size: 1.5rem;
 }
