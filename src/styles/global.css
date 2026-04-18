@@ -8,6 +8,7 @@ src/styles/global.css
     --t2: #888;
     --t3: #444;
     --border: rgba(255, 255, 255, 0.07);
+    --border-hi: rgba(255, 255, 255, 0.1);
 }
 
 body {
@@ -16,36 +17,17 @@ body {
     font-family: 'Inter', sans-serif;
     margin: 0;
     padding: 0;
-}
-
-.container {
-    max-width: 520px;
-    padding: 16px;
-    margin: auto;
+    overflow-x: hidden;
 }
 
 .card {
-    background: rgba(255, 255, 255, 0.04);
-    backdrop-filter: blur(12px);
+    background-color: rgba(255, 255, 255, 0.04);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 12px;
+    backdrop-filter: blur(12px);
     padding: 16px;
-    margin-bottom: 16px;
-}
-
-.skeleton {
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 25%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.1) 75%);
-    background-size: 400% 100%;
-    animation: shimmer 1.2s infinite;
-}
-
-@keyframes shimmer {
-    0% {
-        background-position: 100% 0;
-    }
-    100% {
-        background-position: 0 0;
-    }
+    max-width: 520px;
+    margin: 16px auto;
 }
 
 .fade-up {
@@ -62,55 +44,84 @@ body {
         transform: translateY(0);
     }
 }
+
+.skeleton {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.1) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
 ```
 
 src/pages/Dashboard.jsx
-```jsx
+```javascript
 import React, { useEffect, useState } from 'react';
-import { fetchPortfolioData, fetchNews } from '../api'; // Assurez-vous que ces fonctions existent
-import Skeleton from '../components/Skeleton';
-import Sparkline from '../components/Sparkline';
-import TopMovers from '../components/TopMovers';
-import FearGreedGauge from '../components/FearGreedGauge';
-import QuickActions from '../components/QuickActions';
+import { fetchPortfolio, fetchNews, fetchTopMovers, fetchFearGreed } from '../api'; // Assume these are defined
+import './Dashboard.css'; // Importing styles
 
 const Dashboard = () => {
     const [portfolio, setPortfolio] = useState(null);
-    const [news, setNews] = useState(null);
+    const [news, setNews] = useState([]);
+    const [topMovers, setTopMovers] = useState([]);
+    const [fearGreed, setFearGreed] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const loadData = async () => {
             setLoading(true);
-            const portfolioData = await fetchPortfolioData();
-            const newsData = await fetchNews();
+            const [portfolioData, newsData, topMoversData, fearGreedData] = await Promise.all([
+                fetchPortfolio(),
+                fetchNews(),
+                fetchTopMovers(),
+                fetchFearGreed()
+            ]);
             setPortfolio(portfolioData);
             setNews(newsData);
+            setTopMovers(topMoversData);
+            setFearGreed(fearGreedData);
             setLoading(false);
         };
         loadData();
     }, []);
 
     return (
-        <div className="container">
+        <div className="dashboard">
             {loading ? (
-                <Skeleton />
+                <div className="skeleton">Loading...</div>
             ) : (
                 <>
-                    <div className="card fade-up">
-                        <h1>Portfolio Value: ${portfolio.value}</h1>
-                        <Sparkline data={portfolio.sparklineData} />
+                    <div className="card">
+                        <h2>Portfolio Value: ${portfolio.value}</h2>
+                        {/* Sparkline SVG */}
                     </div>
-                    <TopMovers />
-                    <FearGreedGauge />
-                    <QuickActions />
-                    <div className="news-feed fade-up">
-                        {news.map((item, index) => (
-                            <div key={index} className="card">
-                                <h3>{item.title}</h3>
-                                <p>{item.description}</p>
-                            </div>
+                    <div className="card">
+                        <h3>Top Movers</h3>
+                        <div className="top-movers">
+                            {topMovers.map(mover => (
+                                <div key={mover.id} className="mover">{mover.name}</div>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="card">
+                        <h3>Fear & Greed</h3>
+                        {/* Gauge SVG */}
+                    </div>
+                    <div className="card">
+                        <h3>News Feed</h3>
+                        {news.map(item => (
+                            <div key={item.id} className="news-item">{item.title}</div>
                         ))}
+                    </div>
+                    <div className="card quick-actions">
+                        {/* Quick actions 2x2 */}
                     </div>
                 </>
             )}
@@ -122,33 +133,28 @@ export default Dashboard;
 ```
 
 src/components/BottomNav.jsx
-```jsx
+```javascript
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Market, News, More, Profile } from 'lucide-react';
+import { Home, Market, News, More, Profile } from 'lucide-react'; // Ensure these icons are available
 
 const BottomNav = () => {
     return (
         <nav className="bottom-nav">
-            <NavLink to="/" activeClassName="active">
-                <Home />
-                <span>Home</span>
+            <NavLink to="/dashboard" activeClassName="active">
+                <Home /> Dashboard
             </NavLink>
             <NavLink to="/markets" activeClassName="active">
-                <Market />
-                <span>Markets</span>
+                <Market /> Markets
             </NavLink>
             <NavLink to="/news" activeClassName="active">
-                <News />
-                <span>News</span>
+                <News /> News
             </NavLink>
             <NavLink to="/more" activeClassName="active">
-                <More />
-                <span>More</span>
+                <More /> More
             </NavLink>
             <NavLink to="/profile" activeClassName="active">
-                <Profile />
-                <span>Profile</span>
+                <Profile /> Profile
             </NavLink>
         </nav>
     );
@@ -158,35 +164,35 @@ export default BottomNav;
 ```
 
 src/pages/Markets.jsx
-```jsx
+```javascript
 import React, { useEffect, useState } from 'react';
-import { fetchMarketData } from '../api'; // Assurez-vous que cette fonction existe
-import Skeleton from '../components/Skeleton';
+import { fetchMarkets } from '../api'; // Assume this is defined
+import './Markets.css'; // Importing styles
 
 const Markets = () => {
     const [markets, setMarkets] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const loadData = async () => {
+        const loadMarkets = async () => {
             setLoading(true);
-            const marketData = await fetchMarketData();
-            setMarkets(marketData);
+            const marketsData = await fetchMarkets();
+            setMarkets(marketsData);
             setLoading(false);
         };
-        loadData();
+        loadMarkets();
     }, []);
 
     return (
-        <div className="container">
+        <div className="markets">
             {loading ? (
-                <Skeleton />
+                <div className="skeleton">Loading...</div>
             ) : (
-                <div className="market-list fade-up">
-                    {markets.map((market, index) => (
-                        <div key={index} className="card">
+                <div className="market-list">
+                    {markets.map(market => (
+                        <div key={market.id} className="market-card">
                             <h3>{market.name}</h3>
-                            <p>${market.price}</p>
+                            <p>Price: ${market.price}</p>
                         </div>
                     ))}
                 </div>
@@ -196,20 +202,3 @@ const Markets = () => {
 };
 
 export default Markets;
-```
-
-src/components/Skeleton.jsx
-```jsx
-import React from 'react';
-
-const Skeleton = () => {
-    return (
-        <div className="skeleton">
-            <div className="card" style={{ height: '100px', marginBottom: '16px' }}></div>
-            <div className="card" style={{ height: '100px', marginBottom: '16px' }}></div>
-            <div className="card" style={{ height: '100px', marginBottom: '16px' }}></div>
-        </div>
-    );
-};
-
-export default Skeleton;
