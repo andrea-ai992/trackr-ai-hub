@@ -210,52 +210,60 @@ async function callOpenAI(baseUrl, apiKey, model, prompt, maxTokens) {
   return d?.choices?.[0]?.message?.content?.trim() || null
 }
 
-// ── Multi-provider LLM (Groq free → Anthropic paid → Ollama local) ────────────
+// ── Multi-provider LLM — fail fast, pas de boucle infinie ────────────────────
 async function generateRaw(prompt, maxTokens = 4096, hint = 'smart') {
   if (globalRateLimitUntil > Date.now()) { await sl(globalRateLimitUntil - Date.now()); globalRateLimitUntil = 0 }
-  while (apiConcurrent >= API_SEMAPHORE_LIMIT) await sl(1500)
+  while (apiConcurrent >= API_SEMAPHORE_LIMIT) await sl(500)
   apiConcurrent++
   try {
-    // Groq (gratuit, prioritaire)
+    // Groq (gratuit, prioritaire) — 2 tentatives max, fail fast
     if (GROQ_KEY) {
       const model = hint === 'fast' ? GROQ_FAST : GROQ_SMART
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 2; i++) {
         try {
           const text = await callOpenAI('https://api.groq.com/openai', GROQ_KEY, model, prompt, maxTokens)
           if (text) return text
         } catch (e) {
-          if (e.message.startsWith('429:')) { const s = parseInt(e.message.split(':')[1]) || 30; globalRateLimitUntil = Date.now() + s * 1000; await sl(s * 1000); globalRateLimitUntil = 0; continue }
-          if (i === 3) log(`Groq échec: ${e.message} — fallback Anthropic`)
-          else await sl(5000)
+          if (e.message.startsWith('429:')) {
+            const s = Math.min(parseInt(e.message.split(':')[1]) || 15, 20)
+            globalRateLimitUntil = Date.now() + s * 1000
+            await sl(s * 1000)
+            globalRateLimitUntil = 0
+          }
+          // pas de sleep entre tentatives — fail fast
+        }
+      }
+      log(`Groq échec — fallback Anthropic`)
+    }
+    // Anthropic — 2 tentatives max, pas de while(true)
+    if (API_KEY) {
+      const model = hint === 'fast' ? MODEL_FAST : MODEL_SMART
+      for (let i = 0; i < 2; i++) {
+        try {
+          const res = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: { 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+            body: JSON.stringify({ model, max_tokens: maxTokens, system: SYSTEM, stream: false, messages: [{ role: 'user', content: prompt }] }),
+            signal: AbortSignal.timeout(60000),
+          })
+          if (res.status === 429) { await sl(15000); continue }
+          if ([500, 503, 529].includes(res.status)) { await sl(5000); continue }
+          if (res.status === 400) {
+            const b = await res.json().catch(() => ({}))
+            const msg = b?.error?.message || ''
+            if (msg.toLowerCase().includes('credit')) { log('Crédits Anthropic épuisés'); break }
+            throw new Error(`API 400: ${msg}`)
+          }
+          if (!res.ok) throw new Error(`API ${res.status}`)
+          const d = await res.json().catch(() => null)
+          const text = d?.content?.[0]?.text?.trim()
+          if (text) return text
+        } catch (e) {
+          if (i === 1) log(`Anthropic échec: ${e.message}`)
         }
       }
     }
-    // Anthropic (fallback payant)
-    if (API_KEY) {
-      const model = hint === 'fast' ? MODEL_FAST : MODEL_SMART
-      while (true) {
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: { 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-          body: JSON.stringify({ model, max_tokens: maxTokens, system: SYSTEM, stream: false, messages: [{ role: 'user', content: prompt }] }),
-          signal: AbortSignal.timeout(60000),
-        }).catch(e => { throw new Error(`Réseau: ${e.message}`) })
-        if (res.status === 429) { const s = parseInt(res.headers?.get?.('retry-after') || '60') || 60; globalRateLimitUntil = Date.now() + s * 1000; await sl(s * 1000); globalRateLimitUntil = 0; continue }
-        if ([500, 503, 529].includes(res.status)) { await sl(30000); continue }
-        if (res.status === 400) { const b = await res.json().catch(() => ({})); const msg = b?.error?.message || ''; if (msg.toLowerCase().includes('credit')) { log('Crédits Anthropic épuisés — skip Anthropic'); break } throw new Error(`API 400: ${msg}`) }
-        if (!res.ok) throw new Error(`API ${res.status}`)
-        const d = await res.json().catch(() => null)
-        const text = d?.content?.[0]?.text?.trim()
-        if (!text) throw new Error('Réponse vide')
-        return text
-      }
-    }
-    // Ollama (local fallback)
-    if (OLLAMA_URL) {
-      const text = await callOpenAI(OLLAMA_URL, '', OLLAMA_MODEL, prompt, maxTokens)
-      if (text) return text
-    }
-    throw new Error('Aucun provider LLM disponible (GROQ_API_KEY / ANTHROPIC_API_KEY / OLLAMA_URL requis)')
+    throw new Error('LLM indisponible')
   } finally {
     apiConcurrent--
   }
@@ -467,6 +475,9 @@ async function flushDiscordNotif(force = false) {
   lastNotifTime = Date.now()
 }
 
+const TASK_TIMEOUT_MS = 90 * 1000   // 90s max par tâche — skip et retry à la fin
+const skipQueue = []                  // tâches à retry après la queue principale
+
 async function runTask(filePath) {
   const name    = filePath.split('/').pop().replace(/\.txt$/, '')
   const content = readFileSync(filePath, 'utf8').trim()
@@ -478,23 +489,23 @@ async function runTask(filePath) {
   updateTaskStatus(name, {
     desc: content.slice(0, 100),
     startedAt: new Date().toISOString(),
-    stage: 'started',
-    stages: { started: new Date().toISOString() },
-    files: [],
-    status: 'RUNNING',
-    dur: 0,
-    error: null,
+    stage: 'started', stages: { started: new Date().toISOString() },
+    files: [], status: 'RUNNING', dur: 0, error: null,
   })
 
   const runningPath = filePath.replace(/\.txt$/, '.running')
   renameSync(filePath, runningPath)
 
   const isManual = name.startsWith('manual-') || name.startsWith('urgent-')
-  if (isManual) {
-    discordPost(CH_UPDATES, `⚡ **Tâche prioritaire démarrée**\n\`${name}\`\n> ${content.slice(0, 120)}`)
-  }
+  if (isManual) discordPost(CH_UPDATES, `⚡ **Tâche prioritaire démarrée**\n\`${name}\`\n> ${content.slice(0, 120)}`)
+
   try {
-    await executeTask(content, name, isManual)
+    // Timeout dur — skip si trop long, retry à la fin
+    await Promise.race([
+      executeTask(content, name, isManual),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('TIMEOUT')), TASK_TIMEOUT_MS)),
+    ])
+
     const dur = Math.round((Date.now() - startTime) / 1000)
     const taskStatus = readStatus().find(t => t.name === name)
     updateTaskStatus(name, { status: 'DONE', dur })
@@ -503,16 +514,28 @@ async function runTask(filePath) {
     log(`TASK DONE: ${name} (${dur}s) [session: ${totalDoneSession}]`)
     notifBuffer.push({ name, files: taskStatus?.files || [], dur })
     await flushDiscordNotif()
+
   } catch (err) {
     if (err.isInterrupt) {
-      // Requeue — une tâche manuelle a la priorité
       renameSync(runningPath, runningPath.replace(/\.running$/, '.txt'))
       claimedTasks.delete(name + '.txt')
       updateTaskStatus(name, { status: 'QUEUED', stage: 'queued' })
-      log(`TASK INTERRUPTED (requeued): ${name} — tâche manuelle prioritaire`)
+      log(`TASK INTERRUPTED: ${name}`)
       return
     }
+
     const dur = Math.round((Date.now() - startTime) / 1000)
+
+    // TIMEOUT ou erreur → skip et retry à la fin au lieu de marquer ERROR permanent
+    if (err.message === 'TIMEOUT' || err.message.includes('LLM indisponible')) {
+      renameSync(runningPath, runningPath.replace(/\.running$/, '.txt'))
+      claimedTasks.delete(name + '.txt')
+      skipQueue.push(name + '.txt')
+      updateTaskStatus(name, { status: 'QUEUED', stage: 'skip-retry', error: err.message })
+      log(`TASK SKIP (retry later): ${name} — ${err.message}`)
+      return
+    }
+
     updateTaskStatus(name, { status: 'ERROR', stage: 'error', dur, error: err.message })
     renameSync(runningPath, runningPath.replace(/\.running$/, '.error'))
     totalErrorSession++
@@ -834,12 +857,23 @@ class InterruptError extends Error {
 }
 
 function claimNextTask() {
-  const queue = readdirSync(TASKS_DIR)
-    .filter(f => f.endsWith('.txt') && !claimedTasks.has(f))
-    .sort((a, b) => priorityScore(b) - priorityScore(a))  // tri par priorité
-  for (const f of queue) {
+  const all = readdirSync(TASKS_DIR).filter(f => f.endsWith('.txt'))
+  // Sépare: tâches normales (pas dans skipQueue) et retries
+  const normal  = all.filter(f => !skipQueue.includes(f) && !claimedTasks.has(f))
+  const retries = all.filter(f => skipQueue.includes(f)  && !claimedTasks.has(f))
+
+  // Priorité: normales d'abord, retries seulement si plus rien d'autre
+  const pool = normal.length > 0 ? normal : retries
+  if (!pool.length) return null
+
+  const sorted = pool.sort((a, b) => priorityScore(b) - priorityScore(a))
+  for (const f of sorted) {
     if (claimedTasks.has(f)) continue
     claimedTasks.add(f)
+    if (retries.includes(f)) {
+      skipQueue.splice(skipQueue.indexOf(f), 1)
+      log(`RETRY: ${f}`)
+    }
     return resolve(TASKS_DIR, f)
   }
   return null
