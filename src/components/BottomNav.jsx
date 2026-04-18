@@ -3,11 +3,11 @@ import { useEffect, useState, useRef } from 'react';
 import { Home, Trophy, TrendingUp, Newspaper, MoreHorizontal, Activity } from 'lucide-react';
 
 const TABS = [
-  { to: '/', icon: Home, label: 'Hub', matches: ['^/$'] },
-  { to: '/sports', icon: Activity, label: 'Sports', matches: ['^/sports'] },
-  { to: '/markets', icon: TrendingUp, label: 'Markets', matches: ['^/markets', '^/stocks'] },
-  { to: '/news', icon: Newspaper, label: 'News', matches: ['^/news'] },
-  { to: '/more', icon: MoreHorizontal, label: 'More', matches: ['^/more', '^/translator', '^/settings', '^/sneakers', '^/portfolio', '^/category', '^/flights'] },
+  { to: '/', icon: Home, label: 'Home' },
+  { to: '/sports', icon: Trophy, label: 'Sports' },
+  { to: '/markets', icon: TrendingUp, label: 'Markets' },
+  { to: '/news', icon: Newspaper, label: 'News' },
+  { to: '/more', icon: MoreHorizontal, label: 'More' },
 ];
 
 export { TABS };
@@ -16,7 +16,7 @@ export default function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const [newsBadge, setNewsBadge] = useState(0);
-  const [pillStyle, setPillStyle] = useState({});
+  const [pillStyle, setPillStyle] = useState({ left: 0, width: 0 });
   const tabRefs = useRef([]);
   const navRef = useRef(null);
 
@@ -37,7 +37,8 @@ export default function BottomNav() {
 
   useEffect(() => {
     const activeIdx = TABS.findIndex((tab) =>
-      tab.matches.some((pattern) => new RegExp(pattern).test(location.pathname))
+      tab.to === location.pathname ||
+      (tab.to !== '/' && location.pathname.startsWith(tab.to))
     );
     if (activeIdx === -1) return;
     const el = tabRefs.current[activeIdx];
@@ -51,10 +52,6 @@ export default function BottomNav() {
       width: elRect.width,
     });
   }, [location.pathname]);
-
-  function isActive(tab) {
-    return tab.matches.some((pattern) => new RegExp(pattern).test(location.pathname));
-  }
 
   function handleTab(tab) {
     navigator.vibrate?.(8);
@@ -89,15 +86,15 @@ export default function BottomNav() {
           gap: 2,
           width: '100%',
           maxWidth: 380,
-          background: 'var(--surface)',
+          background: 'rgba(8, 8, 8, 0.92)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
-          border: '1px solid var(--border)',
-          borderRadius: 999,
+          borderTop: '1px solid rgba(255, 255, 255, 0.07)',
+          borderRadius: 0,
           padding: '5px 6px',
-          boxShadow: '0 8px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--border-bright) inset',
+          boxShadow: '0 -8px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--border-bright) inset',
           position: 'relative',
-          height: 56,
+          height: 60,
           pointerEvents: 'auto',
           WebkitTapHighlightColor: 'transparent',
         }}
@@ -107,21 +104,23 @@ export default function BottomNav() {
             aria-hidden
             style={{
               position: 'absolute',
-              top: 4,
-              bottom: 4,
+              top: 0,
+              bottom: 0,
               left: pillStyle.left,
               width: pillStyle.width,
-              backgroundColor: 'var(--surface-high)',
-              border: '1px solid var(--border)',
-              borderRadius: 999,
-              transition: 'left 200ms ease, width 200ms ease',
+              backgroundColor: 'rgba(0, 255, 136, 0.12)',
+              border: '1px solid var(--neon)',
+              borderRadius: 12,
+              transition: 'left 300ms ease, width 300ms ease',
               pointerEvents: 'none',
+              zIndex: 0,
             }}
           />
         )}
 
         {TABS.map((tab, i) => {
-          const active = isActive(tab);
+          const active = location.pathname === tab.to ||
+                        (tab.to !== '/' && location.pathname.startsWith(tab.to));
           const Icon = tab.icon;
           const badge = tab.to === '/news' ? newsBadge : 0;
 
@@ -139,7 +138,7 @@ export default function BottomNav() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 3,
-                minHeight: 56,
+                minHeight: 60,
                 padding: '8px 4px',
                 position: 'relative',
                 background: 'transparent',
@@ -148,6 +147,8 @@ export default function BottomNav() {
                 cursor: 'pointer',
                 WebkitTapHighlightColor: 'transparent',
                 zIndex: 1,
+                transform: active ? 'scale(0.92)' : 'scale(1)',
+                transition: 'transform 200ms ease',
               }}
             >
               <div
@@ -162,13 +163,8 @@ export default function BottomNav() {
                   size={22}
                   strokeWidth={active ? 2.2 : 1.6}
                   style={{
-                    color: active ? 'var(--neon)' : 'var(--text-secondary)',
+                    color: active ? 'var(--neon)' : '#444',
                     transition: 'color 200ms ease',
-                    filter: active ? 'drop-shadow(0 0 5px rgba(0, 255, 136, 0.7))' : 'none',
-                    transform: active ? 'scale(1.08)' : 'scale(1)',
-                    transitionProperty: 'color, filter, transform',
-                    transitionDuration: '200ms',
-                    transitionTimingFunction: 'ease',
                   }}
                 />
                 {badge > 0 && (
@@ -201,7 +197,7 @@ export default function BottomNav() {
                 style={{
                   fontSize: 9,
                   fontWeight: active ? 700 : 500,
-                  color: active ? 'var(--neon)' : 'var(--text-secondary)',
+                  color: active ? 'var(--neon)' : '#444',
                   transition: 'color 200ms ease, font-weight 200ms ease',
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
