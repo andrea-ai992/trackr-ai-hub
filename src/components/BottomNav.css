@@ -12,6 +12,11 @@ Création de src/components/BottomNav.css
   --t3: #444;
   --border: rgba(255, 255, 255, 0.07);
   --pill-indicator: rgba(0, 255, 136, 0.12);
+  --accent: #00ff88;
+  --font-family: 'Inter', sans-serif;
+  --font-size: 22px;
+  --font-size-label: 9px;
+  --letter-spacing: 0.08em;
 }
 
 /* Styles */
@@ -32,6 +37,8 @@ Création de src/components/BottomNav.css
   transition: transform 300ms ease;
   height: 60px;
   z-index: 1000;
+  font-family: var(--font-family);
+  font-size: var(--font-size);
 }
 
 .safe-area-inset-bottom {
@@ -51,14 +58,16 @@ Création de src/components/BottomNav.css
 }
 
 .bottom-nav-item-icon {
-  font-size: 22px;
+  font-size: var(--font-size);
   margin-right: 6px;
   color: var(--t3);
 }
 
 .bottom-nav-item-label {
-  font-size: 9px;
+  font-size: var(--font-size-label);
   color: var(--t3);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing);
 }
 
 .bottom-nav-item-pill {
@@ -69,7 +78,7 @@ Création de src/components/BottomNav.css
   border-radius: 12px;
   padding: 6px 16px;
   transform: translateX(0);
-  transition: transform 300ms ease;
+  transition: transform 200ms ease;
 }
 
 .bottom-nav-item-active .bottom-nav-item-pill {
@@ -86,49 +95,80 @@ Création de src/components/BottomNav.css
   border-radius: 50%;
   font-size: 12px;
 }
+
+.bottom-nav-item-badge {
+  position: absolute;
+  top: 0;
+  right: -12px;
+  background-color: #f00;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 50%;
+  font-size: 12px;
+  transition: transform 200ms ease;
+}
 ```
 
 Création de src/components/BottomNav.jsx
 ```jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FaHome, FaFootball, FaChartLine, FaNewspaper, FaEllipsis } from 'lucide-react';
+import { useContext } from 'react';
+import { NewsContext } from '../context/NewsContext';
 
 const BottomNav = () => {
+  const { unreadNews } = useContext(NewsContext);
+  const [active, setActive] = useState(null);
+
+  useEffect(() => {
+    const handleRouteChange = () => {
+      setActive(window.location.pathname);
+    };
+    window.addEventListener('popstate', handleRouteChange);
+    return () => {
+      window.removeEventListener('popstate', handleRouteChange);
+    };
+  }, []);
+
   return (
     <div className="bottom-nav">
       <div className="safe-area-inset-bottom">
         <div className="bottom-nav-item">
-          <Link to="/dashboard" className="bottom-nav-item-active">
+          <Link to="/dashboard" className={active === '/dashboard' ? 'bottom-nav-item-active' : ''}>
             <FaHome className="bottom-nav-item-icon" />
             <span className="bottom-nav-item-label">Home</span>
             <div className="bottom-nav-item-pill" />
           </Link>
         </div>
         <div className="bottom-nav-item">
-          <Link to="/sports">
+          <Link to="/sports" className={active === '/sports' ? 'bottom-nav-item-active' : ''}>
             <FaFootball className="bottom-nav-item-icon" />
             <span className="bottom-nav-item-label">Sports</span>
             <div className="bottom-nav-item-pill" />
           </Link>
         </div>
         <div className="bottom-nav-item">
-          <Link to="/markets">
+          <Link to="/markets" className={active === '/markets' ? 'bottom-nav-item-active' : ''}>
             <FaChartLine className="bottom-nav-item-icon" />
             <span className="bottom-nav-item-label">Markets</span>
             <div className="bottom-nav-item-pill" />
           </Link>
         </div>
         <div className="bottom-nav-item">
-          <Link to="/news">
+          <Link to="/news" className={active === '/news' ? 'bottom-nav-item-active' : ''}>
             <FaNewspaper className="bottom-nav-item-icon" />
             <span className="bottom-nav-item-label">News</span>
             <div className="bottom-nav-item-pill" />
-            <div className="badge">5</div>
+            {unreadNews > 0 && (
+              <div className="bottom-nav-item-badge">
+                <span>{unreadNews}</span>
+              </div>
+            )}
           </Link>
         </div>
         <div className="bottom-nav-item">
-          <Link to="/more">
+          <Link to="/more" className={active === '/more' ? 'bottom-nav-item-active' : ''}>
             <FaEllipsis className="bottom-nav-item-icon" />
             <span className="bottom-nav-item-label">More</span>
             <div className="bottom-nav-item-pill" />
@@ -141,4 +181,21 @@ const BottomNav = () => {
 
 export default BottomNav;
 ```
-Assurez-vous d'ajouter les imports nécessaires dans votre fichier src/index.js ou src/App.js.
+Import dans src/index.js
+```jsx
+import React from 'react';
+import ReactDOM from 'react-dom';
+import App from './App';
+import { BrowserRouter } from 'react-router-dom';
+import { NewsContextProvider } from './context/NewsContext';
+
+ReactDOM.render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <NewsContextProvider>
+        <App />
+      </NewsContextProvider>
+    </BrowserRouter>
+  </React.StrictMode>,
+  document.getElementById('root')
+);
