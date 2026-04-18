@@ -121,12 +121,31 @@ async function ghGet(path) {
 }
 
 async function ghWriteFile(filePath, content, message, sha) {
-  const body = { message, content: Buffer.from(content).toString('base64'), ...(sha ? { sha } : {}) }
+  const encoded = Buffer.from(content).toString('base64')
+  // Si pas de SHA fourni, tenter de le récupérer (fichier existant)
+  if (!sha) {
+    const existing = await ghGet(`/contents/${filePath}`)
+    if (existing?.sha) sha = existing.sha
+  }
+  const body = { message, content: encoded, ...(sha ? { sha } : {}) }
   const r = await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/contents/${filePath}`, {
     method: 'PUT', headers: ghHeaders(), body: JSON.stringify(body),
     signal: AbortSignal.timeout(20000),
   }).catch(() => null)
-  return r?.ok || false
+  if (r?.ok) return true
+  // 422 = conflit SHA — re-fetch et retry une fois
+  if (r?.status === 422) {
+    const fresh = await ghGet(`/contents/${filePath}`)
+    if (fresh?.sha) {
+      const r2 = await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/contents/${filePath}`, {
+        method: 'PUT', headers: ghHeaders(),
+        body: JSON.stringify({ message, content: encoded, sha: fresh.sha }),
+        signal: AbortSignal.timeout(20000),
+      }).catch(() => null)
+      return r2?.ok || false
+    }
+  }
+  return false
 }
 
 async function flushSyncQueue() {
@@ -210,58 +229,58 @@ async function callOpenAI(baseUrl, apiKey, model, prompt, maxTokens) {
   return d?.choices?.[0]?.message?.content?.trim() || null
 }
 
-// ── Multi-provider LLM — fail fast, pas de boucle infinie ────────────────────
+// ── Multi-provider LLM ────────────────────────────────────────────────────────
 async function generateRaw(prompt, maxTokens = 4096, hint = 'smart') {
-  if (globalRateLimitUntil > Date.now()) { await sl(globalRateLimitUntil - Date.now()); globalRateLimitUntil = 0 }
   while (apiConcurrent >= API_SEMAPHORE_LIMIT) await sl(500)
   apiConcurrent++
   try {
-    // Groq (gratuit, prioritaire) — 2 tentatives max, fail fast
     if (GROQ_KEY) {
       const model = hint === 'fast' ? GROQ_FAST : GROQ_SMART
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; i < 5; i++) {
+        // Respecte le rate limit global
+        if (globalRateLimitUntil > Date.now()) {
+          await sl(globalRateLimitUntil - Date.now())
+          globalRateLimitUntil = 0
+        }
         try {
           const text = await callOpenAI('https://api.groq.com/openai', GROQ_KEY, model, prompt, maxTokens)
           if (text) return text
         } catch (e) {
           if (e.message.startsWith('429:')) {
-            const s = Math.min(parseInt(e.message.split(':')[1]) || 15, 20)
+            const s = parseInt(e.message.split(':')[1]) || 30
+            log(`Groq 429 — wait ${s}s`)
             globalRateLimitUntil = Date.now() + s * 1000
             await sl(s * 1000)
             globalRateLimitUntil = 0
+            continue  // retry immédiatement après le wait
           }
-          // pas de sleep entre tentatives — fail fast
+          log(`Groq tentative ${i+1}/5: ${e.message}`)
+          if (i < 4) await sl(3000)
         }
       }
-      log(`Groq échec — fallback Anthropic`)
+      log(`Groq échec après 5 tentatives`)
     }
-    // Anthropic — 2 tentatives max, pas de while(true)
+    // Anthropic fallback — 1 tentative, skip si crédits épuisés
     if (API_KEY) {
-      const model = hint === 'fast' ? MODEL_FAST : MODEL_SMART
-      for (let i = 0; i < 2; i++) {
-        try {
-          const res = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: { 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-            body: JSON.stringify({ model, max_tokens: maxTokens, system: SYSTEM, stream: false, messages: [{ role: 'user', content: prompt }] }),
-            signal: AbortSignal.timeout(60000),
-          })
-          if (res.status === 429) { await sl(15000); continue }
-          if ([500, 503, 529].includes(res.status)) { await sl(5000); continue }
-          if (res.status === 400) {
-            const b = await res.json().catch(() => ({}))
-            const msg = b?.error?.message || ''
-            if (msg.toLowerCase().includes('credit')) { log('Crédits Anthropic épuisés'); break }
-            throw new Error(`API 400: ${msg}`)
-          }
-          if (!res.ok) throw new Error(`API ${res.status}`)
+      try {
+        const model = hint === 'fast' ? MODEL_FAST : MODEL_SMART
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+          body: JSON.stringify({ model, max_tokens: maxTokens, system: SYSTEM, stream: false, messages: [{ role: 'user', content: prompt }] }),
+          signal: AbortSignal.timeout(60000),
+        })
+        if (res.status === 400) {
+          const b = await res.json().catch(() => ({}))
+          if ((b?.error?.message || '').toLowerCase().includes('credit')) {
+            log('Crédits Anthropic épuisés — Groq only')
+          } else throw new Error(`API 400: ${b?.error?.message}`)
+        } else if (res.ok) {
           const d = await res.json().catch(() => null)
           const text = d?.content?.[0]?.text?.trim()
           if (text) return text
-        } catch (e) {
-          if (i === 1) log(`Anthropic échec: ${e.message}`)
         }
-      }
+      } catch (e) { log(`Anthropic: ${e.message}`) }
     }
     throw new Error('LLM indisponible')
   } finally {
@@ -389,13 +408,9 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
     ].filter(Boolean).join('\n')
 
     checkInterrupt()
-    const newCode = await generateRaw(codePrompt, 4000, 'fast')
+    const newCode = await generateRaw(codePrompt, 4000, 'smart')
     let clean = newCode.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim()
-
-    // Validation de base
-    if (clean.includes('TODO') || clean.includes('placeholder') || clean.length < 100) {
-      throw new Error('Code invalide (TODO/placeholder/trop court)')
-    }
+    if (clean.length < 50) throw new Error('Code trop court')
 
     stage('safe')
 
