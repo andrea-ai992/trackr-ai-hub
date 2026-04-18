@@ -1,10 +1,4 @@
-Pour ajouter un système de tabs défilants horizontalement pour les sections PSG/NBA/NFL/UFC, nous allons modifier le fichier `src/pages/Sports.jsx` et `src/pages/Sports.css`.
-
-**src/pages/Sports.jsx**
-
-```jsx
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import './Sports.css';
 
 const Sports = () => {
@@ -252,11 +246,7 @@ const Sports = () => {
 };
 
 export default Sports;
-```
 
-**src/pages/Sports.css**
-
-```css
 .sports-container {
   background-color: var(--bg);
   color: var(--t1);
@@ -437,122 +427,3 @@ export default Sports;
   display: flex;
   flex-direction: column;
 }
-
-.team-score {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
-  border-bottom: 1px solid var(--border);
-}
-
-.team-name {
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.team-score-value {
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.game-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.85rem;
-  color: var(--t2);
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
-}
-
-.game-period {
-  font-size: 0.8rem;
-}
-
-.game-time {
-  font-size: 0.8rem;
-}
-
-.event-card {
-  padding: 16px;
-}
-
-.event-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border);
-}
-
-.event-name {
-  font-weight: 600;
-  font-size: 1rem;
-}
-
-.event-date {
-  font-size: 0.8rem;
-}
-
-.fight {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
-  border-bottom: 1px solid var(--border);
-}
-
-.fighter {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.fighter-name {
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.fighter-score {
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.fight-vs {
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.fight-status {
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.fight-status-live {
-  background-color: rgba(0, 255, 136, 0.2);
-  color: var(--green);
-}
-
-.fight-status-final {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: var(--t2);
-}
-
-.fight-status-scheduled {
-  background-color: rgba(255, 255, 0, 0.1);
-  color: var(--t2);
-}
-```
-
-Pour ajouter un système de tabs défilants horizontalement, nous avons ajouté un élément `<div>` avec la classe `tabs` dans le fichier `src/pages/Sports.css`. Nous avons également ajouté les classes `tab` et `active` pour les éléments `<div>` qui représentent les tabs.
-
-Nous avons également ajouté les classes `team-score` et `team-name` pour les éléments `<span>` qui représentent les scores et les noms des équipes dans les fichiers `src/pages/Sports.css` et `src/pages/Sports.jsx`.
-
-Enfin, nous avons ajouté les classes `event-card` et `event-header` pour les éléments `<div>` qui représentent les cartes des événements dans les fichiers `src/pages/Sports.css` et `src/pages/Sports.jsx`.
-
-Cela devrait ajouter un système de tabs défilants horizontalement pour les sections PSG/NBA/NFL/UFC.
