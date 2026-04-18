@@ -1,15 +1,26 @@
 **src/index.css**
 ```css
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
 :root {
   --green: #00ff88;
   --bg: #080808;
+  --bg1: #0c0c0c;
   --bg2: #111;
+  --bg3: #161616;
+  --bg4: #1c1c1c;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-hi: rgba(0, 255, 136, 0.20);
+  --green-dim: #00cc66;
+  --green-bg: rgba(0, 255, 136, 0.06);
+  --red: #ff4d4d;
+  --amber: #fbbf24;
+  --blue: #38bdf8;
+  --purple: #a78bfa;
   --t1: #f0f0f0;
   --t2: #888;
   --t3: #444;
-  --border: rgba(255, 255, 255, 0.07);
+  --radius-sm: 12px;
+  --radius: 16px;
+  --radius-lg: 22px;
 }
 
 body {
@@ -25,7 +36,7 @@ body {
   padding: 20px;
   background-color: var(--bg2);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius);
   box-shadow: 0 8px 32px rgba(0, 255, 136, 0.08);
 }
 
@@ -57,11 +68,20 @@ body {
   color: var(--green);
 }
 
+.page {
+  max-width: 520px;
+  padding: 20px;
+  background-color: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 32px rgba(0, 255, 136, 0.08);
+}
+
 .page-card {
   background-color: var(--bg2);
   padding: 20px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius);
   box-shadow: 0 8px 32px rgba(0, 255, 136, 0.08);
   transition: transform 200ms ease-out, box-shadow 200ms ease-out;
 }
@@ -69,6 +89,87 @@ body {
 .page-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 32px rgba(0, 255, 136, 0.16);
+}
+
+.card {
+  background-color: var(--bg2);
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 32px rgba(0, 255, 136, 0.08);
+}
+
+.pill-up {
+  color: var(--green);
+}
+
+.pill-down {
+  color: var(--red);
+}
+
+.scroll-row {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tab-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius);
+  background-color: var(--bg2);
+  color: var(--t1);
+  cursor: pointer;
+}
+
+.tab-btn:hover {
+  background-color: var(--green);
+  color: var(--t1);
+}
+
+.section-label {
+  text-transform: uppercase;
+  font-size: 10px;
+  color: var(--t2);
+}
+
+.press-scale {
+  transform: scale(0.97);
+}
+
+.live-dot {
+  animation: ping 200ms infinite;
+}
+
+@keyframes ping {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.num {
+  font-family: 'Inter', sans-serif;
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+  color: var(--t1);
 }
 
 .anim-1 {
@@ -103,7 +204,7 @@ body {
 
 @keyframes fadeUp {
   0% {
-    transform: translateY(20px);
+    transform: translateY(16px);
     opacity: 0;
   }
   100% {
@@ -149,6 +250,8 @@ body {
     background-position: 200%;
   }
 }
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 ```
 
 **src/components/PageTransition.jsx**
@@ -266,6 +369,3 @@ const PageTransition = ({ children }) => {
 };
 
 export default PageTransition;
-```
-
-Notez que j'ai utilisé les classes CSS définies dans `src/index.css` pour les animations. J'ai également utilisé les fonctions `useLocation` et `useNavigate` de `react-router-dom` pour récupérer l'emplacement actuel et naviguer vers un emplacement spécifique.
