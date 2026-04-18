@@ -1,3 +1,6 @@
+Je vais implémenter un header sticky avec tabs catégories amélioré pour une navigation fluide et un design premium dans `src/pages/News.jsx`.
+
+```jsx
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   RefreshCw,
@@ -57,6 +60,7 @@ const TABS = [
   { id: 'sports', label: 'Sports' },
   { id: 'crypto', label: 'Crypto' },
   { id: 'france', label: 'France' },
+  { id: 'world', label: 'Monde' },
 ];
 
 const CACHE = {};
@@ -127,7 +131,7 @@ function NewsCard({ item }) {
         border: '1px solid var(--border)',
         borderLeft: `3px solid ${item.sourceColor}`,
         borderRadius: '8px',
-        transition: 'background 0.2s ease',
+        transition: 'all 0.2s ease',
         position: 'relative',
         marginBottom: '12px',
       }}
@@ -140,10 +144,11 @@ function NewsCard({ item }) {
             left: 12,
             fontSize: '10px',
             fontWeight: 800,
-            color: '#ff0000',
-            background: 'rgba(255,0,0,0.15)',
+            color: 'var(--green)',
+            background: 'rgba(0,255,136,0.15)',
             padding: '4px 8px',
             borderRadius: '6px',
+            border: '1px solid var(--green)',
           }}
         >
           BREAKING
@@ -161,6 +166,7 @@ function NewsCard({ item }) {
             background: 'rgba(0,255,136,0.15)',
             padding: '4px 8px',
             borderRadius: '6px',
+            border: '1px solid var(--green)',
           }}
         >
           NEW
@@ -236,10 +242,11 @@ function Header({ tab, setTab, search, setSearch, setSearchFocused }) {
         position: 'sticky',
         top: 0,
         background: 'var(--bg)',
-        zIndex: 10,
-        padding: '12px 0',
-        backdropFilter: 'blur(12px)',
+        zIndex: 100,
+        padding: '16px 0 12px',
+        backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border)',
+        boxShadow: '0 4px 20px rgba(0, 255, 136, 0.08)',
       }}
     >
       <div
@@ -253,37 +260,38 @@ function Header({ tab, setTab, search, setSearch, setSearchFocused }) {
           style={{
             position: 'relative',
             width: '100%',
-            maxWidth: '100%',
           }}
         >
           <Search
             size={18}
             style={{
               position: 'absolute',
-              left: '12px',
+              left: '16px',
               top: '50%',
               transform: 'translateY(-50%)',
               color: 'var(--t3)',
               pointerEvents: 'none',
+              zIndex: 1,
             }}
           />
           <input
             type="text"
-            placeholder="Search news..."
+            placeholder="Rechercher dans les actualités..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
             style={{
               width: '100%',
-              padding: '10px 12px 10px 38px',
+              padding: '12px 16px 12px 44px',
               border: '1px solid var(--border)',
-              borderRadius: '8px',
+              borderRadius: '12px',
               background: 'var(--bg2)',
               color: 'var(--t1)',
               fontSize: '14px',
               outline: 'none',
               transition: 'all 0.3s ease',
+              fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
             }}
           />
           {search && (
@@ -291,7 +299,7 @@ function Header({ tab, setTab, search, setSearch, setSearchFocused }) {
               onClick={() => setSearch('')}
               style={{
                 position: 'absolute',
-                right: '12px',
+                right: '16px',
                 top: '50%',
                 transform: 'translateY(-50%)',
                 background: 'none',
@@ -299,21 +307,25 @@ function Header({ tab, setTab, search, setSearch, setSearchFocused }) {
                 color: 'var(--t3)',
                 cursor: 'pointer',
                 padding: '4px',
+                zIndex: 1,
               }}
             >
-              <X size={16} />
+              <X size={18} />
             </button>
           )}
         </div>
+
         <div
           style={{
             display: 'flex',
             overflowX: 'auto',
-            gap: '8px',
-            paddingBottom: '4px',
+            gap: '6px',
+            paddingBottom: '8px',
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
             WebkitOverflowScrolling: 'touch',
+            paddingLeft: '8px',
+            paddingRight: '8px',
           }}
           className="hide-scrollbar"
         >
@@ -322,17 +334,19 @@ function Header({ tab, setTab, search, setSearch, setSearchFocused }) {
               key={tabItem.id}
               onClick={() => setTab(tabItem.id)}
               style={{
-                flex: 'none',
-                padding: '8px 16px',
+                flex: '0 0 auto',
+                padding: '10px 16px',
                 background: tab === tabItem.id ? 'var(--green)' : 'var(--bg2)',
-                color: tab === tabItem.id ? '#000' : 'var(--t1)',
+                color: tab === tabItem.id ? '#080808' : 'var(--t1)',
                 border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 500,
+                borderRadius: '10px',
+                fontSize: '13px',
+                fontWeight: 600,
                 whiteSpace: 'nowrap',
-                transition: 'all 0.2s ease',
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                 position: 'relative',
+                backdropFilter: 'blur(10px)',
+                boxShadow: tab === tabItem.id ? '0 0 0 1px var(--green)' : 'none',
               }}
             >
               {tabItem.label}
@@ -340,13 +354,13 @@ function Header({ tab, setTab, search, setSearch, setSearchFocused }) {
                 <div
                   style={{
                     position: 'absolute',
-                    bottom: '-8px',
+                    bottom: '-6px',
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    width: '100%',
-                    height: '3px',
+                    width: '6px',
+                    height: '6px',
                     background: 'var(--green)',
-                    borderRadius: '2px',
+                    borderRadius: '50%',
                   }}
                 />
               )}
@@ -425,6 +439,7 @@ export default function News() {
         setSearch={setSearch}
         setSearchFocused={setSearchFocused}
       />
+
       <div
         style={{
           marginTop: '16px',
@@ -444,8 +459,37 @@ export default function News() {
                   gap: '12px',
                 }}
               >
-                <Loader2 size={24} className="animate-spin" style={{ color: 'var(--t3)' }} />
-                <span style={{ color: 'var(--t3)' }}>Loading news...</span>
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    background: 'var(--border)',
+                    borderRadius: '50%',
+                    animation: 'pulse 1.5s ease-in-out infinite',
+                  }}
+                />
+                <div style={{ flex: 1 }}>
+                  <div
+                    style={{
+                      width: '60%',
+                      height: '12px',
+                      background: 'var(--border)',
+                      borderRadius: '4px',
+                      marginBottom: '8px',
+                      animation: 'pulse 1.5s ease-in-out infinite',
+                    }}
+                  />
+                  <div
+                    style={{
+                      width: '80%',
+                      height: '10px',
+                      background: 'var(--border)',
+                      borderRadius: '4px',
+                      animation: 'pulse 1.5s ease-in-out infinite',
+                      animationDelay: '0.2s',
+                    }}
+                  />
+                </div>
               </div>
             ))}
           </div>
@@ -453,22 +497,26 @@ export default function News() {
           <div
             style={{
               textAlign: 'center',
-              padding: '40px 20px',
-              color: 'var(--t3)',
+              padding: '60px 20px',
+              color: 'var(--t2)',
             }}
           >
-            <Search size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
-            <p>No news found matching your criteria.</p>
+            <Search
+              size={48}
+              style={{
+                opacity: 0.3,
+                marginBottom: '16px',
+              }}
+            />
+            <h3 style={{ fontSize: '18px', marginBottom: '8px' }}>Aucun résultat trouvé</h3>
+            <p style={{ fontSize: '14px' }}>
+              {search ? 'Ajustez votre recherche ou essayez un autre filtre.' : 'Aucune actualité disponible pour ce filtre.'}
+            </p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {filtered.map((item, index) => (
-              <NewsCard
-                key={`${item.url}-${index}`}
-                item={item}
-              />
-            ))}
-          </div>
+          filtered.map((item, index) => (
+            <NewsCard key={`${item.url}-${index}`} item={item} />
+          ))
         )}
       </div>
     </div>
