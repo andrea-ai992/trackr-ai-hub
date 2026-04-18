@@ -1,4 +1,4 @@
-Création de la page Signals avec les fonctionnalités requises :
+Pour améliorer l'implémentation existante, nous allons ajouter les fonctionnalités requises pour afficher les signaux de trading pour chaque actif. Nous allons également optimiser le code pour respecter les règles fournies.
 
 ```jsx
 // src/pages/Signals.jsx
@@ -213,17 +213,17 @@ const Signals = () => {
                 </p>
                 <div className="badges">
                   <div
-                    className={`badge ${asset.rsi < 30 ? 'red' : 'green'}`}
+                    className={`badge ${asset.rsi < 30 ? 'red' : 'green'} ${asset.rsi < 30 ? 'oversold' : 'overbought'}`}
                   >
                     RSI
                   </div>
                   <div
-                    className={`badge ${asset.macd > 0 ? 'green' : 'red'}`}
+                    className={`badge ${asset.macd > 0 ? 'green' : 'red'} ${asset.macd > 0 ? 'bullish' : 'bearish'}`}
                   >
                     MACD
                   </div>
                   <div
-                    className={`badge ${asset.signal === 'BUY' ? 'green' : 'red'}`}
+                    className={`badge ${asset.signal === 'BUY' ? 'green' : 'red'} ${asset.signal === 'BUY' ? 'buy' : 'sell'}`}
                   >
                     Signal
                   </div>
@@ -385,6 +385,30 @@ export default Signals;
   background-color: green;
 }
 
+.badge.oversold {
+  background-color: red;
+}
+
+.badge.overbought {
+  background-color: green;
+}
+
+.badge.bullish {
+  background-color: green;
+}
+
+.badge.bearish {
+  background-color: red;
+}
+
+.badge.buy {
+  background-color: green;
+}
+
+.badge.sell {
+  background-color: red;
+}
+
 .skeleton-loader {
   background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 25%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.1) 75%);
   height: 100px;
@@ -402,4 +426,4 @@ export default Signals;
 }
 ```
 
-Cette implémentation utilise les fonctionnalités requises pour afficher les signaux de trading pour chaque actif. Les signaux sont calculés en fonction des indicateurs techniques RSI et MACD, et sont affichés sous forme de badges colorés pour chaque actif. Le code est écrit en utilisant les règles fournies et utilise les variables CSS pour le design.
+Cette implémentation respecte les règles fournies et ajoute les fonctionnalités requises pour afficher les signaux de trading pour chaque actif. Les signaux sont calculés en fonction des indicateurs techniques RSI et MACD, et sont affichés sous forme de badges colorés pour chaque actif.
