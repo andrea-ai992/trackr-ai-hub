@@ -329,55 +329,30 @@ export default function Dashboard() {
           justifyContent: 'space-between',
         }}>
           <Sparkline data={sparkData} />
+          <span style={{ fontSize: 12, color: 'var(--t2)' }}>Sur 7 jours</span>
         </div>
       </button>
 
-      {/* Top Movers */}
-      <div className="stagger-item" style={{ marginBottom: 24 }}>
-        <h2 style={{
-          fontSize: 18,
-          fontWeight: 700,
-          color: 'var(--t1)',
-          marginBottom: 12
-        }}>Top Movers</h2>
+      {/* Movers Section */}
+      <div className="stagger-item" style={{ marginBottom: 16 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--t1)', marginBottom: 8 }}>Movers</h2>
         <div className="scroll-row">
           {crypto.map(c => (
             <div key={c.id} style={{
-              background: 'rgba(255, 255, 255, 0.04)',
+              background: 'var(--bg2)',
               borderRadius: '12px',
               padding: '16px',
               minWidth: 120,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'flex-start',
-              gap: 8
+              gap: 4
             }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8
-              }}>
-                <div style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: '50%',
-                  backgroundColor: coinColor[c.id],
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white'
-                }}>{c.symbol.toUpperCase()}</div>
-                <span style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: 'var(--t1)'
-                }}>{fmt(c.current_price)}</span>
-              </div>
-              <span style={{
-                fontSize: 12,
-                fontWeight: 500,
-                color: c.price_change_percentage_24h >= 0 ? 'var(--green)' : '#ff4d4d'
-              }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)' }}>{c.symbol.toUpperCase()}</span>
+              <span style={{ fontSize: 16, fontWeight: 900, color: c.price_change_percentage_24h >= 0 ? 'var(--green)' : '#ff4d4d' }}>
+                {fmt(c.current_price)}
+              </span>
+              <span style={{ fontSize: 12, color: c.price_change_percentage_24h >= 0 ? 'var(--green)' : '#ff4d4d' }}>
                 {fmtPct(c.price_change_percentage_24h)}
               </span>
             </div>
@@ -385,23 +360,20 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Fear & Greed Gauge */}
-      <div className="stagger-item" style={{ marginBottom: 24 }}>
-        <h2 style={{
-          fontSize: 18,
-          fontWeight: 700,
-          color: 'var(--t1)',
-          marginBottom: 12
-        }}>Fear & Greed</h2>
+      {/* Fear & Greed Section */}
+      <div className="stagger-item" style={{ marginBottom: 16 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--t1)', marginBottom: 8 }}>Fear & Greed</h2>
         <FGGauge value={fg} />
       </div>
 
-      {/* News Feed */}
-      <div className="stagger-item" style={{ marginBottom: 24 }}>
-        <h2 style={{
-          fontSize: 18,
-          fontWeight: 700,
-          color: 'var(--t1)',
-          marginBottom: 12
-        }}>Dernières Nouvelles</h2>
-        {news.slice(0, 3).map(n
+      {/* News Feed Section */}
+      <div className="stagger-item" style={{ marginBottom: 16 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--t1)', marginBottom: 8 }}>Dernières nouvelles</h2>
+        {news.slice(0, 3).map(n => (
+          <div key={n.guid} style={{
+            background: 'var(--bg2)',
+            borderRadius: '12px',
+            padding: '16px',
+            marginBottom: 8
+          }}>
+            <h3 style={{ fontSize: 14, fontWeight
