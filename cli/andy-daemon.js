@@ -156,14 +156,14 @@ const OLLAMA_URL  = process.env.OLLAMA_URL       || ''
 const OLLAMA_MODEL= process.env.OLLAMA_MODEL     || 'qwen2.5-coder:7b'
 
 // Modèles Anthropic (fallback)
-const MODEL_SMART = 'claude-sonnet-4-6'
-const MODEL_FAST  = 'claude-haiku-4-5-20251001'
+const MODEL_SMART = 'claude-3-5-sonnet-20241022'
+const MODEL_FAST  = 'claude-3-5-haiku-20241022'
 // Modèles Groq (gratuit)
 const GROQ_SMART  = 'llama-3.3-70b-versatile'   // meilleur qualité gratuit
 const GROQ_FAST   = 'llama-3.1-8b-instant'       // ultra rapide, gratuit
 
 // Semaphore global — évite burst API
-const API_SEMAPHORE_LIMIT = 2
+const API_SEMAPHORE_LIMIT = 4
 let   apiConcurrent = 0
 let   globalRateLimitUntil = 0
 
@@ -389,25 +389,6 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
       throw new Error('Code invalide (TODO/placeholder/trop court)')
     }
 
-    stage('testing')
-    const reviewPrompt = [
-      'Superviseur — vérifie ce code pour ' + op.path + ' (Trackr React+Vite).',
-      'TÂCHE: ' + taskContent.slice(0, 200),
-      'CODE:\n' + clean.slice(0, 8000),
-      'Vérifie: syntaxe valide, tâche accomplie, pas de TODO/placeholder.',
-      'Réponds uniquement: APPROVED ou REJECTED\nRAISON: ...\nFIX: <code complet corrigé si REJECTED>',
-    ].join('\n')
-
-    checkInterrupt()
-    const review = await generateRaw(reviewPrompt, 6000, MODEL_FAST)
-    if (review.trim().startsWith('REJECTED')) {
-      const fixMatch = review.match(/FIX:([\s\S]+)/)
-      if (fixMatch) {
-        clean = fixMatch[1].replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim()
-        log(`corrigé par superviseur: ${op.path}`)
-      } else throw new Error('Review rejeté sans fix')
-    }
-
     stage('safe')
 
     // ── Build test local avant push ──────────────────────────────────────────
@@ -419,7 +400,7 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
       mkdirSync(localPath.replace(/\/[^/]+$/, ''), { recursive: true })
       writeFileSync(localPath, clean, 'utf8')
       log(`build test: ${op.path}…`)
-      execSync('npm run build --silent 2>&1', { cwd: ROOT, timeout: 90000, stdio: 'pipe' })
+      execSync('npm run build --silent 2>&1', { cwd: ROOT, timeout: 60000, stdio: 'pipe' })
       buildPassed = true
       log(`build OK: ${op.path}`)
     } catch (buildErr) {
@@ -444,7 +425,7 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
 
       try {
         writeFileSync(localPath, clean, 'utf8')
-        execSync('npm run build --silent 2>&1', { cwd: ROOT, timeout: 90000, stdio: 'pipe' })
+        execSync('npm run build --silent 2>&1', { cwd: ROOT, timeout: 60000, stdio: 'pipe' })
         buildPassed = true
         log(`build OK après fix: ${op.path}`)
         discordPost(CH_UPDATES, `✅ **Build fixé** — \`${fname}\` corrigé et validé`)
@@ -856,18 +837,17 @@ async function selfUpdate() {
 }
 
 // ── Parallel workers ──────────────────────────────────────────────────────────
-// 2 workers (safe pour rate limit Anthropic) + semaphore API global (max 2 calls)
-// Coût: ~$0.08-0.12/tâche | $20 crédits ≈ 160-250 tâches
-const WORKER_COUNT     = 2
-const PAUSE_AFTER_TASK = 12   // secondes de pause entre tâches par worker
-const PAUSE_IDLE       = 40   // secondes si pas de tâche dispo
+const WORKER_COUNT     = 4
+const PAUSE_AFTER_TASK = 5    // secondes de pause entre tâches par worker
+const PAUSE_IDLE       = 10   // secondes si pas de tâche dispo
 
 const claimedTasks = new Set()
 
 function priorityScore(fname) {
   let score = 0
-  if (fname.startsWith('urgent-'))   score += 2000  // interruption immédiate
-  if (fname.startsWith('manual-'))   score += 1000  // tâches utilisateur — toujours en premier
+  if (fname.startsWith('urgent-'))   score += 2000
+  if (fname.startsWith('manual-'))   score += 1000
+  if (fname.startsWith('MISSION-'))  score += 500   // tâches missions — haute priorité
   if (fname.startsWith('critical-')) score += 100
   if (fname.startsWith('fix-'))      score += 80
   if (fname.startsWith('NUIT-'))     score += 70
@@ -905,7 +885,7 @@ function claimNextTask() {
 }
 
 async function worker(id) {
-  await sl(id * 6000)
+  await sl(id * 2000)
   log(`Worker #${id} démarré`)
   liveWorkers[id] = { task: null, stage: 'idle', since: new Date().toISOString() }
   writeLiveState()
