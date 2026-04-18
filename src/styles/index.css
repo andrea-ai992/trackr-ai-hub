@@ -1,13 +1,15 @@
-**src/styles/index.css**
+src/styles/index.css
 ```css
 :root {
   --green: #00ff88;
   --bg: #080808;
   --bg2: #111;
+  --bg3: #1a1a1a;
   --t1: #f0f0f0;
   --t2: #888;
   --t3: #444;
   --border: rgba(255, 255, 255, 0.07);
+  --border-hi: rgba(0, 255, 136, 0.2);
   --font-family: 'Inter', sans-serif;
 }
 
@@ -28,6 +30,29 @@ body {
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
+.card {
+  background-color: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.button {
+  background-color: var(--bg3);
+  color: var(--t1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.button:hover {
+  background-color: var(--bg2);
+  border-color: var(--border-hi);
+}
+
 .badge {
   display: inline-block;
   padding: 8px 16px;
@@ -40,55 +65,52 @@ body {
   transition: background-color 0.3s ease;
 }
 
-.badge LIVE {
+.badge.LIVE {
   background-color: var(--t3);
   color: var(--t1);
 }
 
-.badge NEW {
+.badge.NEW {
   background-color: var(--t3);
   color: var(--t1);
 }
 ```
 
-**src/pages/More/index.js**
-```jsx
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Container, Badge } from '../styles';
-
-const More = () => {
-  return (
-    <Container>
-      <h1>Plus</h1>
-      <p>Voici quelques-unes de nos fonctionnalités supplémentaires</p>
-      <ul>
-        <li>
-          <Link to="/news">News</Link>
-          <Badge>LIVE</Badge>
-        </li>
-        <li>
-          <Link to="/sneakers">Sneakers</Link>
-          <Badge>NEW</Badge>
-        </li>
-        <li>
-          <Link to="/watches">Montres</Link>
-          <Badge>LIVE</Badge>
-        </li>
-        <li>
-          <Link to="/realestate">Immobilier</Link>
-          <Badge>NEW</Badge>
-        </li>
-      </ul>
-    </Container>
-  );
-};
-
-export default More;
-```
-
-**src/pages/More/index.css**
+src/pages/More/index.css
 ```css
+.container {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 20px;
+}
+
 .badge {
   margin-left: 8px;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+li:last-child {
+  border-bottom: none;
+}
+
+a {
+  color: var(--t1);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+a:hover {
+  color: var(--green);
 }
