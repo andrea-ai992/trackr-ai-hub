@@ -139,6 +139,8 @@ export default function BrainExplorer() {
   const [tasks,   setTasks]   = useState(null)
   const [loading, setLoading] = useState(true)
   const [tab,     setTab]     = useState('workers')
+  const [newTask, setNewTask] = useState('')
+  const [feedback, setFeedback] = useState('');
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
@@ -158,6 +160,27 @@ export default function BrainExplorer() {
     const id = setInterval(() => load(true), 4000)
     return () => clearInterval(id)
   }, [load])
+
+  const submitTask = async () => {
+    if (!newTask) return;
+    try {
+      const response = await fetch(`${SERVER}/api/task`, {
+        method: 'POST',
+        headers: { ...HEADERS, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task: newTask }),
+      });
+      if (response.ok) {
+        setFeedback('Tâche ajoutée à la queue');
+        setNewTask('');
+        setTimeout(() => {
+          setFeedback('');
+          load();
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout de la tâche:', error);
+    }
+  };
 
   const st      = live?.stats || {}
   const workers = live?.workers || {}
@@ -228,95 +251,17 @@ export default function BrainExplorer() {
         </div>
       </div>
 
-      <div style={{ padding: '12px 16px 0' }}>
-
-        {/* Workers tab */}
+      {/* Content */}
+      <div style={{ padding: '16px' }}>
         {tab === 'workers' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {wIds.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--t3)' }}>
-                <Cpu size={32} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
-                <p style={{ fontSize: 13 }}>Daemon pas encore connecté</p>
-                <p style={{ fontSize: 11, marginTop: 6, opacity: 0.6 }}>Serveur: {SERVER}</p>
-              </div>
-            ) : wIds.map(id => (
+          <div>
+            {wIds.map(id => (
               <WorkerCard key={id} id={id} worker={workers[id]} />
             ))}
-            {running.length > 0 && (
-              <div style={{ marginTop: 12 }}>
-                <p style={{ fontSize: 9, color: 'var(--t3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Tâches actives</p>
-                {running.map(t => <TaskNode key={t.name} task={t} />)}
-              </div>
-            )}
-            <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center', padding: '10px 12px', background: 'var(--bg2)', borderRadius: 10, border: '1px solid var(--border)' }}>
-              <Zap size={12} color="var(--amber)" />
-              <span style={{ fontSize: 10, color: 'var(--t3)' }}>Coût estimé: </span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--green)' }}>${st.cost || '0.00'}</span>
-              <span style={{ fontSize: 10, color: 'var(--t3)', marginLeft: 'auto' }}>Cycle #{st.cycles || 0}</span>
-            </div>
+            <button onClick={() => window.open('http://62.238.12.221:4000/brain', '_blank')} style={{ marginTop: 10, padding: '8px 12px', background: 'var(--green)', border: 'none', borderRadius: 5, color: 'var(--bg)', cursor: 'pointer' }}>
+              Ouvrir dashboard live
+            </button>
           </div>
         )}
-
-        {/* Log tab */}
-        {tab === 'log' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-            {log.length === 0 ? (
-              <p style={{ textAlign: 'center', color: 'var(--t3)', padding: '40px 0', fontSize: 13 }}>Aucun log</p>
-            ) : log.map((e, i) => <LogLine key={i} entry={e} />)}
-          </div>
-        )}
-
-        {/* Done tab */}
-        {tab === 'done' && (
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {done.length === 0 ? (
-              <p style={{ textAlign: 'center', color: 'var(--t3)', padding: '40px 0', fontSize: 13 }}>Aucune tâche terminée</p>
-            ) : done.slice().reverse().map(t => <TaskNode key={t.name + t.startedAt} task={t} />)}
-          </div>
-        )}
-
-        {/* Errors tab */}
-        {tab === 'errors' && (
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {errors.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <CheckCircle size={32} color="var(--green)" style={{ margin: '0 auto 12px' }} />
-                <p style={{ fontSize: 13, color: 'var(--t2)' }}>Aucune erreur</p>
-              </div>
-            ) : errors.map(t => <TaskNode key={t.name} task={t} />)}
-          </div>
-        )}
-
-        {/* Tree tab — infinite folder explorer */}
-        {tab === 'tree' && (
-          <div>
-            <Folder label="En cours" icon="⚡" count={running.length} accent="var(--blue)" defaultOpen>
-              {running.length === 0
-                ? <p style={{ fontSize: 11, color: 'var(--t3)', padding: '8px 12px' }}>Aucune tâche en cours</p>
-                : running.map(t => <TaskNode key={t.name} task={t} depth={0} />)
-              }
-            </Folder>
-            <Folder label="Queue" icon="⏳" count={st.queue || 0} accent="var(--amber)" defaultOpen={false}>
-              {(tasks?.files?.queue || []).slice(0, 20).map(name => (
-                <div key={name} style={{ display: 'flex', gap: 7, padding: '6px 10px' }}>
-                  <span style={{ fontSize: 10, color: 'var(--t3)' }}>○</span>
-                  <span style={{ fontSize: 11, color: 'var(--t2)' }}>{name.replace(/^(auto|manual|chat)-[\d]+-?/, '').replace(/-/g, ' ').slice(0, 60)}</span>
-                </div>
-              ))}
-            </Folder>
-            <Folder label="Terminées" icon="✅" count={done.length} accent="var(--green-dim)" defaultOpen={false}>
-              {done.slice(-30).reverse().map(t => <TaskNode key={t.name} task={t} depth={0} />)}
-            </Folder>
-            <Folder label="Erreurs" icon="⚠️" count={errors.length} accent="var(--red)" defaultOpen={false}>
-              {errors.slice(-20).map(t => <TaskNode key={t.name} task={t} depth={0} />)}
-            </Folder>
-            <Folder label="Mémoire AnDy" icon="🧠" count="∞" accent="#a78bfa" defaultOpen={false}>
-              <p style={{ fontSize: 11, color: 'var(--t3)', padding: '8px 12px' }}>Ouvre <a href={`${SERVER}/brain`} target="_blank" rel="noreferrer" style={{ color: 'var(--green-dim)' }}>le dashboard live</a> pour voir la mémoire complète.</p>
-            </Folder>
-          </div>
-        )}
-
-      </div>
-    </div>
-  )
-}
+        {tab === 'log' && log.map(entry => <LogLine key={entry.ts} entry={entry} />)}
+        {tab === 'done' && done.map
