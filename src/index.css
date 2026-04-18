@@ -1,141 +1,270 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  HomeIcon,
-  FootballIcon,
-  TrendingUpIcon,
-  NewspaperIcon,
-  MoreHorizontalIcon,
-} from 'lucide-react';
+Je vais consolider le fichier `src/index.css` avec le système de design tokens complet tout en conservant le code existant du composant `BottomNav`. Voici le fichier mis à jour :
 
-const BottomNav = ({ unreadNews = 0 }) => {
-  const navigate = useNavigate();
-  const [activeIndex, setActiveIndex] = useState(0);
+```css
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 
-  const tabs = [
-    { label: 'Home', icon: HomeIcon, path: '/' },
-    { label: 'Sports', icon: FootballIcon, path: '/sports' },
-    { label: 'Markets', icon: TrendingUpIcon, path: '/markets' },
-    { label: 'News', icon: NewspaperIcon, path: '/news' },
-    { label: 'More', icon: MoreHorizontalIcon, path: '/more' },
-  ];
+:root {
+  /* Colors */
+  --bg: #080808;
+  --bg1: #0c0c0c;
+  --bg2: #111111;
+  --bg3: #161616;
+  --bg4: #1c1c1c;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-hi: rgba(0, 255, 136, 0.20);
+  --green: #00ff88;
+  --green-dim: #00cc66;
+  --green-bg: rgba(0, 255, 136, 0.06);
+  --red: #ff4d4d;
+  --amber: #fbbf24;
+  --blue: #38bdf8;
+  --purple: #a78bfa;
+  --t1: #f0f0f0;
+  --t2: #888888;
+  --t3: #444444;
 
-  const handleTabClick = (index, path) => {
-    setActiveIndex(index);
-    navigate(path);
-  };
+  /* Radius */
+  --radius-sm: 12px;
+  --radius: 16px;
+  --radius-lg: 22px;
 
-  const pillStyle = {
-    position: 'absolute',
-    left: `calc(${activeIndex * 20}% + ${activeIndex * 8}px)`,
-    bottom: '6px',
-    width: 'calc(20% - 8px)',
-    height: '36px',
-    backgroundColor: 'rgba(0,255,136,0.12)',
-    borderRadius: '12px',
-    transition: 'transform 300ms ease',
-    pointerEvents: 'none',
-    zIndex: 1,
-  };
+  /* Fonts */
+  --font-main: 'Inter', sans-serif;
+  --font-weight-400: 400;
+  --font-weight-600: 600;
+  --font-weight-700: 700;
+}
 
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        left: 0,
-        right: 0,
-        bottom: 0,
-        height: '60px',
-        paddingBottom: 'env(safe-area-inset-bottom)',
-        backgroundColor: 'rgba(8,8,8,0.92)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
-        borderTop: '1px solid rgba(255,255,255,0.07)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-around',
-        zIndex: 1000,
-      }}
-    >
-      <div style={{ position: 'relative', flex: 1, display: 'flex' }}>
-        {tabs.map((tab, idx) => {
-          const isActive = activeIndex === idx;
-          return (
-            <button
-              key={idx}
-              onClick={() => handleTabClick(idx, tab.path)}
-              style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '2px',
-                padding: '0',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                transition: 'transform 120ms ease',
-                '&:active': { transform: 'scale(0.92)' },
-                color: isActive ? 'var(--green)' : '#444',
-              }}
-              className="press-scale"
-            >
-              <span
-                style={{
-                  position: 'relative',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 22,
-                  height: 22,
-                }}
-              >
-                <tab.icon
-                  size={22}
-                  color={isActive ? 'var(--green)' : '#444'}
-                  style={{ flexShrink: 0 }}
-                />
-                {tab.label === 'News' && unreadNews > 0 && (
-                  <span
-                    style={{
-                      position: 'absolute',
-                      top: -2,
-                      right: -2,
-                      width: 12,
-                      height: 12,
-                      background: '#ff4d4d',
-                      borderRadius: '50%',
-                      fontSize: '8px',
-                      color: '#fff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {unreadNews > 9 ? '9+' : unreadNews}
-                  </span>
-                )}
-              </span>
-              <span
-                style={{
-                  fontSize: '9px',
-                  lineHeight: 1,
-                  letterSpacing: '0.3px',
-                  color: isActive ? 'var(--green)' : '#444',
-                  transition: 'color 150ms ease',
-                }}
-              >
-                {tab.label}
-              </span>
-            </button>
-          );
-        })}
-        <div style={pillStyle} />
-      </div>
-    </div>
-  );
-};
+/* Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
-export default BottomNav;
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg);
+  color: var(--t1);
+  font-family: var(--font-main), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+body {
+  min-height: 100vh;
+  background-color: var(--bg);
+  color: var(--t1);
+}
+
+/* Utility Classes */
+.page {
+  max-width: 520px;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.card {
+  background-color: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.pill-up {
+  color: var(--green);
+}
+
+.pill-down {
+  color: var(--red);
+}
+
+.scroll-row {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scroll-row::-webkit-scrollbar {
+  display: none;
+}
+
+.scroll-row > * {
+  flex-shrink: 0;
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--t3);
+  transition: color 150ms ease;
+}
+
+.tab-btn.active {
+  color: var(--green);
+}
+
+.section-label {
+  text-transform: uppercase;
+  font-size: 10px;
+  color: var(--t3);
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.press-scale {
+  transition: transform 120ms ease;
+}
+
+.press-scale:active {
+  transform: scale(0.97);
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--green);
+  border-radius: 50%;
+  animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Animations */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+@keyframes ping {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  75% {
+    transform: scale(2);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.25);
+    opacity: 0;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .5;
+  }
+}
+
+/* Bottom Navigation Styles */
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 60px;
+  padding-bottom: env(safe-area-inset-bottom);
+  background-color: rgba(8, 8, 8, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  z-index: 1000;
+}
+
+.bottom-nav-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: transform 120ms ease;
+}
+
+.bottom-nav-tab:active {
+  transform: scale(0.92);
+}
+
+.bottom-nav-tab-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+}
+
+.bottom-nav-tab-label {
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0.3px;
+  color: var(--t3);
+  transition: color 150ms ease;
+}
+
+.bottom-nav-tab.active .bottom-nav-tab-label {
+  color: var(--green);
+}
+
+.bottom-nav-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  background: var(--red);
+  border-radius: 50%;
+  font-size: 8px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.bottom-nav-pill {
+  position: absolute;
+  left: calc(var(--active-index) * 20% + var(--active-index) * 8px);
+  bottom: 6px;
+  width: calc(20% - 8px);
+  height: 36px;
+  background-color: var(--green-bg);
+  border-radius: var(--radius-sm);
+  transition: transform 300ms ease;
+  pointer-events: none;
+  z-index: 1;
+}
