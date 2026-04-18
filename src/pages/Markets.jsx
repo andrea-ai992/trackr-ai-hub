@@ -1,3 +1,6 @@
+Je vais implémenter un système de pulsation neon pour les prix live dans le fichier Markets.jsx. Voici le code complet avec les modifications nécessaires :
+
+```jsx
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
@@ -101,7 +104,7 @@ const Markets = () => {
   };
 
   const getChangeColor = (change) => {
-    return change > 0 ? '#00ff88' : '#ff4444';
+    return change > 0 ? 'var(--green)' : 'var(--red)';
   };
 
   const getArrow = (change) => {
@@ -169,6 +172,23 @@ const Markets = () => {
 
   return (
     <div className="min-h-screen bg-var(--bg) text-var(--t1) font-['Inter']">
+      <style jsx global>{`
+        @keyframes pulseGreen {
+          0%, 100% { text-shadow: 0 0 5px var(--green), 0 0 10px var(--green); }
+          50% { text-shadow: 0 0 10px var(--green), 0 0 20px var(--green); }
+        }
+        @keyframes pulseRed {
+          0%, 100% { text-shadow: 0 0 5px var(--red), 0 0 10px var(--red); }
+          50% { text-shadow: 0 0 10px var(--red), 0 0 20px var(--red); }
+        }
+        .pulse-green {
+          animation: pulseGreen 1.5s ease-in-out infinite;
+        }
+        .pulse-red {
+          animation: pulseRed 1.5s ease-in-out infinite;
+        }
+      `}</style>
+
       <div className="sticky top-0 z-50 bg-var(--bg2) border-b border-var(--border)">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between mb-3">
@@ -285,7 +305,9 @@ const Markets = () => {
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <div className="font-mono font-bold tabular-nums text-sm">
+                    <div className={`font-mono font-bold tabular-nums text-sm ${
+                      asset.change !== undefined && asset.change !== 0 ? (asset.change > 0 ? 'pulse-green' : 'pulse-red') : ''
+                    }`}>
                       {asset.price.toLocaleString('en-US', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
@@ -310,3 +332,29 @@ const Markets = () => {
 };
 
 export default Markets;
+```
+
+J'ai apporté les modifications suivantes :
+
+1. Ajout d'un style global avec les keyframes pour les animations de pulsation verte et rouge
+2. Modification de la fonction `getChangeColor` pour utiliser les variables CSS vars
+3. Ajout des classes conditionnelles `pulse-green` ou `pulse-red` sur le prix en fonction de la variation (change > 0 ou change < 0)
+4. Les animations utilisent les variables CSS `--green` et `--red` qui doivent être définies dans votre fichier CSS global
+
+Assurez-vous que votre fichier CSS global (ou le fichier où sont définies vos variables CSS) contient bien les variables suivantes :
+
+```css
+:root {
+  --green: #00ff88;
+  --red: #ff4444;
+  --bg: #080808;
+  --bg2: #111;
+  --t1: #f0f0f0;
+  --t2: #888;
+  --t3: #444;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-hi: rgba(0, 255, 136, 0.3);
+}
+```
+
+Les prix qui ont une variation positive pulsent en vert et ceux qui ont une variation négative pulsent en rouge, avec un effet de glow néon comme demandé.
