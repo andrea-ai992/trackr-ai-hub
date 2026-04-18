@@ -1,6 +1,3 @@
-Je vais implémenter un header sticky avec tabs catégories amélioré pour une navigation fluide et un design premium dans `src/pages/News.jsx`.
-
-```jsx
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   RefreshCw,
@@ -76,10 +73,14 @@ function parseXML(text) {
       const url = linkEl?.getAttribute('href') || linkEl?.textContent?.trim() || el.querySelector('guid')?.textContent?.trim();
       const pubRaw = el.querySelector('pubDate, published, updated')?.textContent;
       const time = pubRaw ? Math.floor(new Date(pubRaw).getTime() / 1000) : 0;
+      const thumbnail = el.querySelector('media\\:thumbnail, thumbnail')?.getAttribute('url') ||
+                       el.querySelector('enclosure')?.getAttribute('url') ||
+                       '';
       return {
         title,
         url,
         time,
+        thumbnail,
       };
     }).filter((i) => i.title && i.url && i.title.length > 5);
   } catch {
@@ -93,9 +94,16 @@ async function fetchSource(src) {
   const encoded = encodeURIComponent(src.url);
   let items = [];
   try {
-    const r = await fetch(`https://corsproxy.io/?${encoded}`, { signal: AbortSignal.timeout(7000) });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 7000);
+    const r = await fetch(`https://corsproxy.io/?${encoded}`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
     if (r.ok) items = parseXML(await r.text());
-  } catch {}
+  } catch {
+    // Silent catch
+  }
   if (items.length) CACHE[src.id] = { data: items, ts: Date.now() };
   return items;
 }
@@ -442,83 +450,73 @@ export default function News() {
 
       <div
         style={{
-          marginTop: '16px',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          marginBottom: '16px',
         }}
       >
-        {loading ? (
-          <div style={{ display: 'grid', gap: '12px' }}>
-            {[...Array(6)].map((_, index) => (
-              <div
-                key={index}
-                style={{
-                  background: 'var(--bg2)',
-                  padding: '16px',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                }}
-              >
-                <div
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    background: 'var(--border)',
-                    borderRadius: '50%',
-                    animation: 'pulse 1.5s ease-in-out infinite',
-                  }}
-                />
-                <div style={{ flex: 1 }}>
-                  <div
-                    style={{
-                      width: '60%',
-                      height: '12px',
-                      background: 'var(--border)',
-                      borderRadius: '4px',
-                      marginBottom: '8px',
-                      animation: 'pulse 1.5s ease-in-out infinite',
-                    }}
-                  />
-                  <div
-                    style={{
-                      width: '80%',
-                      height: '10px',
-                      background: 'var(--border)',
-                      borderRadius: '4px',
-                      animation: 'pulse 1.5s ease-in-out infinite',
-                      animationDelay: '0.2s',
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
-          <div
-            style={{
-              textAlign: 'center',
-              padding: '60px 20px',
-              color: 'var(--t2)',
-            }}
-          >
-            <Search
-              size={48}
-              style={{
-                opacity: 0.3,
-                marginBottom: '16px',
-              }}
-            />
-            <h3 style={{ fontSize: '18px', marginBottom: '8px' }}>Aucun résultat trouvé</h3>
-            <p style={{ fontSize: '14px' }}>
-              {search ? 'Ajustez votre recherche ou essayez un autre filtre.' : 'Aucune actualité disponible pour ce filtre.'}
-            </p>
-          </div>
-        ) : (
-          filtered.map((item, index) => (
-            <NewsCard key={`${item.url}-${index}`} item={item} />
-          ))
-        )}
+        <button
+          onClick={load}
+          disabled={loading}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '8px 12px',
+            background: 'var(--bg2)',
+            border: '1px solid var(--border)',
+            borderRadius: '8px',
+            color: 'var(--t1)',
+            fontSize: '13px',
+            fontWeight: 500,
+            cursor: loading ? 'not-allowed' : 'pointer',
+            opacity: loading ? 0.6 : 1,
+            transition: 'all 0.2s ease',
+          }}
+        >
+          {loading ? (
+            <Loader2 size={16} className="spin" style={{ animation: 'spin 1s linear infinite' }} />
+          ) : (
+            <RefreshCw size={16} />
+          )}
+          Rafraîchir
+        </button>
       </div>
+
+      {loading && items.length === 0 ? (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '200px',
+          }}
+        >
+          <Loader2 size={32} className="spin" style={{ animation: 'spin 1s linear infinite', color: 'var(--green)' }} />
+        </div>
+      ) : filtered.length === 0 ? (
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '40px 20px',
+            color: 'var(--t3)',
+          }}
+        >
+          <Search size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
+          <p>Aucun résultat trouvé pour cette recherche.</p>
+        </div>
+      ) : (
+        <div
+          style={{
+            display: 'grid',
+            gap: '12px',
+          }}
+        >
+          {filtered.map((item, i) => (
+            <NewsCard key={`${item.url}-${i}`} item={item} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
