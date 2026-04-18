@@ -1,3 +1,6 @@
+Je vais intégrer un toggle dark mode persistant dans le SettingsPanel.jsx en suivant les règles. Voici le code complet et fonctionnel :
+
+```jsx
 import { useState, useEffect } from 'react';
 import DOMPurify from 'dompurify';
 
@@ -9,6 +12,10 @@ const SettingsPanel = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [darkMode, setDarkMode] = useState(() => {
+    const savedMode = localStorage.getItem('darkMode');
+    return savedMode !== null ? JSON.parse(savedMode) : true;
+  });
 
   useEffect(() => {
     const savedUsername = localStorage.getItem('username') || '';
@@ -20,7 +27,30 @@ const SettingsPanel = () => {
     setBio(savedBio);
     setGithub(savedGithub);
     setTwitter(savedTwitter);
-  }, []);
+
+    // Apply dark mode
+    if (darkMode) {
+      document.documentElement.style.setProperty('--bg', '#080808');
+      document.documentElement.style.setProperty('--bg2', '#111');
+      document.documentElement.style.setProperty('--bg3', '#1a1a1a');
+      document.documentElement.style.setProperty('--t1', '#f0f0f0');
+      document.documentElement.style.setProperty('--t2', '#888');
+      document.documentElement.style.setProperty('--t3', '#444');
+      document.documentElement.style.setProperty('--border', 'rgba(255,255,255,0.07)');
+      document.documentElement.style.setProperty('--border-hi', 'rgba(0,255,136,0.3)');
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.style.setProperty('--bg', '#f5f5f5');
+      document.documentElement.style.setProperty('--bg2', '#e0e0e0');
+      document.documentElement.style.setProperty('--bg3', '#d0d0d0');
+      document.documentElement.style.setProperty('--t1', '#1a1a1a');
+      document.documentElement.style.setProperty('--t2', '#555');
+      document.documentElement.style.setProperty('--t3', '#777');
+      document.documentElement.style.setProperty('--border', 'rgba(0,0,0,0.1)');
+      document.documentElement.style.setProperty('--border-hi', 'rgba(0,128,255,0.3)');
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
 
   const handleSave = () => {
     setIsSaving(true);
@@ -48,6 +78,12 @@ const SettingsPanel = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const toggleDarkMode = () => {
+    const newMode = !darkMode;
+    setDarkMode(newMode);
+    localStorage.setItem('darkMode', JSON.stringify(newMode));
   };
 
   return (
@@ -99,6 +135,18 @@ const SettingsPanel = () => {
             onChange={(e) => setTwitter(e.target.value)}
             placeholder="Your Twitter handle"
           />
+        </div>
+
+        <div className="dark-mode-toggle">
+          <label className="toggle-switch">
+            <input
+              type="checkbox"
+              checked={darkMode}
+              onChange={toggleDarkMode}
+            />
+            <span className="slider round"></span>
+            <span className="toggle-label">{darkMode ? 'Dark Mode' : 'Light Mode'}</span>
+          </label>
         </div>
 
         {error && <div className="error-message">{error}</div>}
