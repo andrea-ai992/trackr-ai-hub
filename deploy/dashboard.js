@@ -58,7 +58,7 @@ const LOGIN_HTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Trackr — Login</title>
+<title>AnDy Dev — Login</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#080808;color:#e0e0e0;font-family:'SF Mono',monospace;min-height:100vh;display:flex;align-items:center;justify-content:center}
@@ -82,7 +82,7 @@ input:focus{border-color:rgba(0,255,136,.4);box-shadow:0 0 0 3px rgba(0,255,136,
 <div class="box">
   <div class="logo">
     <div class="logo-icon">⟨◈⟩</div>
-    <div class="logo-text">TRACKR SERVER</div>
+    <div class="logo-text">ANDY DEV</div>
     <div class="logo-sub">Hetzner CX22 · 62.238.12.221</div>
   </div>
   <form method="POST" action="/login" onsubmit="document.querySelector('.btn').textContent='...'">
@@ -105,9 +105,9 @@ const VIBE_HTML = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="AnDy">
+<meta name="apple-mobile-web-app-title" content="AnDy Dev">
 <meta name="theme-color" content="#050505">
-<title>AnDy — Dev</title>
+<title>AnDy Dev</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{--bg:#050505;--bg2:#0d0d0d;--bg3:#141414;--border:#1e1e1e;--green:#00ff88;--cyan:#00d4ff;--purple:#a78bfa;--amber:#fbbf24;--red:#ef4444;--text:#efefef;--dim:#3a3a3a;--dim2:#555}
@@ -207,7 +207,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
     <div class="hdr-l">
       <div class="pulse"></div>
       <div>
-        <div class="hdr-title">⟨◈⟩ AnDy</div>
+        <div class="hdr-title">⟨◈⟩ AnDy Dev</div>
         <div class="hdr-sub" id="hdr-sub">Chargement…</div>
       </div>
     </div>
@@ -480,9 +480,9 @@ const CHAT_HTML = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="AnDy">
+<meta name="apple-mobile-web-app-title" content="AnDy Chat">
 <meta name="theme-color" content="#080808">
-<title>AnDy — IA</title>
+<title>AnDy Chat</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{--bg:#080808;--bg2:#0f0f0f;--border:#1a1a1a;--green:#00ff88;--text:#e0e0e0;--dim:#555;--red:#ef4444}
@@ -539,7 +539,7 @@ textarea::placeholder{color:var(--dim)}
     <div class="hdr-left">
       <div class="pulse"></div>
       <div>
-        <div class="hdr-title">AnDy</div>
+        <div class="hdr-title">AnDy Chat</div>
         <div class="hdr-sub" id="hdr-sub">IA · Trackr</div>
       </div>
     </div>
@@ -731,7 +731,7 @@ const DASH_HTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Trackr Dashboard</title>
+<title>AnDy HQ</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#080808;color:#e0e0e0;font-family:'SF Mono',monospace;font-size:13px;min-height:100vh}
@@ -799,7 +799,7 @@ body{background:#080808;color:#e0e0e0;font-family:'SF Mono',monospace;font-size:
 </head>
 <body>
 <div class="header">
-  <div class="logo"><div class="pulse"></div>TRACKR SERVER</div>
+  <div class="logo"><div class="pulse"></div>ANDY HQ</div>
   <div class="header-right">
     <span class="server-info" id="htime">—</span>
     <a href="/logout" class="logout">Déconnexion</a>
@@ -953,7 +953,7 @@ const BRAIN_HTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AnDy Brain — Live</title>
+<title>AnDy Brain</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#080808;color:#e0e0e0;font-family:'SF Mono',Menlo,monospace;min-height:100vh}
