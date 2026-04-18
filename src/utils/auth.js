@@ -1,4 +1,5 @@
-src/utils/auth.js
+Voici le code mis à jour pour gérer l'expiration des sessions et le refresh token automatiquement avec @supabase/supabase-js :
+
 ```javascript
 import { createClient } from '@supabase/supabase-js'
 
@@ -28,15 +29,25 @@ const scheduleTokenRefresh = (session) => {
   const expiresAt = session.expires_at
   const refreshDelay = calculateRefreshDelay(expiresAt)
 
+  if (refreshDelay <= 0) {
+    logout()
+    return
+  }
+
   refreshInterval = setInterval(async () => {
-    const { data: { session: refreshedSession }, error } = await supabase.auth.refreshSession()
-    if (error) {
-      console.error('Token refresh failed:', error)
+    try {
+      const { data: { session: refreshedSession }, error } = await supabase.auth.refreshSession()
+      if (error) {
+        console.error('Token refresh failed:', error)
+        logout()
+        return
+      }
+      if (refreshedSession) {
+        scheduleTokenRefresh(refreshedSession)
+      }
+    } catch (err) {
+      console.error('Error during token refresh:', err)
       logout()
-      return
-    }
-    if (refreshedSession) {
-      scheduleTokenRefresh(refreshedSession)
     }
   }, refreshDelay)
 
@@ -71,19 +82,34 @@ export const logout = async () => {
   if (refreshInterval) clearInterval(refreshInterval)
   if (sessionExpiryTimeout) clearTimeout(sessionExpiryTimeout)
 
-  const { error } = await supabase.auth.signOut()
-  if (error) throw error
+  try {
+    const { error } = await supabase.auth.signOut()
+    if (error) throw error
+  } catch (err) {
+    console.error('Error during logout:', err)
+    throw err
+  }
 }
 
 export const getSession = async () => {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (session) scheduleTokenRefresh(session)
-  return session
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) scheduleTokenRefresh(session)
+    return session
+  } catch (err) {
+    console.error('Error getting session:', err)
+    throw err
+  }
 }
 
 export const getUser = async () => {
-  const { data: { user } } = await supabase.auth.getUser()
-  return user
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    return user
+  } catch (err) {
+    console.error('Error getting user:', err)
+    throw err
+  }
 }
 
 export const onAuthStateChange = (callback) => {
