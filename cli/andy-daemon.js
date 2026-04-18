@@ -163,7 +163,7 @@ const GROQ_SMART  = 'llama-3.3-70b-versatile'   // meilleur qualité gratuit
 const GROQ_FAST   = 'llama-3.1-8b-instant'       // ultra rapide, gratuit
 
 // Semaphore global — évite burst API
-const API_SEMAPHORE_LIMIT = 3
+const API_SEMAPHORE_LIMIT = 5
 let   apiConcurrent = 0
 let   globalRateLimitUntil = 0
 
@@ -381,7 +381,7 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
     ].filter(Boolean).join('\n')
 
     checkInterrupt()
-    const newCode = await generateRaw(codePrompt, 6000, 'smart')
+    const newCode = await generateRaw(codePrompt, 4000, 'smart')
     let clean = newCode.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim()
 
     // Validation de base
@@ -798,9 +798,9 @@ async function selfUpdate() {
 }
 
 // ── Parallel workers ──────────────────────────────────────────────────────────
-const WORKER_COUNT     = 4
-const PAUSE_AFTER_TASK = 5    // secondes de pause entre tâches par worker
-const PAUSE_IDLE       = 10   // secondes si pas de tâche dispo
+const WORKER_COUNT     = 6
+const PAUSE_AFTER_TASK = 3
+const PAUSE_IDLE       = 8
 
 const claimedTasks = new Set()
 
@@ -846,7 +846,7 @@ function claimNextTask() {
 }
 
 async function worker(id) {
-  await sl(id * 2000)
+  await sl(id * 1000)
   log(`Worker #${id} démarré`)
   liveWorkers[id] = { task: null, stage: 'idle', since: new Date().toISOString() }
   writeLiveState()
