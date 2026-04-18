@@ -1,3 +1,4 @@
+// src/pages/News.jsx
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   RefreshCw, Loader2, ExternalLink, TrendingUp, Bitcoin,
@@ -75,33 +76,68 @@ const isNew = ts => ts && (Date.now() / 1000 - ts) < 120 * 60      // < 2h
 // ─── Card component ───────────────────────────────────────────────────────────
 function NewsCard({ item }) {
   const breaking = isBreaking(item.time)
+  const newItem = isNew(item.time) && !breaking
   return (
     <a href={item.url} target="_blank" rel="noreferrer"
+      className="news-card"
       style={{
         display: 'block', textDecoration: 'none',
-        padding: '13px 14px 13px 17px',
-        background: breaking ? 'rgba(255,77,77,0.06)' : 'var(--bg2)',
-        border: breaking ? '1px solid rgba(255,77,77,0.2)' : '1px solid var(--border)',
+        padding: '16px 16px 16px 20px',
+        background: 'var(--bg2)',
+        border: '1px solid var(--border)',
         borderLeft: `3px solid ${item.sourceColor}`,
-        borderRadius: 'var(--radius)',
-        transition: 'background 100ms',
+        borderRadius: '8px',
+        transition: 'background 0.2s ease',
         WebkitTapHighlightColor: 'transparent',
-        position: 'relative'
+        position: 'relative',
+        marginBottom: '12px'
       }}
     >
       {breaking && (
-        <span style={{ position: 'absolute', top: 10, left: 10, fontSize: 9, fontWeight: 800, color: '#ff0000', background: 'rgba(255,0,0,0.1)', padding: '2px 6px', borderRadius: 5 }}>
+        <span style={{
+          position: 'absolute', top: 12, left: 12, fontSize: '10px', fontWeight: 800,
+          color: '#ff0000', background: 'rgba(255,0,0,0.15)', padding: '4px 8px', borderRadius: '6px'
+        }}>
           BREAKING
         </span>
       )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: item.sourceColor }}>{item.sourceEmoji} {item.source}</span>
-        <span style={{ fontSize: 10, color: 'var(--t3)' }}>· {ago(item.time)}</span>
-        <ExternalLink size={11} style={{ color: 'var(--t3)', marginLeft: 'auto' }} />
+      {newItem && !breaking && (
+        <span style={{
+          position: 'absolute', top: 12, left: 12, fontSize: '10px', fontWeight: 800,
+          color: '#00ff88', background: 'rgba(0,255,136,0.15)', padding: '4px 8px', borderRadius: '6px'
+        }}>
+          NEW
+        </span>
+      )}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+        <span style={{
+          fontSize: '12px', fontWeight: 700, color: item.sourceColor,
+          background: item.sourceColor === '#1a1a1a' ? 'rgba(255,255,255,0.1)' : 'transparent',
+          padding: item.sourceColor === '#1a1a1a' ? '2px 6px' : 0,
+          borderRadius: item.sourceColor === '#1a1a1a' ? '4px' : 0
+        }}>
+          {item.sourceEmoji} {item.source}
+        </span>
+        <span style={{ fontSize: '11px', color: 'var(--t3)' }}>· {ago(item.time)}</span>
+        <ExternalLink size={14} style={{ color: 'var(--t3)', marginLeft: 'auto', flexShrink: 0 }} />
       </div>
-      <p style={{ fontSize: breaking ? 14 : 13, lineHeight: 1.45, color: breaking ? 'var(--t1)' : 'var(--t2)', fontWeight: breaking ? 700 : 500, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+      <h3 style={{
+        fontSize: '15px', lineHeight: 1.45, color: 'var(--t1)',
+        fontWeight: 500, margin: 0, display: '-webkit-box',
+        WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
+      }}>
         {item.title}
-      </p>
+      </h3>
+      {item.thumbnail && (
+        <img
+          src={item.thumbnail}
+          alt=""
+          style={{
+            width: '72px', height: '72px', objectFit: 'cover',
+            borderRadius: '6px', marginLeft: 'auto', marginTop: '12px'
+          }}
+        />
+      )}
     </a>
   )
 }
@@ -112,13 +148,20 @@ export default function News() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [searchFocused, setSearchFocused] = useState(false)
   const timerRef = useRef(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     const results = await Promise.allSettled(
       SOURCES.map(s => fetchSource(s).then(rows =>
-        rows.map(r => ({ ...r, source: s.label, sourceColor: s.color, sourceEmoji: s.emoji }))
+        rows.map(r => ({
+          ...r,
+          source: s.label,
+          sourceColor: s.color,
+          sourceEmoji: s.emoji,
+          category: s.cat
+        }))
       ))
     )
     let merged = []
@@ -129,7 +172,7 @@ export default function News() {
     setLoading(false)
   }, [])
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [load])
 
   useEffect(() => {
     clearInterval(timerRef.current)
@@ -137,48 +180,246 @@ export default function News() {
     return () => clearInterval(timerRef.current)
   }, [load])
 
-  const filtered = search
-    ? items.filter(i =>
-        i.title?.toLowerCase().includes(search.toLowerCase()) ||
-        i.source?.toLowerCase().includes(search.toLowerCase())
-      )
-    : items
+  const filtered = items.filter(item => {
+    const matchesSearch = search
+      ? item.title?.toLowerCase().includes(search.toLowerCase()) ||
+        item.source?.toLowerCase().includes(search.toLowerCase())
+      : true
+
+    const matchesTab = tab === 'all' || item.category === tab
+    return matchesSearch && matchesTab
+  })
 
   return (
-    <div style={{ background: 'var(--bg)', color: 'var(--t1)', padding: '16px' }}>
-      <header style={{ position: 'sticky', top: 0, background: 'var(--bg)', zIndex: 10, padding: '10px 0' }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <input
-            type="text"
-            placeholder="Search..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{
-              flex: 1, padding: '10px', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
-              transition: 'width 0.3s', outline: 'none', background: 'var(--bg2)', color: 'var(--t1)'
-            }}
-            onFocus={e => e.target.style.width = '200px'}
-            onBlur={e => e.target.style.width = '100px'}
-          />
+    <div style={{
+      background: 'var(--bg)',
+      color: 'var(--t1)',
+      padding: '16px',
+      minHeight: '100vh',
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif'
+    }}>
+      <header style={{
+        position: 'sticky',
+        top: 0,
+        background: 'var(--bg)',
+        zIndex: 10,
+        padding: '12px 0',
+        backdropFilter: 'blur(12px)'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          marginBottom: '12px'
+        }}>
+          <div style={{
+            position: 'relative',
+            flex: 1,
+            maxWidth: searchFocused ? '240px' : '120px',
+            transition: 'max-width 0.3s ease'
+          }}>
+            <Search
+              size={18}
+              style={{
+                position: 'absolute',
+                left: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'var(--t3)',
+                pointerEvents: 'none'
+              }}
+            />
+            <input
+              type="text"
+              placeholder="Search news..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setSearchFocused(false)}
+              style={{
+                width: '100%',
+                padding: '10px 12px 10px 38px',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                background: 'var(--bg2)',
+                color: 'var(--t1)',
+                fontSize: '14px',
+                outline: 'none',
+                transition: 'all 0.3s ease'
+              }}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--t3)',
+                  cursor: 'pointer',
+                  padding: '4px'
+                }}
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
         </div>
-        <div style={{ display: 'flex', overflowX: 'auto', marginTop: '10px' }}>
+        <div style={{
+          display: 'flex',
+          overflowX: 'auto',
+          gap: '8px',
+          paddingBottom: '8px',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none'
+        }}>
           {TABS.map(tabItem => (
-            <button key={tabItem.id} onClick={() => setTab(tabItem.id)} style={{
-              flex: 'none', padding: '10px 15px', background: tab === tabItem.id ? 'var(--green)' : 'var(--bg2)',
-              color: tab === tabItem.id ? '#fff' : 'var(--t1)', border: 'none', borderRadius: 'var(--radius)', marginRight: '8px'
-            }}>
+            <button
+              key={tabItem.id}
+              onClick={() => setTab(tabItem.id)}
+              style={{
+                flex: 'none',
+                padding: '8px 16px',
+                background: tab === tabItem.id ? 'var(--green)' : 'var(--bg2)',
+                color: tab === tabItem.id ? '#000' : 'var(--t1)',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 500,
+                whiteSpace: 'nowrap',
+                transition: 'all 0.2s ease',
+                position: 'relative'
+              }}
+            >
               {tabItem.label}
+              {tab === tabItem.id && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '-8px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '6px',
+                  height: '6px',
+                  background: 'var(--green)',
+                  borderRadius: '50%'
+                }} />
+              )}
             </button>
           ))}
         </div>
       </header>
-      <div>
+
+      <main style={{ marginTop: '20px' }}>
         {loading ? (
-          <PullIndicator />
+          <div style={{ display: 'grid', gap: '12px' }}>
+            {[...Array(6)].map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  padding: '16px 16px 16px 20px',
+                  background: 'var(--bg2)',
+                  border: '1px solid var(--border)',
+                  borderLeft: '3px solid var(--border)',
+                  borderRadius: '8px',
+                  animation: 'pulse 1.5s infinite ease-in-out'
+                }}
+              >
+                <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                  <div style={{
+                    width: '40px',
+                    height: '12px',
+                    background: 'var(--border)',
+                    borderRadius: '4px'
+                  }} />
+                  <div style={{
+                    width: '60px',
+                    height: '12px',
+                    background: 'var(--border)',
+                    borderRadius: '4px'
+                  }} />
+                </div>
+                <div style={{
+                  width: '100%',
+                  height: '16px',
+                  background: 'var(--border)',
+                  borderRadius: '4px',
+                  marginBottom: '8px'
+                }} />
+                <div style={{
+                  width: '72px',
+                  height: '72px',
+                  background: 'var(--border)',
+                  borderRadius: '6px',
+                  marginLeft: 'auto'
+                }} />
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '40px 20px',
+            color: 'var(--t3)'
+          }}>
+            <p>No news found matching your criteria.</p>
+          </div>
         ) : (
-          filtered.map((item, index) => <NewsCard key={index} item={item} />)
+          <div style={{ display: 'grid', gap: '12px' }}>
+            {filtered.map((item, index) => (
+              <NewsCard key={`${item.url}-${index}`} item={item} />
+            ))}
+          </div>
         )}
-      </div>
+      </main>
     </div>
   )
 }
+```
+
+```jsx
+// src/components/NewsCard.jsx
+export default function NewsCard({ item }) {
+  const breaking = isBreaking(item.time)
+  const newItem = isNew(item.time) && !breaking
+
+  return (
+    <a
+      href={item.url}
+      target="_blank"
+      rel="noreferrer"
+      className="news-card"
+      style={{
+        display: 'block',
+        textDecoration: 'none',
+        padding: '16px 16px 16px 20px',
+        background: 'var(--bg2)',
+        border: '1px solid var(--border)',
+        borderLeft: `3px solid ${item.sourceColor}`,
+        borderRadius: '8px',
+        transition: 'background 0.2s ease',
+        WebkitTapHighlightColor: 'transparent',
+        position: 'relative',
+        marginBottom: '12px'
+      }}
+    >
+      {breaking && (
+        <span style={{
+          position: 'absolute',
+          top: 12,
+          left: 12,
+          fontSize: '10px',
+          fontWeight: 800,
+          color: '#ff0000',
+          background: 'rgba(255,0,0,0.15)',
+          padding: '4px 8px',
+          borderRadius: '6px'
+        }}>
+          BREAKING
+        </span>
+      )}
+      {newItem && !breaking && (
+        <span style={{
+          position: '
