@@ -1,11 +1,6 @@
-Je vais complètement redessiner l'interface Markets.jsx dans le style Bloomberg dark premium tout en conservant toute la logique existante. Voici le code complet et fonctionnel :
-
-```jsx
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, ChevronDown, ChevronUp } from 'lucide-react';
-import Stocks from './Stocks';
-import Crypto from './Crypto';
 
 const Markets = () => {
   const [params, setParams] = useSearchParams();
@@ -115,7 +110,6 @@ const Markets = () => {
 
   return (
     <div className="min-h-screen bg-var(--bg) text-var(--t1) font-['Inter']">
-      {/* Sticky Header */}
       <div className="sticky top-0 z-50 bg-var(--bg2) border-b border-var(--border)">
         <div className="px-4 py-3">
           <div className="flex items-center gap-4 mb-3">
@@ -138,7 +132,6 @@ const Markets = () => {
             </div>
           </div>
 
-          {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-var(--t3)" size={18} />
             <input
@@ -152,7 +145,6 @@ const Markets = () => {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="px-4 pt-4 pb-24">
         {loading ? (
           <div className="space-y-3">
@@ -170,14 +162,75 @@ const Markets = () => {
           </div>
         ) : (
           <>
-            {/* Current Tab Content */}
             {tab === 'stocks' ? (
-              <Stocks inMarkets data={data} />
+              <div className="space-y-4">
+                {filteredStocks.map((asset, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 rounded-lg hover:bg-var(--bg2)/50 transition-colors cursor-pointer">
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="w-8 h-8 rounded-full bg-var(--bg) flex items-center justify-center text-xs font-bold">
+                        {asset.image ? (
+                          <img src={asset.image} alt={asset.name} className="w-full h-full rounded-full object-cover" />
+                        ) : (
+                          asset.symbol.substring(0, 2).toUpperCase()
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">{asset.name}</h3>
+                        <p className="text-xs text-var(--t3)">{asset.symbol}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-mono font-bold tabular-nums">
+                        {asset.price.toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </div>
+                      <div className="flex items-center gap-1 text-xs" style={{ color: getChangeColor(asset.change) }}>
+                        {getArrow(asset.change)}
+                        {Math.abs(asset.change).toFixed(2)}%
+                      </div>
+                    </div>
+                    <div className="ml-4">
+                      {renderSparkline(asset.sparkline)}
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : (
-              <Crypto data={data} />
+              <div className="space-y-4">
+                {filteredCrypto.map((asset, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 rounded-lg hover:bg-var(--bg2)/50 transition-colors cursor-pointer">
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="w-8 h-8 rounded-full bg-var(--bg) flex items-center justify-center text-xs font-bold">
+                        {asset.image ? (
+                          <img src={asset.image} alt={asset.name} className="w-full h-full rounded-full object-cover" />
+                        ) : (
+                          asset.symbol.substring(0, 2).toUpperCase()
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">{asset.name}</h3>
+                        <p className="text-xs text-var(--t3)">{asset.symbol}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-mono font-bold tabular-nums">
+                        {asset.price.toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </div>
+                      <div className="flex items-center gap-1 text-xs" style={{ color: getChangeColor(asset.change) }}>
+                        {getArrow(asset.change)}
+                        {Math.abs(asset.change).toFixed(2)}%
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
 
-            {/* Top Gainers */}
             <div className="mt-8">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-var(--t3) mb-3 px-1">
                 Top Gainers
@@ -221,7 +274,6 @@ const Markets = () => {
               </div>
             </div>
 
-            {/* Top Losers */}
             <div className="mt-6">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-var(--t3) mb-3 px-1">
                 Top Losers
@@ -268,14 +320,12 @@ const Markets = () => {
         )}
       </div>
 
-      {/* Pull to Refresh Indicator */}
       {refreshing && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/20 backdrop-blur-sm">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-var(--green)"></div>
         </div>
       )}
 
-      {/* Refresh Button */}
       <button
         onClick={handleRefresh}
         className="fixed bottom-6 right-6 z-30 w-12 h-12 rounded-full bg-var(--bg2) border border-var(--border) flex items-center justify-center shadow-lg hover:bg-var(--bg)/50 transition-all"
@@ -288,34 +338,3 @@ const Markets = () => {
 };
 
 export default Markets;
-```
-
-```css
-/* Ajouts au globals.css pour les nouvelles fonctionnalités */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-
-.font-['Inter'] {
-  font-family: 'Inter', sans-serif;
-}
-
-.animate-pulse {
-  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
