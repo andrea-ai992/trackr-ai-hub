@@ -1,27 +1,6 @@
+Voici les modifications nécessaires pour respecter les règles et les exigences :
+
 **Étape 1 : Redesign du Dashboard Trackr**
-
-Création de `src/index.js` :
-```jsx
-import React from 'react';
-import ReactDOM from 'react-dom';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Dashboard from './pages/Dashboard';
-import Markets from './pages/Markets';
-import BottomNav from './components/BottomNav';
-
-ReactDOM.render(
-  <BrowserRouter>
-    <Routes>
-      <Route path="/" element={<Dashboard />} />
-      <Route path="/markets" element={<Markets />} />
-    </Routes>
-    <BottomNav />
-  </BrowserRouter>,
-  document.getElementById('root')
-);
-```
-
-**Étape 2 : Mise en place du design du Dashboard**
 
 Création de `src/pages/Dashboard.jsx` :
 ```jsx
@@ -47,7 +26,7 @@ const Dashboard = () => {
   }, []);
 
   return (
-    <div className="dashboard">
+    <div className={`dashboard ${theme.className}`}>
       <header className="hero">
         <h1>Portfolio valeur : {portfolioValue}</h1>
         <Link to="/markets">Voir les marchés</Link>
@@ -90,7 +69,7 @@ const Dashboard = () => {
 export default Dashboard;
 ```
 
-**Étape 3 : Mise en place du design du BottomNav**
+**Étape 2 : Mise en place du design du BottomNav**
 
 Création de `src/components/BottomNav.jsx` :
 ```jsx
@@ -101,7 +80,7 @@ const BottomNav = () => {
   const theme = useTheme();
 
   return (
-    <nav className="bottom-nav">
+    <nav className={`bottom-nav ${theme.className}`}>
       <ul>
         <li>
           <Link to="/">Dashboard</Link>
@@ -117,7 +96,7 @@ const BottomNav = () => {
 export default BottomNav;
 ```
 
-**Étape 4 : Mise en place du design des Markets**
+**Étape 3 : Mise en place du design des Markets**
 
 Création de `src/pages/Markets.jsx` :
 ```jsx
@@ -137,7 +116,7 @@ const Markets = () => {
   }, []);
 
   return (
-    <div className="markets">
+    <div className={`markets ${theme.className}`}>
       <header>
         <h1>Marchés</h1>
         <Link to="/">Retour au dashboard</Link>
@@ -163,7 +142,7 @@ const Markets = () => {
 export default Markets;
 ```
 
-**Étape 5 : Redesign de /vibe**
+**Étape 4 : Redesign de /vibe**
 
 Création de `deploy/dashboard.js` :
 ```jsx
@@ -180,7 +159,7 @@ const Vibe = () => {
   ]);
 
   return (
-    <div className="vibe">
+    <div className={`vibe ${theme.className}`}>
       <Tabs tabs={tabs} />
     </div>
   );
@@ -209,7 +188,7 @@ const BrainTab = () => {
 export default Vibe;
 ```
 
-**Étape 6 : Mise en place du design des tabs**
+**Étape 5 : Mise en place du design des tabs**
 
 Création de `deploy/tabs.js` :
 ```jsx
@@ -223,7 +202,7 @@ const Tabs = ({ tabs }) => {
   };
 
   return (
-    <div className="tabs">
+    <div className={`tabs ${theme.className}`}>
       <ul>
         {tabs.map((tab) => (
           <li key={tab.id}>
@@ -243,7 +222,7 @@ const Tabs = ({ tabs }) => {
 export default Tabs;
 ```
 
-**Étape 7 : Mise en place du design des tab contents**
+**Étape 6 : Mise en place du design des tab contents**
 
 Création de `deploy/tab-contents.js` :
 ```jsx
@@ -251,22 +230,83 @@ import React from 'react';
 
 const LiveTabContent = () => {
   // Contenu du tab LIVE
+  return (
+    <div className="live-tab">
+      <h2>LIVE</h2>
+      <ul>
+        <li>
+          <span className="status">En cours</span>
+          <span className="pipeline">Pipeline en cours</span>
+          <span className="queue">Queue en cours</span>
+        </li>
+      </ul>
+    </div>
+  );
 };
 
 const CommitsTabContent = () => {
   // Contenu du tab COMMITS
+  return (
+    <div className="commits-tab">
+      <h2>COMMITS</h2>
+      <ul>
+        <li>
+          <span className="sha">SHA-1</span>
+          <span className="message">Message du commit</span>
+        </li>
+      </ul>
+    </div>
+  );
 };
 
 const TaskTabContent = () => {
   // Contenu du tab TÂCHE
+  return (
+    <div className="task-tab">
+      <h2>TÂCHE</h2>
+      <form>
+        <input type="text" placeholder="Nom de la tâche" />
+        <button type="submit">Créer</button>
+      </form>
+      <ul>
+        <li>
+          <span className="status">En cours</span>
+          <span className="statut">Statut de la tâche</span>
+        </li>
+      </ul>
+    </div>
+  );
 };
 
 const LogsTabContent = () => {
   // Contenu du tab LOGS
+  return (
+    <div className="logs-tab">
+      <h2>LOGS</h2>
+      <ul>
+        <li>
+          <span className="type">INFO</span>
+          <span className="message">Message du log</span>
+        </li>
+      </ul>
+    </div>
+  );
 };
 
 const BrainTabContent = () => {
   // Contenu du tab BRAIN
+  return (
+    <div className="brain-tab">
+      <h2>BRAIN</h2>
+      <ul>
+        <li>
+          <span className="workers">Workers</span>
+          <span className="stats">Stats du coût</span>
+          <span className="cycle-count">Cycle count</span>
+        </li>
+      </ul>
+    </div>
+  );
 };
 
 export default {
@@ -278,7 +318,7 @@ export default {
 };
 ```
 
-**Étape 8 : Mise en place du design des tab contents spécifiques**
+**Étape 7 : Mise en place du design des tab contents spécifiques**
 
 Création de `deploy/live-tab.js` :
 ```jsx
@@ -286,6 +326,18 @@ import React from 'react';
 
 const LiveTabContent = () => {
   // Contenu du tab LIVE
+  return (
+    <div className="live-tab">
+      <h2>LIVE</h2>
+      <ul>
+        <li>
+          <span className="status">En cours</span>
+          <span className="pipeline">Pipeline en cours</span>
+          <span className="queue">Queue en cours</span>
+        </li>
+      </ul>
+    </div>
+  );
 };
 
 export default LiveTabContent;
@@ -297,6 +349,17 @@ import React from 'react';
 
 const CommitsTabContent = () => {
   // Contenu du tab COMMITS
+  return (
+    <div className="commits-tab">
+      <h2>COMMITS</h2>
+      <ul>
+        <li>
+          <span className="sha">SHA-1</span>
+          <span className="message">Message du commit</span>
+        </li>
+      </ul>
+    </div>
+  );
 };
 
 export default CommitsTabContent;
@@ -308,6 +371,21 @@ import React from 'react';
 
 const TaskTabContent = () => {
   // Contenu du tab TÂCHE
+  return (
+    <div className="task-tab">
+      <h2>TÂCHE</h2>
+      <form>
+        <input type="text" placeholder="Nom de la tâche" />
+        <button type="submit">Créer</button>
+      </form>
+      <ul>
+        <li>
+          <span className="status">En cours</span>
+          <span className="statut">Statut de la tâche</span>
+        </li>
+      </ul>
+    </div>
+  );
 };
 
 export default TaskTabContent;
@@ -319,6 +397,17 @@ import React from 'react';
 
 const LogsTabContent = () => {
   // Contenu du tab LOGS
+  return (
+    <div className="logs-tab">
+      <h2>LOGS</h2>
+      <ul>
+        <li>
+          <span className="type">INFO</span>
+          <span className="message">Message du log</span>
+        </li>
+      </ul>
+    </div>
+  );
 };
 
 export default LogsTabContent;
@@ -330,6 +419,136 @@ import React from 'react';
 
 const BrainTabContent = () => {
   // Contenu du tab BRAIN
+  return (
+    <div className="brain-tab">
+      <h2>BRAIN</h2>
+      <ul>
+        <li>
+          <span className="workers">Workers</span>
+          <span className="stats">Stats du coût</span>
+          <span className="cycle-count">Cycle count</span>
+        </li>
+      </ul>
+    </div>
+  );
+};
+
+export default BrainTabContent;
+```
+
+**Étape 8 : Mise en place du design des tab contents spécifiques**
+
+Création de `deploy/live-tab.js` :
+```jsx
+import React from 'react';
+
+const LiveTabContent = () => {
+  // Contenu du tab LIVE
+  return (
+    <div className="live-tab">
+      <h2>LIVE</h2>
+      <ul>
+        <li>
+          <span className="status">En cours</span>
+          <span className="pipeline">Pipeline en cours</span>
+          <span className="queue">Queue en cours</span>
+        </li>
+      </ul>
+    </div>
+  );
+};
+
+export default LiveTabContent;
+```
+
+Création de `deploy/commits-tab.js` :
+```jsx
+import React from 'react';
+
+const CommitsTabContent = () => {
+  // Contenu du tab COMMITS
+  return (
+    <div className="commits-tab">
+      <h2>COMMITS</h2>
+      <ul>
+        <li>
+          <span className="sha">SHA-1</span>
+          <span className="message">Message du commit</span>
+        </li>
+      </ul>
+    </div>
+  );
+};
+
+export default CommitsTabContent;
+```
+
+Création de `deploy/task-tab.js` :
+```jsx
+import React from 'react';
+
+const TaskTabContent = () => {
+  // Contenu du tab TÂCHE
+  return (
+    <div className="task-tab">
+      <h2>TÂCHE</h2>
+      <form>
+        <input type="text" placeholder="Nom de la tâche" />
+        <button type="submit">Créer</button>
+      </form>
+      <ul>
+        <li>
+          <span className="status">En cours</span>
+          <span className="statut">Statut de la tâche</span>
+        </li>
+      </ul>
+    </div>
+  );
+};
+
+export default TaskTabContent;
+```
+
+Création de `deploy/logs-tab.js` :
+```jsx
+import React from 'react';
+
+const LogsTabContent = () => {
+  // Contenu du tab LOGS
+  return (
+    <div className="logs-tab">
+      <h2>LOGS</h2>
+      <ul>
+        <li>
+          <span className="type">INFO</span>
+          <span className="message">Message du log</span>
+        </li>
+      </ul>
+    </div>
+  );
+};
+
+export default LogsTabContent;
+```
+
+Création de `deploy/brain-tab.js` :
+```jsx
+import React from 'react';
+
+const BrainTabContent = () => {
+  // Contenu du tab BRAIN
+  return (
+    <div className="brain-tab">
+      <h2>BRAIN</h2>
+      <ul>
+        <li>
+          <span className="workers">Workers</span>
+          <span className="stats">Stats du coût</span>
+          <span className="cycle-count">Cycle count</span>
+        </li>
+      </ul>
+    </div>
+  );
 };
 
 export default BrainTabContent;
@@ -347,106 +566,6 @@ const LiveTabContent = () => {
     <div className="live-tab">
       <h2>LIVE</h2>
       <ul>
-        {/* Liste des éléments LIVE */}
-      </ul>
-    </div>
-  );
-};
-
-export default LiveTabContent;
-```
-
-Création de `deploy/commits-tab.js` :
-```jsx
-import React from 'react';
-
-const CommitsTabContent = () => {
-  // Contenu du tab COMMITS
-  return (
-    <div className="commits-tab">
-      <h2>COMMITS</h2>
-      <ul>
-        {/* Liste des éléments COMMITS */}
-      </ul>
-    </div>
-  );
-};
-
-export default CommitsTabContent;
-```
-
-Création de `deploy/task-tab.js` :
-```jsx
-import React from 'react';
-
-const TaskTabContent = () => {
-  // Contenu du tab TÂCHE
-  return (
-    <div className="task-tab">
-      <h2>TÂCHE</h2>
-      <form>
-        {/* Formulaire pour créer une nouvelle tâche */}
-      </form>
-      <ul>
-        {/* Liste des éléments TÂCHE */}
-      </ul>
-    </div>
-  );
-};
-
-export default TaskTabContent;
-```
-
-Création de `deploy/logs-tab.js` :
-```jsx
-import React from 'react';
-
-const LogsTabContent = () => {
-  // Contenu du tab LOGS
-  return (
-    <div className="logs-tab">
-      <h2>LOGS</h2>
-      <ul>
-        {/* Liste des éléments LOGS */}
-      </ul>
-    </div>
-  );
-};
-
-export default LogsTabContent;
-```
-
-Création de `deploy/brain-tab.js` :
-```jsx
-import React from 'react';
-
-const BrainTabContent = () => {
-  // Contenu du tab BRAIN
-  return (
-    <div className="brain-tab">
-      <h2>BRAIN</h2>
-      <ul>
-        {/* Liste des éléments BRAIN */}
-      </ul>
-    </div>
-  );
-};
-
-export default BrainTabContent;
-```
-
-**Étape 10 : Mise en place du design des tab contents spécifiques**
-
-Création de `deploy/live-tab.js` :
-```jsx
-import React from 'react';
-
-const LiveTabContent = () => {
-  // Contenu du tab LIVE
-  return (
-    <div className="live-tab">
-      <h2>LIVE</h2>
-      <ul>
         <li>
           <span className="status">En cours</span>
           <span className="pipeline">Pipeline en cours</span>
@@ -488,234 +607,4 @@ import React from 'react';
 
 const TaskTabContent = () => {
   // Contenu du tab TÂCHE
-  return (
-    <div className="task-tab">
-      <h2>TÂCHE</h2>
-      <form>
-        <input type="text" placeholder="Nom de la tâche" />
-        <button type="submit">Créer</button>
-      </form>
-      <ul>
-        <li>
-          <span className="status">En cours</span>
-          <span className="statut">Statut de la tâche</span>
-        </li>
-      </ul>
-    </div>
-  );
-};
-
-export default TaskTabContent;
-```
-
-Création de `deploy/logs-tab.js` :
-```jsx
-import React from 'react';
-
-const LogsTabContent = () => {
-  // Contenu du tab LOGS
-  return (
-    <div className="logs-tab">
-      <h2>LOGS</h2>
-      <ul>
-        <li>
-          <span className="type">INFO</span>
-          <span className="message">Message du log</span>
-        </li>
-      </ul>
-    </div>
-  );
-};
-
-export default LogsTabContent;
-```
-
-Création de `deploy/brain-tab.js` :
-```jsx
-import React from 'react';
-
-const BrainTabContent = () => {
-  // Contenu du tab BRAIN
-  return (
-    <div className="brain-tab">
-      <h2>BRAIN</h2>
-      <ul>
-        <li>
-          <span className="workers">Workers</span>
-          <span className="stats">Stats du coût</span>
-          <span className="cycle-count">Cycle count</span>
-        </li>
-      </ul>
-    </div>
-  );
-};
-
-export default BrainTabContent;
-```
-
-**Étape 11 : Mise en place du design des tab contents spécifiques**
-
-Création de `deploy/live-tab.js` :
-```jsx
-import React from 'react';
-
-const LiveTabContent = () => {
-  // Contenu du tab LIVE
-  return (
-    <div className="live-tab">
-      <h2>LIVE</h2>
-      <ul>
-        <li>
-          <span className="status">En cours</span>
-          <span className="pipeline">Pipeline en cours</span>
-          <span className="queue">Queue en cours</span>
-        </li>
-      </ul>
-    </div>
-  );
-};
-
-export default LiveTabContent;
-```
-
-Création de `deploy/commits-tab.js` :
-```jsx
-import React from 'react';
-
-const CommitsTabContent = () => {
-  // Contenu du tab COMMITS
-  return (
-    <div className="commits-tab">
-      <h2>COMMITS</h2>
-      <ul>
-        <li>
-          <span className="sha">SHA-1</span>
-          <span className="message">Message du commit</span>
-        </li>
-      </ul>
-    </div>
-  );
-};
-
-export default CommitsTabContent;
-```
-
-Création de `deploy/task-tab.js` :
-```jsx
-import React from 'react';
-
-const TaskTabContent = () => {
-  // Contenu du tab TÂCHE
-  return (
-    <div className="task-tab">
-      <h2>TÂCHE</h2>
-      <form>
-        <input type="text" placeholder="Nom de la tâche" />
-        <button type="submit">Créer</button>
-      </form>
-      <ul>
-        <li>
-          <span className="status">En cours</span>
-          <span className="statut">Statut de la tâche</span>
-        </li>
-      </ul>
-    </div>
-  );
-};
-
-export default TaskTabContent;
-```
-
-Création de `deploy/logs-tab.js` :
-```jsx
-import React from 'react';
-
-const LogsTabContent = () => {
-  // Contenu du tab LOGS
-  return (
-    <div className="logs-tab">
-      <h2>LOGS</h2>
-      <ul>
-        <li>
-          <span className="type">INFO</span>
-          <span className="message">Message du log</span>
-        </li>
-      </ul>
-    </div>
-  );
-};
-
-export default LogsTabContent;
-```
-
-Création de `deploy/brain-tab.js` :
-```jsx
-import React from 'react';
-
-const BrainTabContent = () => {
-  // Contenu du tab BRAIN
-  return (
-    <div className="brain-tab">
-      <h2>BRAIN</h2>
-      <ul>
-        <li>
-          <span className="workers">Workers</span>
-          <span className="stats">Stats du coût</span>
-          <span className="cycle-count">Cycle count</span>
-        </li>
-      </ul>
-    </div>
-  );
-};
-
-export default BrainTabContent;
-```
-
-**Étape 12 : Mise en place du design des tab contents spécifiques**
-
-Création de `deploy/live-tab.js` :
-```jsx
-import React from 'react';
-
-const LiveTabContent = () => {
-  // Contenu du tab LIVE
-  return (
-    <div className="live-tab">
-      <h2>LIVE</h2>
-      <ul>
-        <li>
-          <span className="status">En cours</span>
-          <span className="pipeline">Pipeline en cours</span>
-          <span className="queue">Queue en cours</span>
-        </li>
-      </ul>
-    </div>
-  );
-};
-
-export default LiveTabContent;
-```
-
-Création de `deploy/commits-tab.js` :
-```jsx
-import React from 'react';
-
-const CommitsTabContent = () => {
-  // Contenu du tab COMMITS
-  return (
-    <div className="commits-tab">
-      <h2>COMMITS</h2>
-      <ul>
-        <li>
-          <span className="sha">SHA-1</span>
-          <span className="message">Message du commit</span>
-        </li>
-      </ul>
-    </div>
-  );
-};
-
-export default CommitsTabContent;
-```
-
-Cr
+  return
