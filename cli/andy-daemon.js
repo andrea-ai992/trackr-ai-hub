@@ -32,7 +32,25 @@ const GITHUB_API   = 'https://api.github.com'
 const BOT_TOKEN    = process.env.DISCORD_BOT_TOKEN || ''
 const CH_MORNING   = process.env.DISCORD_CH_MORNING || process.env.DISCORD_CH_BRAIN || ''
 const CH_UPDATES   = process.env.DISCORD_CH_UPDATES || CH_MORNING
+const CH_NOISE     = process.env.DISCORD_CH_NOISE   || CH_UPDATES  // channel secondaire pour les notifs peu importantes
 const DISCORD_API  = 'https://discord.com/api/v10'
+
+// Juge si une notif mérite le channel principal ou le channel secondaire
+// Retourne 'important' ou 'noise'
+function judgeNotif(taskName = '', files = []) {
+  const n = taskName.toLowerCase()
+  // Toujours important
+  if (n.startsWith('manual-') || n.startsWith('urgent-') || n.startsWith('critical-') || n.startsWith('fix-')) return 'important'
+  // Fichiers visibles par l'utilisateur = important
+  const userFiles = ['dashboard', 'sports', 'markets', 'news', 'bottomnav', 'cryptotrader', 'signals', 'portfolio', 'more', 'andy', 'index.css', 'app.jsx']
+  if (files.some(f => userFiles.some(u => f.toLowerCase().includes(u)))) return 'important'
+  // Memory, internal, auto mineurs = noise
+  if (n.includes('memory') || n.includes('learning') || n.includes('reflect') || n.includes('self-improve')) return 'noise'
+  if (n.startsWith('auto-') && !files.some(f => f.startsWith('src/'))) return 'noise'
+  // Tout le reste auto = noise
+  if (n.startsWith('auto-')) return 'noise'
+  return 'important'
+}
 
 // ── Logging ───────────────────────────────────────────────────────────────────
 const _liveLog = []
@@ -476,22 +494,33 @@ async function flushDiscordNotif(force = false) {
   if (!force && notifBuffer.length < NOTIF_EVERY_N && Date.now() - lastNotifTime < NOTIF_EVERY_MS) return
   if (!CH_UPDATES) { notifBuffer.length = 0; return }
 
-  const count = notifBuffer.length
-  const since = Math.round((Date.now() - lastNotifTime) / 60000)
-  const lines = notifBuffer.map(t => {
-    const files = (t.files || []).map(f => `\`${f.split('/').pop()}\``).join(' ') || `\`${t.name}\``
-    return `✅ ${files}`
-  }).join('\n')
+  // Sépare les notifs importantes des bruits de fond
+  const important = notifBuffer.filter(t => judgeNotif(t.name, t.files) === 'important')
+  const noise     = notifBuffer.filter(t => judgeNotif(t.name, t.files) === 'noise')
+  const since     = Math.round((Date.now() - lastNotifTime) / 60000)
 
-  const msg = [
-    `🤖 **AnDy — ${count} tâche${count>1?'s':''} terminée${count>1?'s':''}** _(${since}min)_`,
-    `━━━━━━━━━━━━━━━━━━━━`,
-    lines,
-    `━━━━━━━━━━━━━━━━━━━━`,
-    `📱 ${APP_URL}`,
-  ].join('\n')
+  if (important.length) {
+    const lines = important.map(t => {
+      const files = (t.files || []).map(f => `\`${f.split('/').pop()}\``).join(' ') || `\`${t.name}\``
+      return `✅ ${files} _(${t.dur}s)_`
+    }).join('\n')
+    await discordPost(CH_UPDATES, [
+      `🤖 **AnDy — ${important.length} update${important.length>1?'s':''}** _(${since}min)_`,
+      `━━━━━━━━━━━━━━━━━━━━`,
+      lines,
+      `━━━━━━━━━━━━━━━━━━━━`,
+      `📱 ${APP_URL}`,
+    ].join('\n'))
+  }
 
-  await discordPost(CH_UPDATES, msg)
+  if (noise.length && CH_NOISE !== CH_UPDATES) {
+    const lines = noise.map(t => `· \`${t.name}\` (${t.dur}s)`).join('\n')
+    await discordPost(CH_NOISE, [
+      `⚙️ **AnDy — ${noise.length} tâche${noise.length>1?'s':''} interne${noise.length>1?'s':''}**`,
+      lines,
+    ].join('\n'))
+  }
+
   notifBuffer.length = 0
   lastNotifTime = Date.now()
 }
