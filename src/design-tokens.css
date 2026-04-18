@@ -19,19 +19,25 @@
   --radius-sm: 12px;
   --radius: 16px;
   --radius-lg: 22px;
+  --font-family: 'Inter', sans-serif;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-
 body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
   background-color: var(--bg);
   color: var(--t1);
-  font-family: 'Inter', sans-serif;
+  padding: 0;
+  margin: 0;
 }
 
 .page {
   max-width: 520px;
-  padding: env(safe-area-inset);
+  padding: 16px;
+  margin: 0 auto;
 }
 
 .card {
@@ -51,17 +57,21 @@ body {
 
 .scroll-row {
   overflow-x: auto;
-  scrollbar-width: none; /* Firefox */
-}
-
-.scroll-row::-webkit-scrollbar {
-  display: none; /* Chrome, Safari and Opera */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .tab-btn {
-  text-transform: uppercase;
-  font-size: 10px;
-  color: var(--t2);
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius);
+  background-color: var(--bg1);
+  color: var(--t1);
+  cursor: pointer;
+}
+
+.tab-btn:hover {
+  background-color: var(--bg3);
 }
 
 .section-label {
@@ -70,58 +80,130 @@ body {
   color: var(--t2);
 }
 
-.press-scale:active {
+.press-scale {
   transform: scale(0.97);
+  transition: transform 0.2s ease;
+}
+
+.press-scale:hover {
+  transform: scale(1);
 }
 
 .live-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
   background-color: var(--green);
-  animation: pulse 1s infinite;
-}
-
-.num {
-  font-variant-numeric: tabular-nums;
-}
-
-@keyframes fadeUp {
-  0% {
-    transform: translateY(16px);
-    opacity: 0;
-  }
-  100% {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200px 0;
-  }
-  100% {
-    background-position: 200px 0;
-  }
+  animation: ping 1s infinite;
 }
 
 @keyframes ping {
   0% {
+    transform: scale(0);
+  }
+  50% {
     transform: scale(1);
-    opacity: 1;
   }
   100% {
-    transform: scale(2);
-    opacity: 0;
+    transform: scale(0);
   }
 }
 
 @keyframes pulse {
   0% {
-    opacity: 1;
-  }
-  50% {
     opacity: 0.5;
   }
-  100% {
+  50% {
     opacity: 1;
   }
+  100% {
+    opacity: 0.5;
+  }
+}
+
+.num {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: bold;
+  text-align: right;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+```
+
+```css
+/* Ajouter les animations */
+@keyframes fadeUp {
+  0% {
+    transform: translateY(16px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 100% 0;
+  }
+}
+
+.pill-up {
+  animation: shimmer 2s infinite;
+}
+
+.live-dot {
+  animation: pulse 2s infinite;
+}
+
+/* Ajouter les classes utilitaires */
+.section-label {
+  font-size: 10px;
+  color: var(--t2);
+  text-transform: uppercase;
+}
+
+.press-scale {
+  transform: scale(0.97);
+  transition: transform 0.2s ease;
+}
+
+.press-scale:hover {
+  transform: scale(1);
+}
+
+/* Ajouter les classes pour les boutons */
+.tab-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius);
+  background-color: var(--bg1);
+  color: var(--t1);
+  cursor: pointer;
+}
+
+.tab-btn:hover {
+  background-color: var(--bg3);
+}
+
+/* Ajouter les classes pour les éléments de navigation */
+.nav-item {
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius);
+  background-color: var(--bg1);
+  color: var(--t1);
+  cursor: pointer;
+}
+
+.nav-item:hover {
+  background-color: var(--bg3);
 }
