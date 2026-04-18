@@ -1,3 +1,49 @@
+Je vais créer une solution complète pour la gestion des erreurs API avec React. Voici les fichiers à modifier :
+
+```javascript
+// components/ApiError.js
+import { useState, useEffect } from 'react';
+import { AlertCircle } from 'lucide-react';
+
+function ApiError({ error, onRetry, className = '' }) {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (error) {
+      setIsVisible(true);
+      const timer = setTimeout(() => setIsVisible(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
+  if (!error || !isVisible) return null;
+
+  return (
+    <div
+      className={`fixed bottom-4 right-4 z-50 max-w-sm p-4 rounded-lg bg-red-900/20 border border-red-500/30 backdrop-blur-sm ${className}`}
+      role="alert"
+    >
+      <div className="flex items-center gap-2">
+        <AlertCircle className="w-5 h-5 text-red-500" />
+        <h3 className="font-semibold text-red-400">Erreur</h3>
+      </div>
+      <p className="mt-1 text-sm text-red-300">{error}</p>
+      {onRetry && (
+        <button
+          onClick={onRetry}
+          className="mt-2 px-3 py-1 text-xs bg-red-500/20 border border-red-500 rounded hover:bg-red-500/30 transition-colors"
+        >
+          Réessayer
+        </button>
+      )}
+    </div>
+  );
+}
+
+export default ApiError;
+```
+
+```javascript
 // api/trading-expert.js
 import { AbortSignal } from 'node-abort-controller';
 import { SupabaseClient } from '@supabase/supabase-js';
@@ -14,12 +60,28 @@ const supabase = new SupabaseClient({
   key: supabaseKey,
 });
 
+const ERROR_MESSAGES = {
+  400: 'Requête invalide',
+  401: 'Non autorisé',
+  403: 'Accès refusé',
+  404: 'Ressource introuvable',
+  405: 'Méthode non autorisée',
+  409: 'Conflit de données',
+  429: 'Trop de requêtes',
+  500: 'Erreur serveur interne',
+  503: 'Service indisponible',
+};
+
+function getErrorMessage(statusCode) {
+  return ERROR_MESSAGES[statusCode] || 'Erreur inconnue';
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { method, query } = req;
 
-  switch (method) {
-    case 'GET':
-      try {
+  try {
+    switch (method) {
+      case 'GET': {
         const { data, error } = await supabase
           .from('trading_expert')
           .select('*')
@@ -30,13 +92,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         return res.status(200).json(data);
-      } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Erreur serveur' });
       }
 
-    case 'POST':
-      try {
+      case 'POST': {
         const { data, error } = await supabase
           .from('trading_expert')
           .insert({
@@ -48,13 +106,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         return res.status(201).json(data);
-      } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Erreur serveur' });
       }
 
-    case 'PUT':
-      try {
+      case 'PUT': {
         const { data, error } = await supabase
           .from('trading_expert')
           .update({
@@ -67,13 +121,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         return res.status(200).json(data);
-      } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Erreur serveur' });
       }
 
-    case 'DELETE':
-      try {
+      case 'DELETE': {
         const { data, error } = await supabase
           .from('trading_expert')
           .delete()
@@ -84,13 +134,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         return res.status(200).json(data);
-      } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Erreur serveur' });
       }
 
-    default:
-      return res.status(405).json({ message: 'Méthode non autorisée' });
+      default:
+        return res.status(405).json({
+          message: getErrorMessage(405),
+          code: 'METHOD_NOT_ALLOWED'
+        });
+    }
+  } catch (error) {
+    console.error('API Error:', error);
+
+    if (error.code === 'PGRST116') {
+      return res.status(404).json({
+        message: 'Ressource introuvable',
+        code: 'RESOURCE_NOT_FOUND'
+      });
+    }
+
+    if (error.code === '23505') {
+      return res.status(409).json({
+        message: 'Conflit de données (entrée dupliquée)',
+        code: 'CONFLICT'
+      });
+    }
+
+    if (error.status) {
+      return res.status(error.status).json({
+        message: getErrorMessage(error.status),
+        code: error.code || 'UNKNOWN_ERROR'
+      });
+    }
+
+    return res.status(500).json({
+      message: getErrorMessage(500),
+      code: 'INTERNAL_SERVER_ERROR',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 }
 ```
@@ -112,12 +192,28 @@ const supabase = new SupabaseClient({
   key: supabaseKey,
 });
 
+const ERROR_MESSAGES = {
+  400: 'Requête invalide',
+  401: 'Non autorisé',
+  403: 'Accès refusé',
+  404: 'Ressource introuvable',
+  405: 'Méthode non autorisée',
+  409: 'Conflit de données',
+  429: 'Trop de requêtes',
+  500: 'Erreur serveur interne',
+  503: 'Service indisponible',
+};
+
+function getErrorMessage(statusCode) {
+  return ERROR_MESSAGES[statusCode] || 'Erreur inconnue';
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { method, query } = req;
 
-  switch (method) {
-    case 'GET':
-      try {
+  try {
+    switch (method) {
+      case 'GET': {
         const { data, error } = await supabase
           .from('brain')
           .select('*')
@@ -128,13 +224,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         return res.status(200).json(data);
-      } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Erreur serveur' });
       }
 
-    case 'POST':
-      try {
+      case 'POST': {
         const { data, error } = await supabase
           .from('brain')
           .insert({
@@ -146,13 +238,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         return res.status(201).json(data);
-      } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Erreur serveur' });
       }
 
-    case 'PUT':
-      try {
+      case 'PUT': {
         const { data, error } = await supabase
           .from('brain')
           .update({
@@ -165,13 +253,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         return res.status(200).json(data);
-      } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Erreur serveur' });
       }
 
-    case 'DELETE':
-      try {
+      case 'DELETE': {
         const { data, error } = await supabase
           .from('brain')
           .delete()
@@ -182,13 +266,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         return res.status(200).json(data);
-      } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Erreur serveur' });
       }
 
-    default:
-      return res.status(405).json({ message: 'Méthode non autorisée' });
+      default:
+        return res.status(405).json({
+          message: getErrorMessage(405),
+          code: 'METHOD_NOT_ALLOWED'
+        });
+    }
+  } catch (error) {
+    console.error('API Error:', error);
+
+    if (error.code === 'PGRST116') {
+      return res.status(404).json({
+        message: 'Ressource introuvable',
+        code: 'RESOURCE_NOT_FOUND'
+      });
+    }
+
+    if (error.code === '23505') {
+      return res.status(409).json({
+        message: 'Conflit de données (entrée dupliquée)',
+        code: 'CONFLICT'
+      });
+    }
+
+    if (error.status) {
+      return res.status(error.status).json({
+        message: getErrorMessage(error.status),
+        code: error.code || 'UNKNOWN_ERROR'
+      });
+    }
+
+    return res.status(500).json({
+      message: getErrorMessage(500),
+      code: 'INTERNAL_SERVER_ERROR',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 }
 ```
@@ -210,12 +324,28 @@ const supabase = new SupabaseClient({
   key: supabaseKey,
 });
 
+const ERROR_MESSAGES = {
+  400: 'Requête invalide',
+  401: 'Non autorisé',
+  403: 'Accès refusé',
+  404: 'Ressource introuvable',
+  405: 'Méthode non autorisée',
+  409: 'Conflit de données',
+  429: 'Trop de requêtes',
+  500: 'Erreur serveur interne',
+  503: 'Service indisponible',
+};
+
+function getErrorMessage(statusCode) {
+  return ERROR_MESSAGES[statusCode] || 'Erreur inconnue';
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { method, query } = req;
 
-  switch (method) {
-    case 'GET':
-      try {
+  try {
+    switch (method) {
+      case 'GET': {
         const { data, error } = await supabase
           .from('andy')
           .select('*')
@@ -226,13 +356,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         return res.status(200).json(data);
-      } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Erreur serveur' });
       }
 
-    case 'POST':
-      try {
+      case 'POST': {
         const { data, error } = await supabase
           .from('andy')
           .insert({
@@ -244,13 +370,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         return res.status(201).json(data);
-      } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Erreur serveur' });
       }
 
-    case 'PUT':
-      try {
+      case 'PUT': {
         const { data, error } = await supabase
           .from('andy')
           .update({
@@ -263,13 +385,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         return res.status(200).json(data);
-      } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Erreur serveur' });
       }
 
-    case 'DELETE':
-      try {
+      case 'DELETE': {
         const { data, error } = await supabase
           .from('andy')
           .delete()
@@ -280,13 +398,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         return res.status(200).json(data);
-      } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Erreur serveur' });
       }
 
-    default:
-      return res.status(405).json({ message: 'Méthode non autorisée' });
+      default:
+        return res.status(405).json({
+          message: getErrorMessage(405),
+          code: 'METHOD_NOT_ALLOWED'
+        });
+    }
+  } catch (error) {
+    console.error('API Error:', error);
+
+    if (error.code === 'PGRST116') {
+      return res.status(404).json({
+        message: 'Ressource introuvable',
+        code: 'RESOURCE_NOT_FOUND'
+      });
+    }
+
+    if (error.code === '23505') {
+      return res.status(409).json({
+        message: 'Conflit de données (entrée dupliquée)',
+        code: 'CONFLICT'
+      });
+    }
+
+    if (error.status) {
+      return res.status(error.status).json({
+        message: getErrorMessage(error.status),
+        code: error.code || 'UNKNOWN_ERROR'
+      });
+    }
+
+    return res.status(500).json({
+      message: getErrorMessage(500),
+      code: 'INTERNAL_SERVER_ERROR',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 }
 ```
@@ -308,12 +456,28 @@ const supabase = new SupabaseClient({
   key: supabaseKey,
 });
 
+const ERROR_MESSAGES = {
+  400: 'Requête invalide',
+  401: 'Non autorisé',
+  403: 'Accès refusé',
+  404: 'Ressource introuvable',
+  405: 'Méthode non autorisée',
+  409: 'Conflit de données',
+  429: 'Trop de requêtes',
+  500: 'Erreur serveur interne',
+  503: 'Service indisponible',
+};
+
+function getErrorMessage(statusCode) {
+  return ERROR_MESSAGES[statusCode] || 'Erreur inconnue';
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { method, query } = req;
 
-  switch (method) {
-    case 'GET':
-      try {
+  try {
+    switch (method) {
+      case 'GET': {
         const { data, error } = await supabase
           .from('discord')
           .select('*')
@@ -324,13 +488,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         return res.status(200).json(data);
-      } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Erreur serveur' });
       }
 
-    case 'POST':
-      try {
+      case 'POST': {
         const { data, error } = await supabase
           .from('discord')
           .insert({
@@ -342,13 +502,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         return res.status(201).json(data);
-      } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Erreur serveur' });
       }
 
-    case 'PUT':
-      try {
+      case 'PUT': {
         const { data, error } = await supabase
           .from('discord')
           .update({
@@ -361,13 +517,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         return res.status(200).json(data);
-      } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Erreur serveur' });
       }
 
-    case 'DELETE':
-      try {
+      case 'DELETE': {
         const { data, error } = await supabase
           .from('discord')
           .delete()
@@ -378,177 +530,84 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         return res.status(200).json(data);
-      } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Erreur serveur' });
       }
 
-    default:
-      return res.status(405).json({ message: 'Méthode non autorisée' });
+      default:
+        return res.status(405).json({
+          message: getErrorMessage(405),
+          code: 'METHOD_NOT_ALLOWED'
+        });
+    }
+  } catch (error) {
+    console.error('API Error:', error);
+
+    if (error.code === 'PGRST116') {
+      return res.status(404).json({
+        message: 'Ressource introuvable',
+        code: 'RESOURCE_NOT_FOUND'
+      });
+    }
+
+    if (error.code === '23505') {
+      return res.status(409).json({
+        message: 'Conflit de données (entrée dupliquée)',
+        code: 'CONFLICT'
+      });
+    }
+
+    if (error.status) {
+      return res.status(error.status).json({
+        message: getErrorMessage(error.status),
+        code: error.code || 'UNKNOWN_ERROR'
+      });
+    }
+
+    return res.status(500).json({
+      message: getErrorMessage(500),
+      code: 'INTERNAL_SERVER_ERROR',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 }
 ```
 
 ```javascript
-// .env
-SUPABASE_URL=your-supabase-url
-SUPABASE_KEY=your-supabase-key
-```
-
-```javascript
-// next.config.js
-module.exports = {
-  env: {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_KEY: process.env.SUPABASE_KEY,
-  },
-};
-```
-
-```javascript
-// pages/_app.js
-import Head from 'next/head';
-import { Inter } from 'next/font/google';
-
-const inter = Inter({ subsets: ['latin'] });
-
-function MyApp({ Component, pageProps }) {
-  return (
-    <>
-      <Head>
-        <title>Trackr</title>
-        <meta name="description" content="Trackr" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-      <Component {...pageProps} />
-    </>
-  );
+// components/ApiError.css
+.ApiError {
+  --error-bg: rgba(139, 0, 0, 0.2);
+  --error-border: rgba(255, 0, 0, 0.3);
+  --error-text: #ffcccc;
+  --error-title: #ff6b6b;
 }
 
-export default MyApp;
-```
-
-```javascript
-// styles/globals.css
-:root {
-  --green: #00ff88;
-  --bg: #080808;
-  --bg2: #111;
-  --t1: #f0f0f0;
-  --t2: #888;
-  --t3: #444;
-  --border: rgba(255, 255, 255, 0.07);
+.ApiError[data-severity="warning"] {
+  --error-bg: rgba(255, 165, 0, 0.2);
+  --error-border: rgba(255, 165, 0, 0.3);
+  --error-text: #ffebcc;
+  --error-title: #ffa500;
 }
 
-body {
-  font-family: 'Inter', sans-serif;
-  background-color: var(--bg);
-  color: var(--t1);
-}
-
-a {
-  color: var(--green);
-  text-decoration: none;
-}
-
-a:hover {
-  color: var(--green);
-}
-
-button {
-  background-color: var(--bg2);
-  color: var(--t1);
-  border: none;
-  padding: 10px 20px;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-button:hover {
-  background-color: var(--bg2);
-  color: var(--t1);
+.ApiError[data-severity="info"] {
+  --error-bg: rgba(0, 120, 215, 0.2);
+  --error-border: rgba(0, 120, 215, 0.3);
+  --error-text: #ccf2ff;
+  --error-title: #0078d7;
 }
 ```
 
 ```javascript
-// components/Layout.js
-import Head from 'next/head';
-import Link from 'next/link';
-import { Inter } from 'next/font/google';
-
-const inter = Inter({ subsets: ['latin'] });
-
-function Layout({ children }) {
-  return (
-    <div>
-      <Head>
-        <title>Trackr</title>
-        <meta name="description" content="Trackr" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-      <header>
-        <nav>
-          <ul>
-            <li>
-              <Link href="/">
-                <a>Accueil</a>
-              </Link>
-            </li>
-            <li>
-              <Link href="/sports">
-                <a>Sports</a>
-              </Link>
-            </li>
-            <li>
-              <Link href="/markets">
-                <a>Marchés</a>
-              </Link>
-            </li>
-            <li>
-              <Link href="/news">
-                <a>Actualités</a>
-              </Link>
-            </li>
-          </ul>
-        </nav>
-      </header>
-      <main>{children}</main>
-    </div>
-  );
+// components/ApiError.module.css
+.container {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  max-width: 24rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  backdrop-filter: blur(8px);
+  z-index: 50;
 }
 
-export default Layout;
-```
-
-```javascript
-// components/Button.js
-import { Inter } from 'next/font/google';
-
-const inter = Inter({ subsets: ['latin'] });
-
-function Button({ children, onClick }) {
-  return (
-    <button onClick={onClick}>
-      {children}
-    </button>
-  );
-}
-
-export default Button;
-```
-
-```javascript
-// components/Card.js
-import { Inter } from 'next/font/google';
-
-const inter = Inter({ subsets: ['latin'] });
-
-function Card({ children }) {
-  return (
-    <div>
-      <h2>{children}</h2>
-    </div>
-  );
-}
-
-export default Card;
+.container[data-severity="error"] {
+  background-color: rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(255, 0, 0,
