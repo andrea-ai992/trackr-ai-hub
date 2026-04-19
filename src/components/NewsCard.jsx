@@ -1,53 +1,90 @@
-// src/components/NewsCard.jsx
-import { Link } from "react-router-dom";
-import { Clock } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Clock } from 'lucide-react';
+import NewsCard from '../components/NewsCard';
+import { SOURCE_COLORS } from '../components/NewsCard';
 
-const SOURCE_COLORS = {
-  BBC: "#e60026",
-  Bloomberg: "#1a1a1a",
-  CoinDesk: "#f7931a",
-  "Le Monde": "#003189",
-  Reuters: "#ff8000",
-};
+const News = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categories, setCategories] = useState(['Tout', 'Tech', 'Finance', 'Sports', 'Crypto', 'France']);
+  const [selectedCategory, setSelectedCategory] = useState('Tout');
+  const [news, setNews] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-export function NewsCard({ article }) {
-  const publishedAt = new Date(article.publishedAt);
-  const now = new Date();
-  const diffMinutes = (now - publishedAt) / (1000 * 60);
-  const diffHours = diffMinutes / 60;
+  useEffect(() => {
+    const fetchNews = async () => {
+      const response = await fetch('/api/news');
+      const data = await response.json();
+      setNews(data);
+      setLoading(false);
+    };
+    fetchNews();
+  }, []);
 
-  const isBreaking = diffMinutes < 30;
-  const isNew = diffMinutes < 120 && !isBreaking;
+  const handleSearch = (event) => {
+    setSearchQuery(event.target.value);
+  };
+
+  const handleCategoryChange = (category) => {
+    setSelectedCategory(category);
+  };
+
+  const filteredNews = news.filter((article) => {
+    if (searchQuery === '') return true;
+    return article.title.toLowerCase().includes(searchQuery.toLowerCase()) || article.description.toLowerCase().includes(searchQuery.toLowerCase());
+  }).filter((article) => {
+    if (selectedCategory === 'Tout') return true;
+    return article.category === selectedCategory;
+  });
 
   return (
-    <Link to={article.url} className="news-card" target="_blank" rel="noopener noreferrer">
-      <div className="news-card-header">
-        <div className="news-source" style={{ color: SOURCE_COLORS[article.source.name] || SOURCE_COLORS[article.source.name.split(' ')[0]] || '#00ff88' }}>
-          {article.source.name}
-        </div>
-        {(isBreaking || isNew) && (
-          <div className={`news-badge ${isBreaking ? 'breaking' : 'new'}`}>
-            {isBreaking ? 'BREAKING' : 'NEW'}
+    <div className="news-page">
+      <header className="news-header">
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={handleSearch}
+          placeholder="Recherche"
+          className="news-search"
+        />
+        <button
+          className="news-search-button"
+          onClick={() => navigate(location.pathname + '?' + searchQuery)}
+        >
+          <Clock size={12} />
+        </button>
+        <nav className="news-tabs">
+          {categories.map((category, index) => (
+            <button
+              key={index}
+              className={`news-tab ${selectedCategory === category ? 'active' : ''}`}
+              onClick={() => handleCategoryChange(category)}
+            >
+              {category}
+            </button>
+          ))}
+        </nav>
+      </header>
+      <main className="news-content">
+        {loading ? (
+          <div className="news-loader">
+            <div className="news-loader-item" />
+            <div className="news-loader-item" />
+            <div className="news-loader-item" />
+            <div className="news-loader-item" />
+            <div className="news-loader-item" />
+            <div className="news-loader-item" />
           </div>
+        ) : (
+          filteredNews.map((article, index) => (
+            <NewsCard key={index} article={article} />
+          ))
         )}
-      </div>
-      <div className="news-card-content">
-        <div className="news-card-text">
-          <h4>{article.title}</h4>
-          <p>{article.description}</p>
-          <div className="news-card-meta">
-            <div className="news-time">
-              <Clock size={12} />
-              <span>{publishedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-            </div>
-          </div>
-        </div>
-        {article.urlToImage && (
-          <div className="news-card-image">
-            <img src={article.urlToImage} alt={article.title} />
-          </div>
-        )}
-      </div>
-    </Link>
+      </main>
+    </div>
   );
-}
+};
+
+export default News;
