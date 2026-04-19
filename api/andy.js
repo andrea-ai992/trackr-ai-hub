@@ -206,7 +206,7 @@ router.post('/chat', timeoutMiddleware, validateRequest, async (req, res, next) 
 // API pour récupérer les données de l'IA avec timeout
 router.get('/fetch', timeoutMiddleware, validateRequest, async (req, res, next) => {
   try {
-    const response = await fetchWithTimeout('https://api.example.com/ai-data', {}, 8000);
+    const response = await fetchWithTimeout('https://api.example.com/ai-data', {}, 5000);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -228,7 +228,7 @@ router.post('/fetch', timeoutMiddleware, validateRequest, async (req, res, next)
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(req.body)
-    }, 8000);
+    }, 5000);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
