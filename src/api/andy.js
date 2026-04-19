@@ -130,6 +130,35 @@ const andy = {
       }
       throw error;
     }
+  },
+
+  async vibe(data, timeout = DEFAULT_TIMEOUT) {
+    try {
+      const signal = AbortSignal.timeout(timeout);
+
+      const response = await fetch('/vibe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+        signal: signal
+      });
+
+      if (!response.ok) {
+        throw new Error(`Vibe request failed with status ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error.name === 'TimeoutError') {
+        throw new Error(`Vibe request timed out after ${timeout}ms`);
+      }
+      if (error.message.includes('Failed to fetch')) {
+        throw new Error('Network request failed');
+      }
+      throw error;
+    }
   }
 };
 
