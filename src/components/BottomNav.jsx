@@ -156,6 +156,7 @@ export default function BottomNav() {
                   padding: active ? '6px 16px' : '0',
                   borderRadius: 999,
                   transition: 'all 300ms ease',
+                  backgroundColor: active ? 'rgba(0, 255, 136, 0.12)' : 'transparent',
                 }}
               >
                 <Icon
