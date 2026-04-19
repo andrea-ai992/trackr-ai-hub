@@ -50,16 +50,11 @@ async function getQuickSignal(symbol, type) {
     if (priceRes.status === 'fulfilled') { const d = priceRes.value?.[id]; price = d?.usd; change24h = d?.usd_24h_change }
     if (ohlcRes.status === 'fulfilled' && Array.isArray(ohlcRes.value)) rsi = quickRSI(ohlcRes.value.map(c => c[4]))
   } else {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 5000)
-
     try {
       const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=30d`, {
         headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' },
-        signal: controller.signal
+        signal: AbortSignal.timeout(5000)
       })
-
-      clearTimeout(timeoutId)
 
       const ct = response.headers.get('content-type') || ''
       if (!response.ok) {
@@ -102,19 +97,14 @@ async function handleDiscordStream(res, streamUrl, timeoutMs = 10000) {
   const encoder = new TextEncoder()
   const decoder = new TextDecoder()
 
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-
   try {
     const response = await fetch(streamUrl, {
       headers: {
         'Authorization': `Bot ${BOT_TOKEN}`,
         'Accept': 'text/event-stream',
       },
-      signal: controller.signal
+      signal: AbortSignal.timeout(timeoutMs)
     })
-
-    clearTimeout(timeoutId)
 
     if (!response.ok) {
       res.status(response.status).json({ error: `Discord API error: ${response.status}` })
@@ -167,7 +157,6 @@ async function handleDiscordStream(res, streamUrl, timeoutMs = 10000) {
 
     pump()
   } catch (error) {
-    clearTimeout(timeoutId)
     console.error('Discord SSE stream setup error:', error)
     res.status(500).json({ error: 'Failed to establish Discord SSE stream' })
   }
@@ -225,10 +214,6 @@ async function handleAgentRequest(agent, payload) {
 }
 
 async function anthropicComplete(prompt, timeoutMs = 4000, maxTimeoutMs = 30000) {
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-  const maxTimeoutId = setTimeout(() => controller.abort(), maxTimeoutMs)
-
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -242,11 +227,8 @@ async function anthropicComplete(prompt, timeoutMs = 4000, maxTimeoutMs = 30000)
         max_tokens: 4096,
         messages: [{ role: 'user', content: prompt }]
       }),
-      signal: controller.signal
+      signal: AbortSignal.timeout(timeoutMs)
     })
-
-    clearTimeout(timeoutId)
-    clearTimeout(maxTimeoutId)
 
     if (!response.ok) {
       throw new Error(`Anthropic API error: ${response.status}`)
@@ -255,8 +237,6 @@ async function anthropicComplete(prompt, timeoutMs = 4000, maxTimeoutMs = 30000)
     const data = await response.json()
     return data.content[0].text
   } catch (error) {
-    clearTimeout(timeoutId)
-    clearTimeout(maxTimeoutId)
     console.error('Anthropic API error:', error)
     throw error
   }
