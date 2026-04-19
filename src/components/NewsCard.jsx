@@ -1,90 +1,66 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+// src/components/NewsCard.jsx
+import React from 'react';
 import { Clock } from 'lucide-react';
-import NewsCard from '../components/NewsCard';
-import { SOURCE_COLORS } from '../components/NewsCard';
 
-const News = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [categories, setCategories] = useState(['Tout', 'Tech', 'Finance', 'Sports', 'Crypto', 'France']);
-  const [selectedCategory, setSelectedCategory] = useState('Tout');
-  const [news, setNews] = useState([]);
-  const [loading, setLoading] = useState(true);
+export const SOURCE_COLORS = {
+  'BBC': '#e60026',
+  'Bloomberg': '#1a1a1a',
+  'CoinDesk': '#f7931a',
+  'Le Monde': '#003189',
+  'Reuters': '#ff8000',
+  'default': 'var(--neon)'
+};
 
-  useEffect(() => {
-    const fetchNews = async () => {
-      const response = await fetch('/api/news');
-      const data = await response.json();
-      setNews(data);
-      setLoading(false);
-    };
-    fetchNews();
-  }, []);
+const NewsCard = ({ article }) => {
+  const formatTime = (dateString) => {
+    const now = new Date();
+    const articleTime = new Date(dateString);
+    const diffMinutes = (now - articleTime) / (1000 * 60);
 
-  const handleSearch = (event) => {
-    setSearchQuery(event.target.value);
+    if (diffMinutes < 30) return 'BREAKING';
+    if (diffMinutes < 120) return 'NEW';
+    return articleTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const handleCategoryChange = (category) => {
-    setSelectedCategory(category);
+  const getBadgeColor = (badge) => {
+    if (badge === 'BREAKING') return '#ff4444';
+    if (badge === 'NEW') return '#00ff88';
+    return 'transparent';
   };
 
-  const filteredNews = news.filter((article) => {
-    if (searchQuery === '') return true;
-    return article.title.toLowerCase().includes(searchQuery.toLowerCase()) || article.description.toLowerCase().includes(searchQuery.toLowerCase());
-  }).filter((article) => {
-    if (selectedCategory === 'Tout') return true;
-    return article.category === selectedCategory;
-  });
+  const getTimeColor = (badge) => {
+    if (badge === 'BREAKING') return '#ff4444';
+    if (badge === 'NEW') return '#00ff88';
+    return 'var(--text-secondary)';
+  };
+
+  const sourceColor = SOURCE_COLORS[article.source] || SOURCE_COLORS.default;
 
   return (
-    <div className="news-page">
-      <header className="news-header">
-        <input
-          type="search"
-          value={searchQuery}
-          onChange={handleSearch}
-          placeholder="Recherche"
-          className="news-search"
-        />
-        <button
-          className="news-search-button"
-          onClick={() => navigate(location.pathname + '?' + searchQuery)}
-        >
-          <Clock size={12} />
-        </button>
-        <nav className="news-tabs">
-          {categories.map((category, index) => (
-            <button
-              key={index}
-              className={`news-tab ${selectedCategory === category ? 'active' : ''}`}
-              onClick={() => handleCategoryChange(category)}
-            >
-              {category}
-            </button>
-          ))}
-        </nav>
-      </header>
-      <main className="news-content">
-        {loading ? (
-          <div className="news-loader">
-            <div className="news-loader-item" />
-            <div className="news-loader-item" />
-            <div className="news-loader-item" />
-            <div className="news-loader-item" />
-            <div className="news-loader-item" />
-            <div className="news-loader-item" />
-          </div>
-        ) : (
-          filteredNews.map((article, index) => (
-            <NewsCard key={index} article={article} />
-          ))
-        )}
-      </main>
-    </div>
+    <article className="news-card">
+      <div className="news-card-accent" style={{ backgroundColor: sourceColor }} />
+      <div className="news-card-content">
+        <div className="news-card-header">
+          <h3 className="news-card-title">{article.title}</h3>
+          {article.thumbnail && (
+            <img
+              src={article.thumbnail}
+              alt={article.title}
+              className="news-card-thumbnail"
+            />
+          )}
+        </div>
+        <div className="news-card-footer">
+          <span className="news-card-source" style={{ color: sourceColor }}>
+            {article.source}
+          </span>
+          <span className="news-card-time" style={{ color: getTimeColor(article.timeBadge) }}>
+            {article.timeBadge}
+          </span>
+        </div>
+      </div>
+    </article>
   );
 };
 
-export default News;
+export default NewsCard;
