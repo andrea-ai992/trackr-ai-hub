@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Clock, DollarSign, Grid, List, Menu, Pencil, Plus, X } from 'lucide-react';
-import { supabase } from '../utils/supabase';
+import { supabase } from '../lib/supabaseClient';
 
 const CryptoTrader = () => {
   const location = useLocation();
