@@ -1,0 +1,110 @@
+// src/styles/More.css
+:root {
+  --glow-primary: 0 0 12px 4px rgba(0, 255, 136, 0.15);
+  --glow-hover: 0 0 8px 2px rgba(0, 255, 136, 0.25);
+}
+
+.More {
+  min-height: 100vh;
+  background: var(--bg);
+  padding: 16px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.More-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.More-header h1 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.More-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.More-section {
+  margin-bottom: 24px;
+}
+
+.More-section h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0 0 12px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.ModuleCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  color: var(--text-primary);
+}
+
+.ModuleCard:hover {
+  border-color: var(--border-bright);
+  box-shadow: var(--glow-hover);
+}
+
+.ModuleCard-icon {
+  width: 28px;
+  height: 28px;
+  color: var(--neon);
+}
+
+.ModuleCard-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0;
+}
+
+.More-info {
+  margin-top: auto;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.More-info p {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0;
+  text-align: center;
+}
+
+.More-info a {
+  color: var(--neon);
+  text-decoration: none;
+}
+
+.More-info a:hover {
+  text-decoration: underline;
+}

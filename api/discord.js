@@ -2,6 +2,7 @@
 // ─── Discord Interaction Handler — 45 AnDy Agents ───────────────────────────
 // Receives slash commands from Discord, routes to agent logic
 // Background processing: res.json() sends immediately, function continues up to 60s
+// SSE export: handleDiscordStream for real-time agent updates
 
 import crypto from 'crypto'
 
@@ -49,16 +50,11 @@ async function getQuickSignal(symbol, type) {
     if (priceRes.status === 'fulfilled') { const d = priceRes.value?.[id]; price = d?.usd; change24h = d?.usd_24h_change }
     if (ohlcRes.status === 'fulfilled' && Array.isArray(ohlcRes.value)) rsi = quickRSI(ohlcRes.value.map(c => c[4]))
   } else {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 5000)
-
     try {
       const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=30d`, {
         headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' },
-        signal: controller.signal
+        signal: AbortSignal.timeout(5000)
       })
-
-      clearTimeout(timeoutId)
 
       const ct = response.headers.get('content-type') || ''
       if (!response.ok) {
@@ -101,19 +97,14 @@ async function handleDiscordStream(res, streamUrl, timeoutMs = 10000) {
   const encoder = new TextEncoder()
   const decoder = new TextDecoder()
 
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-
   try {
     const response = await fetch(streamUrl, {
       headers: {
         'Authorization': `Bot ${BOT_TOKEN}`,
         'Accept': 'text/event-stream',
       },
-      signal: controller.signal
+      signal: AbortSignal.timeout(timeoutMs)
     })
-
-    clearTimeout(timeoutId)
 
     if (!response.ok) {
       res.status(response.status).json({ error: `Discord API error: ${response.status}` })
@@ -166,7 +157,6 @@ async function handleDiscordStream(res, streamUrl, timeoutMs = 10000) {
 
     pump()
   } catch (error) {
-    clearTimeout(timeoutId)
     console.error('Discord SSE stream setup error:', error)
     res.status(500).json({ error: 'Failed to establish Discord SSE stream' })
   }
@@ -223,4 +213,80 @@ async function handleAgentRequest(agent, payload) {
   }
 }
 
-export { handleDiscordStream, handleAgentRequest }
+async function anthropicComplete(prompt, timeoutMs = 4000, maxTimeoutMs = 30000) {
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 4096,
+        messages: [{ role: 'user', content: prompt }]
+      }),
+      signal: AbortSignal.timeout(timeoutMs)
+    })
+
+    if (!response.ok) {
+      throw new Error(`Anthropic API error: ${response.status}`)
+    }
+
+    const stream = response.body
+    if (!stream) {
+      throw new Error('No response body from Anthropic')
+    }
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+    })
+
+    const reader = stream.getReader()
+    const decoder = new TextDecoder()
+
+    function pump() {
+      reader.read().then(({ done, value }) => {
+        if (done) {
+          res.end()
+          return
+        }
+
+        const text = decoder.decode(value, { stream: true })
+        const lines = text.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6)
+            if (data === '[DONE]') {
+              res.end()
+              return
+            }
+            try {
+              const parsed = JSON.parse(data)
+              res.write(`data: ${JSON.stringify(parsed)}\n\n`)
+            } catch (e) {
+              res.write(`data: ${JSON.stringify({ error: 'Failed to parse event data' })}\n\n`)
+            }
+          }
+        }
+
+        pump()
+      }).catch(err => {
+        console.error('Anthropic SSE stream error:', err)
+        res.end()
+      })
+    }
+
+    pump()
+  } catch (error) {
+    console.error('Anthropic API error:', error)
+    throw error
+  }
+}
+
+export { handleDiscordStream, handleAgentRequest, anthropicComplete }

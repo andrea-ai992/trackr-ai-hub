@@ -1,249 +1,234 @@
-import { useState, useEffect } from 'react';
-import { ChevronDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 
-const SignalsChart = () => {
-  const [signals, setSignals] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState(false);
+const SignalsChart = ({ data }) => {
+  const [activeTab, setActiveTab] = useState('rsi');
+  const [chartWidth, setChartWidth] = useState(375);
+  const [chartHeight, setChartHeight] = useState(200);
 
   useEffect(() => {
-    const fetchSignals = () => {
-      const mockSignals = Array.from({ length: 12 }, (_, i) => ({
-        id: i + 1,
-        symbol: ['BTC', 'ETH', 'SOL', 'ADA', 'DOT', 'AVAX'][i % 6],
-        price: (Math.random() * 5000 + 100).toFixed(2),
-        change: (Math.random() * 20 - 10).toFixed(2),
-        signal: ['BUY', 'SELL', 'HOLD'][Math.floor(Math.random() * 3)],
-        timestamp: new Date(Date.now() - Math.random() * 86400000).toISOString(),
-        confidence: (Math.random() * 100).toFixed(1),
-      }));
-      setSignals(mockSignals);
-      setLoading(false);
+    const handleResize = () => {
+      setChartWidth(Math.min(375, window.innerWidth - 20));
+      setChartHeight(Math.min(200, window.innerHeight * 0.25));
     };
 
-    const timer = setTimeout(fetchSignals, 800);
-    return () => clearTimeout(timer);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const visibleSignals = expanded ? signals : signals.slice(0, 6);
+  if (!data || !data.rsi || !data.macd || !data.volume) return null;
+
+  const renderRSIChart = () => {
+    const rsiValues = data.rsi.values;
+    const rsiOverbought = 70;
+    const rsiOversold = 30;
+    const maxValue = Math.max(...rsiValues, rsiOverbought);
+    const minValue = Math.min(...rsiValues, rsiOversold);
+
+    return (
+      <div className="chart-container" style={{ width: chartWidth, height: chartHeight }}>
+        <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="rsiGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#00ff88" stopOpacity="0.3" />
+              <stop offset="100%" stopColor="#00ff88" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+
+          <rect width="100%" height="100%" fill="var(--surface-low)" rx="4" />
+
+          <path
+            d={`M0,${chartHeight} ${rsiValues.map((val, i) => `${i * (chartWidth / (rsiValues.length - 1))},${chartHeight - ((val - minValue) / (maxValue - minValue)) * chartHeight}`).join(' ')}`}
+            stroke="var(--neon)"
+            strokeWidth="1.5"
+            fill="url(#rsiGradient)"
+            fillOpacity="0.6"
+          />
+
+          <line
+            x1="0"
+            y1={chartHeight - ((rsiOverbought - minValue) / (maxValue - minValue)) * chartHeight}
+            x2={chartWidth}
+            y2={chartHeight - ((rsiOverbought - minValue) / (maxValue - minValue)) * chartHeight}
+            stroke="#ff4444"
+            strokeWidth="1"
+            strokeDasharray="2,2"
+          />
+
+          <line
+            x1="0"
+            y1={chartHeight - ((rsiOversold - minValue) / (maxValue - minValue)) * chartHeight}
+            x2={chartWidth}
+            y2={chartHeight - ((rsiOversold - minValue) / (maxValue - minValue)) * chartHeight}
+            stroke="#4444ff"
+            strokeWidth="1"
+            strokeDasharray="2,2"
+          />
+
+          <text x={chartWidth - 40} y={20} fill="#ff4444" fontSize="10" fontFamily="JetBrains Mono">OB</text>
+          <text x={chartWidth - 40} y={chartHeight - 5} fill="#4444ff" fontSize="10" fontFamily="JetBrains Mono">OS</text>
+        </svg>
+
+        <div className="chart-info">
+          <div className="signal-item">
+            <span className="signal-label">RSI: {data.rsi.current.toFixed(2)}</span>
+            {data.rsi.current > rsiOverbought && (
+              <span className="signal-bearish">
+                <TrendingDown size={14} /> Overbought
+              </span>
+            )}
+            {data.rsi.current < rsiOversold && (
+              <span className="signal-bullish">
+                <TrendingUp size={14} /> Oversold
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderMACDChart = () => {
+    const macdLine = data.macd.macdLine;
+    const signalLine = data.macd.signalLine;
+    const histogram = data.macd.histogram;
+
+    const maxValue = Math.max(...macdLine.map((val, i) => Math.max(val, signalLine[i], histogram[i])));
+    const minValue = Math.min(...macdLine.map((val, i) => Math.min(val, signalLine[i], histogram[i])));
+
+    return (
+      <div className="chart-container" style={{ width: chartWidth, height: chartHeight }}>
+        <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="macdGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#00ff88" stopOpacity="0.3" />
+              <stop offset="100%" stopColor="#00ff88" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+
+          <rect width="100%" height="100%" fill="var(--surface-low)" rx="4" />
+
+          <path
+            d={`M0,${chartHeight/2} ${macdLine.map((val, i) => `${i * (chartWidth / (macdLine.length - 1))},${chartHeight/2 - (val / maxValue) * (chartHeight/2)}`).join(' ')}`}
+            stroke="#00ff88"
+            strokeWidth="1.5"
+            fill="none"
+          />
+
+          <path
+            d={`M0,${chartHeight/2} ${signalLine.map((val, i) => `${i * (chartWidth / (signalLine.length - 1))},${chartHeight/2 - (val / maxValue) * (chartHeight/2)}`).join(' ')}`}
+            stroke="#ffaa00"
+            strokeWidth="1.5"
+            fill="none"
+          />
+
+          {histogram.map((val, i) => (
+            <rect
+              key={i}
+              x={i * (chartWidth / (histogram.length - 1)) - 1}
+              y={chartHeight/2 - (val / maxValue) * (chartHeight/2)}
+              width="2"
+              height={Math.abs((val / maxValue) * (chartHeight/2))}
+              fill={val > 0 ? "#00ff88" : "#ff4444"}
+            />
+          ))}
+        </svg>
+
+        <div className="chart-info">
+          <div className="signal-item">
+            <span className="signal-label">MACD: {data.macd.current.toFixed(4)}</span>
+            <span className={`signal-${data.macd.histogram[data.macd.histogram.length-1] > 0 ? 'bullish' : 'bearish'}`}>
+              {data.macd.histogram[data.macd.histogram.length-1] > 0 ? (
+                <TrendingUp size={14} />
+              ) : (
+                <TrendingDown size={14} />
+              )}
+              {data.macd.histogram[data.macd.histogram.length-1] > 0 ? ' Bullish' : ' Bearish'}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderVolumeChart = () => {
+    const volumeValues = data.volume.values;
+    const priceChanges = data.volume.priceChanges;
+
+    const maxVolume = Math.max(...volumeValues);
+    const minVolume = Math.min(...volumeValues.filter(v => v > 0));
+
+    return (
+      <div className="chart-container" style={{ width: chartWidth, height: chartHeight }}>
+        <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="volumeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#00ff88" stopOpacity="0.3" />
+              <stop offset="100%" stopColor="#00ff88" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+
+          <rect width="100%" height="100%" fill="var(--surface-low)" rx="4" />
+
+          {volumeValues.map((vol, i) => (
+            <rect
+              key={i}
+              x={i * (chartWidth / (volumeValues.length - 1))}
+              y={chartHeight - (vol / maxVolume) * chartHeight}
+              width={Math.max(1, chartWidth / (volumeValues.length - 1) - 1)}
+              height={(vol / maxVolume) * chartHeight}
+              fill={priceChanges[i] > 0 ? "var(--neon)" : "#ff4444"}
+              opacity="0.8"
+            />
+          ))}
+        </svg>
+
+        <div className="chart-info">
+          <div className="signal-item">
+            <span className="signal-label">Volume: {data.volume.current.toLocaleString()}</span>
+            <span className={`signal-${priceChanges[priceChanges.length-1] > 0 ? 'bullish' : 'bearish'}`}>
+              {priceChanges[priceChanges.length-1] > 0 ? (
+                <TrendingUp size={14} />
+              ) : (
+                <TrendingDown size={14} />
+              )}
+              {priceChanges[priceChanges.length-1] > 0 ? ' Up' : ' Down'}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <div className="signals-chart-container">
-      <div className="signals-header">
-        <h3>Market Signals</h3>
-        <button onClick={() => setExpanded(!expanded)} className="expand-toggle">
-          <ChevronDown size={16} className={expanded ? 'rotate-180' : ''} />
+    <div className="signals-chart" style={{ fontFamily: 'JetBrains Mono, monospace' }}>
+      <div className="chart-tabs">
+        <button
+          className={`tab-button ${activeTab === 'rsi' ? 'active' : ''}`}
+          onClick={() => setActiveTab('rsi')}
+        >
+          RSI
+        </button>
+        <button
+          className={`tab-button ${activeTab === 'macd' ? 'active' : ''}`}
+          onClick={() => setActiveTab('macd')}
+        >
+          MACD
+        </button>
+        <button
+          className={`tab-button ${activeTab === 'volume' ? 'active' : ''}`}
+          onClick={() => setActiveTab('volume')}
+        >
+          Volume
         </button>
       </div>
 
-      <div className="signals-list">
-        {loading ? (
-          Array.from({ length: 6 }).map((_, i) => (
-            <div key={`skeleton-${i}`} className="signal-item skeleton">
-              <div className="skeleton-line" style={{ width: `${Math.random() * 80 + 20}%` }}></div>
-              <div className="skeleton-line" style={{ width: `${Math.random() * 60 + 20}%` }}></div>
-            </div>
-          ))
-        ) : (
-          visibleSignals.map((signal) => (
-            <div
-              key={signal.id}
-              className="signal-item"
-              style={{
-                animationDelay: `${signal.id * 0.05}s`,
-                animation: 'fadeUp 0.4s ease-out forwards'
-              }}
-            >
-              <div className="signal-symbol">{signal.symbol}</div>
-              <div className="signal-price">${signal.price}</div>
-              <div className={`signal-change ${signal.change >= 0 ? 'positive' : 'negative'}`}>
-                {signal.change >= 0 ? '+' : ''}{signal.change}%
-              </div>
-              <div className={`signal-type ${signal.signal.toLowerCase()}`}>{signal.signal}</div>
-              <div className="signal-confidence">{signal.confidence}%</div>
-              <div className="signal-time">
-                {new Date(signal.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </div>
-            </div>
-          ))
-        )}
+      <div className="chart-content">
+        {activeTab === 'rsi' && renderRSIChart()}
+        {activeTab === 'macd' && renderMACDChart()}
+        {activeTab === 'volume' && renderVolumeChart()}
       </div>
-
-      <style jsx>{`
-        .signals-chart-container {
-          width: 100%;
-          background: var(--surface);
-          border-radius: 8px;
-          padding: 12px;
-          font-family: 'JetBrains Mono', monospace;
-          color: var(--text-primary);
-          border: 1px solid var(--border);
-        }
-
-        .signals-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 12px;
-          font-size: 14px;
-          font-weight: 500;
-        }
-
-        .expand-toggle {
-          background: none;
-          border: none;
-          color: var(--neon);
-          cursor: pointer;
-          transition: transform 0.2s ease;
-          padding: 4px;
-        }
-
-        .expand-toggle:hover {
-          opacity: 0.8;
-        }
-
-        .rotate-180 {
-          transform: rotate(180deg);
-        }
-
-        .signals-list {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .signal-item {
-          display: grid;
-          grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1.5fr;
-          align-items: center;
-          padding: 8px 4px;
-          font-size: 12px;
-          border-radius: 4px;
-          background: var(--surface-low);
-          border: 1px solid transparent;
-          transition: all 0.2s ease;
-          opacity: 0;
-          transform: translateY(20px);
-        }
-
-        .signal-item.skeleton {
-          background: linear-gradient(90deg, var(--surface-high) 25%, var(--surface-low) 50%, var(--surface-high) 75%);
-          background-size: 200% 100%;
-          animation: shimmer 1.5s infinite;
-          grid-template-columns: repeat(6, 1fr);
-        }
-
-        @keyframes shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-
-        .skeleton-line {
-          height: 8px;
-          background: var(--surface-high);
-          border-radius: 2px;
-        }
-
-        .signal-item:hover {
-          background: var(--surface-high);
-          border-color: var(--border-bright);
-        }
-
-        .signal-symbol {
-          font-weight: 600;
-          color: var(--text-primary);
-        }
-
-        .signal-price {
-          font-weight: 500;
-        }
-
-        .signal-change {
-          font-weight: 500;
-        }
-
-        .signal-change.positive {
-          color: #00ff88;
-        }
-
-        .signal-change.negative {
-          color: #ff4444;
-        }
-
-        .signal-type {
-          padding: 2px 6px;
-          border-radius: 4px;
-          font-size: 10px;
-          font-weight: 600;
-          text-align: center;
-        }
-
-        .signal-type.buy {
-          background: rgba(0, 255, 136, 0.1);
-          color: #00ff88;
-        }
-
-        .signal-type.sell {
-          background: rgba(255, 68, 68, 0.1);
-          color: #ff4444;
-        }
-
-        .signal-type.hold {
-          background: rgba(170, 170, 170, 0.1);
-          color: var(--text-secondary);
-        }
-
-        .signal-confidence {
-          font-size: 10px;
-          color: var(--text-secondary);
-        }
-
-        .signal-time {
-          font-size: 10px;
-          color: var(--text-muted);
-        }
-
-        @keyframes fadeUp {
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        @media (max-width: 768px) {
-          .signal-item {
-            grid-template-columns: 2fr 1fr 1fr;
-            font-size: 11px;
-          }
-
-          .signal-type {
-            display: none;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .signals-header {
-            font-size: 12px;
-          }
-
-          .signal-item {
-            grid-template-columns: 1.5fr 1fr 1fr;
-            padding: 6px 4px;
-          }
-
-          .signal-symbol {
-            font-size: 11px;
-          }
-
-          .signal-price {
-            font-size: 11px;
-          }
-
-          .signal-change {
-            font-size: 11px;
-          }
-        }
-      `}</style>
     </div>
   );
 };

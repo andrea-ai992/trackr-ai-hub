@@ -1,166 +1,3 @@
-Je vais améliorer le composant Sparkline.jsx pour le rendre plus robuste et fonctionnel avec des animations fluides et une meilleure gestion des dimensions. Voici le code complet:
-
-```jsx
-import { useEffect, useRef, useState } from 'react';
-
-const Sparkline = ({
-  data = [],
-  width = '100%',
-  height = 40,
-  color = 'var(--green)',
-  pulse = true,
-  strokeWidth = 2,
-}) => {
-  const svgRef = useRef(null);
-  const [dimensions, setDimensions] = useState({
-    width: parseInt(width) || 100,
-    height: parseInt(height) || 40,
-  });
-  const [isHovered, setIsHovered] = useState(false);
-
-  useEffect(() => {
-    if (svgRef.current) {
-      const updateDimensions = () => {
-        const { clientWidth, clientHeight } = svgRef.current;
-        setDimensions({
-          width: clientWidth || parseInt(width) || 100,
-          height: clientHeight || parseInt(height) || 40
-        });
-      };
-
-      updateDimensions();
-      window.addEventListener('resize', updateDimensions);
-      return () => window.removeEventListener('resize', updateDimensions);
-    }
-  }, [width, height]);
-
-  if (data.length === 0) {
-    return (
-      <div
-        className="sparkline-placeholder"
-        style={{
-          width: width,
-          height: height,
-          backgroundColor: 'var(--bg2)',
-          borderRadius: '4px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--t3)',
-          fontSize: '12px'
-        }}
-      >
-        No data available
-      </div>
-    );
-  }
-
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const range = max - min || 1;
-
-  const points = data
-    .map((value, i) => {
-      const x = (i / (data.length - 1)) * dimensions.width;
-      const y = dimensions.height - ((value - min) / range) * dimensions.height;
-      return `${x},${y}`;
-    })
-    .join(' ');
-
-  const getPulseColor = () => {
-    if (color === 'var(--green)') return 'hsl(120, 100%, 50%)';
-    if (color === '#ff0000') return 'hsl(0, 100%, 50%)';
-    if (color === '#627eea') return 'hsl(240, 100%, 50%)';
-    return color;
-  };
-
-  const animatedColor = pulse ? getPulseColor() : color;
-
-  return (
-    <div
-      className="sparkline-wrapper"
-      style={{
-        width: width,
-        height: height,
-        position: 'relative',
-        cursor: isHovered ? 'pointer' : 'default'
-      }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <svg
-        ref={svgRef}
-        width="100%"
-        height="100%"
-        viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
-        preserveAspectRatio="none"
-        style={{
-          width: '100%',
-          height: '100%',
-          overflow: 'visible'
-        }}
-      >
-        <rect
-          x="0"
-          y="0"
-          width="100%"
-          height="100%"
-          fill="transparent"
-          rx="4"
-        />
-        <polyline
-          points={points}
-          fill="none"
-          stroke={animatedColor}
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeDasharray={isHovered ? 'none' : '4'}
-          strokeDashoffset={isHovered ? '0' : '4'}
-        >
-          {isHovered && (
-            <animate
-              attributeName="stroke-width"
-              values={`${strokeWidth};${strokeWidth * 1.5}`}
-              dur="0.3s"
-              fill="freeze"
-            />
-          )}
-        </polyline>
-
-        {pulse && (
-          <circle
-            cx={dimensions.width * 0.8}
-            cy={dimensions.height * 0.5}
-            r={strokeWidth * 3}
-            fill={animatedColor}
-            opacity="0.6"
-          >
-            <animate
-              attributeName="r"
-              values={`${strokeWidth * 3};${strokeWidth * 5};${strokeWidth * 3}`}
-              dur="1.5s"
-              repeatCount="indefinite"
-            />
-            <animate
-              attributeName="opacity"
-              values="0.6;0.1;0.6"
-              dur="1.5s"
-              repeatCount="indefinite"
-            />
-          </circle>
-        )}
-      </svg>
-    </div>
-  );
-};
-
-export default Sparkline;
-```
-
-Maintenant, je vais améliorer le composant ChartAnalysis.jsx pour intégrer correctement le Sparkline et ajouter les styles CSS nécessaires:
-
-```jsx
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import Sparkline from './Sparkline';
@@ -175,7 +12,7 @@ const ChartAnalysis = () => {
     trend: 0,
     change: '0%',
     volume: '0',
-    color: 'var(--green)',
+    color: 'var(--neon)',
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -220,7 +57,7 @@ const ChartAnalysis = () => {
         trend: 0.25,
         change: '+13.5%',
         volume: '12.4K',
-        color: 'var(--green)',
+        color: 'var(--neon)',
       },
       'NFL': {
         labels: Array.from({ length: 16 }, (_, i) => `W${i + 1}`),
@@ -230,7 +67,7 @@ const ChartAnalysis = () => {
         trend: 2.5,
         change: '+12.8%',
         volume: '8.7K',
-        color: 'var(--green)',
+        color: 'var(--neon)',
       },
       'NBA': {
         labels: Array.from({ length: 82 }, (_, i) => `G${i + 1}`),
@@ -240,7 +77,7 @@ const ChartAnalysis = () => {
         trend: 0.15,
         change: '+8.2%',
         volume: '22.1K',
-        color: 'var(--green)',
+        color: 'var(--neon)',
       },
       'UFC': {
         labels: Array.from({ length: 12 }, (_, i) => `F${i + 1}`),
@@ -250,7 +87,7 @@ const ChartAnalysis = () => {
         trend: 0.3,
         change: '+15.6%',
         volume: '5.3K',
-        color: 'var(--green)',
+        color: 'var(--neon)',
       },
     };
     return mockData[symbol] || mockData.PSG;
@@ -266,7 +103,7 @@ const ChartAnalysis = () => {
         trend: 9200,
         change: '+21.9%',
         volume: '1.2M BTC',
-        color: 'var(--green)',
+        color: 'var(--neon)',
       },
       'ETH-USD': {
         labels: ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Juin'],
@@ -292,7 +129,7 @@ const ChartAnalysis = () => {
         trend: 25,
         change: '+14.3%',
         volume: '32.5M',
-        color: 'var(--green)',
+        color: 'var(--neon)',
       },
       'TSLA': {
         labels: ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Juin'],
@@ -344,13 +181,13 @@ const ChartAnalysis = () => {
       <div className="chart-stats">
         <div className="stat">
           <span className="label">Trend</span>
-          <span className="value" style={{ color: chartData.trend >= 0 ? 'var(--green)' : '#ff4444' }}>
+          <span className="value" style={{ color: chartData.trend >= 0 ? 'var(--neon)' : '#ff4444' }}>
             {chartData.trend >= 0 ? '+' : ''}{chartData.trend.toFixed(2)}
           </span>
         </div>
         <div className="stat">
           <span className="label">Change</span>
-          <span className="value" style={{ color: chartData.change.startsWith('+') ? 'var(--green)' : '#ff4444' }}>
+          <span className="value" style={{ color: chartData.change.startsWith('+') ? 'var(--neon)' : '#ff4444' }}>
             {chartData.change}
           </span>
         </div>
@@ -364,14 +201,3 @@ const ChartAnalysis = () => {
 };
 
 export default ChartAnalysis;
-```
-
-Les améliorations apportées incluent:
-1. Meilleure gestion des dimensions du SVG avec fallback
-2. Animation de pulse plus fluide et personnalisable
-3. Effet de survol avec animation du trait
-4. Gestion des couleurs pour différents types de données
-5. Placeholder plus élégant quand il n'y a pas de données
-6. Meilleure gestion des états de chargement et d'erreur
-7. Responsive design amélioré
-8. Accessibilité et interactions améliorées
