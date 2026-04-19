@@ -3,8 +3,8 @@ import React from 'react';
 import { Clock } from 'lucide-react';
 
 export const SOURCE_COLORS = {
-  'BBC': '#e60026',
-  'Bloomberg': '#1a1a1a',
+  'BBC': '#c00',
+  'Bloomberg': 'var(--surface-high)',
   'CoinDesk': '#f7931a',
   'Le Monde': '#003189',
   'Reuters': '#ff8000',
@@ -51,11 +51,21 @@ const NewsCard = ({ article }) => {
           )}
         </div>
         <div className="news-card-footer">
-          <span className="news-card-source" style={{ color: sourceColor }}>
-            {article.source}
-          </span>
+          <div className="news-card-meta">
+            <span className="news-card-source" style={{ color: sourceColor }}>
+              {article.source}
+            </span>
+            {article.timeBadge && (
+              <span
+                className="news-card-time-badge"
+                style={{ backgroundColor: getBadgeColor(article.timeBadge) }}
+              >
+                {article.timeBadge}
+              </span>
+            )}
+          </div>
           <span className="news-card-time" style={{ color: getTimeColor(article.timeBadge) }}>
-            {article.timeBadge}
+            {article.timeBadge && article.timeBadge !== 'BREAKING' && article.timeBadge !== 'NEW' ? article.timeBadge : formatTime(article.publishedAt)}
           </span>
         </div>
       </div>
