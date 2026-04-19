@@ -1,146 +1,131 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+// src/components/BottomNav.jsx
+import { useState, useEffect, useRef } from 'react';
+import { Home, TrendingUp, Globe, MoreHorizontal, Activity } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useApp } from '../context/AppContext';
 
-const AppContext = createContext(null)
-const KEY = 'trackr_v3'
+const navItems = [
+  { path: '/', icon: Home, label: 'Accueil' },
+  { path: '/markets', icon: TrendingUp, label: 'Marchés' },
+  { path: '/news', icon: Globe, label: 'Actualités' },
+  { path: '/sports', icon: Activity, label: 'Sports' },
+  { path: '/more', icon: MoreHorizontal, label: 'Plus' },
+];
 
-const defaultCategories = [
-  { id: 'sneakers', name: 'Sneakers', icon: 'Footprints', color: '#6366f1', builtIn: true },
-  { id: 'stocks', name: 'Actions', icon: 'TrendingUp', color: '#10b981', builtIn: true },
-  { id: 'flights', name: 'Vols', icon: 'Plane', color: '#06b6d4', builtIn: true },
-]
+export default function BottomNav() {
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const { categories } = useApp();
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [newsCount, setNewsCount] = useState(0);
+  const pillRef = useRef(null);
 
-const defaultData = {
-  categories: defaultCategories,
-  sneakers: [],
-  stocks: [],
-  flights: [],
-  cryptoHoldings: [], // { id, coinId, coinName, symbol, image, quantity, buyPrice, buyDate, salePrice, saleDate }
-  stockWatchlist: [], // { symbol, name } — tracked without a position
-  customItems: {},
-  alerts: [], // { id, symbol, targetPrice, direction: 'above'|'below', triggered: false, name }
-}
+  useEffect(() => {
+    const currentIndex = navItems.findIndex(item => item.path === pathname);
+    if (currentIndex !== -1) setActiveIndex(currentIndex);
 
-export function AppProvider({ children }) {
-  const [data, setData] = useState(() => {
-    try {
-      const s = localStorage.getItem(KEY)
-      const parsed = s ? JSON.parse(s) : defaultData
-      if (!parsed.categories) parsed.categories = defaultCategories
-      if (!parsed.customItems) parsed.customItems = {}
-      if (!parsed.alerts) parsed.alerts = []
-      if (!parsed.cryptoHoldings) parsed.cryptoHoldings = []
-      if (!parsed.stockWatchlist) parsed.stockWatchlist = []
-      if (!parsed.flights) parsed.flights = []
-      // ensure flights category exists
-      if (!parsed.categories.find(c => c.id === 'flights')) {
-        parsed.categories.push({ id: 'flights', name: 'Vols', icon: 'Plane', color: '#06b6d4', builtIn: true })
+    const updatePillPosition = () => {
+      if (pillRef.current) {
+        const activeItem = document.querySelector(`[data-index="${activeIndex}"]`);
+        if (activeItem) {
+          const { offsetLeft, offsetWidth } = activeItem;
+          pillRef.current.style.left = `${offsetLeft}px`;
+          pillRef.current.style.width = `${offsetWidth}px`;
+        }
       }
-      return parsed
-    } catch { return defaultData }
-  })
+    };
 
-  useEffect(() => { localStorage.setItem(KEY, JSON.stringify(data)) }, [data])
+    const timer = setTimeout(updatePillPosition, 50);
+    return () => clearTimeout(timer);
+  }, [pathname, activeIndex]);
 
-  // CATEGORIES
-  const addCategory = cat => setData(p => ({ ...p, categories: [...p.categories, { ...cat, id: 'cat_' + Date.now(), builtIn: false }], customItems: { ...p.customItems, ['cat_' + Date.now()]: [] } }))
-  const updateCategory = (id, u) => setData(p => ({ ...p, categories: p.categories.map(c => c.id === id ? { ...c, ...u } : c) }))
-  const deleteCategory = id => setData(p => { const { [id]: _, ...rest } = p.customItems; return { ...p, categories: p.categories.filter(c => c.id !== id), customItems: rest } })
+  useEffect(() => {
+    const unread = localStorage.getItem('trackr_news_unread') || '0';
+    setNewsCount(parseInt(unread, 10));
+  }, []);
 
-  // SNEAKERS
-  const addSneaker = i => setData(p => ({ ...p, sneakers: [...p.sneakers, { ...i, id: Date.now().toString() }] }))
-  const updateSneaker = (id, u) => setData(p => ({ ...p, sneakers: p.sneakers.map(s => s.id === id ? { ...s, ...u } : s) }))
-  const deleteSneaker = id => setData(p => ({ ...p, sneakers: p.sneakers.filter(s => s.id !== id) }))
-
-  // STOCKS
-  const addStock = i => setData(p => ({ ...p, stocks: [...p.stocks, { ...i, id: Date.now().toString() }] }))
-  const updateStock = (id, u) => setData(p => ({ ...p, stocks: p.stocks.map(s => s.id === id ? { ...s, ...u } : s) }))
-  const deleteStock = id => setData(p => ({ ...p, stocks: p.stocks.filter(s => s.id !== id) }))
-
-  // CRYPTO HOLDINGS
-  const addCryptoHolding = i => setData(p => ({ ...p, cryptoHoldings: [...p.cryptoHoldings, { ...i, id: Date.now().toString() }] }))
-  const updateCryptoHolding = (id, u) => setData(p => ({ ...p, cryptoHoldings: p.cryptoHoldings.map(h => h.id === id ? { ...h, ...u } : h) }))
-  const deleteCryptoHolding = id => setData(p => ({ ...p, cryptoHoldings: p.cryptoHoldings.filter(h => h.id !== id) }))
-
-  // STOCK WATCHLIST
-  const addToWatchlist = item => setData(p => ({
-    ...p, stockWatchlist: p.stockWatchlist.find(w => w.symbol === item.symbol)
-      ? p.stockWatchlist
-      : [...p.stockWatchlist, { symbol: item.symbol, name: item.name || item.symbol }]
-  }))
-  const removeFromWatchlist = symbol => setData(p => ({
-    ...p, stockWatchlist: p.stockWatchlist.filter(w => w.symbol !== symbol)
-  }))
-
-  // FLIGHTS
-  const addFlight = i => setData(p => ({ ...p, flights: [...p.flights, { ...i, id: Date.now().toString() }] }))
-  const updateFlight = (id, u) => setData(p => ({ ...p, flights: p.flights.map(f => f.id === id ? { ...f, ...u } : f) }))
-  const deleteFlight = id => setData(p => ({ ...p, flights: p.flights.filter(f => f.id !== id) }))
-
-  // CUSTOM
-  const addCustomItem = (cid, i) => setData(p => ({ ...p, customItems: { ...p.customItems, [cid]: [...(p.customItems[cid] || []), { ...i, id: Date.now().toString() }] } }))
-  const updateCustomItem = (cid, id, u) => setData(p => ({ ...p, customItems: { ...p.customItems, [cid]: (p.customItems[cid] || []).map(i => i.id === id ? { ...i, ...u } : i) } }))
-  const deleteCustomItem = (cid, id) => setData(p => ({ ...p, customItems: { ...p.customItems, [cid]: (p.customItems[cid] || []).filter(i => i.id !== id) } }))
-
-  // ALERTS
-  const addAlert = a => setData(p => ({ ...p, alerts: [...p.alerts, { ...a, id: Date.now().toString(), triggered: false, createdAt: new Date().toISOString() }] }))
-  const deleteAlert = id => setData(p => ({ ...p, alerts: p.alerts.filter(a => a.id !== id) }))
-  const triggerAlert = id => setData(p => ({ ...p, alerts: p.alerts.map(a => a.id === id ? { ...a, triggered: true } : a) }))
-
-  // EXPORT / IMPORT
-  function exportData() {
-    const json = JSON.stringify(data, null, 2)
-    const blob = new Blob([json], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `trackr-backup-${new Date().toISOString().slice(0,10)}.json`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-  function importData(json) {
-    try {
-      const parsed = JSON.parse(json)
-      if (!parsed.stocks && !parsed.sneakers) throw new Error('Invalid file')
-      const merged = { ...defaultData, ...parsed }
-      setData(merged)
-      return true
-    } catch { return false }
-  }
-
-  // RECENT SALES
-  function getRecentSales(limit = 8) {
-    const all = []
-    const catMap = Object.fromEntries(data.categories.map(c => [c.id, c]))
-    data.sneakers.filter(s => s.salePrice && s.saleDate).forEach(s =>
-      all.push({ ...s, profit: s.salePrice - s.buyPrice, _cat: 'sneakers', _catName: 'Sneakers', _color: '#6366f1' }))
-    data.stocks.filter(s => s.salePrice && s.saleDate).forEach(s =>
-      all.push({ ...s, profit: (s.salePrice - s.buyPrice) * s.quantity, _cat: 'stocks', _catName: 'Actions', _color: '#10b981' }))
-    Object.entries(data.customItems).forEach(([cid, items]) => {
-      const cat = catMap[cid]; if (!cat) return
-      items.filter(i => i.salePrice && i.saleDate).forEach(i =>
-        all.push({ ...i, profit: (i.salePrice - i.buyPrice) * (i.quantity || 1), _cat: cid, _catName: cat.name, _color: cat.color }))
-    })
-    return all.sort((a, b) => a.saleDate < b.saleDate ? 1 : -1).slice(0, limit)
-  }
+  const handleNavClick = (path, index) => {
+    navigate(path);
+    setActiveIndex(index);
+  };
 
   return (
-    <AppContext.Provider value={{
-      categories: data.categories, sneakers: data.sneakers, stocks: data.stocks,
-      flights: data.flights, cryptoHoldings: data.cryptoHoldings, stockWatchlist: data.stockWatchlist,
-      customItems: data.customItems, alerts: data.alerts,
-      addToWatchlist, removeFromWatchlist,
-      addCategory, updateCategory, deleteCategory,
-      addSneaker, updateSneaker, deleteSneaker,
-      addStock, updateStock, deleteStock,
-      addFlight, updateFlight, deleteFlight,
-      addCustomItem, updateCustomItem, deleteCustomItem,
-      addCryptoHolding, updateCryptoHolding, deleteCryptoHolding,
-      addAlert, deleteAlert, triggerAlert,
-      getRecentSales, exportData, importData,
+    <nav className="bottom-nav" style={{
+      position: 'fixed',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: '56px',
+      paddingBottom: 'env(safe-area-inset-bottom)',
+      backgroundColor: 'var(--surface)',
+      borderTop: '1px solid var(--border)',
+      display: 'flex',
+      justifyContent: 'space-around',
+      alignItems: 'center',
+      zIndex: 1000,
     }}>
-      {children}
-    </AppContext.Provider>
-  )
-}
+      <div
+        ref={pillRef}
+        className="pill-indicator"
+        style={{
+          position: 'absolute',
+          top: '8px',
+          height: '40px',
+          backgroundColor: 'var(--green-bg, rgba(0, 255, 136, 0.12))',
+          border: '1px solid var(--border-bright)',
+          borderRadius: '999px',
+          transition: 'left 250ms ease, width 250ms ease',
+          pointerEvents: 'none',
+        }}
+      />
 
-export function useApp() { return useContext(AppContext) }
+      {navItems.map((item, index) => (
+        <button
+          key={item.path}
+          data-index={index}
+          onClick={() => handleNavClick(item.path, index)}
+          className="nav-item"
+          style={{
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '4px',
+            width: '60px',
+            height: '100%',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 0,
+            color: activeIndex === index ? 'var(--neon)' : 'var(--text-secondary)',
+            fontFamily: 'JetBrains Mono, monospace',
+            fontSize: '10px',
+            fontWeight: 500,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            transition: 'color 200ms ease',
+          }}
+        >
+          <item.icon size={22} style={{ strokeWidth: 1.5 }} />
+          <span style={{ fontSize: '8px' }}>{item.label}</span>
+          {item.path === '/news' && newsCount > 0 && (
+            <span style={{
+              position: 'absolute',
+              top: '6px',
+              right: '12px',
+              backgroundColor: '#ff4757',
+              color: 'white',
+              borderRadius: '999px',
+              padding: '2px 6px',
+              fontSize: '8px',
+              fontWeight: 'bold',
+            }}>
+              {newsCount > 9 ? '9+' : newsCount}
+            </span>
+          )}
+        </button>
+      ))}
+    </nav>
+  );
+}
