@@ -5,6 +5,7 @@ import './FearGreedGauge.css';
 const FearGreedGauge = () => {
   const [index, setIndex] = useState(50);
   const [isLoading, setIsLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   useEffect(() => {
     const fetchFearGreedIndex = async () => {
@@ -12,7 +13,9 @@ const FearGreedGauge = () => {
         const response = await fetch('https://api.alternative.me/fng/?limit=1');
         const data = await response.json();
         if (data.data && data.data.length > 0) {
-          setIndex(parseInt(data.data[0].value));
+          const newIndex = parseInt(data.data[0].value);
+          setIndex(newIndex);
+          setLastUpdated(new Date(data.data[0].timestamp * 1000));
         }
       } catch (error) {
         console.error('Error fetching Fear & Greed Index:', error);
@@ -22,15 +25,15 @@ const FearGreedGauge = () => {
     };
 
     fetchFearGreedIndex();
-    const interval = setInterval(fetchFearGreedIndex, 300000); // Refresh every 5 minutes
+    const interval = setInterval(fetchFearGreedIndex, 300000);
     return () => clearInterval(interval);
   }, []);
 
   const getGaugeColor = (value) => {
-    if (value < 25) return '#ff4757';
-    if (value < 50) return '#ffa502';
-    if (value < 75) return '#2ed573';
-    return '#1e90ff';
+    if (value < 25) return 'var(--text-danger)';
+    if (value < 50) return 'var(--text-warning)';
+    if (value < 75) return 'var(--text-success)';
+    return 'var(--text-info)';
   };
 
   const getGaugePosition = (value) => {
@@ -61,7 +64,14 @@ const FearGreedGauge = () => {
   return (
     <div className="fear-greed-gauge">
       <div className="gauge-container">
-        <div className="gauge-label">Fear & Greed Index</div>
+        <div className="gauge-header">
+          <div className="gauge-title">Fear & Greed Index</div>
+          {lastUpdated && (
+            <div className="gauge-timestamp">
+              Updated: {lastUpdated.toLocaleTimeString()}
+            </div>
+          )}
+        </div>
         <div className="gauge-value">{index}</div>
         <div className="gauge-label">{getFearGreedLabel(index)}</div>
         <div className="gauge-track">
