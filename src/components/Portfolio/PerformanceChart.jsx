@@ -1,47 +1,41 @@
-import React from 'react';
+import { useEffect, useRef } from 'react';
 
 const PerformanceChart = ({ data, width = 375, height = 120 }) => {
-  if (!data || data.length === 0) {
-    return (
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-        <rect width="100%" height="100%" fill="var(--surface)" rx="12" />
-        <text x="50%" y="50%" textAnchor="middle" dy=".3em" fill="var(--text-muted)" fontFamily="'JetBrains Mono', monospace" fontSize="12">No data available</text>
-      </svg>
-    );
-  }
+  const svgRef = useRef(null);
 
-  const maxValue = Math.max(...data.map(d => Math.abs(d.value)), 1);
-  const minValue = Math.min(...data.map(d => d.value), -1);
-  const range = maxValue - minValue;
+  useEffect(() => {
+    if (!data || data.length === 0) return;
 
-  const getY = (value) => {
-    const normalized = (value - minValue) / range;
-    return height - (normalized * height * 0.9);
-  };
+    const svg = svgRef.current;
+    const max = Math.max(...data.map(d => d.value), 1);
+    const min = Math.min(...data.map(d => d.value), 0);
+    const range = max - min;
 
-  const points = data.map((d, i) => {
-    const x = (i / (data.length - 1)) * (width * 0.95) + (width * 0.025);
-    const y = getY(d.value);
-    return `${x},${y}`;
-  }).join(' ');
+    const points = data.map((d, i) => {
+      const x = (i / (data.length - 1)) * (width - 20) + 10;
+      const y = height - 10 - ((d.value - min) / range) * (height - 20);
+      return { x, y };
+    });
 
-  const pathData = `M ${points} L ${width},${getY(0)} L 0,${getY(0)} Z`;
+    const pathData = points.map((p, i) =>
+      i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`
+    ).join(' ');
 
-  return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+    const gradientId = `perf-gradient-${Math.random().toString(36).substr(2, 9)}`;
+
+    svg.innerHTML = `
       <defs>
-        <linearGradient id="performanceGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="var(--neon)" stopOpacity="0.3" />
-          <stop offset="100%" stopColor="var(--neon)" stopOpacity="0" />
+        <linearGradient id="${gradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#00ff88" stop-opacity="0.3" />
+          <stop offset="100%" stop-color="#00ff88" stop-opacity="0" />
         </linearGradient>
       </defs>
-      <rect width="100%" height="100%" fill="var(--surface)" rx="12" />
-      <path d={pathData} fill="url(#performanceGradient)" stroke="var(--neon)" strokeWidth="1.5" />
-      <line x1="0" y1={getY(0)} x2={width} y2={getY(0)} stroke="var(--border)" strokeWidth="1" strokeDasharray="2,2" />
-      <text x={width * 0.025} y={getY(maxValue) - 4} textAnchor="start" fill="var(--text-secondary)" fontFamily="'JetBrains Mono', monospace" fontSize="10">{maxValue.toFixed(2)}%</text>
-      <text x={width * 0.025} y={getY(minValue) + 14} textAnchor="start" fill="var(--text-secondary)" fontFamily="'JetBrains Mono', monospace" fontSize="10">{minValue.toFixed(2)}%</text>
-    </svg>
-  );
+      <path d="${pathData}" fill="none" stroke="url(#${gradientId})" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      ${points.map(p => `<circle cx="${p.x}" cy="${p.y}" r="3" fill="#00ff88" />`).join('')}
+    `;
+  }, [data, width, height]);
+
+  return <svg ref={svgRef} width={width} height={height} style={{ display: 'block' }} />;
 };
 
 export default PerformanceChart;
