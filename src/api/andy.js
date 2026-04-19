@@ -76,7 +76,10 @@ const andy = {
 
       const response = await fetch(url, {
         ...options,
-        headers,
+        headers: {
+          ...headers,
+          ...options.headers
+        },
         signal: AbortSignal.timeout(options.timeout || DEFAULT_TIMEOUT)
       });
 
