@@ -74,23 +74,23 @@ const andy = {
       const accessToken = await this.getAccessToken();
       const headers = { Authorization: `Bearer ${accessToken}` };
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), options.timeout || DEFAULT_TIMEOUT);
-
-      const response = await axios(url, {
+      const response = await fetch(url, {
         ...options,
         headers,
-        signal: controller.signal
+        signal: AbortSignal.timeout(options.timeout || DEFAULT_TIMEOUT)
       });
-      clearTimeout(timeoutId);
 
-      return response.data;
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if (error.name === 'TimeoutError') {
         throw new Error(`Request timed out after ${options.timeout || DEFAULT_TIMEOUT}ms`);
       }
-      if (error.response) {
-        throw new Error(`Request failed with status ${error.response.status}: ${error.response.statusText}`);
+      if (error.message.includes('Failed to fetch')) {
+        throw new Error('Network request failed');
       }
       throw error;
     }
@@ -99,21 +99,26 @@ const andy = {
   async chat(query, timeout = DEFAULT_TIMEOUT) {
     const validatedQuery = ChatSchema.parse({ query });
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-      const response = await axios.post('/chat', { query: validatedQuery.query }, {
-        signal: controller.signal
+      const response = await fetch('/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: validatedQuery.query }),
+        signal: AbortSignal.timeout(timeout)
       });
-      clearTimeout(timeoutId);
 
-      return response.data;
+      if (!response.ok) {
+        throw new Error(`Chat request failed with status ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if (error.name === 'TimeoutError') {
         throw new Error(`Chat request timed out after ${timeout}ms`);
       }
-      if (error.response) {
-        throw new Error(`Chat request failed with status ${error.response.status}: ${error.response.statusText}`);
+      if (error.message.includes('Failed to fetch')) {
+        throw new Error('Network request failed');
       }
       throw error;
     }
