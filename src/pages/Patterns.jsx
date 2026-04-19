@@ -1,15 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, TrendingUp, Info, Zap, ChevronRight, BarChart3, LineChart, Target, HelpCircle } from 'lucide-react'
-import { z } from 'zod'
-
-// ─── Zod Schemas ────────────────────────────────────────────────────────────
-const searchSchema = z.object({
-  type: z.enum(['All', 'Reversal', 'Continuation', 'Bilateral']).default('All'),
-  pattern: z.string().optional(),
-  sort: z.enum(['name', 'type']).default('name'),
-  order: z.enum(['asc', 'desc']).default('asc')
-})
 
 // ─── Pattern Data ─────────────────────────────────────────────────────────────
 const PATTERNS = [
@@ -181,9 +172,9 @@ const PATTERNS = [
 // ─── Pattern SVG Component ────────────────────────────────────────────────────
 function PatternSVG({ pattern, isHovered }) {
   const { points, support, resistance, neckline, pole, color } = pattern
-
+  
   const toPoints = (pts) => pts.map(p => `${p[0]},${p[1]}`).join(' ')
-
+  
   return (
     <svg viewBox="0 0 160 120" style={{ width: '100%', height: 'auto', overflow: 'visible' }}>
       <defs>
@@ -250,178 +241,147 @@ function PatternSVG({ pattern, isHovered }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Patterns() {
   const navigate = useNavigate()
-  const [searchParams, setSearchParams] = useSearchParams()
-  const [filters, setFilters] = useState({
-    type: searchParams.get('type') || 'All',
-    pattern: searchParams.get('pattern') || '',
-    sort: searchParams.get('sort') || 'name',
-    order: searchParams.get('order') || 'asc'
-  })
-  const [selectedPattern, setSelectedPattern] = useState(null)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [hoveredId, setHoveredId] = useState(null)
+  const [selectedType, setSelectedType] = useState('All')
 
-  // ─── Validation des paramètres avec Zod ───────────────────────────────────────
-  useEffect(() => {
-    const result = searchSchema.safeParse(Object.fromEntries(searchParams.entries()))
-    if (!result.success) {
-      const defaultParams = searchSchema.parse({})
-      setSearchParams(defaultParams)
-      setFilters(defaultParams)
-    }
-  }, [searchParams, setSearchParams])
+  const types = ['All', 'Reversal', 'Continuation', 'Bilateral']
+  
+  const filteredPatterns = selectedType === 'All' 
+    ? PATTERNS 
+    : PATTERNS.filter(p => p.type.includes(selectedType))
 
-  // ─── Gestion des filtres ───────────────────────────────────────────────────────
-  useEffect(() => {
-    const params = new URLSearchParams()
-    if (filters.type !== 'All') params.set('type', filters.type)
-    if (filters.pattern) params.set('pattern', filters.pattern)
-    if (filters.sort !== 'name') params.set('sort', filters.sort)
-    if (filters.order !== 'asc') params.set('order', filters.order)
-    setSearchParams(params)
-  }, [filters, setSearchParams])
-
-  // ─── Filtrage et tri des patterns ─────────────────────────────────────────────
-  const filteredPatterns = PATTERNS
-    .filter(p => filters.type === 'All' || p.type.includes(filters.type))
-    .filter(p => !filters.pattern || p.name.toLowerCase().includes(filters.pattern.toLowerCase()))
-    .sort((a, b) => {
-      const keyA = a[filters.sort]
-      const keyB = b[filters.sort]
-      return filters.order === 'asc'
-        ? keyA.localeCompare(keyB)
-        : keyB.localeCompare(keyA)
-    })
-
-  // ─── Gestion des clics sur les patterns ───────────────────────────────────────
-  const handlePatternClick = (pattern) => {
-    setSelectedPattern(pattern)
-    setIsMobileMenuOpen(false)
-  }
-
-  const handleBackClick = () => {
-    setSelectedPattern(null)
-  }
-
-  // ─── Rendu ────────────────────────────────────────────────────────────────────
-  if (selectedPattern) {
-    return (
-      <div className="min-h-screen w-full bg-[var(--bg)] text-[var(--text-primary)] font-[JetBrains_Mono] p-4">
-        <div className="flex items-center gap-2 mb-6">
-          <button
-            onClick={handleBackClick}
-            className="p-2 rounded hover:bg-[var(--surface-low)] transition-colors"
-            aria-label="Retour"
+  return (
+    <div style={{ 
+      maxWidth: 600, 
+      margin: '0 auto', 
+      paddingBottom: 40,
+      minHeight: '100dvh',
+      background: '#0b1323',
+      color: '#dbe2f8'
+    }}>
+      {/* Header */}
+      <div style={{ 
+        position: 'sticky', 
+        top: 0, 
+        zIndex: 100, 
+        background: 'rgba(11,19,35,0.85)', 
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        padding: 'max(52px, env(safe-area-inset-top, 0px)) 16px 16px',
+        borderBottom: '1px solid rgba(255,255,255,0.06)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button 
+            onClick={() => navigate(-1)}
+            className="press-scale"
+            style={{ 
+              width: 40, height: 40, borderRadius: 12, 
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', cursor: 'pointer'
+            }}
           >
             <ArrowLeft size={20} />
           </button>
-          <h1 className="text-xl font-bold text-[var(--neon)]">{selectedPattern.name}</h1>
-        </div>
-
-        <div className="bg-[var(--surface)] rounded-lg p-4 mb-6">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-[var(--text-secondary)]">Type:</span>
-              <span className="text-sm font-mono text-[var(--neon)]">{selectedPattern.type}</span>
-            </div>
-            <p className="text-sm leading-relaxed">{selectedPattern.desc}</p>
+          <div style={{ flex: 1 }}>
+            <h1 style={{ fontSize: 24, fontWeight: 900, color: 'white', letterSpacing: '-0.02em' }}>Patterns Academy</h1>
+            <p style={{ fontSize: 13, color: '#64748b' }}>Apprenez les signaux du marché</p>
+          </div>
+          <div style={{ 
+            width: 42, height: 42, borderRadius: 14, 
+            background: 'linear-gradient(135deg, #00daf3, #00a3ff)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', 
+            boxShadow: '0 0 20px rgba(0,218,243,0.3)' 
+          }}>
+            <LineChart size={22} color="white" />
           </div>
         </div>
 
-        <div className="bg-[var(--surface)] rounded-lg p-4">
-          <PatternSVG pattern={selectedPattern} isHovered={true} />
+        {/* Filter Tabs */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+          {types.map(t => (
+            <button
+              key={t}
+              onClick={() => setSelectedType(t)}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 12,
+                fontSize: 13,
+                fontWeight: 700,
+                border: 'none',
+                cursor: 'pointer',
+                background: selectedType === t ? 'rgba(0,218,243,0.15)' : 'rgba(255,255,255,0.05)',
+                color: selectedType === t ? '#00daf3' : '#64748b',
+                transition: 'all 200ms'
+              }}
+            >
+              {t}
+            </button>
+          ))}
         </div>
       </div>
-    )
-  }
 
-  return (
-    <div className="min-h-screen w-full bg-[var(--bg)] text-[var(--text-primary)] font-[JetBrains_Mono] p-4">
-      <div className="flex items-center justify-between mb-6">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 rounded hover:bg-[var(--surface-low)] transition-colors"
-          aria-label="Retour"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="text-xl font-bold text-[var(--neon)]">Patterns</h1>
-        <button
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="p-2 rounded hover:bg-[var(--surface-low)] transition-colors md:hidden"
-          aria-label="Menu"
-        >
-          <Zap size={20} />
-        </button>
-      </div>
-
-      {/* Filtres Mobile */}
-      {isMobileMenuOpen && (
-        <div className="bg-[var(--surface)] rounded-lg p-4 mb-4 md:hidden">
-          <div className="flex flex-col gap-4">
-            <div>
-              <label className="block text-xs mb-1 text-[var(--text-secondary)]">Type</label>
-              <select
-                value={filters.type}
-                onChange={(e) => setFilters({...filters, type: e.target.value})}
-                className="w-full p-2 bg-[var(--surface-high)] border border-[var(--border)] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[var(--neon)]"
-              >
-                <option value="All">All</option>
-                <option value="Reversal">Reversal</option>
-                <option value="Continuation">Continuation</option>
-                <option value="Bilateral">Bilateral</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs mb-1 text-[var(--text-secondary)]">Pattern</label>
-              <input
-                type="text"
-                value={filters.pattern}
-                onChange={(e) => setFilters({...filters, pattern: e.target.value})}
-                placeholder="Rechercher..."
-                className="w-full p-2 bg-[var(--surface-high)] border border-[var(--border)] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[var(--neon)]"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs mb-1 text-[var(--text-secondary)]">Sort by</label>
-                <select
-                  value={filters.sort}
-                  onChange={(e) => setFilters({...filters, sort: e.target.value})}
-                  className="w-full p-2 bg-[var(--surface-high)] border border-[var(--border)] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[var(--neon)]"
-                >
-                  <option value="name">Name</option>
-                  <option value="type">Type</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs mb-1 text-[var(--text-secondary)]">Order</label>
-                <select
-                  value={filters.order}
-                  onChange={(e) => setFilters({...filters, order: e.target.value})}
-                  className="w-full p-2 bg-[var(--surface-high)] border border-[var(--border)] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[var(--neon)]"
-                >
-                  <option value="asc">Ascending</option>
-                  <option value="desc">Descending</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Filtres Desktop */}
-      <div className="hidden md:flex gap-4 mb-6">
-        <div className="flex-1">
-          <label className="block text-xs mb-1 text-[var(--text-secondary)]">Type</label>
-          <select
-            value={filters.type}
-            onChange={(e) => setFilters({...filters, type: e.target.value})}
-            className="w-full p-2 bg-[var(--surface-high)] border border-[var(--border)] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[var(--neon)]"
+      {/* Grid */}
+      <div style={{ padding: '24px 16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        {filteredPatterns.map(pattern => (
+          <div 
+            key={pattern.id}
+            onMouseEnter={() => setHoveredId(pattern.id)}
+            onMouseLeave={() => setHoveredId(null)}
+            onTouchStart={() => setHoveredId(pattern.id)}
+            style={{
+              padding: '16px',
+              borderRadius: 24,
+              background: 'rgba(255,255,255,0.02)',
+              border: `1px solid ${hoveredId === pattern.id ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)'}`,
+              transition: 'all 300ms cubic-bezier(0.22, 1, 0.36, 1)',
+              transform: hoveredId === pattern.id ? 'translateY(-4px)' : 'none',
+              boxShadow: hoveredId === pattern.id ? '0 12px 30px rgba(0,0,0,0.3)' : 'none'
+            }}
           >
-            <option value="All">All</option>
-            <option value="Reversal">Reversal</option>
-            <option value="Continuation">Continuation</option>
-            <option value="Bilateral">B
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+              <p style={{ 
+                fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em',
+                color: pattern.type.includes('Bullish') ? '#10b981' : pattern.type.includes('Bearish') ? '#ef4444' : '#3b82f6'
+              }}>
+                {pattern.type}
+              </p>
+              {hoveredId === pattern.id && <Zap size={10} color={pattern.color} fill={pattern.color} />}
+            </div>
+            
+            <div style={{ position: 'relative', marginBottom: 14, padding: '10px 0' }}>
+               <PatternSVG pattern={pattern} isHovered={hoveredId === pattern.id} />
+            </div>
+
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: 'white', marginBottom: 4 }}>{pattern.name}</h3>
+            <p style={{ fontSize: 12, color: '#4b5563', lineHeight: 1.4, minHeight: 48 }}>{pattern.desc}</p>
+            
+            <button style={{ 
+              marginTop: 12, width: '100%', padding: '10px', borderRadius: 12,
+              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+              color: 'white', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+            }}>
+              Détails <ChevronRight size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Info Card */}
+      <div style={{ margin: '0 16px', padding: 20, borderRadius: 24, background: 'rgba(0,218,243,0.05)', border: '1px solid rgba(0,218,243,0.15)', display: 'flex', gap: 14 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 14, background: 'rgba(0,218,243,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Info size={20} color="#00daf3" />
+        </div>
+        <div>
+          <h4 style={{ fontSize: 15, fontWeight: 800, color: '#00daf3', marginBottom: 4 }}>Conseil de pro</h4>
+          <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>
+            Les patterns sont plus fiables lorsqu'ils sont confirmés par le <strong>volume</strong> et surviennent sur des unités de temps élevées (D1, H4).
+          </p>
+        </div>
+      </div>
+
+      <style>{`
+        .press-scale:active { transform: scale(0.95); }
+      `}</style>
+    </div>
+  )
+}

@@ -525,8 +525,8 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
     .map(m => ({ action: m[1].toUpperCase(), path: m[2].trim().replace(/^\//, '') }))
     .filter(o => o.path.startsWith('src/') || o.path.startsWith('api/') || o.path.startsWith('deploy/') || o.path.startsWith('public/') || o.path.startsWith('ai-data/') || o.path === 'vercel.json' || o.path === 'vite.config.js' || o.path === 'index.html')
     .filter(o => !['cli/andy-daemon.js', 'cli/andy.js', 'cli/task.js'].includes(o.path))
-    // Pages critiques — interdites en MODIFY (trop grandes pour 8B, causent troncature)
-    .filter(o => !(o.action === 'MODIFY' && [
+    // Fichiers protégés — interdits en MODIFY *et* CREATE
+    .filter(o => !(['MODIFY', 'CREATE'].includes(o.action) && [
       'src/pages/Dashboard.jsx', 'src/pages/Sports.jsx', 'src/pages/Markets.jsx',
       'src/pages/News.jsx', 'src/pages/More.jsx', 'src/pages/Andy.jsx',
       'src/pages/Portfolio.jsx', 'src/pages/FlightTracker.jsx', 'src/App.jsx',
