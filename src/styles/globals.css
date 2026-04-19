@@ -29,6 +29,7 @@ export const BottomNav = () => {
             className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
             onClick={() => navigate(`/${item.id}`)}
             aria-label={item.label}
+            style={{ '--active': activeTab === item.id ? '1' : '0' }}
           >
             <item.icon
               size={24}
