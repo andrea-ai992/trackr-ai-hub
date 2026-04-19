@@ -1,23 +1,29 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
-import { Clock, Badge } from 'lucide-react';
+import { FaGlobe } from 'lucide-react';
 
 const Header = () => {
   const location = useLocation();
-  const heure = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const isHome = location.pathname === '/';
 
   return (
-    <header className="Header">
-      <div className="Header__container">
-        <div className="Header__logo">
-          <span className="Header__text">Bonjour Andrea</span>
-          <span className="Header__time">{heure}</span>
-        </div>
-        <div className="Header__actions">
-          <Badge className="Header__badge" color="#00ff88" pulse>
-            Live
-          </Badge>
-        </div>
+    <header className="flex justify-between items-center p-4">
+      <div className="flex items-center">
+        <span className="text-lg font-bold text--text-primary mr-2">
+          Bonjour Andrea
+        </span>
+        <span className="text-lg text--text-secondary">
+          {new Date().toLocaleTimeString()}
+        </span>
+      </div>
+      <div className="flex items-center">
+        <button
+          className={`bg--neon rounded-full p-2 text--text-primary transition duration-300 ${
+            isHome ? 'animate-pulse' : ''
+          }`}
+        >
+          <FaGlobe size={20} />
+        </button>
       </div>
     </header>
   );
