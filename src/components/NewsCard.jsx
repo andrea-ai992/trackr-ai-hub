@@ -11,6 +11,16 @@ export const SOURCE_COLORS = {
   'default': 'var(--neon)'
 };
 
+const sanitizeHTML = (str) => {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+};
+
 const NewsCard = ({ article }) => {
   const formatTime = (dateString) => {
     const now = new Date();
@@ -41,11 +51,14 @@ const NewsCard = ({ article }) => {
       <div className="news-card-accent" style={{ backgroundColor: sourceColor }} />
       <div className="news-card-content">
         <div className="news-card-header">
-          <h3 className="news-card-title">{article.title}</h3>
+          <h3
+            className="news-card-title"
+            dangerouslySetInnerHTML={{ __html: sanitizeHTML(article.title) }}
+          />
           {article.thumbnail && (
             <img
               src={article.thumbnail}
-              alt={article.title}
+              alt={sanitizeHTML(article.title)}
               className="news-card-thumbnail"
             />
           )}
@@ -53,19 +66,19 @@ const NewsCard = ({ article }) => {
         <div className="news-card-footer">
           <div className="news-card-meta">
             <span className="news-card-source" style={{ color: sourceColor }}>
-              {article.source}
+              {sanitizeHTML(article.source)}
             </span>
             {article.timeBadge && (
               <span
                 className="news-card-time-badge"
                 style={{ backgroundColor: getBadgeColor(article.timeBadge) }}
               >
-                {article.timeBadge}
+                {sanitizeHTML(article.timeBadge)}
               </span>
             )}
           </div>
           <span className="news-card-time" style={{ color: getTimeColor(article.timeBadge) }}>
-            {article.timeBadge && article.timeBadge !== 'BREAKING' && article.timeBadge !== 'NEW' ? article.timeBadge : formatTime(article.publishedAt)}
+            {article.timeBadge && article.timeBadge !== 'BREAKING' && article.timeBadge !== 'NEW' ? sanitizeHTML(article.timeBadge) : formatTime(article.publishedAt)}
           </span>
         </div>
       </div>
