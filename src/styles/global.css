@@ -1,673 +1,95 @@
-Pour rendre l'interface de BrainExplorer responsive et mobile-first, nous devons modifier les styles CSS et les composants React.
-
-**src/styles/global.css**
-
-```css
-:root {
-  --green: #00ff88;
-  --bg: #080808;
-  --bg2: #111;
-  --t1: #f0f0f0;
-  --t2: #888;
-  --t3: #444;
-  --border: rgba(255, 255, 255, 0.07);
-}
-
-body {
-  font-family: 'Inter', sans-serif;
-  background-color: var(--bg);
-  color: var(--t1);
-  padding: 0;
-  margin: 0;
-}
-
-.skeleton-loader {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-}
-
-.skeleton-loader__item {
-  width: 100px;
-  height: 20px;
-  background-color: var(--t1);
-  border-radius: 10px;
-  margin-bottom: 10px;
-}
-
-.dashboard {
-  max-width: 800px;
-  margin: 40px auto;
-  padding: 20px;
-  background-color: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-
-.dashboard__hero {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-  background-color: var(--bg);
-  border-bottom: 1px solid var(--border);
-}
-
-.dashboard__hero-title {
-  font-size: 24px;
-  color: var(--t1);
-}
-
-.dashboard__hero-value {
-  font-size: 48px;
-  color: var(--t1);
-}
-
-.dashboard__sparkline {
-  height: 100px;
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px;
-}
-
-.dashboard__sparkline svg {
-  width: 100%;
-  height: 100%;
-}
-
-.dashboard__top-movers {
-  padding: 20px;
-  background-color: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-
-.dashboard__top-movers-title {
-  font-size: 18px;
-  color: var(--t1);
-}
-
-.dashboard__top-movers-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.dashboard__top-movers-list li {
-  padding: 10px;
-  border-bottom: 1px solid var(--border);
-}
-
-.dashboard__top-movers-name {
-  font-size: 16px;
-  color: var(--t1);
-}
-
-.dashboard__top-movers-value {
-  font-size: 16px;
-  color: var(--t1);
-}
-
-.dashboard__fear-and-greed {
-  padding: 20px;
-  background-color: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-
-.dashboard__fear-and-greed-title {
-  font-size: 18px;
-  color: var(--t1);
-}
-
-.dashboard__news-feed {
-  padding: 20px;
-  background-color: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-
-.dashboard__news-feed-title {
-  font-size: 18px;
-  color: var(--t1);
-}
-
-.dashboard__news-feed-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.dashboard__news-feed-list li {
-  padding: 10px;
-  border-bottom: 1px solid var(--border);
-}
-
-.dashboard__news-feed-title {
-  font-size: 16px;
-  color: var(--t1);
-}
-
-.dashboard__news-feed-date {
-  font-size: 14px;
-  color: var(--t3);
-}
-
-.dashboard__quick-actions {
-  padding: 20px;
-  background-color: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-
-.dashboard__quick-actions-title {
-  font-size: 18px;
-  color: var(--t1);
-}
-
-.dashboard__quick-actions-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.dashboard__quick-actions-list li {
-  padding: 10px;
-  border-bottom: 1px solid var(--border);
-}
-
-.dashboard__quick-actions-name {
-  font-size: 16px;
-  color: var(--t1);
-}
-
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  padding: 10px;
-  background-color: var(--bg);
-  border-top: 1px solid var(--border);
-}
-
-.bottom-nav__list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.bottom-nav__item {
-  display: inline-block;
-  margin-right: 20px;
-}
-
-.bottom-nav__link {
-  text-decoration: none;
-  color: var(--t1);
-}
-
-.bottom-nav__icon {
-  font-size: 18px;
-  margin-right: 10px;
-}
-
-.bottom-nav__label {
-  font-size: 16px;
-}
-
-.markets {
-  max-width: 800px;
-  margin: 40px auto;
-  padding: 20px;
-  background-color: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-
-.markets__title {
-  font-size: 24px;
-  color: var(--t1);
-}
-
-.markets__list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.markets__list li {
-  padding: 10px;
-  border-bottom: 1px solid var(--border);
-}
-
-.markets__name {
-  font-size: 16px;
-  color: var(--t1);
-}
-
-.markets__price {
-  font-size: 16px;
-  color: var(--t1);
-}
-
-.markets__filter-button {
-  padding: 10px 20px;
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  cursor: pointer;
-}
-
-.markets__filter-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.markets__filter-list li {
-  padding: 10px;
-  border-bottom: 1px solid var(--border);
-}
-
-.markets__filter-label {
-  font-size: 16px;
-  color: var(--t1);
-}
-
-.vibe {
-  max-width: 800px;
-  margin: 40px auto;
-  padding: 20px;
-  background-color: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-
-.vibe__nav {
-  padding: 20px;
-  background-color: var(--bg);
-  border-bottom: 1px solid var(--border);
-}
-
-.vibe__nav-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.vibe__nav-item {
-  display: inline-block;
-  margin-right: 20px;
-}
-
-.vibe__nav-button {
-  padding: 10px 20px;
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  cursor: pointer;
-}
-
-.vibe__nav-button.active {
-  background-color: var(--t1);
-  color: var(--bg);
-}
-
-.vibe__main {
-  padding: 20px;
-  background-color: var(--bg2);
-}
-
-.vibe__live {
-  padding: 20px;
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-
-.vibe__live-title {
-  font-size: 18px;
-  color: var(--t1);
-}
-
-.vibe__live-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.vibe__live-list li {
-  padding: 10px;
-  border-bottom: 1px solid var(--border);
-}
-
-.vibe__live-name {
-  font-size: 16px;
-  color: var(--t1);
-}
-
-.vibe__live-status {
-  font-size: 14px;
-  color: var(--t3);
-}
-
-.vibe__commits {
-  padding: 20px;
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-
-.vibe__commits-title {
-  font-size: 18px;
-  color: var(--t1);
-}
-
-.vibe__commits-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.vibe__commits-list li {
-  padding: 10px;
-  border-bottom: 1px solid var(--border);
-}
-
-.vibe__commits-sha {
-  font-size: 16px;
-  color: var(--t1);
-}
-
-.vibe__commits-message {
-  font-size: 14px;
-  color: var(--t3);
-}
-
-.vibe__tasks {
-  padding: 20px;
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-
-.vibe__tasks-title {
-  font-size: 18px;
-  color: var(--t1);
-}
-
-.vibe__tasks-form {
-  padding: 20px;
-  background-color: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-
-.vibe__tasks-input {
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  width: 100%;
-}
-
-.vibe__tasks-button {
-  padding: 10px 20px;
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  cursor: pointer;
-}
-
-.vibe__tasks-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.vibe__tasks-list li {
-  padding: 10px;
-  border-bottom: 1px solid var(--border);
-}
-
-.vibe__tasks-name {
-  font-size: 16px;
-  color: var(--t1);
-}
-
-.vibe__tasks-stat {
-  font-size: 14px;
-  color: var(--t3);
-}
-```
-
-**src/components/BrainExplorer.js**
-
-```jsx
+// src/pages/More.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useUser } from '../hooks';
-import { Inter } from 'next/font/google';
-import styles from '../styles/global.css';
+import { Monitor, Settings, Moon, Github } from 'lucide-react';
 
-const inter = Inter({ subsets: ['latin'] });
-
-const BrainExplorer = () => {
-  const user = useUser();
+const More = () => {
+  const modules = [
+    { path: '/flights', emoji: '✈️', badge: 'LIVE', title: 'FlightTracker', desc: 'Suivi temps réel des vols', color: 'var(--neon)' },
+    { path: '/crypto-trader', emoji: '📈', badge: 'NEW', title: 'CryptoTrader', desc: 'Trading automatisé crypto', color: 'var(--neon)' },
+    { path: '/signals', emoji: '⚡', badge: 'NEW', title: 'Signals IA', desc: 'Signaux trading générés par IA', color: 'var(--neon)' },
+    { path: '/portfolio', emoji: '💼', badge: '', title: 'Portfolio', desc: 'Gestion de portefeuille', color: 'var(--text-primary)' },
+    { path: '/patterns', emoji: '📊', badge: '', title: 'Patterns', desc: 'Analyse de patterns techniques', color: 'var(--text-primary)' },
+    { path: '/translator', emoji: '🌐', badge: '', title: 'Translator', desc: 'Traduction instantanée', color: 'var(--text-primary)' },
+    { path: '/realestate', emoji: '🏠', badge: 'PRO', title: 'RealEstate', desc: 'Analyse marché immobilier', color: '#8a2be2' },
+    { path: '/sneakers', emoji: '👟', badge: '', title: 'Sneakers', desc: 'Suivi marché sneakers', color: 'var(--text-primary)' },
+    { path: '/watches', emoji: '⌚', badge: 'PRO', title: 'Watches', desc: 'Analyse marché montres', color: '#8a2be2' },
+    { path: '/businessplan', emoji: '📋', badge: '', title: 'BusinessPlan', desc: 'Génération business plans', color: 'var(--text-primary)' },
+  ];
 
   return (
-    <div className="brain-explorer">
-      <nav className="brain-explorer__nav">
-        <ul className="brain-explorer__nav-list">
-          <li className="brain-explorer__nav-item">
-            <Link to="/brain/live" className="brain-explorer__nav-link">
-              Live
-            </Link>
-          </li>
-          <li className="brain-explorer__nav-item">
-            <Link to="/brain/commits" className="brain-explorer__nav-link">
-              Commits
-            </Link>
-          </li>
-          <li className="brain-explorer__nav-item">
-            <Link to="/brain/tasks" className="brain-explorer__nav-link">
-              Tasks
-            </Link>
-          </li>
-          <li className="brain-explorer__nav-item">
-            <Link to="/brain/logs" className="brain-explorer__nav-link">
-              Logs
-            </Link>
-          </li>
-          <li className="brain-explorer__nav-item">
-            <Link to="/brain/brain" className="brain-explorer__nav-link">
-              Brain
-            </Link>
-          </li>
-        </ul>
-      </nav>
-      <main className="brain-explorer__main">
-        <h1 className="brain-explorer__title">Brain Explorer</h1>
-        <ul className="brain-explorer__list">
-          <li>
-            <Link to="/brain/live" className="brain-explorer__link">
-              Live
-            </Link>
-          </li>
-          <li>
-            <Link to="/brain/commits" className="brain-explorer__link">
-              Commits
-            </Link>
-          </li>
-          <li>
-            <Link to="/brain/tasks" className="brain-explorer__link">
-              Tasks
-            </Link>
-          </li>
-          <li>
-            <Link to="/brain/logs" className="brain-explorer__link">
-              Logs
-            </Link>
-          </li>
-          <li>
-            <Link to="/brain/brain" className="brain-explorer__link">
-              Brain
-            </Link>
-          </li>
-        </ul>
+    <div className="more-page">
+      <header className="more-header">
+        <h1>Modules Premium</h1>
+      </header>
+
+      <main className="more-grid">
+        {modules.map((module, index) => (
+          <ModuleCard key={index} {...module} />
+        ))}
+        <AddModuleCard />
       </main>
+
+      <footer className="more-footer">
+        <div className="settings-section">
+          <div className="settings-item">
+            <Monitor size={20} />
+            <span>Dark Mode</span>
+            <button className="toggle-disabled" disabled title="Dark mode activé">
+              <Moon size={16} />
+            </button>
+          </div>
+          <div className="settings-item">
+            <span>Version</span>
+            <span>v3.0</span>
+          </div>
+          <div className="settings-item">
+            <Github size={20} />
+            <a href="https://github.com/andrea-ai992/trackr-ai-hub" target="_blank" rel="noopener noreferrer">
+              GitHub
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
 
-export default BrainExplorer;
-```
+const ModuleCard = ({ path, emoji, badge, title, desc, color }) => {
+  const badgeColors = {
+    'LIVE': '#00ff88',
+    'NEW': '#00bfff',
+    'PRO': '#8a2be2',
+    'BETA': '#ffa500'
+  };
 
-**src/pages/BrainExplorer.js**
-
-```jsx
-import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { fetchBrainData } from '../api';
-import { useUser } from '../hooks';
-import { Inter } from 'next/font/google';
-import styles from '../styles/global.css';
-
-const inter = Inter({ subsets: ['latin'] });
-
-const BrainExplorer = () => {
-  const { data, error, isLoading } = useQuery(['brain'], fetchBrainData);
-  const user = useUser();
-  const [activeTab, setActiveTab] = useState('live');
-
-  useEffect(() => {
-    if (data) {
-      const activeTab = data.tabs.find((tab) => tab.id === 'live');
-      setActiveTab(activeTab.id);
-    }
-  }, [data]);
-
-  if (isLoading) {
-    return (
-      <div className="skeleton-loader">
-        <div className="skeleton-loader__item" />
-        <div className="skeleton-loader__item" />
-        <div className="skeleton-loader__item" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return <div>Error: {error.message}</div>;
-  }
+  const badgeColor = badgeColors[badge] || 'var(--text-secondary)';
 
   return (
-    <div className="brain-explorer">
-      <nav className="brain-explorer__nav">
-        <ul className="brain-explorer__nav-list">
-          <li className="brain-explorer__nav-item">
-            <button
-              className={`brain-explorer__nav-button ${activeTab === 'live' ? 'active' : ''}`}
-              onClick={() => setActiveTab('live')}
-            >
-              Live
-            </button>
-          </li>
-          <li className="brain-explorer__nav-item">
-            <button
-              className={`brain-explorer__nav-button ${activeTab === 'commits' ? 'active' : ''}`}
-              onClick={() => setActiveTab('commits')}
-            >
-              Commits
-            </button>
-          </li>
-          <li className="brain-explorer__nav-item">
-            <button
-              className={`brain-explorer__nav-button ${activeTab === 'tasks' ? 'active' : ''}`}
-              onClick={() => setActiveTab('tasks')}
-            >
-              Tasks
-            </button>
-          </li>
-          <li className="brain-explorer__nav-item">
-            <button
-              className={`brain-explorer__nav-button ${activeTab === 'logs' ? 'active' : ''}`}
-              onClick={() => setActiveTab('logs')}
-            >
-              Logs
-            </button>
-          </li>
-          <li className="brain-explorer__nav-item">
-            <button
-              className={`brain-explorer__nav-button ${activeTab === 'brain' ? 'active' : ''}`}
-              onClick={() => setActiveTab('brain')}
-            >
-              Brain
-            </button>
-          </li>
-        </ul>
-      </nav>
-      <main className="brain-explorer__main">
-        {activeTab === 'live' && (
-          <div className="brain-explorer__live">
-            <h1 className="brain-explorer__live-title">Live</h1>
-            <ul className="brain-explorer__live-list">
-              {data.live.map((item) => (
-                <li key={item.id}>
-                  <span className="brain-explorer__live-name">{item.name}</span>
-                  <span className="brain-explorer__live-status">{item.status}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {activeTab === 'commits' && (
-          <div className="brain-explorer__commits">
-            <h1 className="brain-explorer__commits-title">Commits</h1>
-            <ul className="brain-explorer__commits-list">
-              {data.commits.map((item) => (
-                <li key={item.id}>
-                  <span className="brain-explorer__commits-sha">{item.sha}</span>
-                  <span className="brain-explorer__commits-message">{item.message}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {activeTab === 'tasks' && (
-          <div className="brain-explorer__tasks">
-            <h1 className="brain-explorer__tasks-title">Tasks</h1>
-            <form className="brain-explorer__tasks-form">
-              <input
-                type="text"
-                placeholder="Task name"
-                className="brain-explorer__tasks-input"
-              />
-              <button className="brain-explorer__tasks-button">Create Task</button>
-            </form>
-            <ul className="brain-explorer__tasks-list">
-              {data.tasks.map((item) => (
-                <li key={item.id}>
-                  <span className="brain-explorer__tasks-name">{item.name}</span>
-                  <span className="brain-explorer__tasks-stat">{item.stat}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {activeTab === 'logs' && (
-          <div className="brain-explorer__logs">
-            <h1 className="brain-explorer__logs-title">Logs</h1>
-            <ul className="brain-explorer__logs-list">
-              {data.logs.map((item) => (
-                <li key={item.id}>
-                  <span className="brain-explorer__logs-date">{item.date}</span>
-                  <span className="brain-explorer__logs-message">{item.message}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+    <Link to={path} className="module-card">
+      <div className="module-header">
+        <span className="module-emoji">{emoji}</span>
+        {badge && <span className="module-badge" style={{ backgroundColor: badgeColor }}>{badge}</span>}
+      </div>
+      <div className="module-content">
+        <h3>{title}</h3>
+        <p>{desc}</p>
+      </div>
+      <div className="module-footer">
+        <span className="chevron">›</span>
+      </div>
+    </Link>
+  );
+};
+
+const AddModuleCard = () => {
+  return (
+    <div className="add-module-card">
+      <div className="add-module-content">
+        <span className="add-emoji">+</span>
+      </div>
+    </div>
+  );
+};
+
+export default More;
