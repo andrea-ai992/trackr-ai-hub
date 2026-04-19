@@ -16,15 +16,17 @@ router.use((req, res, next) => {
 
 router.use(express.json({ limit: '10kb' }));
 
-// Middleware de timeout (10 secondes)
+// Middleware de timeout (10 secondes) avec AbortSignal.timeout()
 const timeoutMiddleware = (req, res, next) => {
-  const timeout = setTimeout(() => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
     const error = new Error('Request timeout');
     error.statusCode = 408;
     next(error);
   }, 10000);
 
-  res.on('finish', () => clearTimeout(timeout));
+  res.on('finish', () => clearTimeout(timeoutId));
   next();
 };
 
@@ -71,22 +73,27 @@ const validateRequest = (req, res, next) => {
   next();
 };
 
-// Fonction utilitaire pour les requêtes fetch avec timeout
+// Fonction utilitaire pour les requêtes fetch avec timeout utilisant AbortSignal.timeout()
 const fetchWithTimeout = async (url, options = {}, timeout = 5000) => {
   const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
+  const timeoutSignal = AbortSignal.timeout(timeout);
+
+  const combinedSignal = AbortSignal.any([controller.signal, timeoutSignal]);
 
   try {
     const response = await fetch(url, {
       ...options,
-      signal: controller.signal
+      signal: combinedSignal
     });
 
-    clearTimeout(id);
     return response;
   } catch (error) {
-    clearTimeout(id);
+    if (error.name === 'AbortError' && !timeoutSignal.aborted) {
+      controller.abort();
+    }
     throw error;
+  } finally {
+    timeoutSignal.removeEventListener('abort', () => {});
   }
 };
 
@@ -218,7 +225,7 @@ router.get('/fetch', timeoutMiddleware, validateRequest, async (req, res, next) 
     const data = await response.json();
     res.json(data);
   } catch (error) {
-    if (error.name === 'AbortError') {
+    if (error.name === 'TimeoutError') {
       error.message = 'Request timeout';
       error.statusCode = 408;
     }
@@ -241,7 +248,7 @@ router.post('/fetch', timeoutMiddleware, validateRequest, async (req, res, next)
     const data = await response.json();
     res.json(data);
   } catch (error) {
-    if (error.name === 'AbortError') {
+    if (error.name === 'TimeoutError') {
       error.message = 'Request timeout';
       error.statusCode = 408;
     }
