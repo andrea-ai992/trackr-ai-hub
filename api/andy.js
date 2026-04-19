@@ -16,13 +16,13 @@ router.use((req, res, next) => {
 
 router.use(express.json({ limit: '10kb' }));
 
-// Middleware de timeout (8 secondes)
+// Middleware de timeout (10 secondes)
 const timeoutMiddleware = (req, res, next) => {
   const timeout = setTimeout(() => {
     const error = new Error('Request timeout');
     error.statusCode = 408;
     next(error);
-  }, 8000);
+  }, 10000);
 
   res.on('finish', () => clearTimeout(timeout));
   next();
@@ -72,7 +72,7 @@ const validateRequest = (req, res, next) => {
 };
 
 // Fonction utilitaire pour les requêtes fetch avec timeout
-const fetchWithTimeout = async (url, options = {}, timeout = 8000) => {
+const fetchWithTimeout = async (url, options = {}, timeout = 10000) => {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
 
@@ -206,7 +206,7 @@ router.post('/chat', timeoutMiddleware, validateRequest, async (req, res, next) 
 // API pour récupérer les données de l'IA avec timeout
 router.get('/fetch', timeoutMiddleware, validateRequest, async (req, res, next) => {
   try {
-    const response = await fetchWithTimeout('https://api.example.com/ai-data', {}, 5000);
+    const response = await fetchWithTimeout('https://api.example.com/ai-data', {}, 10000);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -228,7 +228,7 @@ router.post('/fetch', timeoutMiddleware, validateRequest, async (req, res, next)
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(req.body)
-    }, 5000);
+    }, 10000);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
