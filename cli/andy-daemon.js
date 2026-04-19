@@ -1008,6 +1008,49 @@ function scheduleDiscordRecap() {
   }, ms)
 }
 
+// ── Recap horaire ─────────────────────────────────────────────────────────────
+let lastHourlyRecap = 0
+
+async function sendHourlyRecap() {
+  const now = Date.now()
+  if (now - lastHourlyRecap < 60 * 60 * 1000) return
+  lastHourlyRecap = now
+
+  try {
+    const allStatus = readStatus()
+    const since = new Date(now - 60 * 60 * 1000)
+    const done   = allStatus.filter(t => t.status === 'DONE'  && t.startedAt && new Date(t.startedAt) >= since)
+    const errors = allStatus.filter(t => t.status === 'ERROR' && t.startedAt && new Date(t.startedAt) >= since)
+    const queue  = readdirSync(TASKS_DIR).filter(f => f.endsWith('.txt')).length
+
+    if (done.length === 0 && errors.length === 0) return  // rien à signaler
+
+    // Fichiers importants uniquement (pages src/, components visibles)
+    const importantFiles = []
+    for (const t of done) {
+      for (const f of (t.files || [])) {
+        if (f.startsWith('src/pages/') || f.startsWith('src/components/') || f === 'src/index.css') {
+          if (!importantFiles.includes(f)) importantFiles.push(f)
+        }
+      }
+    }
+
+    const heure = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    const lines = [
+      `⚡ **AnDy — Recap ${heure}**`,
+      `✅ ${done.length} tâche${done.length > 1 ? 's' : ''} · ⏳ ${queue} en queue${errors.length ? ` · ❌ ${errors.length} erreur${errors.length > 1 ? 's' : ''}` : ''}`,
+      importantFiles.length ? `📁 ${importantFiles.slice(0, 6).map(f => `\`${f.split('/').pop()}\``).join(' · ')}` : '',
+      done.length ? `\n🏆 Dernières:\n${done.slice(-4).map(t => `• ${(t.desc || t.name || '').slice(0, 70)}`).join('\n')}` : '',
+      `\n📱 ${APP_URL}`,
+    ].filter(Boolean).join('\n')
+
+    const ok = await discordPost(CH_UPDATES, lines.slice(0, 1990))
+    log(`Recap horaire Discord: ${ok ? 'envoyé ✓' : 'échec'}`)
+  } catch (e) {
+    log(`sendHourlyRecap error: ${e.message}`)
+  }
+}
+
 // ── AI Data Export ────────────────────────────────────────────────────────────
 const AI_DATA_DIR     = resolve(ROOT, 'ai-data')
 const MEMORY_FILE     = resolve(ROOT, 'ANDY_MEMORY.json')
@@ -1228,6 +1271,7 @@ async function supervisor() {
     await sendHeartbeat()
 
     if (Date.now() - lastNotifTime > NOTIF_EVERY_MS) await flushDiscordNotif(true)
+    await sendHourlyRecap()
 
     // Export AI data toutes les EXPORT_EVERY_N tâches
     if (totalDoneSession > 0 && totalDoneSession % EXPORT_EVERY_N === 0 && totalDoneSession !== lastExportCount) {
