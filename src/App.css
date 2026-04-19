@@ -1,68 +1,50 @@
-// src/components/BottomNav.jsx
-import { useState, useEffect } from 'react';
-import { Home, TrendingUp, Newspaper, Settings, MessageSquare, Target, PieChart, ShoppingBag, Plane, Watch, Gem } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
+// src/pages/More.jsx
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-const navItems = [
-  { path: '/', icon: Home, label: 'Dashboard' },
-  { path: '/sports', icon: Target, label: 'Sports' },
-  { path: '/markets', icon: TrendingUp, label: 'Markets' },
-  { path: '/news', icon: Newspaper, label: 'News' },
-  { path: '/andy', icon: MessageSquare, label: 'Andy' },
-  { path: '/agents', icon: PieChart, label: 'Agents' },
-  { path: '/portfolio', icon: ShoppingBag, label: 'Portfolio' },
-  { path: '/crypto', icon: TrendingUp, label: 'Crypto' },
-  { path: '/signals', icon: Target, label: 'Signals' },
-  { path: '/flights', icon: Plane, label: 'Flights' },
-  { path: '/sneakers', icon: ShoppingBag, label: 'Sneakers' },
-  { path: '/watches', icon: Watch, label: 'Watches' },
-  { path: '/realestate', icon: Gem, label: 'RealEstate' }
-];
-
-export const BottomNav = () => {
-  const location = useLocation();
+export const More = () => {
   const navigate = useNavigate();
-  const [activePath, setActivePath] = useState(location.pathname);
 
   useEffect(() => {
-    setActivePath(location.pathname);
-  }, [location.pathname]);
-
-  const handleNavClick = (path) => {
-    navigate(path);
-  };
+    document.documentElement.style.setProperty('--page-transition', 'transform 340ms cubic-bezier(0.4, 0, 0.2, 1)');
+  }, []);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 safe-area-bottom">
-      <div className="relative w-full max-w-[520px] mx-auto">
-        <div className="flex items-center justify-between bg-surface-low border border-border rounded-full px-2 py-2 backdrop-blur-md">
-          {navItems.map((item) => {
-            const isActive = activePath === item.path || (activePath.startsWith(item.path) && item.path !== '/');
-            const Icon = item.icon;
+    <div className="min-h-screen w-full bg-bg text-text-primary font-jetbrains-mono">
+      <div className="w-full max-w-[520px] mx-auto px-4 pt-4">
+        <div className="flex flex-col gap-4">
+          <div className="bg-surface rounded-xl p-4 border border-border transition-all duration-340 ease-[cubic-bezier(0.4,0,0.2,1)]">
+            <h1 className="text-lg font-bold text-neon mb-2">More</h1>
+            <p className="text-sm text-text-secondary">Explore additional features and tools.</p>
+          </div>
 
-            return (
-              <button
-                key={item.path}
-                onClick={() => handleNavClick(item.path)}
-                className={`flex flex-col items-center justify-center flex-1 py-1 px-2 rounded-full transition-all duration-200 ease-in-out relative z-10 ${
-                  isActive ? 'text-neon' : 'text-text-secondary hover:text-text-primary'
-                }`}
-                aria-label={item.label}
-              >
-                <div className="relative flex items-center justify-center w-6 h-6">
-                  <Icon size={20} strokeWidth={isActive ? 2.5 : 2} absoluteStrokeWidth />
-                  {isActive && (
-                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-neon rounded-full animate-pulse" />
-                  )}
-                </div>
-                <span className={`text-[10px] mt-1 font-medium tracking-tight ${isActive ? 'text-neon' : 'text-text-muted'}`}>
-                  {item.label}
-                </span>
-              </button>
-            );
-          })}
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={() => navigate('/businessplan')}
+              className="bg-surface rounded-xl p-4 border border-border transition-all duration-340 ease-[cubic-bezier(0.4,0,0.2,1)] hover:bg-surface-high"
+            >
+              <h2 className="text-base font-bold text-neon mb-1">Business Plan</h2>
+              <p className="text-xs text-text-secondary">Generate business plans</p>
+            </button>
+
+            <button
+              onClick={() => navigate('/pattern')}
+              className="bg-surface rounded-xl p-4 border border-border transition-all duration-340 ease-[cubic-bezier(0.4,0,0.2,1)] hover:bg-surface-high"
+            >
+              <h2 className="text-base font-bold text-neon mb-1">Patterns</h2>
+              <p className="text-xs text-text-secondary">Analyze patterns</p>
+            </button>
+
+            <button
+              onClick={() => navigate('/chartanalysis')}
+              className="bg-surface rounded-xl p-4 border border-border transition-all duration-340 ease-[cubic-bezier(0.4,0,0.2,1)] hover:bg-surface-high"
+            >
+              <h2 className="text-base font-bold text-neon mb-1">Chart Analysis</h2>
+              <p className="text-xs text-text-secondary">Advanced chart analysis</p>
+            </button>
+          </div>
         </div>
       </div>
-    </nav>
+    </div>
   );
 };
