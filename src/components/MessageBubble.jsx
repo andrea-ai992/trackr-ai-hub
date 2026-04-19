@@ -1,105 +1,27 @@
-import { useState } from 'react';
-import DOMPurify from 'dompurify';
+import { memo } from 'react';
 
-export const MessageBubble = ({
-  content,
-  isUser = false,
-  isSuggestion = false,
-  onClick = null,
-  className = ''
-}) => {
-  const [isHovered, setIsHovered] = useState(false);
-
-  const baseClasses = 'px-4 py-2 rounded-lg text-sm transition-all duration-200 ease-out';
-  const userClasses = 'bg-green-500/20 border border-green-500/30 ml-auto';
-  const aiClasses = 'bg-bg2 border border-border';
-  const suggestionClasses = 'bg-bg3 border border-border/50 hover:border-green/50';
-
-  const getClasses = () => {
-    let classes = baseClasses;
-    if (isUser) {
-      classes += ' ' + userClasses;
-    } else if (isSuggestion) {
-      classes += ' ' + suggestionClasses;
-    } else {
-      classes += ' ' + aiClasses;
-    }
-
-    if (onClick) {
-      classes += ' cursor-pointer';
-    }
-
-    if (className) {
-      classes += ' ' + className;
-    }
-
-    return classes;
-  };
-
-  const sanitizedContent = DOMPurify.sanitize(content, {
-    ALLOWED_TAGS: ['b', 'i', 'u', 'em', 'strong', 'a', 'br', 'code', 'pre'],
-    ALLOWED_ATTR: ['href', 'title', 'class', 'style']
-  });
+const MessageBubble = memo(({ content, isUser, isThinking }) => {
+  if (isThinking) {
+    return (
+      <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} w-full px-4 py-2`}>
+        <div className={`max-w-[80%] px-4 py-3 rounded-lg ${isUser ? 'bg-neon text-black' : 'bg-surface text-text-primary'}`}>
+          <div className="flex items-center gap-2">
+            <span className="animate-pulse">...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div
-      className={getClasses()}
-      style={{
-        animation: 'fadeInScale 0.3s ease-out forwards',
-        opacity: 0,
-        transform: 'scale(0.95)'
-      }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onClick={onClick}
-    >
-      <div className="font-inter" dangerouslySetInnerHTML={{ __html: sanitizedContent }} />
-
-      {isSuggestion && onClick && (
-        <style jsx>{`
-          .message-bubble {
-            animation: fadeInScale 0.3s ease-out forwards;
-          }
-          .message-bubble:hover {
-            border-color: var(--green);
-            transform: translateY(-1px);
-          }
-          .message-bubble:hover::after {
-            content: '→';
-            margin-left: 4px;
-            transition: all 0.2s ease;
-          }
-        `}</style>
-      )}
-
-      <style jsx global>{`
-        @keyframes fadeInScale {
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-        .font-inter {
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        }
-        a {
-          color: var(--green);
-          text-decoration: none;
-        }
-        a:hover {
-          text-decoration: underline;
-        }
-        code, pre {
-          background: rgba(0, 255, 136, 0.1);
-          padding: 0.2em 0.4em;
-          border-radius: 4px;
-          font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-        }
-        pre {
-          padding: 1em;
-          overflow-x: auto;
-        }
-      `}</style>
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} w-full px-4 py-2`}>
+      <div className={`max-w-[80%] px-4 py-3 rounded-lg ${isUser ? 'bg-neon text-black' : 'bg-surface text-text-primary'}`}>
+        <p className="whitespace-pre-wrap break-words text-sm font-mono">{content}</p>
+      </div>
     </div>
   );
-};
+});
+
+MessageBubble.displayName = 'MessageBubble';
+
+export default MessageBubble;
