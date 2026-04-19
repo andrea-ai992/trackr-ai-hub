@@ -107,12 +107,20 @@ async function handleDiscordStream(res, streamUrl, timeoutMs = 10000) {
     })
 
     if (!response.ok) {
-      res.status(response.status).json({ error: `Discord API error: ${response.status}` })
+      res.writeHead(response.status, {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+      })
+      res.end(JSON.stringify({ error: `Discord API error: ${response.status}` }))
       return
     }
 
     if (!response.body) {
-      res.status(500).json({ error: 'No response body from Discord' })
+      res.writeHead(500, {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+      })
+      res.end(JSON.stringify({ error: 'No response body from Discord' }))
       return
     }
 
@@ -158,19 +166,23 @@ async function handleDiscordStream(res, streamUrl, timeoutMs = 10000) {
     pump()
   } catch (error) {
     console.error('Discord SSE stream setup error:', error)
-    res.status(500).json({ error: 'Failed to establish Discord SSE stream' })
+    res.writeHead(500, {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache',
+    })
+    res.end(JSON.stringify({ error: 'Failed to establish Discord SSE stream' }))
   }
 }
 
 // ─── Agent Logic ───────────────────────────────────────────────────────────
-async function handleAgentRequest(agent, payload) {
+async function handleAgentRequest(agent, payload, res) {
   switch (agent) {
     case 'andy':
     case 'nexus':
     case 'pulse':
     case 'synapse':
     case 'oracle':
-      return await anthropicComplete(payload.prompt, 4000, 30000)
+      return await anthropicComplete(payload.prompt, 4000, 30000, res)
     case 'market_scanner':
     case 'tech_analyst':
     case 'crypto_tracker':
@@ -181,7 +193,7 @@ async function handleAgentRequest(agent, payload) {
     case 'sentiment_bot':
     case 'macro_watch':
     case 'options_flow':
-      return await anthropicComplete(payload.prompt, 4000, 30000)
+      return await anthropicComplete(payload.prompt, 4000, 30000, res)
     case 'code_reviewer':
     case 'bug_hunter':
     case 'perf_optimizer':
@@ -192,7 +204,7 @@ async function handleAgentRequest(agent, payload) {
     case 'deploy_watch':
     case 'dependency_bot':
     case 'doc_writer':
-      return await anthropicComplete(payload.prompt, 4000, 30000)
+      return await anthropicComplete(payload.prompt, 4000, 30000, res)
     case 'ui_inspector':
     case 'ux_analyst':
     case 'color_master':
@@ -201,19 +213,19 @@ async function handleAgentRequest(agent, payload) {
     case 'responsive_bot':
     case 'access_bot':
     case 'pixel_perfect':
-      return await anthropicComplete(payload.prompt, 4000, 30000)
+      return await anthropicComplete(payload.prompt, 4000, 30000, res)
     case 'data_miner':
     case 'stats_bot':
     case 'correlation_bot':
     case 'backtest_bot':
     case 'risk_metrics':
-      return await anthropicComplete(payload.prompt, 4000, 30000)
+      return await anthropicComplete(payload.prompt, 4000, 30000, res)
     default:
       throw new Error(`Unknown agent: ${agent}`)
   }
 }
 
-async function anthropicComplete(prompt, timeoutMs = 4000, maxTimeoutMs = 30000) {
+async function anthropicComplete(prompt, timeoutMs = 4000, maxTimeoutMs = 30000, res) {
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -231,12 +243,22 @@ async function anthropicComplete(prompt, timeoutMs = 4000, maxTimeoutMs = 30000)
     })
 
     if (!response.ok) {
-      throw new Error(`Anthropic API error: ${response.status}`)
+      res.writeHead(response.status, {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+      })
+      res.end(JSON.stringify({ error: `Anthropic API error: ${response.status}` }))
+      return
     }
 
     const stream = response.body
     if (!stream) {
-      throw new Error('No response body from Anthropic')
+      res.writeHead(500, {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+      })
+      res.end(JSON.stringify({ error: 'No response body from Anthropic' }))
+      return
     }
 
     res.writeHead(200, {
@@ -285,6 +307,11 @@ async function anthropicComplete(prompt, timeoutMs = 4000, maxTimeoutMs = 30000)
     pump()
   } catch (error) {
     console.error('Anthropic API error:', error)
+    res.writeHead(500, {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache',
+    })
+    res.end(JSON.stringify({ error: error.message || 'Anthropic API error' }))
     throw error
   }
 }
