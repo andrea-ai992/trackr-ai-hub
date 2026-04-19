@@ -1,43 +1,49 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle } from 'lucide-react';
 
 const FearGreedGauge = () => {
   const [score, setScore] = useState(50);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchFearGreedIndex = async () => {
-      try {
-        setIsLoading(true);
-        const response = await fetch('https://api.alternative.me/fng/?limit=1');
-        if (!response.ok) throw new Error('Failed to fetch Fear & Greed Index');
+  const fetchFearGreedIndex = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await fetch('https://api.coingecko.com/api/v3/fear_greed_index', {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+        signal: AbortSignal.timeout(5000),
+      });
 
-        const data = await response.json();
-        const currentScore = parseInt(data.data[0].value, 10);
-        setScore(currentScore);
-        setError(null);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
+      if (!response.ok) {
+        throw new Error('Failed to fetch fear & greed index');
       }
-    };
 
+      const data = await response.json();
+      setScore(data.value);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchFearGreedIndex();
     const interval = setInterval(fetchFearGreedIndex, 300000);
     return () => clearInterval(interval);
   }, []);
 
-  const getGaugeColor = (score) => {
-    if (score < 20) return 'bg-red-500';
-    if (score < 40) return 'bg-orange-500';
-    if (score < 60) return 'bg-yellow-500';
-    if (score < 80) return 'bg-lime-500';
-    return 'bg-green-500';
+  const getColor = () => {
+    if (score < 25) return '#ff3366';
+    if (score < 50) return '#ff9900';
+    if (score < 75) return '#ffcc00';
+    return '#00ff88';
   };
 
-  const getLabel = (score) => {
+  const getLabel = () => {
     if (score < 20) return 'Extreme Fear';
     if (score < 40) return 'Fear';
     if (score < 60) return 'Neutral';
@@ -48,52 +54,164 @@ const FearGreedGauge = () => {
   const normalizedScore = Math.min(Math.max(score, 0), 100);
 
   return (
-    <div className="w-full p-4 bg-surface rounded-lg border border-border">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-text-primary font-medium text-sm">Fear & Greed Index</h3>
-        {error && (
-          <div className="flex items-center gap-1 text-red-500 text-xs">
-            <AlertTriangle size={14} />
-            <span>Error</span>
-          </div>
-        )}
+    <div className="fear-greed-gauge-container">
+      <div className="gauge-header">
+        <h3>Fear & Greed Index</h3>
+        <button onClick={fetchFearGreedIndex} disabled={isLoading} className="refresh-btn">
+          <RefreshCw size={16} />
+        </button>
       </div>
 
-      <div className="relative w-full h-24 flex items-end justify-center">
-        <div className="absolute bottom-0 left-0 w-full h-2 bg-surface-low rounded-full overflow-hidden">
-          <div
-            className={`absolute bottom-0 left-0 h-full ${getGaugeColor(normalizedScore)} transition-all duration-500 ease-out`}
-            style={{ width: `${normalizedScore}%` }}
+      {error && <div className="error-message">{error}</div>}
+
+      <div className="gauge-wrapper">
+        <svg viewBox="0 0 200 100" className="gauge-svg">
+          <defs>
+            <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor={getColor()} />
+              <stop offset={`${normalizedScore}%`} stopColor={getColor()} />
+              <stop offset={`${normalizedScore}%`} stopColor="#333" />
+              <stop offset="100%" stopColor="#333" />
+            </linearGradient>
+          </defs>
+
+          <path
+            d="M 20 50 A 30 30 0 0 1 180 50"
+            fill="none"
+            stroke="var(--border)"
+            strokeWidth="2"
           />
-          <div
-            className="absolute top-0 left-0 w-full h-px bg-border-bright"
-            style={{ left: `${normalizedScore}%`, width: '1px' }}
+
+          <path
+            d="M 20 50 A 30 30 0 0 1 180 50"
+            fill="none"
+            stroke="url(#gaugeGradient)"
+            strokeWidth="2"
+            strokeDasharray="188.5"
+            strokeDashoffset={188.5 - (normalizedScore / 100) * 188.5}
+            strokeLinecap="round"
+            transform="rotate(-90 50 50)"
           />
+
+          <circle cx="50" cy="50" r="4" fill={getColor()} />
+
+          {Array.from({ length: 11 }).map((_, i) => {
+            const angle = (i * 18) - 90;
+            const value = i * 10;
+            const isActive = value <= normalizedScore;
+            return (
+              <g key={i} transform={`rotate(${angle} 50 50) translate(0,-45)`}>
+                <line
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2={isActive ? 5 : 3}
+                  stroke={isActive ? getColor() : "var(--border)"}
+                  strokeWidth={isActive ? 2 : 1}
+                />
+                <text
+                  x="0"
+                  y="8"
+                  textAnchor="middle"
+                  fill={isActive ? getColor() : "var(--text-secondary)"}
+                  fontSize="8"
+                  fontFamily="JetBrains Mono, monospace"
+                >
+                  {value}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+
+        <div className="gauge-value">
+          <span className="score">{normalizedScore}</span>
+          <span className="label">{getLabel()}</span>
         </div>
-
-        <div
-          className={`absolute bottom-6 w-16 h-16 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${getGaugeColor(normalizedScore)}`}
-          style={{
-            left: `calc(${normalizedScore}% - 4rem)`,
-            transform: `translateX(-50%) translateY(50%)`,
-          }}
-        >
-          <span className="text-text-primary font-bold text-sm">{score}</span>
-        </div>
       </div>
 
-      <div className="mt-3 flex justify-between text-xs text-text-secondary">
-        <span>0</span>
-        <span>100</span>
-      </div>
+      <style jsx>{`
+        .fear-greed-gauge-container {
+          width: 100%;
+          max-width: 200px;
+          background: var(--surface);
+          border-radius: 8px;
+          padding: 16px;
+          border: 1px solid var(--border);
+          font-family: 'JetBrains Mono', monospace;
+        }
 
-      <div className="mt-2 text-center">
-        <p className="text-text-primary font-mono text-sm">{getLabel(normalizedScore)}</p>
-      </div>
+        .gauge-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 12px;
+        }
 
-      {isLoading && !error && (
-        <div className="mt-2 text-text-muted text-xs text-center">Updating...</div>
-      )}
+        .gauge-header h3 {
+          margin: 0;
+          font-size: 14px;
+          color: var(--text-primary);
+          font-weight: 500;
+        }
+
+        .refresh-btn {
+          background: none;
+          border: none;
+          color: var(--neon);
+          cursor: pointer;
+          padding: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .refresh-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .error-message {
+          color: #ff3366;
+          font-size: 12px;
+          margin-bottom: 12px;
+          text-align: center;
+        }
+
+        .gauge-wrapper {
+          position: relative;
+          width: 100%;
+          height: 100px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+
+        .gauge-svg {
+          width: 100%;
+          height: 100%;
+          transform: rotate(-90deg);
+        }
+
+        .gauge-value {
+          margin-top: 8px;
+          text-align: center;
+        }
+
+        .score {
+          font-size: 24px;
+          font-weight: 700;
+          color: var(--neon);
+          display: block;
+        }
+
+        .label {
+          font-size: 10px;
+          color: var(--text-secondary);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+      `}</style>
     </div>
   );
 };
