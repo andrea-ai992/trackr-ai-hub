@@ -92,7 +92,7 @@ const andy = {
 
       return await response.json();
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if (error.name === 'TimeoutError') {
         throw new Error(`Request timed out after ${options.timeout || DEFAULT_TIMEOUT}ms`);
       }
       if (error.message.includes('Failed to fetch')) {
@@ -122,7 +122,7 @@ const andy = {
 
       return await response.json();
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if (error.name === 'TimeoutError') {
         throw new Error(`Chat request timed out after ${timeout}ms`);
       }
       if (error.message.includes('Failed to fetch')) {
