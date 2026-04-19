@@ -1,530 +1,197 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ChevronDown, TrendingUp, TrendingDown, Plus, Minus } from 'lucide-react';
+// src/pages/CryptoTrader.jsx
+
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Clock, DollarSign, Grid, List, Menu, Pencil, Plus, X } from 'lucide-react';
+import { supabase } from '../utils/supabase';
 
 const CryptoTrader = () => {
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('Marché');
-  const [prices, setPrices] = useState({
-    BTC: { price: 0, change24h: 0 },
-    ETH: { price: 0, change24h: 0 },
-    SOL: { price: 0, change24h: 0 }
+  const location = useLocation();
+  const [data, setData] = useState({
+    btc: { price: 0, variation: 0 },
+    eth: { price: 0, variation: 0 },
+    sol: { price: 0, variation: 0 },
+    portfolio: 0,
+    positions: [
+      { symbol: 'BTC', long: true, entryPrice: 30000, currentPrice: 31000, pnl: 500, pnlPercent: 1.67 },
+      { symbol: 'ETH', long: false, entryPrice: 2000, currentPrice: 1960, pnl: -40, pnlPercent: -2 },
+      { symbol: 'SOL', long: true, entryPrice: 50, currentPrice: 56, pnl: 600, pnlPercent: 12 },
+    ],
+    orderbook: {
+      bids: [
+        { price: 30000, amount: 10 },
+        { price: 30010, amount: 20 },
+        { price: 30020, amount: 30 },
+        { price: 30030, amount: 40 },
+        { price: 30040, amount: 50 },
+        { price: 30050, amount: 60 },
+        { price: 30060, amount: 70 },
+        { price: 30070, amount: 80 },
+      ],
+      asks: [
+        { price: 31000, amount: 10 },
+        { price: 31010, amount: 20 },
+        { price: 31020, amount: 30 },
+        { price: 31030, amount: 40 },
+        { price: 31040, amount: 50 },
+        { price: 31050, amount: 60 },
+        { price: 31060, amount: 70 },
+        { price: 31070, amount: 80 },
+      ],
+      spread: 100,
+    },
   });
-  const [portfolio, setPortfolio] = useState({
-    total: 0,
-    assets: [
-      { symbol: 'BTC', amount: 0.5, value: 0 },
-      { symbol: 'ETH', amount: 3.2, value: 0 },
-      { symbol: 'SOL', amount: 15.7, value: 0 }
-    ]
-  });
-  const [orderbook, setOrderbook] = useState({
-    bids: [],
-    asks: []
-  });
-  const [positions, setPositions] = useState([
-    { symbol: 'BTC', type: 'long', entry: 45000, current: 47250, pnl: 1125, pnlPercent: 5, active: true },
-    { symbol: 'ETH', type: 'short', entry: 3100, current: 3038, pnl: -192, pnlPercent: -2, active: true },
-    { symbol: 'SOL', type: 'long', entry: 120, current: 134.4, pnl: 226.8, pnlPercent: 12, active: true }
-  ]);
-  const [selectedAsset, setSelectedAsset] = useState('BTC');
 
-  const fetchPrices = async () => {
-    try {
-      const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true');
+  useEffect(() => {
+    const intervalId = setInterval(async () => {
+      const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin%2Cethereum%2Csolana&vs_currencies=usd');
       const data = await response.json();
-      setPrices({
-        BTC: { price: data.bitcoin.usd, change24h: data.bitcoin.usd_24h_change },
-        ETH: { price: data.ethereum.usd, change24h: data.ethereum.usd_24h_change },
-        SOL: { price: data.solana.usd, change24h: data.solana.usd_24h_change }
-      });
-      updatePortfolio(data);
-    } catch (error) {
-      console.error('Error fetching prices:', error);
-    }
-  };
-
-  const updatePortfolio = (priceData) => {
-    const updatedAssets = portfolio.assets.map(asset => {
-      const price = priceData[asset.symbol.toLowerCase()].usd;
-      return {
-        ...asset,
-        value: asset.amount * price
-      };
-    });
-    const total = updatedAssets.reduce((sum, asset) => sum + asset.value, 0);
-    setPortfolio({ total, assets: updatedAssets });
-  };
-
-  const generateOrderbook = () => {
-    const bids = [];
-    const asks = [];
-    const midPrice = prices[selectedAsset]?.price || 0;
-
-    for (let i = 1; i <= 8; i++) {
-      const priceVariation = midPrice * (0.001 * i);
-      bids.push({
-        price: midPrice - priceVariation,
-        size: Math.random() * 10 + 5,
-        total: (midPrice - priceVariation) * (Math.random() * 10 + 5)
-      });
-      asks.push({
-        price: midPrice + priceVariation,
-        size: Math.random() * 10 + 5,
-        total: (midPrice + priceVariation) * (Math.random() * 10 + 5)
-      });
-    }
-
-    setOrderbook({ bids, asks });
-  };
-
-  const calculateSpread = () => {
-    if (orderbook.bids.length === 0 || orderbook.asks.length === 0) return 0;
-    const bestBid = orderbook.bids[0].price;
-    const bestAsk = orderbook.asks[0].price;
-    return ((bestAsk - bestBid) / bestBid) * 100;
-  };
-
-  const updatePositionPnL = () => {
-    setPositions(positions.map(position => {
-      const currentPrice = prices[position.symbol.toLowerCase()]?.price || 0;
-      const pnl = position.type === 'long'
-        ? (currentPrice - position.entry) * (position.entry / position.entry)
-        : (position.entry - currentPrice) * (position.entry / position.entry);
-      const pnlPercent = position.type === 'long'
-        ? ((currentPrice - position.entry) / position.entry) * 100
-        : ((position.entry - currentPrice) / position.entry) * 100;
-      return {
-        ...position,
-        current: currentPrice,
-        pnl,
-        pnlPercent
-      };
-    }));
-  };
-
-  useEffect(() => {
-    fetchPrices();
-    const interval = setInterval(() => {
-      fetchPrices();
-      generateOrderbook();
-      updatePositionPnL();
+      setData((prevData) => ({
+        ...prevData,
+        btc: { price: data.bitcoin.usd, variation: Math.random() * 10 - 5 },
+        eth: { price: data.ethereum.usd, variation: Math.random() * 10 - 5 },
+        sol: { price: data.solana.usd, variation: Math.random() * 10 - 5 },
+      }));
     }, 10000);
-    return () => clearInterval(interval);
-  }, [selectedAsset]);
 
-  useEffect(() => {
-    generateOrderbook();
-  }, [selectedAsset]);
-
-  const formatPrice = (price) => {
-    return price.toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-  };
-
-  const formatPnL = (value, percent) => {
-    const absValue = Math.abs(value);
-    const formattedValue = `$${absValue.toFixed(2)}`;
-    const formattedPercent = `${percent > 0 ? '+' : ''}${percent.toFixed(2)}%`;
-    return (
-      <span style={{ color: percent >= 0 ? 'var(--neon)' : '#ff4444' }}>
-        {value >= 0 ? formattedValue : `-${formattedValue}`} ({formattedPercent})
-      </span>
-    );
-  };
+    return () => clearInterval(intervalId);
+  }, []);
 
   const handleBuy = () => {
-    const currentPrice = prices[selectedAsset]?.price || 0;
-    const newPosition = {
-      symbol: selectedAsset,
-      type: 'long',
-      entry: currentPrice,
-      current: currentPrice,
+    // Simulate buying
+    const newPositions = [...data.positions];
+    newPositions.push({
+      symbol: 'BTC',
+      long: true,
+      entryPrice: data.btc.price,
+      currentPrice: data.btc.price,
       pnl: 0,
       pnlPercent: 0,
-      active: true
-    };
-    setPositions([...positions, newPosition]);
+    });
+    setData((prevData) => ({ ...prevData, positions: newPositions }));
   };
 
   const handleSell = () => {
-    const currentPrice = prices[selectedAsset]?.price || 0;
-    const newPosition = {
-      symbol: selectedAsset,
-      type: 'short',
-      entry: currentPrice,
-      current: currentPrice,
-      pnl: 0,
-      pnlPercent: 0,
-      active: true
-    };
-    setPositions([...positions, newPosition]);
+    // Simulate selling
+    const newPositions = [...data.positions];
+    newPositions.pop();
+    setData((prevData) => ({ ...prevData, positions: newPositions }));
   };
 
   return (
-    <div style={{
-      fontFamily: 'JetBrains Mono, monospace',
-      backgroundColor: 'var(--bg)',
-      color: 'var(--text-primary)',
-      minHeight: '100vh',
-      padding: '16px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '16px'
-    }}>
-      <header style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingBottom: '16px',
-        borderBottom: '1px solid var(--border)'
-      }}>
-        <button
-          onClick={() => navigate('/')}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--neon)',
-            cursor: 'pointer',
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: '16px'
-          }}
-        >
-          ← Dashboard
-        </button>
-        <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 500 }}>CRYPTO TRADER</h1>
-        <div style={{ width: '24px' }}></div>
-      </header>
-
-      <div style={{
-        display: 'flex',
-        gap: '8px',
-        marginBottom: '16px',
-        overflowX: 'auto'
-      }}>
-        {['BTC', 'ETH', 'SOL'].map(asset => (
-          <button
-            key={asset}
-            onClick={() => setSelectedAsset(asset)}
-            style={{
-              backgroundColor: selectedAsset === asset ? 'var(--surface-high)' : 'var(--surface)',
-              border: '1px solid var(--border)',
-              color: selectedAsset === asset ? 'var(--neon)' : 'var(--text-primary)',
-              padding: '8px 16px',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '14px',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            {asset}
+    <div className="flex flex-col h-screen">
+      <header className="flex justify-between items-center p-4 bg-surface-high">
+        <h1 className="text-lg font-bold text-text-primary">Crypto Trader</h1>
+        <div className="flex items-center">
+          <button className="bg-neon text-text-primary px-4 py-2 rounded-md">
+            <Plus />
           </button>
-        ))}
-      </div>
-
-      <div style={{
-        backgroundColor: 'var(--surface)',
-        borderRadius: '8px',
-        padding: '16px',
-        marginBottom: '16px'
-      }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '16px'
-        }}>
-          <h2 style={{ margin: 0, fontSize: '18px' }}>Prix</h2>
-          <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>Bloomberg Style</span>
+          <button className="bg-neon text-text-primary px-4 py-2 rounded-md">
+            <List />
+          </button>
         </div>
-
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '16px'
-        }}>
-          <div>
-            <div style={{ fontSize: '24px', fontWeight: 600 }}>
-              {selectedAsset} {formatPrice(prices[selectedAsset]?.price || 0)}
+      </header>
+      <main className="flex-1 overflow-y-auto">
+        <section className="px-4 py-4 bg-surface">
+          <h2 className="text-lg font-bold text-text-primary">Prix en temps réel</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <span className="text-text-secondary mr-2">{data.btc.price}</span>
+              <span className={`text-text-primary ${data.btc.variation >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {data.btc.variation.toFixed(2)}%
+              </span>
             </div>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              {prices[selectedAsset]?.change24h >= 0 ? (
-                <TrendingUp size={16} color="#00ff88" />
-              ) : (
-                <TrendingDown size={16} color="#ff4444" />
-              )}
-              <span style={{
-                color: prices[selectedAsset]?.change24h >= 0 ? 'var(--neon)' : '#ff4444',
-                fontSize: '14px'
-              }}>
-                {prices[selectedAsset]?.change24h >= 0 ? '+' : ''}{prices[selectedAsset]?.change24h.toFixed(2)}%
+            <div className="flex items-center">
+              <span className="text-text-secondary mr-2">{data.eth.price}</span>
+              <span className={`text-text-primary ${data.eth.variation >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {data.eth.variation.toFixed(2)}%
+              </span>
+            </div>
+            <div className="flex items-center">
+              <span className="text-text-secondary mr-2">{data.sol.price}</span>
+              <span className={`text-text-primary ${data.sol.variation >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {data.sol.variation.toFixed(2)}%
               </span>
             </div>
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>PORTFOLIO</div>
-            <div style={{ fontSize: '18px', fontWeight: 600 }}>${formatPrice(portfolio.total)}</div>
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-text-secondary">Portfolio : {data.portfolio.toFixed(2)} $</span>
+            <button className="bg-neon text-text-primary px-4 py-2 rounded-md" onClick={handleBuy}>
+              BUY
+            </button>
+            <button className="bg-neon text-text-primary px-4 py-2 rounded-md" onClick={handleSell}>
+              SELL
+            </button>
           </div>
-        </div>
-      </div>
-
-      <div style={{
-        display: 'flex',
-        gap: '16px',
-        marginBottom: '16px'
-      }}>
-        <button
-          onClick={handleBuy}
-          style={{
-            backgroundColor: '#00aa44',
-            border: 'none',
-            color: 'white',
-            padding: '12px 24px',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: '14px',
-            height: '44px',
-            flex: 1
-          }}
-        >
-          BUY {selectedAsset}
-        </button>
-        <button
-          onClick={handleSell}
-          style={{
-            backgroundColor: '#aa0044',
-            border: 'none',
-            color: 'white',
-            padding: '12px 24px',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: '14px',
-            height: '44px',
-            flex: 1
-          }}
-        >
-          SELL {selectedAsset}
-        </button>
-      </div>
-
-      <div style={{
-        display: 'flex',
-        borderBottom: '1px solid var(--border)',
-        marginBottom: '16px'
-      }}>
-        {['Marché', 'Positions', 'Historique'].map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              background: 'none',
-              border: 'none',
-              padding: '12px 16px',
-              cursor: 'pointer',
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '14px',
-              color: activeTab === tab ? 'var(--neon)' : 'var(--text-secondary)',
-              borderBottom: activeTab === tab ? '2px solid var(--neon)' : 'none'
-            }}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === 'Marché' && (
-        <div style={{
-          backgroundColor: 'var(--surface)',
-          borderRadius: '8px',
-          padding: '16px',
-          flex: 1
-        }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px' }}>Order Book</h3>
-
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            marginBottom: '8px',
-            fontSize: '12px',
-            color: 'var(--text-secondary)'
-          }}>
-            <span>BID</span>
-            <span>SIZE</span>
-            <span>ASK</span>
-            <span>SIZE</span>
+        </section>
+        <section className="px-4 py-4 bg-surface">
+          <h2 className="text-lg font-bold text-text-primary">Orderbook</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <span className="text-text-secondary">Bids</span>
+              <span className="text-text-secondary ml-2">{data.orderbook.spread}</span>
+            </div>
+            <div className="flex items-center">
+              <span className="text-text-secondary">Asks</span>
+              <span className="text-text-secondary ml-2">{data.orderbook.spread}</span>
+            </div>
           </div>
-
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px',
-            maxHeight: '200px',
-            overflowY: 'auto'
-          }}>
-            {orderbook.bids.slice().reverse().map((bid, index) => (
-              <div key={`bid-${index}`} style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '4px 0',
-                fontSize: '12px'
-              }}>
-                <span style={{ color: 'var(--neon)' }}>${formatPrice(bid.price)}</span>
-                <span style={{ color: 'var(--text-secondary)' }}>{bid.size.toFixed(2)}</span>
-                {index === 0 && (
-                  <span style={{
-                    color: 'var(--text-secondary)',
-                    fontSize: '10px'
-                  }}>
-                    SPREAD: {calculateSpread().toFixed(3)}%
+          <div className="flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-text-secondary">Price</span>
+              <span className="text-text-secondary">Amount</span>
+            </div>
+            {data.orderbook.bids.map((bid, index) => (
+              <div key={index} className="flex items-center justify-between mb-2">
+                <span className="text-text-secondary">{bid.price}</span>
+                <span className="text-text-secondary">{bid.amount}</span>
+              </div>
+            ))}
+            {data.orderbook.asks.map((ask, index) => (
+              <div key={index} className="flex items-center justify-between mb-2">
+                <span className="text-text-secondary">{ask.price}</span>
+                <span className="text-text-secondary">{ask.amount}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className="px-4 py-4 bg-surface">
+          <h2 className="text-lg font-bold text-text-primary">Positions</h2>
+          <div className="flex flex-col">
+            {data.positions.map((position, index) => (
+              <div key={index} className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <span className="text-text-secondary">{position.symbol}</span>
+                  <span className={`text-text-primary ${position.long ? 'text-green-600' : 'text-red-600'}`}>
+                    {position.long ? '+' : '-'}
                   </span>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            margin: '8px 0',
-            fontSize: '12px',
-            color: 'var(--text-secondary)'
-          }}>
-            <span>TOTAL</span>
-            <span>PRICE</span>
-            <span>TOTAL</span>
-          </div>
-
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px',
-            maxHeight: '200px',
-            overflowY: 'auto'
-          }}>
-            {orderbook.asks.map((ask, index) => (
-              <div key={`ask-${index}`} style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '4px 0',
-                fontSize: '12px'
-              }}>
-                <span style={{ color: '#ff4444' }}>${formatPrice(ask.price)}</span>
-                <span style={{ color: 'var(--text-secondary)' }}>{ask.size.toFixed(2)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'Positions' && (
-        <div style={{
-          backgroundColor: 'var(--surface)',
-          borderRadius: '8px',
-          padding: '16px',
-          flex: 1
-        }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px' }}>Positions Actives</h3>
-
-          {positions.filter(p => p.active).length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '40px 0',
-              color: 'var(--text-muted)'
-            }}>
-              Aucune position ouverte
-            </div>
-          ) : (
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px'
-            }}>
-              {positions.filter(p => p.active).map((position, index) => (
-                <div key={index} style={{
-                  backgroundColor: 'var(--surface-low)',
-                  padding: '12px',
-                  borderRadius: '4px',
-                  border: '1px solid var(--border)'
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '8px'
-                  }}>
-                    <span style={{ fontSize: '14px', fontWeight: 600 }}>
-                      {position.symbol} {position.type.toUpperCase()}
-                    </span>
-                    <span style={{
-                      color: position.pnlPercent >= 0 ? 'var(--neon)' : '#ff4444',
-                      fontSize: '14px'
-                    }}>
-                      {formatPnL(position.pnl, position.pnlPercent)}
-                    </span>
-                  </div>
-
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    fontSize: '12px',
-                    color: 'var(--text-secondary)'
-                  }}>
-                    <span>ENTRY: ${formatPrice(position.entry)}</span>
-                    <span>CURRENT: ${formatPrice(position.current)}</span>
-                  </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === 'Historique' && (
-        <div style={{
-          backgroundColor: 'var(--surface)',
-          borderRadius: '8px',
-          padding: '16px',
-          flex: 1
-        }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px' }}>Historique des Trades</h3>
-
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px'
-          }}>
-            {[...Array(5)].map((_, index) => (
-              <div key={index} style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '8px 0',
-                borderBottom: '1px solid var(--border)',
-                fontSize: '12px'
-              }}>
-                <div>
-                  <div style={{ fontWeight: 600 }}>BTC LONG</div>
-                  <div style={{ color: 'var(--text-secondary)' }}>16:42:12</div>
+                <div className="flex items-center">
+                  <span className="text-text-secondary">Entry Price : {position.entryPrice}</span>
+                  <span className="text-text-secondary ml-2">Current Price : {position.currentPrice}</span>
                 </div>
-                <div style={{ color: 'var(--neon)' }}>$45,000.00</div>
-                <div style={{ color: '#00aa44' }}>$+1,125.00 (+2.50%)</div>
+                <div className="flex items-center">
+                  <span className="text-text-secondary">P&L : {position.pnl.toFixed(2)} $</span>
+                  <span className={`text-text-primary ${position.pnlPercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {position.pnlPercent.toFixed(2)}%
+                  </span>
+                </div>
               </div>
             ))}
           </div>
-        </div>
-      )}
+        </section>
+        <footer className="flex justify-between items-center p-4 bg-surface-high">
+          <Link to="/crypto/trader/market" className="bg-neon text-text-primary px-4 py-2 rounded-md">
+            Marché
+          </Link>
+          <Link to="/crypto/trader/positions" className="bg-neon text-text-primary px-4 py-2 rounded-md">
+            Positions
+          </Link>
+          <Link to="/crypto/trader/history" className="bg-neon text-text-primary px-4 py-2 rounded-md">
+            Historique
+          </Link>
+        </footer>
+      </main>
     </div>
   );
 };
