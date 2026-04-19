@@ -1,37 +1,54 @@
 // src/components/PortfolioChart.jsx
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 
-const PortfolioChart = ({ data }) => {
+const PortfolioChart = ({ data, width = 375, height = 120 }) => {
   const svgRef = useRef(null);
 
   useEffect(() => {
-    if (!data || !svgRef.current) return;
+    if (!data || data.length === 0) return;
 
     const svg = svgRef.current;
-    const width = svg.clientWidth;
-    const height = svg.clientHeight;
-    const padding = 40;
-    const innerWidth = width - padding * 2;
-    const innerHeight = height - padding * 2;
+    svg.innerHTML = '';
 
-    // Clear previous chart
-    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const margin = { top: 20, right: 20, bottom: 30, left: 40 };
+    const chartWidth = width - margin.left - margin.right;
+    const chartHeight = height - margin.top - margin.bottom;
 
-    // Create gradient
-    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-    gradient.setAttribute('id', 'chartGradient');
+    const minValue = Math.min(...data.map(d => d.value));
+    const maxValue = Math.max(...data.map(d => d.value));
+    const range = maxValue - minValue;
+    const padding = range * 0.05;
+    const yMin = minValue - padding;
+    const yMax = maxValue + padding;
+
+    const xScale = (i) => (i / (data.length - 1)) * chartWidth;
+    const yScale = (value) => chartHeight - ((value - yMin) / (yMax - yMin)) * chartHeight;
+
+    const pathData = data.map((d, i) => `${xScale(i)},${yScale(d.value)}`).join(' ');
+
+    const gradientId = `gradient-${Math.random().toString(36).substr(2, 9)}`;
+
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const chart = document.createElementNS(svgNS, 'svg');
+    chart.setAttribute('width', width);
+    chart.setAttribute('height', height);
+    chart.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    chart.setAttribute('fill', 'none');
+
+    const defs = document.createElementNS(svgNS, 'defs');
+    const gradient = document.createElementNS(svgNS, 'linearGradient');
+    gradient.setAttribute('id', gradientId);
     gradient.setAttribute('x1', '0%');
     gradient.setAttribute('y1', '0%');
     gradient.setAttribute('x2', '0%');
     gradient.setAttribute('y2', '100%');
 
-    const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+    const stop1 = document.createElementNS(svgNS, 'stop');
     stop1.setAttribute('offset', '0%');
     stop1.setAttribute('stop-color', '#00ff88');
     stop1.setAttribute('stop-opacity', '0.3');
 
-    const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+    const stop2 = document.createElementNS(svgNS, 'stop');
     stop2.setAttribute('offset', '100%');
     stop2.setAttribute('stop-color', '#00ff88');
     stop2.setAttribute('stop-opacity', '0');
@@ -39,105 +56,85 @@ const PortfolioChart = ({ data }) => {
     gradient.appendChild(stop1);
     gradient.appendChild(stop2);
     defs.appendChild(gradient);
-    svg.appendChild(defs);
+    chart.appendChild(defs);
 
-    // Create axes
-    const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    xAxis.setAttribute('x1', padding);
-    xAxis.setAttribute('y1', height - padding);
-    xAxis.setAttribute('x2', width - padding);
-    xAxis.setAttribute('y2', height - padding);
-    xAxis.setAttribute('stroke', 'var(--neon)');
-    xAxis.setAttribute('stroke-width', '1');
-    svg.appendChild(xAxis);
+    const axesGroup = document.createElementNS(svgNS, 'g');
+    axesGroup.setAttribute('stroke', '#00ff88');
+    axesGroup.setAttribute('stroke-width', '1');
 
-    const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    yAxis.setAttribute('x1', padding);
-    yAxis.setAttribute('y1', padding);
-    yAxis.setAttribute('x2', padding);
-    yAxis.setAttribute('y2', height - padding);
-    yAxis.setAttribute('stroke', 'var(--neon)');
-    yAxis.setAttribute('stroke-width', '1');
-    svg.appendChild(yAxis);
+    const xAxis = document.createElementNS(svgNS, 'line');
+    xAxis.setAttribute('x1', margin.left);
+    xAxis.setAttribute('y1', height - margin.bottom);
+    xAxis.setAttribute('x2', width - margin.right);
+    xAxis.setAttribute('y2', height - margin.bottom);
+    axesGroup.appendChild(xAxis);
 
-    // Create path
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('fill', 'url(#chartGradient)');
-    path.setAttribute('stroke', 'var(--neon)');
+    const yAxis = document.createElementNS(svgNS, 'line');
+    yAxis.setAttribute('x1', margin.left);
+    yAxis.setAttribute('y1', margin.top);
+    yAxis.setAttribute('x2', margin.left);
+    yAxis.setAttribute('y2', height - margin.bottom);
+    axesGroup.appendChild(yAxis);
+
+    chart.appendChild(axesGroup);
+
+    const path = document.createElementNS(svgNS, 'path');
+    path.setAttribute('d', `M ${margin.left} ${yScale(data[0].value)} L ${pathData}`);
+    path.setAttribute('stroke', '#00ff88');
     path.setAttribute('stroke-width', '2');
+    path.setAttribute('fill', 'none');
     path.setAttribute('stroke-linecap', 'round');
     path.setAttribute('stroke-linejoin', 'round');
-    path.setAttribute('paint-order', 'stroke');
-
-    // Generate curve points
-    const points = data.map((point, i) => {
-      const x = padding + (i / (data.length - 1)) * innerWidth;
-      const y = height - padding - (point.value / Math.max(...data.map(d => d.value))) * innerHeight;
-      return { x, y };
-    });
-
-    // Create smooth curve
-    let d = `M ${points[0].x} ${points[0].y}`;
-    for (let i = 1; i < points.length - 1; i++) {
-      const xc = (points[i].x + points[i + 1].x) / 2;
-      const yc = (points[i].y + points[i + 1].y) / 2;
-      d += ` Q ${points[i].x} ${points[i].y}, ${xc} ${yc}`;
-    }
-    d += ` L ${points[points.length - 1].x} ${height - padding}`;
-    d += ` L ${points[0].x} ${height - padding} Z`;
-
-    path.setAttribute('d', d);
+    path.setAttribute('stroke-dasharray', '1000');
+    path.setAttribute('stroke-dashoffset', '1000');
     path.style.transition = 'stroke-dashoffset 800ms ease-in-out';
-    path.style.strokeDasharray = '1000';
-    path.style.strokeDashoffset = '1000';
-    svg.appendChild(path);
 
-    // Animate path
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        path.style.strokeDashoffset = '0';
-      }
-    });
-    observer.observe(svg);
+    setTimeout(() => {
+      path.setAttribute('stroke-dashoffset', '0');
+    }, 100);
 
-    // Create x-axis labels
-    data.forEach((point, i) => {
-      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      text.setAttribute('x', padding + (i / (data.length - 1)) * innerWidth);
-      text.setAttribute('y', height - padding + 20);
-      text.setAttribute('fill', 'var(--text-secondary)');
-      text.setAttribute('font-family', 'JetBrains Mono, monospace');
-      text.setAttribute('font-size', '10');
+    const gradientPath = document.createElementNS(svgNS, 'path');
+    gradientPath.setAttribute('d', `M ${margin.left} ${yScale(data[0].value)} L ${pathData} L ${width - margin.right} ${height - margin.bottom} L ${margin.left} ${height - margin.bottom} Z`);
+    gradientPath.setAttribute('fill', `url(#${gradientId})`);
+    gradientPath.setAttribute('opacity', '0.8');
+
+    chart.appendChild(gradientPath);
+    chart.appendChild(path);
+
+    const labelsGroup = document.createElementNS(svgNS, 'g');
+    labelsGroup.setAttribute('font-family', 'JetBrains Mono, monospace');
+    labelsGroup.setAttribute('font-size', '10');
+    labelsGroup.setAttribute('fill', '#aaa');
+
+    data.forEach((d, i) => {
+      const x = margin.left + xScale(i);
+      const y = height - margin.bottom + 12;
+
+      const text = document.createElementNS(svgNS, 'text');
+      text.setAttribute('x', x);
+      text.setAttribute('y', y);
       text.setAttribute('text-anchor', 'middle');
-      text.textContent = point.date;
-      svg.appendChild(text);
+      text.textContent = d.date;
+      labelsGroup.appendChild(text);
     });
 
-    // Create y-axis labels
-    const maxValue = Math.max(...data.map(d => d.value));
-    for (let i = 0; i <= 5; i++) {
-      const value = (maxValue * (1 - i / 5)).toFixed(2);
-      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      text.setAttribute('x', padding - 10);
-      text.setAttribute('y', padding + (i / 5) * innerHeight);
-      text.setAttribute('fill', 'var(--text-secondary)');
-      text.setAttribute('font-family', 'JetBrains Mono, monospace');
-      text.setAttribute('font-size', '10');
+    const yValues = [yMin, yMax];
+    yValues.forEach((value, i) => {
+      const y = margin.top + (i === 0 ? chartHeight : 0);
+      const text = document.createElementNS(svgNS, 'text');
+      text.setAttribute('x', margin.left - 5);
+      text.setAttribute('y', y + 4);
       text.setAttribute('text-anchor', 'end');
-      text.textContent = value;
-      svg.appendChild(text);
-    }
-  }, [data]);
+      text.setAttribute('font-size', '10');
+      text.textContent = value.toFixed(2);
+      labelsGroup.appendChild(text);
+    });
 
-  return (
-    <svg
-      ref={svgRef}
-      width="100%"
-      height="200"
-      viewBox="0 0 375 200"
-      style={{ fontFamily: 'JetBrains Mono, monospace' }}
-    />
-  );
+    chart.appendChild(labelsGroup);
+    svg.appendChild(chart);
+  }, [data, width, height]);
+
+  return <div ref={svgRef} style={{ width, height }} />;
 };
 
 export default PortfolioChart;
