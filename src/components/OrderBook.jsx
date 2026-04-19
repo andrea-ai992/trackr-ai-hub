@@ -8,8 +8,8 @@ const OrderBook = ({ bids = [], asks = [], pricePrecision = 2 }) => {
   const bidsEndRef = useRef(null);
   const asksEndRef = useRef(null);
 
-  const sortedBids = [...bids].sort((a, b) => b[0] - a[0]);
-  const sortedAsks = [...asks].sort((a, b) => (sortAsks ? a[0] - b[0] : b[0] - a[0]));
+  const sortedBids = [...bids].sort((a, b) => sortBids ? b[0] - a[0] : a[0] - b[0]);
+  const sortedAsks = [...asks].sort((a, b) => sortAsks ? a[0] - b[0] : b[0] - a[0]);
 
   useEffect(() => {
     bidsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -26,6 +26,22 @@ const OrderBook = ({ bids = [], asks = [], pricePrecision = 2 }) => {
     <div className="orderbook-container">
       <div className="orderbook-header">
         <h3>Order Book</h3>
+        <div className="orderbook-controls">
+          <button
+            className="sort-btn"
+            onClick={() => setSortBids(!sortBids)}
+            aria-label="Sort bids"
+          >
+            {sortBids ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+          <button
+            className="sort-btn"
+            onClick={() => setSortAsks(!sortAsks)}
+            aria-label="Sort asks"
+          >
+            {sortAsks ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+        </div>
       </div>
 
       <div className="orderbook-grid">
