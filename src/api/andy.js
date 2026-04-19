@@ -80,7 +80,7 @@ const andy = {
           ...headers,
           ...options.headers
         },
-        signal: AbortSignal.timeout(options.timeout || DEFAULT_TIMEOUT)
+        signal: options.signal || AbortSignal.timeout(options.timeout || DEFAULT_TIMEOUT)
       });
 
       if (!response.ok) {
