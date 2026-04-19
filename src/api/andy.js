@@ -74,14 +74,20 @@ const andy = {
       const accessToken = await this.getAccessToken();
       const headers = { Authorization: `Bearer ${accessToken}` };
 
+      const timeout = options.timeout || DEFAULT_TIMEOUT;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+
       const response = await fetch(url, {
         ...options,
         headers: {
           ...headers,
           ...options.headers
         },
-        signal: options.signal || AbortSignal.timeout(options.timeout || DEFAULT_TIMEOUT)
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`Request failed with status ${response.status}: ${response.statusText}`);
@@ -89,7 +95,7 @@ const andy = {
 
       return await response.json();
     } catch (error) {
-      if (error.name === 'TimeoutError') {
+      if (error.name === 'AbortError') {
         throw new Error(`Request timed out after ${options.timeout || DEFAULT_TIMEOUT}ms`);
       }
       if (error.message.includes('Failed to fetch')) {
@@ -102,14 +108,19 @@ const andy = {
   async chat(query, timeout = DEFAULT_TIMEOUT) {
     const validatedQuery = ChatSchema.parse({ query });
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+
       const response = await fetch('/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ query: validatedQuery.query }),
-        signal: AbortSignal.timeout(timeout)
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`Chat request failed with status ${response.status}: ${response.statusText}`);
@@ -117,7 +128,7 @@ const andy = {
 
       return await response.json();
     } catch (error) {
-      if (error.name === 'TimeoutError') {
+      if (error.name === 'AbortError') {
         throw new Error(`Chat request timed out after ${timeout}ms`);
       }
       if (error.message.includes('Failed to fetch')) {
