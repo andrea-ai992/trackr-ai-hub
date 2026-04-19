@@ -1,6 +1,5 @@
 // src/pages/Markets.jsx
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import './Markets.css';
 
@@ -90,8 +89,7 @@ const Markets = () => {
           maximumFractionDigits: 2
         })}</p>
         <p className={`asset-change ${asset.changePercent >= 0 ? 'positive' : 'negative'}`}>
-          {asset.changePercent.toFixed(2)}%
-          {asset.changePercent >= 0 ? '↑' : '↓'}
+          {asset.changePercent >= 0 ? '+' : ''}{asset.changePercent.toFixed(2)}%
         </p>
         <div className="sparkline-container">
           <svg width="40" height="20" viewBox="0 0 40 20" className="sparkline">
@@ -99,14 +97,14 @@ const Markets = () => {
               <polyline
                 fill="none"
                 stroke={asset.changePercent >= 0 ? '#00ff88' : '#ff4444'}
-                strokeWidth="1"
+                strokeWidth="1.5"
                 points={asset.sparkline}
               />
             ) : (
               <polyline
                 fill="none"
-                stroke="#555"
-                strokeWidth="1"
+                stroke="var(--text-muted)"
+                strokeWidth="1.5"
                 points="0,10 5,8 10,12 15,6 20,14 25,8 30,12 35,10"
               />
             )}
@@ -144,66 +142,56 @@ const Markets = () => {
             />
           </div>
         </div>
-        <button
-          className={`refresh-button ${refreshing ? 'refreshing' : ''}`}
-          onClick={handleRefresh}
-          disabled={refreshing}
-        >
-          {refreshing ? 'Refreshing...' : 'Refresh'}
-        </button>
       </header>
 
-      {loading ? (
-        <div className="skeleton-loader">
-          {[...Array(10)].map((_, i) => (
-            <div key={i} className="skeleton-card"></div>
-          ))}
-        </div>
-      ) : (
-        <div className="markets-content">
-          {activeTab === 'stocks' ? (
-            <>
-              <div className="section">
-                <h2 className="section-title">Top Gainers</h2>
-                {filteredStocks
-                  .filter(asset => asset.changePercent > 0)
-                  .sort((a, b) => b.changePercent - a.changePercent)
-                  .slice(0, 5)
-                  .map(renderAssetCard)}
-              </div>
+      <div
+        className={`markets-content ${refreshing ? 'refreshing' : ''}`}
+        onClick={(e) => {
+          if (e.currentTarget.classList.contains('refreshing')) {
+            handleRefresh();
+          }
+        }}
+      >
+        {loading ? (
+          <div className="skeleton-loader">
+            {[...Array(10)].map((_, i) => (
+              <div key={i} className="skeleton-card"></div>
+            ))}
+          </div>
+        ) : (
+          <>
+            <div className="section">
+              <h2 className="section-title">Top Gainers</h2>
+              {activeTab === 'stocks'
+                ? filteredStocks
+                    .filter(asset => asset.changePercent > 0)
+                    .sort((a, b) => b.changePercent - a.changePercent)
+                    .slice(0, 5)
+                    .map(renderAssetCard)
+                : filteredCrypto
+                    .filter(asset => asset.changePercent > 0)
+                    .sort((a, b) => b.changePercent - a.changePercent)
+                    .slice(0, 5)
+                    .map(renderAssetCard)}
+            </div>
 
-              <div className="section">
-                <h2 className="section-title">Top Losers</h2>
-                {filteredStocks
-                  .filter(asset => asset.changePercent < 0)
-                  .sort((a, b) => a.changePercent - b.changePercent)
-                  .slice(0, 5)
-                  .map(renderAssetCard)}
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="section">
-                <h2 className="section-title">Top Gainers</h2>
-                {filteredCrypto
-                  .filter(asset => asset.changePercent > 0)
-                  .sort((a, b) => b.changePercent - a.changePercent)
-                  .slice(0, 5)
-                  .map(renderAssetCard)}
-              </div>
-
-              <div className="section">
-                <h2 className="section-title">Top Losers</h2>
-                {filteredCrypto
-                  .filter(asset => asset.changePercent < 0)
-                  .sort((a, b) => a.changePercent - b.changePercent)
-                  .slice(0, 5)
-                  .map(renderAssetCard)}
-              </div>
-            </>
-          )}
-        </div>
-      )}
+            <div className="section">
+              <h2 className="section-title">Top Losers</h2>
+              {activeTab === 'stocks'
+                ? filteredStocks
+                    .filter(asset => asset.changePercent < 0)
+                    .sort((a, b) => a.changePercent - b.changePercent)
+                    .slice(0, 5)
+                    .map(renderAssetCard)
+                : filteredCrypto
+                    .filter(asset => asset.changePercent < 0)
+                    .sort((a, b) => a.changePercent - b.changePercent)
+                    .slice(0, 5)
+                    .map(renderAssetCard)}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 };
