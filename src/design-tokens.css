@@ -1,35 +1,20 @@
-/* src/design-tokens.css */
-
 :root {
+  --neon: #00ff88;
   --bg: #080808;
-  --bg1: #0c0c0c;
-  --bg2: #111111;
-  --bg3: #161616;
-  --bg4: #1c1c1c;
-  --border: rgba(255, 255, 255, 0.07);
-  --border-hi: rgba(0, 255, 136, 0.20);
-  --green: #00ff88;
-  --green-dim: #00cc66;
-  --green-bg: rgba(0, 255, 136, 0.06);
-  --red: #ff4d4d;
-  --amber: #fbbf24;
-  --blue: #38bdf8;
-  --purple: #a78bfa;
-  --t1: #f0f0f0;
-  --t2: #888888;
-  --t3: #444444;
-  --radius-sm: 12px;
-  --radius: 16px;
-  --radius-lg: 22px;
+  --surface: #0f0f0f;
+  --surface-low: #111;
+  --surface-high: #1a1a1a;
+  --text-primary: #e0e0e0;
+  --text-secondary: #aaa;
+  --text-muted: #555;
+  --border: rgba(0, 255, 136, 0.08);
+  --border-bright: rgba(0, 255, 136, 0.18);
 }
 
 body {
-  font-family: 'Inter', sans-serif;
-  font-weight: 400;
-  font-size: 16px;
-  line-height: 1.5;
-  color: var(--t1);
+  font-family: JetBrains Mono, monospace;
   background-color: var(--bg);
+  color: var(--text-primary);
   padding: 0;
   margin: 0;
 }
@@ -38,91 +23,64 @@ body {
   max-width: 520px;
   padding: 16px;
   margin: 0 auto;
+  background-color: var(--surface-low);
 }
 
 .card {
-  background-color: var(--bg2);
+  background-color: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 16px;
   padding: 16px;
 }
 
 .pill-up {
-  color: var(--green);
+  border-radius: 50%;
+  background-color: var(--neon);
+  padding: 4px 8px;
 }
 
 .pill-down {
-  color: var(--red);
+  border-radius: 50%;
+  background-color: var(--neon);
+  padding: 4px 8px;
 }
 
 .scroll-row {
   overflow-x: auto;
   scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .tab-btn {
-  background-color: var(--bg);
-  color: var(--t1);
-  border: none;
+  background-color: var(--neon);
+  color: var(--text-primary);
   padding: 8px 16px;
-  font-size: 16px;
+  border: none;
+  border-radius: 16px;
   cursor: pointer;
 }
 
 .section-label {
-  text-transform: uppercase;
-  font-size: 10px;
-  color: var(--t2);
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 8px;
 }
 
 .press-scale {
-  transform: scale(1);
-  transition: transform 0.2s ease;
-}
-
-.press-scale:hover {
-  transform: scale(0.97);
+  transition: transform 0.2s ease-in-out;
 }
 
 .live-dot {
-  background-color: var(--green);
-  border-radius: 50%;
-  width: 8px;
-  height: 8px;
-  animation: ping 1s ease-in-out infinite;
+  animation: ping 1s infinite;
 }
 
-@keyframes ping {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.2);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-@keyframes pulse {
-  0% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: 0 0;
-  }
-  100% {
-    background-position: 100% 0;
-  }
+.num {
+  font-family: JetBrains Mono, monospace;
+  font-size: 24px;
+  font-weight: bold;
+  margin-right: 8px;
 }
 
 @keyframes fadeUp {
@@ -134,39 +92,34 @@ body {
   }
 }
 
-.num {
-  font-family: monospace;
-  font-size: 16px;
-  font-weight: bold;
+@keyframes shimmer {
+  0% {
+    background-color: var(--neon);
+  }
+  100% {
+    background-color: var(--neon);
+  }
 }
 
-.live-dot.pulse {
-  animation: pulse 1s ease-in-out infinite;
+@keyframes ping {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
-.live-dot.ping {
-  animation: ping 1s ease-in-out infinite;
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.5;
+  }
 }
 
-.live-dot.shimmer {
-  animation: shimmer 1s ease-in-out infinite;
-}
-
-.live-dot.fadeUp {
-  animation: fadeUp 280ms ease;
-}
-
-/* Import Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-```
-
-```css
-/* src/index.css */
-
-/* Import design tokens */
-@import './design-tokens.css';
-
-/* Ajoutez le code existant ici */
-```
-
-Notez que j'ai supprimé les classes et les animations qui n'étaient pas utilisées dans le code existant. J'ai également ajouté les classes et les animations qui manquaient pour compléter le système de design tokens.
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
