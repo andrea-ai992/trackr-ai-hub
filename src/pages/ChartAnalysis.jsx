@@ -1,8 +1,12 @@
+// src/pages/ChartAnalysis.jsx
+import { lazy, Suspense } from 'react'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, TrendingUp, TrendingDown, Minus, Zap, RefreshCw, ChevronDown, ChevronUp, Brain } from 'lucide-react'
 
-// ─── Assets ───────────────────────────────────────────────────────────────────
+// Lazy load TVChart component
+const TVChart = lazy(() => import('../components/TVChart'))
+
 const ASSETS = [
   { label: 'BTC',   symbol: 'BTC-USD',  tv: 'COINBASE:BTCUSD', type: 'crypto' },
   { label: 'ETH',   symbol: 'ETH-USD',  tv: 'COINBASE:ETHUSD', type: 'crypto' },
@@ -24,77 +28,238 @@ const TIMEFRAMES = [
 
 const TYPE_COLOR = { crypto: '#f59e0b', stock: '#6366f1', index: '#10b981', commo: '#fcd34d' }
 
-// ─── TradingView Chart ────────────────────────────────────────────────────────
-let tvReady = false
-function TVChart({ tvSymbol, tvInterval, uid }) {
-  const ref = useRef(null)
+function ChartAnalysis() {
+  const [activeAsset, setActiveAsset] = useState(ASSETS[0])
+  const [activeTimeframe, setActiveTimeframe] = useState(TIMEFRAMES[0])
+  const [analysisData, setAnalysisData] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [showTimeframeDropdown, setShowTimeframeDropdown] = useState(false)
+  const navigate = useNavigate()
 
-  useEffect(() => {
-    const container = ref.current
-    if (!container) return
-
-    function mount() {
-      if (!window.TradingView || !container) return
-      container.innerHTML = `<div id="${uid}" style="height:100%;width:100%"></div>`
-      new window.TradingView.widget({
-        container_id: uid,
-        autosize: true,
-        symbol: tvSymbol,
-        interval: tvInterval,
-        timezone: 'Europe/Paris',
-        theme: 'dark',
-        style: '1',
-        locale: 'fr',
-        backgroundColor: 'rgba(6,10,22,1)',
-        gridColor: 'rgba(255,255,255,0.03)',
-        enable_publishing: false,
-        hide_side_toolbar: false,
-        allow_symbol_change: true,
-        save_image: false,
-        studies: [
-          'Volume@tv-basicstudies',
-          'RSI@tv-basicstudies',
-          'MACD@tv-basicstudies',
-          'MAExp@tv-basicstudies',
-        ],
-        studies_overrides: {
-          'moving average exp.length': 21,
-        },
-        overrides: {
-          'paneProperties.background': '#060a16',
-          'paneProperties.backgroundType': 'solid',
-          'mainSeriesProperties.candleStyle.upColor': '#26a69a',
-          'mainSeriesProperties.candleStyle.downColor': '#ef5350',
-          'mainSeriesProperties.candleStyle.borderUpColor': '#26a69a',
-          'mainSeriesProperties.candleStyle.borderDownColor': '#ef5350',
-          'mainSeriesProperties.candleStyle.wickUpColor': '#26a69a',
-          'mainSeriesProperties.candleStyle.wickDownColor': '#ef5350',
-        },
-        loading_screen: { backgroundColor: '#060a16', foregroundColor: '#6366f1' },
+  const handleAnalyze = useCallback(async () => {
+    setLoading(true)
+    try {
+      const response = await fetch('/api/analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol: activeAsset.symbol,
+          interval: activeTimeframe.api,
+          type: activeAsset.type
+        })
       })
+      const data = await response.json()
+      setAnalysisData(data.text)
+    } catch (error) {
+      console.error('Analysis error:', error)
+    } finally {
+      setLoading(false)
     }
-
-    if (tvReady && window.TradingView) {
-      mount()
-    } else if (!tvReady) {
-      tvReady = true
-      const s = document.createElement('script')
-      s.src = 'https://s3.tradingview.com/tv.js'
-      s.onload = mount
-      document.head.appendChild(s)
-    } else {
-      const t = setInterval(() => {
-        if (window.TradingView) { clearInterval(t); mount() }
-      }, 200)
-      return () => clearInterval(t)
-    }
-
-    return () => { if (container) container.innerHTML = '' }
-  }, [tvSymbol, tvInterval, uid])
+  }, [activeAsset, activeTimeframe])
 
   return (
-    <div style={{ width: '100%', height: '100%' }}>
-      <div ref={ref} style={{ height: '100%', width: '100%' }} />
+    <div style={{
+      minHeight: '100vh',
+      background: 'var(--bg)',
+      color: 'var(--text-primary)',
+      fontFamily: 'JetBrains Mono, monospace',
+      padding: '16px',
+      paddingBottom: '80px'
+    }}>
+      {/* Header */}
+      <header style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        marginBottom: 24
+      }}>
+        <button
+          onClick={() => navigate(-1)}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: 'var(--neon)',
+            padding: 8
+          }}
+        >
+          <ArrowLeft size={20} />
+        </button>
+        <h1 style={{
+          fontSize: 18,
+          fontWeight: 700,
+          color: 'var(--text-primary)',
+          margin: 0
+        }}>
+          ChartAnalysis
+        </h1>
+      </header>
+
+      {/* Asset Selector */}
+      <div style={{
+        marginBottom: 20,
+        position: 'relative'
+      }}>
+        <div style={{
+          fontSize: 11,
+          fontWeight: 700,
+          color: 'var(--text-secondary)',
+          letterSpacing: '0.08em',
+          marginBottom: 8
+        }}>
+          ACTIF
+        </div>
+        <div style={{
+          display: 'flex',
+          gap: 8,
+          flexWrap: 'wrap'
+        }}>
+          {ASSETS.map((asset) => (
+            <button
+              key={asset.symbol}
+              onClick={() => setActiveAsset(asset)}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 8,
+                border: activeAsset.symbol === asset.symbol ? '1px solid var(--neon)' : '1px solid var(--border)',
+                background: activeAsset.symbol === asset.symbol ? 'rgba(0,255,136,0.1)' : 'transparent',
+                color: 'var(--text-primary)',
+                fontSize: 14,
+                cursor: 'pointer',
+                fontFamily: 'JetBrains Mono, monospace'
+              }}
+            >
+              {asset.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Timeframe Selector */}
+      <div style={{
+        marginBottom: 24,
+        position: 'relative'
+      }}>
+        <div style={{
+          fontSize: 11,
+          fontWeight: 700,
+          color: 'var(--text-secondary)',
+          letterSpacing: '0.08em',
+          marginBottom: 8
+        }}>
+          TIMEFRAME
+        </div>
+        <button
+          onClick={() => setShowTimeframeDropdown(!showTimeframeDropdown)}
+          style={{
+            padding: '12px 16px',
+            borderRadius: 8,
+            border: '1px solid var(--border)',
+            background: 'var(--surface)',
+            color: 'var(--text-primary)',
+            fontSize: 14,
+            cursor: 'pointer',
+            fontFamily: 'JetBrains Mono, monospace',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%'
+          }}
+        >
+          <span>{activeTimeframe.label}</span>
+          {showTimeframeDropdown ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
+
+        {showTimeframeDropdown && (
+          <div style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            right: 0,
+            background: 'var(--surface)',
+            borderRadius: 8,
+            border: '1px solid var(--border)',
+            marginTop: 8,
+            zIndex: 1000,
+            maxHeight: '200px',
+            overflowY: 'auto'
+          }}>
+            {TIMEFRAMES.map((tf) => (
+              <button
+                key={tf.api}
+                onClick={() => {
+                  setActiveTimeframe(tf)
+                  setShowTimeframeDropdown(false)
+                }}
+                style={{
+                  padding: '12px 16px',
+                  width: '100%',
+                  textAlign: 'left',
+                  background: activeTimeframe.api === tf.api ? 'rgba(0,255,136,0.1)' : 'transparent',
+                  border: 'none',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: 14
+                }}
+              >
+                {tf.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Chart Container */}
+      <div style={{
+        height: 300,
+        marginBottom: 24,
+        borderRadius: 12,
+        overflow: 'hidden',
+        border: '1px solid var(--border)'
+      }}>
+        <Suspense fallback={
+          <div style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'var(--surface)'
+          }}>
+            <div style={{
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              border: '3px solid var(--neon)',
+              borderTopColor: 'var(--neon)',
+              animation: 'spin 0.8s linear infinite'
+            }} />
+          </div>
+        }>
+          <TVChart
+            tvSymbol={activeAsset.tv}
+            tvInterval={activeTimeframe.tv}
+            uid={`tv-chart-${activeAsset.symbol}-${activeTimeframe.api}`}
+          />
+        </Suspense>
+      </div>
+
+      {/* Analysis Section */}
+      <div style={{
+        background: 'var(--surface)',
+        borderRadius: 12,
+        padding: 16,
+        border: '1px solid var(--border)'
+      }}>
+        <AnalysisCard
+          data={analysisData}
+          loading={loading}
+          onRefresh={handleAnalyze}
+          symbol={activeAsset.symbol}
+          interval={activeTimeframe.label}
+        />
+      </div>
     </div>
   )
 }
@@ -237,263 +402,31 @@ function AnalysisCard({ data, loading, onRefresh, symbol, interval }) {
           const cleanLine = line.replace(/^#+\s*/, '').replace(/\*\*/g, '')
 
           if (isTitle) return (
-            <div key={i} style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.08em', marginTop: 10, marginBottom: 4 }}>
-              {cleanLine.toUpperCase()}
+            <div key={i} style={{
+              fontWeight: 600,
+              margin: '12px 0 8px 0',
+              color: 'var(--text-primary)'
+            }}>
+              {cleanLine}
             </div>
           )
+
           if (isBullet) return (
-            <div key={i} style={{ paddingLeft: 8, borderLeft: '2px solid var(--border-bright)', marginBottom: 4, color: 'var(--text-primary)' }}>
-              {cleanLine.replace(/^[-•]\s*/, '')}
+            <div key={i} style={{ marginBottom: 6 }}>
+              <span style={{ marginRight: 8 }}>•</span>
+              <span>{cleanLine}</span>
             </div>
           )
-          return <div key={i} style={{ marginBottom: 3 }}>{cleanLine}</div>
+
+          return (
+            <div key={i} style={{ marginBottom: 6 }}>
+              {cleanLine}
+            </div>
+          )
         })}
       </div>
     </div>
   )
 }
 
-// ─── Historical Analysis ──────────────────────────────────────────────────────
-function HistoricalAnalysis({ analyses, symbol }) {
-  const [expanded, setExpanded] = useState(false)
-
-  if (!analyses || analyses.length === 0) return null
-
-  return (
-    <div style={{ marginTop: 24 }}>
-      <div
-        onClick={() => setExpanded(!expanded)}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          cursor: 'pointer',
-          padding: '12px 0',
-          borderBottom: '1px solid var(--border)',
-          marginBottom: 8
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <ChevronDown size={16} style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
-            {expanded ? 'Masquer' : 'Voir'} l'historique ({analyses.length})
-          </span>
-        </div>
-      </div>
-
-      {expanded && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {analyses.slice(0, 3).map((analysis, index) => (
-            <div key={index} style={{
-              background: 'var(--surface-low)',
-              borderRadius: 12,
-              padding: 12,
-              border: '1px solid var(--border)',
-              fontSize: 12,
-              color: 'var(--text-primary)'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ color: 'var(--text-secondary)' }}>{new Date(analysis.timestamp).toLocaleString('fr-FR')}</span>
-                <span style={{
-                  padding: '2px 8px',
-                  borderRadius: 12,
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: analysis.recommendation === 'BUY' ? '#10b981' : analysis.recommendation === 'SELL' ? '#ef4444' : '#f59e0b',
-                  background: analysis.recommendation === 'BUY' ? '#10b98115' : analysis.recommendation === 'SELL' ? '#ef444415' : '#f59e0b15'
-                }}>
-                  {analysis.recommendation}
-                </span>
-              </div>
-              <div style={{ fontSize: 11, lineHeight: 1.5 }}>
-                {analysis.summary}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ─── Main Page ────────────────────────────────────────────────────────────────
-export default function ChartAnalysis() {
-  const navigate = useNavigate()
-  const [asset, setAsset] = useState(ASSETS[0])
-  const [tf, setTf] = useState(TIMEFRAMES[3])
-  const [analysis, setAnalysis] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [showAssets, setShowAssets] = useState(false)
-  const [showTimeframes, setShowTimeframes] = useState(false)
-  const [historicalAnalyses, setHistoricalAnalyses] = useState([])
-  const chartUid = useRef(`tv_${Date.now()}`)
-
-  useEffect(() => {
-    setAnalysis(null)
-    setShowAssets(false)
-    setShowTimeframes(false)
-  }, [asset, tf])
-
-  const saveAnalysis = useCallback((analysisData) => {
-    const newAnalysis = {
-      timestamp: new Date().toISOString(),
-      symbol: asset.symbol,
-      interval: tf.label,
-      recommendation: analysisData.includes('BUY') ? 'BUY' : analysisData.includes('SELL') ? 'SELL' : 'HOLD',
-      summary: analysisData.split('\n')[0].substring(0, 100) + '...',
-      fullText: analysisData
-    }
-
-    setHistoricalAnalyses(prev => {
-      const updated = [newAnalysis, ...prev]
-      localStorage.setItem(`chartAnalysis_${asset.symbol}_${tf.label}`, JSON.stringify(updated))
-      return updated.slice(0, 3)
-    })
-  }, [asset, tf])
-
-  const loadHistoricalAnalyses = useCallback(() => {
-    const key = `chartAnalysis_${asset.symbol}_${tf.label}`
-    const saved = localStorage.getItem(key)
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved)
-        setHistoricalAnalyses(parsed.slice(0, 3))
-      } catch {
-        setHistoricalAnalyses([])
-      }
-    }
-  }, [asset, tf])
-
-  useEffect(() => {
-    loadHistoricalAnalyses()
-  }, [loadHistoricalAnalyses])
-
-  const runAnalysis = useCallback(async () => {
-    setLoading(true)
-    setAnalysis(null)
-    try {
-      const res = await fetch('/api/brain', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: `Analyse le chart de ${asset.symbol} en ${tf.api}, identifie les niveaux clés, patterns, support/résistance, et donne une recommendation. Format: Niveaux clés: [supports, résistances], Patterns: [liste], Sentiment: [score], Conclusion: [recommandation].`
-        })
-      })
-
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
-      const data = await res.json()
-      const analysisText = data.analysis || data.response || "Analyse non disponible"
-
-      setAnalysis(analysisText)
-      saveAnalysis(analysisText)
-    } catch (e) {
-      setAnalysis(`Erreur: ${e.message}`)
-    }
-    setLoading(false)
-  }, [asset, tf, saveAnalysis])
-
-  return (
-    <div style={{
-      minHeight: '100dvh',
-      background: 'var(--bg)',
-      color: 'var(--text-primary)',
-      display: 'flex',
-      flexDirection: 'column',
-      fontFamily: 'JetBrains Mono, monospace'
-    }}>
-
-      {/* Header */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        padding: '0 14px',
-        paddingTop: 'max(12px, env(safe-area-inset-top, 0px))',
-        paddingBottom: 10,
-        borderBottom: '1px solid var(--border)',
-        background: 'var(--surface-high)'
-      }}>
-        <button onClick={() => navigate(-1)} style={{
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          color: 'var(--text-primary)',
-          padding: 4
-        }}>
-          <ArrowLeft size={20} />
-        </button>
-
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '6px 12px',
-            borderRadius: 12,
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            cursor: 'pointer',
-            fontSize: 13
-          }}>
-            <span style={{ fontWeight: 600 }}>{asset.label}</span>
-            <ChevronDown size={16} />
-          </div>
-
-          <div style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '6px 12px',
-            borderRadius: 12,
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            cursor: 'pointer',
-            fontSize: 13
-          }}>
-            <span style={{ fontWeight: 600 }}>{tf.label}</span>
-            <ChevronDown size={16} />
-          </div>
-        </div>
-      </div>
-
-      {/* TradingView Chart */}
-      <div style={{
-        flex: 1,
-        minHeight: 300,
-        background: 'var(--surface-high)',
-        position: 'relative'
-      }}>
-        <TVChart tvSymbol={asset.tv} tvInterval={tf.tv} uid={chartUid.current} />
-      </div>
-
-      {/* Analysis Section */}
-      <div style={{
-        padding: '20px 14px',
-        background: 'var(--surface-high)'
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          marginBottom: 16
-        }}>
-          <Brain size={18} color="var(--neon)" />
-          <span style={{ fontSize: 14, fontWeight: 600 }}>Analyse IA</span>
-        </div>
-
-        <AnalysisCard
-          data={analysis}
-          loading={loading}
-          onRefresh={runAnalysis}
-          symbol={asset.symbol}
-          interval={tf.label}
-        />
-
-        <HistoricalAnalysis analyses={historicalAnalyses} symbol={asset.symbol} />
-      </div>
-    </div>
-  )
-}
+export default ChartAnalysis
