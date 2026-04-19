@@ -15,8 +15,6 @@ const NewsCard = ({ title, source, time, url }) => {
         color: 'var(--text-primary)',
         borderBottom: '1px solid var(--border)',
         fontFamily: 'JetBrains Mono, monospace',
-        fontSize: '13px',
-        lineHeight: '1.4',
         transition: 'background 0.2s'
       }}
       onMouseEnter={(e) => {
@@ -26,11 +24,29 @@ const NewsCard = ({ title, source, time, url }) => {
         e.currentTarget.style.background = 'transparent';
       }}
     >
-      <div style={{ marginBottom: '4px' }}>
-        <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>{source}</span>
-        <span style={{ color: 'var(--text-muted)', fontSize: '11px', marginLeft: '8px' }}>{time}</span>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        marginBottom: '4px',
+        fontSize: '11px',
+        fontWeight: 600,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase'
+      }}>
+        <span style={{ color: 'var(--neon-dim)' }}>{source}</span>
+        <span style={{ color: 'var(--text-muted)' }}>{time}</span>
       </div>
-      <div style={{ fontWeight: 500 }}>{title}</div>
+      <div style={{
+        fontSize: '14px',
+        fontWeight: 600,
+        lineHeight: '1.4',
+        display: '-webkit-box',
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: 'vertical',
+        overflow: 'hidden'
+      }}>
+        {title}
+      </div>
     </a>
   );
 };
