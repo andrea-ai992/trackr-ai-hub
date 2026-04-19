@@ -1,198 +1,241 @@
-// src/pages/Dashboard.jsx
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Settings, RefreshCw, TrendingUp, TrendingDown, Newspaper, Activity, ChevronRight } from 'lucide-react';
+// src/pages/Dashboard.jsx — Hub Terminal
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { TrendingUp, TrendingDown, Newspaper, Trophy, Cpu, ChevronRight, RefreshCw, Settings } from 'lucide-react'
 
-const MOVERS = [
-  { s: 'BTC',  p: 64320.10, c: 2.41 },
-  { s: 'ETH',  p: 3180.55,  c: -1.12 },
-  { s: 'SOL',  p: 148.30,   c: 4.87 },
-  { s: 'NVDA', p: 876.20,   c: 1.63 },
-  { s: 'TSLA', p: 175.40,   c: -2.34 },
-  { s: 'AAPL', p: 189.60,   c: 0.82 },
-  { s: 'SPY',  p: 521.30,   c: 0.44 },
-  { s: 'AMZN', p: 185.90,   c: -0.71 },
-];
+// ── Static data (remplacer par API plus tard) ─────────────────────────────
+const PRICES = [
+  { s: 'BTC',  p: 64320, c: +2.41, color: '#f7931a' },
+  { s: 'ETH',  p: 3181,  c: -1.12, color: '#627eea' },
+  { s: 'SOL',  p: 148.3, c: +4.87, color: '#9945ff' },
+  { s: 'NVDA', p: 876,   c: +1.63, color: '#76b900' },
+  { s: 'TSLA', p: 175,   c: -2.34, color: '#cc0000' },
+  { s: 'SPY',  p: 521,   c: +0.44, color: '#00d4ff' },
+  { s: 'AAPL', p: 189,   c: +0.82, color: '#888' },
+  { s: 'AMZN', p: 186,   c: -0.71, color: '#ff9900' },
+]
 
-const NEWS = [
-  { id: 0, title: 'Fed signals rate cut in Q3 amid cooling inflation data', src: 'Reuters', t: '3m' },
-  { id: 1, title: 'Bitcoin ETF inflows hit $800M in single session record', src: 'Bloomberg', t: '12m' },
-  { id: 2, title: 'NVDA earnings beat consensus by 18% on AI data center demand', src: 'WSJ', t: '28m' },
-  { id: 3, title: 'ECB holds rates steady, warns of prolonged economic uncertainty', src: 'FT', t: '1h' },
-  { id: 4, title: 'Solana network processes 65k TPS in stress test', src: 'CoinDesk', t: '1h' },
-];
+const HEADLINES = [
+  { id: 0, t: 'Fed signals rate cut Q3 — inflation cools to 2.8%', src: 'Reuters', ago: '4m' },
+  { id: 1, t: 'BTC ETF inflows $800M single session — record flows', src: 'Bloomberg', ago: '11m' },
+  { id: 2, t: 'NVDA Q2 earnings +18% beat — AI demand accelerates', src: 'WSJ', ago: '29m' },
+  { id: 3, t: 'PSG 3-1 Monaco — Mbappé doublé en Ligue 1', src: 'L\'Équipe', ago: '1h' },
+]
 
-const SPARK = [0.3, 0.5, 0.4, 0.7, 0.6, 0.85, 0.75, 0.9, 0.8, 1.0];
-function sparkPath(pts) {
-  return pts.map((y, i) => `${i === 0 ? 'M' : 'L'}${(i / (pts.length - 1)) * 100},${30 - y * 25}`).join(' ');
+const NEXT_MATCH = { home: 'PSG', away: 'Dortmund', comp: 'UCL', date: 'Mer 22 Avr', time: '21:00' }
+
+const SIGNALS = [
+  { s: 'BTC',  sig: 'BUY',  rsi: 28 },
+  { s: 'ETH',  sig: 'HOLD', rsi: 51 },
+  { s: 'NVDA', sig: 'BUY',  rsi: 32 },
+]
+
+const SPARK = [0.4, 0.55, 0.42, 0.68, 0.6, 0.82, 0.75, 0.88, 0.78, 1.0]
+function spark(pts) {
+  return pts.map((y, i) => `${i === 0 ? 'M' : 'L'}${(i / (pts.length - 1)) * 100},${28 - y * 22}`).join(' ')
 }
 
-function FearGreed({ value }) {
-  const r = 34;
-  const circ = Math.PI * r;
-  const offset = circ - (value / 100) * circ;
-  const color = value > 60 ? 'var(--neon)' : value < 40 ? '#ff4444' : '#f59e0b';
-  const label = value > 60 ? 'Greed' : value < 40 ? 'Fear' : 'Neutral';
+function FG({ v }) {
+  const c = v > 60 ? '#00ff88' : v < 40 ? '#ff3b3b' : '#ff9500'
+  const circ = Math.PI * 34
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-      <svg width="80" height="46" viewBox="0 0 80 46">
-        <path d="M8,44 A34,34 0 0,1 72,44" fill="none" stroke="var(--surface-high)" strokeWidth="7" strokeLinecap="round" />
-        <path d="M8,44 A34,34 0 0,1 72,44" fill="none" stroke={color} strokeWidth="7" strokeLinecap="round"
-          strokeDasharray={circ} strokeDashoffset={offset} />
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+      <svg width="72" height="42" viewBox="0 0 80 46">
+        <path d="M8,44 A34,34 0 0,1 72,44" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="6" strokeLinecap="round" />
+        <path d="M8,44 A34,34 0 0,1 72,44" fill="none" stroke={c} strokeWidth="6" strokeLinecap="round"
+          strokeDasharray={circ} strokeDashoffset={circ - (v / 100) * circ} />
       </svg>
-      <div style={{ fontSize: 20, fontWeight: 700, color, marginTop: -8 }}>{value}</div>
-      <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: c, marginTop: -6 }}>{v}</div>
+      <div style={{ fontSize: 9, color: '#444', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        {v > 60 ? 'Greed' : v < 40 ? 'Fear' : 'Neutral'}
+      </div>
     </div>
-  );
+  )
 }
+
+const G = ({ children, style = {} }) => (
+  <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, ...style }}>
+    {children}
+  </div>
+)
 
 export default function Dashboard() {
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [fg, setFg] = useState(72);
-  const [pv, setPv] = useState(42893.24);
-  const [pc, setPc] = useState(3.12);
+  const navigate = useNavigate()
+  const [loading, setLoading] = useState(true)
+  const [fg, setFg] = useState(68)
+  const [pv, setPv] = useState(42893.24)
+  const [pc, setPc] = useState(3.12)
 
   const refresh = useCallback(() => {
-    setLoading(true);
+    setLoading(true)
     setTimeout(() => {
-      setFg(Math.floor(Math.random() * 40) + 50);
-      setPv(42893.24 + (Math.random() - 0.5) * 1000);
-      setPc(+(Math.random() * 6 - 1).toFixed(2));
-      setLoading(false);
-    }, 600);
-  }, []);
+      setFg(Math.floor(Math.random() * 40) + 50)
+      setPv(42893 + (Math.random() - 0.5) * 800)
+      setPc(+(Math.random() * 7 - 1.5).toFixed(2))
+      setLoading(false)
+    }, 500)
+  }, [])
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => { refresh() }, [])
+
+  const $ = (n) => n < 1000 ? n.toFixed(2) : n.toLocaleString('en-US', { maximumFractionDigits: 0 })
 
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--bg)', fontFamily: "'JetBrains Mono', monospace", paddingBottom: 'calc(72px + env(safe-area-inset-bottom))' }}>
-      <div style={{ position: 'sticky', top: 0, zIndex: 30, background: 'rgba(8,8,8,0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid var(--border)', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div style={{ minHeight: '100dvh', background: '#000', fontFamily: "'JetBrains Mono', monospace", color: '#f0f0f0', paddingBottom: 'calc(64px + env(safe-area-inset-bottom))' }}>
+
+      {/* ── Header ── */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 30, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--neon)', boxShadow: '0 0 6px var(--neon)', animation: 'pulse 2s infinite' }} />
-          <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.02em' }}>TRACKR</span>
-          <span style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>TERMINAL</span>
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#00ff88', animation: 'pulse 2s infinite' }} />
+          <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em' }}>TRACKR</span>
+          <span style={{ fontSize: 9, color: '#444', letterSpacing: '0.1em', textTransform: 'uppercase' }}>HUB</span>
         </div>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <button onClick={refresh} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}>
-            <RefreshCw size={15} style={loading ? { animation: 'spin 1s linear infinite' } : {}} />
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={refresh} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#444', padding: 4, display: 'flex' }}>
+            <RefreshCw size={14} style={loading ? { animation: 'spin 1s linear infinite' } : {}} />
           </button>
-          <button onClick={() => navigate('/settings')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}>
-            <Settings size={15} />
+          <button onClick={() => navigate('/settings')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#444', padding: 4, display: 'flex' }}>
+            <Settings size={14} />
           </button>
         </div>
       </div>
 
       {loading ? (
-        <div style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {[90, 120, 60, 100, 80].map((w, i) => (
-            <div key={i} style={{ height: 14, width: `${w}%`, borderRadius: 4, background: 'var(--surface-high)', animation: 'pulse 1.4s ease-in-out infinite alternate' }} />
+        <div style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[100, 80, 60, 90, 70].map((w, i) => (
+            <div key={i} style={{ height: 13, width: `${w}%`, borderRadius: 4, background: 'rgba(255,255,255,0.05)', animation: 'pulse 1.4s ease-in-out infinite alternate' }} />
           ))}
         </div>
-      ) : (
-        <>
-          <div style={{ padding: '20px 16px 0' }}>
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Portfolio Value</div>
-                  <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em' }}>
-                    ${pv.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                    {pc >= 0 ? <TrendingUp size={12} color="var(--neon)" /> : <TrendingDown size={12} color="#ff4444" />}
-                    <span style={{ fontSize: 13, fontWeight: 600, color: pc >= 0 ? 'var(--neon)' : '#ff4444' }}>
-                      {pc >= 0 ? '+' : ''}{pc}% today
-                    </span>
-                  </div>
+      ) : <>
+
+        {/* ── Portfolio card ── */}
+        <div style={{ padding: '16px 16px 0' }}>
+          <G style={{ padding: '14px 16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ fontSize: 9, color: '#444', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Portfolio</div>
+                <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1 }}>
+                  ${pv.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
-                <svg width="110" height="36" viewBox="0 0 100 30" preserveAspectRatio="none" style={{ paddingTop: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6 }}>
+                  {pc >= 0
+                    ? <TrendingUp size={11} color="#00ff88" />
+                    : <TrendingDown size={11} color="#ff3b3b" />}
+                  <span style={{ fontSize: 12, fontWeight: 600, color: pc >= 0 ? '#00ff88' : '#ff3b3b' }}>
+                    {pc >= 0 ? '+' : ''}{pc}% today
+                  </span>
+                </div>
+              </div>
+              <div style={{ paddingTop: 4 }}>
+                <svg width="100" height="32" viewBox="0 0 100 30" preserveAspectRatio="none">
                   <defs>
-                    <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="var(--neon)" stopOpacity="0.3" />
-                      <stop offset="100%" stopColor="var(--neon)" stopOpacity="0" />
+                    <linearGradient id="spg" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#00ff88" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="#00ff88" stopOpacity="0" />
                     </linearGradient>
                   </defs>
-                  <path d={sparkPath(SPARK) + ' L100,30 L0,30 Z'} fill="url(#sg)" />
-                  <path d={sparkPath(SPARK)} fill="none" stroke="var(--neon)" strokeWidth="1.5" strokeLinejoin="round" />
+                  <path d={spark(SPARK) + ' L100,30 L0,30 Z'} fill="url(#spg)" />
+                  <path d={spark(SPARK)} fill="none" stroke="#00ff88" strokeWidth="1.5" strokeLinejoin="round" />
                 </svg>
               </div>
             </div>
-          </div>
+          </G>
+        </div>
 
-          <div style={{ padding: '14px 0 0', overflowX: 'auto', scrollbarWidth: 'none' }}>
-            <div style={{ display: 'flex', gap: 8, padding: '0 16px', width: 'max-content' }}>
-              {MOVERS.map(m => (
-                <div key={m.s} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 12px', minWidth: 90 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em' }}>{m.s}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>${m.p < 1000 ? m.p.toFixed(2) : m.p.toLocaleString()}</div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: m.c >= 0 ? 'var(--neon)' : '#ff4444', marginTop: 1 }}>{m.c >= 0 ? '+' : ''}{m.c}%</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ padding: '14px 16px 0', display: 'grid', gridTemplateColumns: '1fr auto', gap: 10 }}>
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px' }}>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Signals</div>
-              {[{ s: 'BTC', sig: 'BUY' }, { s: 'ETH', sig: 'HOLD' }, { s: 'NVDA', sig: 'BUY' }].map(item => (
-                <div key={item.s} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: '1px solid var(--border)' }}>
-                  <span style={{ fontSize: 12, fontWeight: 600 }}>{item.s}</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999,
-                    background: item.sig === 'BUY' ? 'rgba(0,255,136,0.1)' : 'rgba(85,85,85,0.2)',
-                    color: item.sig === 'BUY' ? 'var(--neon)' : 'var(--text-muted)',
-                    border: `1px solid ${item.sig === 'BUY' ? 'var(--border-bright)' : 'transparent'}` }}>{item.sig}</span>
-                </div>
-              ))}
-              <button onClick={() => navigate('/signals')} style={{ background: 'none', border: 'none', cursor: 'pointer', marginTop: 8, fontSize: 11, color: 'var(--neon)', display: 'flex', alignItems: 'center', gap: 2 }}>
-                All signals <ChevronRight size={12} />
-              </button>
-            </div>
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>F&G</div>
-              <FearGreed value={fg} />
-            </div>
-          </div>
-
-          <div style={{ padding: '14px 16px 0' }}>
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
-              <div style={{ padding: '12px 14px 10px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Newspaper size={13} color="var(--text-muted)" />
-                  <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>News</span>
-                </div>
-                <button onClick={() => navigate('/markets?tab=news')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: 'var(--neon)', display: 'flex', alignItems: 'center', gap: 2 }}>
-                  More <ChevronRight size={11} />
-                </button>
-              </div>
-              {NEWS.map((item, i) => (
-                <div key={item.id} style={{ padding: '10px 14px', borderBottom: i < NEWS.length - 1 ? '1px solid var(--border)' : 'none', display: 'flex', justifyContent: 'space-between', gap: 10, cursor: 'pointer' }}
-                  onClick={() => navigate('/markets?tab=news')}>
-                  <div style={{ fontSize: 12, lineHeight: 1.4, flex: 1 }}>{item.title}</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
-                    <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--neon)' }}>{item.src}</span>
-                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{item.t}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ padding: '14px 16px 0', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-            {[
-              { label: 'Markets', icon: TrendingUp, to: '/markets' },
-              { label: 'Signals', icon: Activity, to: '/signals' },
-              { label: 'AI', icon: Activity, to: '/ai' },
-            ].map(({ label, icon: Icon, to }) => (
-              <button key={label} onClick={() => navigate(to)}
-                style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace" }}>
-                <Icon size={18} color="var(--neon)" />
-                <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{label}</span>
-              </button>
+        {/* ── Prices ticker ── */}
+        <div style={{ padding: '12px 0 0', overflowX: 'auto', scrollbarWidth: 'none' }}>
+          <div style={{ display: 'flex', gap: 6, padding: '0 16px', width: 'max-content' }}>
+            {PRICES.map(p => (
+              <G key={p.s} style={{ padding: '8px 12px', minWidth: 84, borderLeft: `2px solid ${p.c >= 0 ? '#00ff88' : '#ff3b3b'}` }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.04em' }}>{p.s}</div>
+                <div style={{ fontSize: 11, color: '#888', marginTop: 1 }}>${$(p.p)}</div>
+                <div style={{ fontSize: 10, fontWeight: 600, color: p.c >= 0 ? '#00ff88' : '#ff3b3b', marginTop: 2 }}>{p.c >= 0 ? '+' : ''}{p.c}%</div>
+              </G>
             ))}
           </div>
-        </>
-      )}
+        </div>
+
+        {/* ── Signals + F&G row ── */}
+        <div style={{ padding: '12px 16px 0', display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
+          <G style={{ padding: '12px 14px' }}>
+            <div style={{ fontSize: 9, color: '#444', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Signals</div>
+            {SIGNALS.map(s => {
+              const c = s.sig === 'BUY' ? '#00ff88' : s.sig === 'SELL' ? '#ff3b3b' : '#444'
+              return (
+                <div key={s.s} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ fontSize: 12, fontWeight: 600 }}>{s.s}</span>
+                  <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: `${c}12`, color: c, border: `1px solid ${c}40` }}>{s.sig}</span>
+                </div>
+              )
+            })}
+            <button onClick={() => navigate('/signals')} style={{ background: 'none', border: 'none', cursor: 'pointer', marginTop: 8, fontSize: 10, color: '#00ff88', display: 'flex', alignItems: 'center', gap: 2, padding: 0 }}>
+              All signals <ChevronRight size={11} />
+            </button>
+          </G>
+          <G style={{ padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+            <div style={{ fontSize: 9, color: '#444', textTransform: 'uppercase', letterSpacing: '0.1em' }}>F&G</div>
+            <FG v={fg} />
+          </G>
+        </div>
+
+        {/* ── Next match ── */}
+        <div style={{ padding: '12px 16px 0' }}>
+          <G style={{ padding: '12px 14px', borderLeft: '2px solid #ff6b35', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Trophy size={13} color="#ff6b35" />
+              <div>
+                <div style={{ fontSize: 9, color: '#ff6b35', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 2 }}>{NEXT_MATCH.comp} · Prochain match</div>
+                <div style={{ fontSize: 13, fontWeight: 700 }}>{NEXT_MATCH.home} <span style={{ color: '#444' }}>vs</span> {NEXT_MATCH.away}</div>
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#ff6b35' }}>{NEXT_MATCH.time}</div>
+              <div style={{ fontSize: 10, color: '#444' }}>{NEXT_MATCH.date}</div>
+            </div>
+          </G>
+        </div>
+
+        {/* ── News ── */}
+        <div style={{ padding: '12px 16px 0' }}>
+          <G style={{ overflow: 'hidden' }}>
+            <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Newspaper size={12} color="#444" />
+                <span style={{ fontSize: 9, color: '#444', textTransform: 'uppercase', letterSpacing: '0.1em' }}>News</span>
+              </div>
+              <button onClick={() => navigate('/markets?tab=news')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 9, color: '#00d4ff', display: 'flex', alignItems: 'center', gap: 1 }}>
+                Tout voir <ChevronRight size={10} />
+              </button>
+            </div>
+            {HEADLINES.map((h, i) => (
+              <div key={h.id} onClick={() => navigate('/markets?tab=news')} style={{ padding: '9px 14px', borderBottom: i < HEADLINES.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none', display: 'flex', gap: 10, cursor: 'pointer' }}>
+                <div style={{ fontSize: 12, color: '#ccc', lineHeight: 1.4, flex: 1 }}>{h.t}</div>
+                <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                  <div style={{ fontSize: 9, fontWeight: 600, color: '#00d4ff' }}>{h.src}</div>
+                  <div style={{ fontSize: 9, color: '#444', marginTop: 1 }}>{h.ago}</div>
+                </div>
+              </div>
+            ))}
+          </G>
+        </div>
+
+        {/* ── Quick nav ── */}
+        <div style={{ padding: '12px 16px 0', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
+          {[
+            { label: 'Markets', icon: TrendingUp,  to: '/markets', color: '#00d4ff' },
+            { label: 'Sports',  icon: Trophy,       to: '/sports',  color: '#ff6b35' },
+            { label: 'Lea AI',  icon: Cpu,          to: '/ai',      color: '#b06dff' },
+          ].map(({ label, icon: Icon, to, color }) => (
+            <button key={label} onClick={() => navigate(to)}
+              style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${color}22`, borderRadius: 10, padding: '11px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace", transition: 'border-color 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = color + '55'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = color + '22'}>
+              <Icon size={17} color={color} />
+              <span style={{ fontSize: 10, color: '#888' }}>{label}</span>
+            </button>
+          ))}
+        </div>
+      </>}
     </div>
-  );
+  )
 }

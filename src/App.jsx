@@ -48,11 +48,12 @@ function AlertWatcher() {
 function getTabIndex(path) {
   if (path === '/' || path === '/dashboard') return 0
   if (path.startsWith('/markets') || path.startsWith('/stocks/') || path.startsWith('/crypto/') || path.startsWith('/news')) return 1
-  if (path.startsWith('/ai') || path.startsWith('/brain') || path.startsWith('/agents') || path.startsWith('/andy')) return 2
-  if (path.startsWith('/more') || path.startsWith('/sports') || path.startsWith('/flights') || path.startsWith('/portfolio') ||
+  if (path.startsWith('/sports')) return 2
+  if (path.startsWith('/ai') || path.startsWith('/brain') || path.startsWith('/agents') || path.startsWith('/andy')) return 3
+  if (path.startsWith('/more') || path.startsWith('/flights') || path.startsWith('/portfolio') ||
     path.startsWith('/translator') || path.startsWith('/sneakers') || path.startsWith('/watches') ||
     path.startsWith('/real-estate') || path.startsWith('/business') || path.startsWith('/patterns')
-  ) return 3
+  ) return 4
   return -1
 }
 

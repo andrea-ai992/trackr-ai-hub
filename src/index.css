@@ -8,52 +8,60 @@
   padding: 0;
 }
 
-/* ─── Design tokens — Black + Neon Green ─────────────────────────────────── */
+/* ─── Design tokens — Futuriste / Terminal Noir ──────────────────────────── */
 :root {
-  /* Backgrounds */
-  --bg:                  #080808;
-  --surface:             #0f0f0f;
-  --surface-low:         #111111;
-  --surface-container:   #141414;
-  --surface-high:        #1a1a1a;
-  --surface-highest:     #222222;
-  --surface-lowest:      #050505;
-  --surface-variant:     #1a1a1a;
+  /* ── Backgrounds — vrai noir ── */
+  --bg:                  #000000;
+  --surface:             #080808;
+  --surface-low:         #0d0d0d;
+  --surface-container:   #0f0f0f;
+  --surface-high:        #141414;
+  --surface-highest:     #1c1c1c;
+  --surface-lowest:      #020202;
+  --surface-variant:     #111111;
 
-  /* Neon Green */
+  /* ── Neon vert — sec, pas de flou ── */
   --neon:                #00ff88;
   --neon-dim:            #00cc66;
-  --neon-glow:           rgba(0,255,136,0.15);
-  --neon-glow-soft:      rgba(0,255,136,0.08);
+  --neon-glow:           rgba(0,255,136,0.06);
+  --neon-glow-soft:      rgba(0,255,136,0.04);
 
-  /* Legacy aliases — keep compatibility with existing components */
-  --cyan:                #00ff88;
-  --cyan-soft:           #ccffe8;
-  --purple:              #00cc66;
-  --purple-deep:         #009944;
-  --purple-mid:          #00aa55;
+  /* ── Couleurs par section ── */
+  --accent-markets:      #00d4ff;   /* cyan — marchés */
+  --accent-sports:       #ff6b35;   /* orange — sport */
+  --accent-ai:           #b06dff;   /* violet — IA/Lea */
+  --accent-red:          #ff3b3b;   /* rouge — baisse */
+
+  /* ── Legacy aliases ── */
+  --cyan:                #00d4ff;
+  --cyan-soft:           #ccf7ff;
+  --purple:              #b06dff;
+  --purple-deep:         #7c3aed;
+  --purple-mid:          #9455f0;
   --secondary:           #00ff88;
   --secondary-deep:      #00cc66;
   --color-primary:       #00ff88;
-  --color-secondary:     #00cc66;
+  --color-secondary:     #00d4ff;
 
-  /* Text */
-  --text-primary:        #e0e0e0;
-  --text-secondary:      #aaaaaa;
-  --text-muted:          #555555;
+  /* ── Texte ── */
+  --text-primary:        #f0f0f0;
+  --text-secondary:      #888888;
+  --text-muted:          #444444;
 
-  /* Borders */
-  --border:              rgba(0,255,136,0.08);
-  --border-bright:       rgba(0,255,136,0.18);
+  /* ── Borders — neutres blancs, pas neon ── */
+  --border:              rgba(255,255,255,0.07);
+  --border-bright:       rgba(255,255,255,0.15);
+  --border-neon:         rgba(0,255,136,0.35);
 
-  /* Glass */
-  --glass-bg:            rgba(15,15,15,0.80);
-  --glass-blur:          blur(20px);
+  /* ── Glass cards ── */
+  --glass-bg:            rgba(255,255,255,0.03);
+  --glass-border:        rgba(255,255,255,0.07);
+  --glass-blur:          blur(12px);
 
-  /* Glow */
-  --glow-primary:        0 0 24px rgba(0,255,136,0.12);
-  --glow-green:          0 0 24px rgba(0,255,136,0.18);
-  --glow-red:            0 0 24px rgba(239,68,68,0.15);
+  /* ── Pas de glow — neon sec ── */
+  --glow-primary:        none;
+  --glow-green:          none;
+  --glow-red:            none;
 }
 
 body {
@@ -162,8 +170,7 @@ h1, h2, h3, h4, .font-headline {
 }
 
 .card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(0, 255, 136, 0.15);
+  border-color: rgba(255,255,255,0.15);
 }
 
 /* ─── Page transitions — iOS spring physics ──────────────────────────────── */
