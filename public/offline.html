@@ -1,23 +1,21 @@
-public/offline.html
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Offline - Trackr</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <title>Trackr - Offline</title>
   <style>
     :root {
-      --green: #00ff88;
+      --neon: #00ff88;
       --bg: #080808;
-      --bg2: #111;
-      --t1: #f0f0f0;
-      --t2: #888;
-      --t3: #444;
-      --border: rgba(255, 255, 255, 0.07);
+      --surface: #0f0f0f;
+      --surface-low: #111;
+      --surface-high: #1a1a1a;
+      --text-primary: #e0e0e0;
+      --text-secondary: #aaa;
+      --text-muted: #555;
+      --border: rgba(0, 255, 136, 0.08);
+      --border-bright: rgba(0, 255, 136, 0.18);
     }
 
     * {
@@ -27,150 +25,81 @@ public/offline.html
     }
 
     body {
-      font-family: 'Inter', sans-serif;
+      font-family: 'JetBrains Mono', monospace;
       background-color: var(--bg);
-      color: var(--t1);
-      min-height: 100vh;
+      color: var(--text-primary);
       display: flex;
-      flex-direction: column;
-      align-items: center;
       justify-content: center;
-      padding: 1rem;
+      align-items: center;
+      height: 100vh;
       text-align: center;
+      padding: 1rem;
     }
 
     .container {
-      max-width: 400px;
+      max-width: 375px;
       width: 100%;
+      padding: 2rem;
+      background-color: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      box-shadow: 0 0 20px rgba(0, 255, 136, 0.05);
     }
 
-    .logo {
-      font-size: 2rem;
-      font-weight: 600;
-      color: var(--green);
-      margin-bottom: 1.5rem;
+    .icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 1.5rem;
+      color: var(--neon);
     }
 
     h1 {
-      font-size: 1.5rem;
-      font-weight: 500;
+      font-size: 1.25rem;
       margin-bottom: 1rem;
+      color: var(--text-primary);
     }
 
     p {
       font-size: 0.9rem;
-      color: var(--t2);
       margin-bottom: 2rem;
+      color: var(--text-secondary);
       line-height: 1.5;
     }
 
-    .icon {
-      width: 60px;
-      height: 60px;
-      margin-bottom: 1.5rem;
-      opacity: 0.8;
-    }
-
-    .btn {
+    .button {
       display: inline-block;
       padding: 0.75rem 1.5rem;
-      background-color: var(--green);
-      color: #000;
-      text-decoration: none;
-      border-radius: 0.5rem;
-      font-weight: 500;
-      transition: background-color 0.2s;
+      background-color: var(--surface-high);
+      color: var(--neon);
+      border: 1px solid var(--border-bright);
+      border-radius: 0.25rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
     }
 
-    .btn:hover {
-      background-color: #00e67a;
+    .button:hover {
+      background-color: var(--surface);
+      border-color: var(--neon);
+    }
+
+    .button:active {
+      transform: scale(0.98);
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="logo">Trackr</div>
-    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-      <path d="M2 17l10 5 10-5"></path>
-      <path d="M2 12l10 5 10-5"></path>
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="2" width="20" height="20" rx="4" ry="4"></rect>
+      <line x1="12" y1="8" x2="12.01" y2="8"></line>
+      <line x1="12" y1="12" x2="12.01" y2="12"></line>
+      <line x1="12" y1="16" x2="12.01" y2="16"></line>
     </svg>
-    <h1>You're offline</h1>
-    <p>It seems you've lost your connection. We've cached the app for offline use.</p>
-    <a href="/" class="btn">Go to Home</a>
+    <h1>Offline Mode</h1>
+    <p>It looks like you're offline. Please check your internet connection and try again.</p>
+    <button class="button" onclick="window.location.reload()">Refresh</button>
   </div>
 </body>
 </html>
-```
-
-src/service-worker.js
-```javascript
-const CACHE_NAME = 'trackr-v1';
-const OFFLINE_URL = '/offline.html';
-const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/offline.html',
-  '/manifest.json',
-  '/assets/icons/icon-192x192.png',
-  '/assets/icons/icon-512x512.png',
-  '/assets/images/logo.svg',
-  '/src/main.jsx',
-  '/src/App.jsx',
-  '/src/index.css',
-  '/src/components/Layout.jsx',
-  '/src/components/Navbar.jsx',
-  '/src/components/Sidebar.jsx',
-  '/src/pages/Dashboard.jsx',
-  '/src/pages/Sports.jsx',
-  '/src/pages/Markets.jsx'
-];
-
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        return cache.addAll(ASSETS_TO_CACHE);
-      })
-  );
-});
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-  );
-});
-
-self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response.status === 404) {
-            return caches.match(OFFLINE_URL);
-          }
-          return response;
-        })
-        .catch(() => {
-          return caches.match(OFFLINE_URL);
-        })
-    );
-  } else {
-    event.respondWith(
-      caches.match(event.request)
-        .then((response) => {
-          return response || fetch(event.request);
-        })
-    );
-  }
-});
