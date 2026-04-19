@@ -75,8 +75,7 @@ const andy = {
       const headers = { Authorization: `Bearer ${accessToken}` };
 
       const timeout = options.timeout || DEFAULT_TIMEOUT;
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      const signal = AbortSignal.timeout(timeout);
 
       const response = await fetch(url, {
         ...options,
@@ -84,10 +83,8 @@ const andy = {
           ...headers,
           ...options.headers
         },
-        signal: controller.signal
+        signal: signal
       });
-
-      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`Request failed with status ${response.status}: ${response.statusText}`);
@@ -108,8 +105,7 @@ const andy = {
   async chat(query, timeout = DEFAULT_TIMEOUT) {
     const validatedQuery = ChatSchema.parse({ query });
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      const signal = AbortSignal.timeout(timeout);
 
       const response = await fetch('/chat', {
         method: 'POST',
@@ -117,10 +113,8 @@ const andy = {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ query: validatedQuery.query }),
-        signal: controller.signal
+        signal: signal
       });
-
-      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`Chat request failed with status ${response.status}: ${response.statusText}`);
