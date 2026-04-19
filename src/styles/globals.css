@@ -1,126 +1,44 @@
-:root {
-  --neon: #00ff88;
-  --bg: #080808;
-  --surface: #0f0f0f;
-  --surface-low: #111;
-  --surface-high: #1a1a1a;
-  --text-primary: #e0e0e0;
-  --text-secondary: #aaa;
-  --text-muted: #555;
-  --border: rgba(0, 255, 136, 0.08);
-  --border-bright: rgba(0, 255, 136, 0.18);
-}
+// src/components/BottomNav.jsx
+import { Home, TrendingUp, Newspaper, Settings, MessageSquare } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 
-body {
-  font-family: JetBrains Mono, monospace;
-  background-color: var(--bg);
-  color: var(--text-primary);
-}
+export const BottomNav = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState(location.pathname.split('/')[1] || 'dashboard');
 
-.card {
-  background-color: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border);
-  padding: 16px;
-  max-width: 520px;
-  margin: 16px auto;
-}
+  useEffect(() => {
+    setActiveTab(location.pathname.split('/')[1] || 'dashboard');
+  }, [location.pathname]);
 
-.card-title {
-  font-size: 24px;
-  font-weight: bold;
-  color: var(--text-primary);
-}
+  const navItems = [
+    { id: 'dashboard', icon: Home, label: 'Dashboard' },
+    { id: 'sports', icon: TrendingUp, label: 'Sports' },
+    { id: 'news', icon: Newspaper, label: 'News' },
+    { id: 'andy', icon: MessageSquare, label: 'Andy' },
+    { id: 'more', icon: Settings, label: 'More' }
+  ];
 
-.card-content {
-  font-size: 18px;
-  color: var(--text-secondary);
-}
-
-.hero {
-  background-color: var(--bg);
-  padding: 24px;
-  text-align: center;
-}
-
-.hero-title {
-  font-size: 48px;
-  font-weight: bold;
-  color: var(--text-primary);
-}
-
-.hero-subtitle {
-  font-size: 24px;
-  color: var(--text-secondary);
-}
-
-.sparkline {
-  width: 100%;
-  height: 100px;
-  margin: 16px auto;
-}
-
-.sparkline svg {
-  width: 100%;
-  height: 100%;
-}
-
-.top-movers {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.top-movers li {
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-.top-movers li:last-child {
-  border-bottom: none;
-}
-
-.fear-and-greed {
-  width: 100%;
-  height: 100px;
-  margin: 16px auto;
-}
-
-.fear-and-greed svg {
-  width: 100%;
-  height: 100%;
-}
-
-.news-feed {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.news-feed li {
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-.news-feed li:last-child {
-  border-bottom: none;
-}
-
-.quick-actions {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
-
-.quick-actions button {
-  background-color: var(--bg);
-  border: none;
-  padding: 16px;
-  font-size: 18px;
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.quick-actions button:hover {
-  background-color: var(--surface-high);
-}
+  return (
+    <nav className="bottom-nav">
+      <div className="nav-container">
+        {navItems.map((item) => (
+          <button
+            key={item.id}
+            className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
+            onClick={() => navigate(`/${item.id}`)}
+            aria-label={item.label}
+          >
+            <item.icon
+              size={24}
+              strokeWidth={activeTab === item.id ? 2.5 : 2}
+              className="nav-icon"
+            />
+            <span className="nav-label">{item.label}</span>
+          </button>
+        ))}
+      </div>
+    </nav>
+  );
+};
