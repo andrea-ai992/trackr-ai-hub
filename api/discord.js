@@ -148,12 +148,7 @@ async function handleDiscordStream(res, streamUrl, timeoutMs = 10000) {
               res.end()
               return
             }
-            try {
-              const parsed = JSON.parse(data)
-              res.write(`data: ${JSON.stringify(parsed)}\n\n`)
-            } catch (e) {
-              res.write(`data: ${JSON.stringify({ error: 'Failed to parse event data' })}\n\n`)
-            }
+            res.write(`data: ${data}\n\n`)
           }
         }
         pump()
@@ -288,15 +283,9 @@ async function anthropicComplete(prompt, timeoutMs = 4000, maxTimeoutMs = 30000,
               res.end()
               return
             }
-            try {
-              const parsed = JSON.parse(data)
-              res.write(`data: ${JSON.stringify(parsed)}\n\n`)
-            } catch (e) {
-              res.write(`data: ${JSON.stringify({ error: 'Failed to parse event data' })}\n\n`)
-            }
+            res.write(`data: ${data}\n\n`)
           }
         }
-
         pump()
       }).catch(err => {
         console.error('Anthropic SSE stream error:', err)
@@ -306,14 +295,13 @@ async function anthropicComplete(prompt, timeoutMs = 4000, maxTimeoutMs = 30000,
 
     pump()
   } catch (error) {
-    console.error('Anthropic API error:', error)
+    console.error('Anthropic SSE stream setup error:', error)
     res.writeHead(500, {
       'Content-Type': 'application/json',
       'Cache-Control': 'no-cache',
     })
-    res.end(JSON.stringify({ error: error.message || 'Anthropic API error' }))
-    throw error
+    res.end(JSON.stringify({ error: 'Failed to establish Anthropic SSE stream' }))
   }
 }
 
-export { handleDiscordStream, handleAgentRequest, anthropicComplete }
+export { handleDiscordStream, handleAgentRequest, getQuickSignal }
