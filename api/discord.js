@@ -2,6 +2,7 @@
 // ─── Discord Interaction Handler — 45 AnDy Agents ───────────────────────────
 // Receives slash commands from Discord, routes to agent logic
 // Background processing: res.json() sends immediately, function continues up to 60s
+// SSE export: handleDiscordStream for real-time agent updates
 
 import crypto from 'crypto'
 
@@ -223,4 +224,42 @@ async function handleAgentRequest(agent, payload) {
   }
 }
 
-export { handleDiscordStream, handleAgentRequest }
+async function anthropicComplete(prompt, timeoutMs = 4000, maxTimeoutMs = 30000) {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+  const maxTimeoutId = setTimeout(() => controller.abort(), maxTimeoutMs)
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 4096,
+        messages: [{ role: 'user', content: prompt }]
+      }),
+      signal: controller.signal
+    })
+
+    clearTimeout(timeoutId)
+    clearTimeout(maxTimeoutId)
+
+    if (!response.ok) {
+      throw new Error(`Anthropic API error: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.content[0].text
+  } catch (error) {
+    clearTimeout(timeoutId)
+    clearTimeout(maxTimeoutId)
+    console.error('Anthropic API error:', error)
+    throw error
+  }
+}
+
+export { handleDiscordStream, handleAgentRequest, anthropicComplete }
