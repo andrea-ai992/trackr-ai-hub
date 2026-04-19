@@ -106,13 +106,13 @@ export default function BottomNav() {
             left: pillStyle.left,
             width: pillStyle.width,
             backgroundColor: 'var(--surface-high)',
-            border: '1px solid var(--border)',
+            border: '1px solid var(--neon)',
             borderRadius: 999,
-            transition: 'left 250ms ease, width 250ms ease',
+            transition: 'left 250ms cubic-bezier(0.4, 0, 0.2, 1), width 250ms cubic-bezier(0.4, 0, 0.2, 1)',
             pointerEvents: 'none',
             zIndex: 0,
             boxShadow: '0 0 12px var(--neon), 0 0 20px var(--neon)',
-            opacity: 0.7,
+            opacity: 0.8,
           }}
         />
 
@@ -153,9 +153,9 @@ export default function BottomNav() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  padding: active ? '6px 16px' : '0',
+                  padding: active ? '6px 16px' : '6px',
                   borderRadius: 999,
-                  transition: 'all 300ms ease',
+                  transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
                   backgroundColor: active ? 'rgba(0, 255, 136, 0.12)' : 'transparent',
                 }}
               >
@@ -164,7 +164,7 @@ export default function BottomNav() {
                   strokeWidth={active ? 2.2 : 1.6}
                   style={{
                     color: active ? 'var(--neon)' : 'var(--text-secondary)',
-                    transition: 'color 300ms ease',
+                    transition: 'color 300ms cubic-bezier(0.4, 0, 0.2, 1)',
                   }}
                 />
                 {badge > 0 && (
@@ -198,7 +198,7 @@ export default function BottomNav() {
                   fontSize: 8,
                   fontWeight: active ? 700 : 500,
                   color: active ? 'var(--neon)' : 'var(--text-secondary)',
-                  transition: 'all 300ms ease',
+                  transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                   fontFamily: 'JetBrains Mono, monospace',
