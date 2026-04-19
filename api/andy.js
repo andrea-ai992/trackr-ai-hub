@@ -256,6 +256,57 @@ router.post('/fetch', timeoutMiddleware, validateRequest, async (req, res, next)
   }
 });
 
+// API pour récupérer les données de l'IA avec timeout externe
+router.get('/external', timeoutMiddleware, validateRequest, async (req, res, next) => {
+  try {
+    const externalUrl = req.query.url;
+    if (!externalUrl) {
+      throw new Error('URL manquante dans les paramètres de la requête');
+    }
+
+    const response = await fetchWithTimeout(externalUrl, {}, 8000);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    if (error.name === 'TimeoutError') {
+      error.message = 'Request timeout';
+      error.statusCode = 408;
+    }
+    next(error);
+  }
+});
+
+// API pour envoyer des données à une URL externe avec timeout
+router.post('/external', timeoutMiddleware, validateRequest, async (req, res, next) => {
+  try {
+    const externalUrl = req.query.url;
+    if (!externalUrl) {
+      throw new Error('URL manquante dans les paramètres de la requête');
+    }
+
+    const response = await fetchWithTimeout(externalUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body)
+    }, 8000);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    if (error.name === 'TimeoutError') {
+      error.message = 'Request timeout';
+      error.statusCode = 408;
+    }
+    next(error);
+  }
+});
+
 // Gestion des erreurs globales
 router.use(errorHandler);
 
