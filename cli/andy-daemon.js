@@ -531,6 +531,9 @@ async function executeTask(taskContent, taskName = '', isManual = false) {
       'src/pages/News.jsx', 'src/pages/More.jsx', 'src/pages/Andy.jsx',
       'src/pages/Portfolio.jsx', 'src/pages/FlightTracker.jsx', 'src/App.jsx',
       'src/pages/Signals.jsx', 'src/pages/BrainExplorer.jsx', 'src/pages/Agents.jsx',
+      'src/pages/AIControl.jsx', 'src/pages/Stocks.jsx', 'src/pages/Crypto.jsx',
+      'src/pages/ChartAnalysis.jsx', 'src/pages/BrainStatus.jsx', 'src/pages/CryptoTrader.jsx',
+      'src/components/BottomNav.jsx', 'src/components/Skeleton.jsx', 'src/components/SkeletonPage.jsx',
       'src/main.jsx', 'src/index.css', 'index.html',
       'vercel.json', 'vite.config.js', 'package.json', 'public/manifest.json',
     ].includes(o.path)))
