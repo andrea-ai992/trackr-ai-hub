@@ -1,150 +1,166 @@
 import { useState, useEffect } from 'react';
-import { ArrowUp, ArrowDown, AlertCircle, Check, X, RefreshCw } from 'lucide-react';
-
-const assets = [
-  { ticker: 'BTC', name: 'Bitcoin' },
-  { ticker: 'ETH', name: 'Ethereum' },
-  { ticker: 'NVDA', name: 'NVIDIA' },
-  { ticker: 'SOL', name: 'Solana' },
-  { ticker: 'AAPL', name: 'Apple' },
-  { ticker: 'SPY', name: 'S&P 500 ETF' },
-  { ticker: 'TSLA', name: 'Tesla' },
-  { ticker: 'LINK', name: 'Chainlink' }
-];
+import { RefreshCw } from 'lucide-react';
 
 const Signals = () => {
   const [signals, setSignals] = useState([]);
   const [filter, setFilter] = useState('Tous');
-  const [lastUpdated, setLastUpdated] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const generateSignals = () => {
-    const newSignals = assets.map(asset => {
-      const rsi = Math.floor(Math.random() * 61) + 20;
-      const volume = ['high', 'normal', 'low'][Math.floor(Math.random() * 3)];
-      const price = (Math.random() * 10000 + 10).toFixed(2);
+  const tickers = [
+    { ticker: 'BTC', name: 'Bitcoin' },
+    { ticker: 'ETH', name: 'Ethereum' },
+    { ticker: 'NVDA', name: 'NVIDIA' },
+    { ticker: 'SOL', name: 'Solana' },
+    { ticker: 'AAPL', name: 'Apple' },
+    { ticker: 'SPY', name: 'S&P 500' }
+  ];
 
-      let macdState = 'neutral';
-      if (rsi < 30) macdState = 'bullish';
-      else if (rsi > 70) macdState = 'bearish';
+  const generateSignal = () => {
+    return tickers.map(ticker => {
+      const rsi = Math.floor(Math.random() * 100);
+      const macd = (Math.random() * 20) - 10;
+      const volume = Math.floor(Math.random() * 5000000) + 1000000;
+      const priceChange = (Math.random() * 20) - 10;
+      const sentiment = Math.random() * 100;
 
-      let signal = 'HOLD';
-      if (rsi < 30 && volume === 'high') signal = 'BUY';
-      else if (rsi > 70 && volume === 'low') signal = 'SELL';
+      let signal;
+      let signalColor;
+      let score;
+
+      if (sentiment > 70) {
+        signal = 'BUY';
+        signalColor = 'var(--neon)';
+        score = Math.min(100, Math.floor(sentiment + (100 - rsi) / 2));
+      } else if (sentiment < 30) {
+        signal = 'SELL';
+        signalColor = '#ff4444';
+        score = Math.min(100, Math.floor((100 - sentiment) / 2 + rsi / 2));
+      } else {
+        signal = 'HOLD';
+        signalColor = '#ffff00';
+        score = Math.floor(sentiment);
+      }
+
+      const rsiColor = rsi > 70 ? '#ff4444' : rsi < 30 ? 'var(--neon)' : '#aaa';
+      const macdColor = macd > 0 ? 'var(--neon)' : '#ff4444';
+      const volumeColor = volume > 3000000 ? 'var(--neon)' : '#aaa';
 
       return {
-        ...asset,
-        price,
-        rsi,
-        volume,
-        macd: macdState,
-        signal,
-        score: Math.floor(Math.random() * 101)
+        ticker: ticker.ticker,
+        name: ticker.name,
+        rsi: { value: rsi, color: rsiColor },
+        macd: { value: macd.toFixed(2), color: macdColor },
+        volume: { value: (volume / 1000000).toFixed(1) + 'M', color: volumeColor },
+        priceChange: priceChange.toFixed(2) + '%',
+        sentiment: Math.floor(sentiment),
+        signal: { type: signal, color: signalColor },
+        score: score
       };
     });
-
-    setSignals(newSignals);
-    setLastUpdated(new Date());
   };
 
   useEffect(() => {
-    generateSignals();
+    const fetchSignals = () => {
+      setLoading(true);
+      const newSignals = generateSignal();
+      setSignals(newSignals);
+      setLoading(false);
+    };
+
+    fetchSignals();
   }, []);
 
-  const filteredSignals = signals.filter(signal => {
-    if (filter === 'Tous') return true;
-    return signal.signal === filter;
-  });
+  const handleRefresh = () => {
+    setLoading(true);
+    const newSignals = generateSignal();
+    setSignals(newSignals);
+    setLoading(false);
+  };
+
+  const filteredSignals = filter === 'Tous'
+    ? signals
+    : signals.filter(signal => signal.signal.type === filter);
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text-primary)] font-[JetBrains_Mono] p-4">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-4 text-[var(--neon)]">SIGNALS</h1>
-        <div className="flex items-center gap-4 mb-4">
-          <div className="flex gap-2">
-            {['Tous', 'BUY', 'SELL', 'HOLD'].map(type => (
-              <button
-                key={type}
-                onClick={() => setFilter(type)}
-                className={`px-3 py-1 rounded text-sm ${filter === type ? 'bg-[var(--neon)] text-black' : 'bg-[var(--surface)] border border-[var(--border)]'}`}
-              >
-                {type}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={generateSignals}
-            className="flex items-center gap-2 px-3 py-1 bg-[var(--surface)] border border-[var(--border)] rounded text-sm hover:bg-[var(--surface-high)] transition-colors"
-          >
-            <RefreshCw size={16} />
-            Refresh
-            {lastUpdated && (
-              <span className="text-xs text-[var(--text-secondary)]">
-                {lastUpdated.toLocaleTimeString()}
-              </span>
-            )}
-          </button>
-        </div>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-xl font-bold text-[var(--neon)]">Signaux IA Trading</h1>
+        <button
+          onClick={handleRefresh}
+          disabled={loading}
+          className="flex items-center gap-2 px-3 py-1.5 rounded bg-[var(--surface)] hover:bg-[var(--surface-high)] transition-colors disabled:opacity-50"
+        >
+          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+          <span>Rafraîchir</span>
+        </button>
       </div>
 
-      <div className="space-y-3">
+      <div className="mb-4 flex gap-2">
+        {['Tous', 'BUY', 'SELL', 'HOLD'].map((option) => (
+          <button
+            key={option}
+            onClick={() => setFilter(option)}
+            className={`px-3 py-1.5 rounded text-sm transition-colors ${
+              filter === option
+                ? 'bg-[var(--neon)] text-black font-bold'
+                : 'bg-[var(--surface)] hover:bg-[var(--surface-high)]'
+            }`}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-col gap-3">
         {filteredSignals.map((signal, index) => (
           <div
             key={index}
-            className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4 flex flex-col gap-3"
+            className="p-4 rounded-lg bg-[var(--surface)] border border-[var(--border)]"
           >
-            <div className="flex justify-between items-start">
+            <div className="flex justify-between items-start mb-3">
               <div>
-                <div className="text-xl font-bold text-[var(--neon)]">{signal.ticker}</div>
-                <div className="text-xs text-[var(--text-secondary)]">{signal.name}</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-bold text-[var(--neon)]">{signal.ticker}</span>
+                  <span className="text-sm text-[var(--text-secondary)]">{signal.name}</span>
+                </div>
+                <div className="text-sm text-[var(--text-muted)] mt-1">
+                  {signal.priceChange}
+                </div>
               </div>
               <div className="text-right">
-                <div className="text-lg font-mono">${signal.price}</div>
+                <div className="text-sm text-[var(--text-secondary)]">Score</div>
+                <div className="text-lg font-bold" style={{ color: signal.score > 70 ? 'var(--neon)' : signal.score > 30 ? '#aaa' : '#ff4444' }}>
+                  {signal.score}/100
+                </div>
               </div>
             </div>
 
-            <div className="w-full h-2 bg-[var(--surface-low)] rounded-full relative">
+            <div className="w-full bg-[var(--surface-low)] rounded-full h-1.5 mb-3">
               <div
-                className="h-full rounded-full transition-all duration-500"
+                className="h-1.5 rounded-full transition-all duration-500"
                 style={{
                   width: `${signal.score}%`,
-                  background: `linear-gradient(90deg, #ff0000 ${100 - signal.score}%, #00ff88 ${signal.score}%)`
+                  background: signal.signal.type === 'BUY'
+                    ? 'linear-gradient(90deg, #00ff88, #00aa55)'
+                    : signal.signal.type === 'SELL'
+                      ? 'linear-gradient(90deg, #ff4444, #aa0000)'
+                      : 'linear-gradient(90deg, #ffff00, #aaaa00)'
                 }}
-              />
+              ></div>
             </div>
 
             <div className="flex gap-2 flex-wrap">
-              <div className={`px-2 py-1 rounded text-xs font-mono ${
-                signal.rsi < 30 ? 'bg-blue-900/30 text-blue-300' :
-                signal.rsi > 70 ? 'bg-red-900/30 text-red-300' :
-                'bg-[var(--surface-low)] text-[var(--text-secondary)]'
-              }`}>
-                RSI {signal.rsi}
+              <div className="px-2 py-1 rounded text-xs bg-[var(--surface-high)] border border-[var(--border)]" style={{ color: signal.rsi.color }}>
+                RSI {signal.rsi.value}
               </div>
-              <div className={`px-2 py-1 rounded text-xs font-mono ${
-                signal.macd === 'bullish' ? 'bg-green-900/30 text-green-300' :
-                signal.macd === 'bearish' ? 'bg-red-900/30 text-red-300' :
-                'bg-[var(--surface-low)] text-[var(--text-secondary)]'
-              }`}>
-                MACD {signal.macd}
+              <div className="px-2 py-1 rounded text-xs bg-[var(--surface-high)] border border-[var(--border)]" style={{ color: signal.macd.color }}>
+                MACD {signal.macd.value}
               </div>
-              <div className={`px-2 py-1 rounded text-xs font-mono ${
-                signal.volume === 'high' ? 'bg-purple-900/30 text-purple-300' :
-                signal.volume === 'low' ? 'bg-orange-900/30 text-orange-300' :
-                'bg-[var(--surface-low)] text-[var(--text-secondary)]'
-              }`}>
-                VOL {signal.volume}
+              <div className="px-2 py-1 rounded text-xs bg-[var(--surface-high)] border border-[var(--border)]" style={{ color: signal.volume.color }}>
+                Volume {signal.volume.value}
               </div>
-            </div>
-
-            <div className="flex justify-between items-center">
-              <div className={`flex items-center gap-1 px-3 py-1 rounded text-sm font-mono ${
-                signal.signal === 'BUY' ? 'bg-green-900/30 text-green-300 border border-green-500/30' :
-                signal.signal === 'SELL' ? 'bg-red-900/30 text-red-300 border border-red-500/30' :
-                'bg-[var(--surface-low)] text-[var(--text-secondary)] border border-[var(--border)]'
-              }`}>
-                {signal.signal === 'BUY' && <ArrowUp size={14} />}
-                {signal.signal === 'SELL' && <ArrowDown size={14} />}
-                {signal.signal}
+              <div className="px-2 py-1 rounded text-xs bg-[var(--surface-high)] border border-[var(--border)]" style={{ color: signal.signal.color }}>
+                {signal.signal.type}
               </div>
             </div>
           </div>
