@@ -16,6 +16,8 @@ const Dashboard = () => {
   const [topMovers, setTopMovers] = useState([]);
   const [fearAndGreed, setFearAndGreed] = useState({});
   const [loading, setLoading] = useState(true);
+  const [date, setDate] = useState(new Date());
+  const [refresh, setRefresh] = useState(false);
 
   useEffect(() => {
     const fetchPortfolios = async () => {
@@ -50,22 +52,48 @@ const Dashboard = () => {
         setFearAndGreed(data);
       }
     };
+    const intervalId = setInterval(() => {
+      setDate(new Date());
+      setRefresh(!refresh);
+    }, 1000);
     fetchPortfolios();
     fetchNews();
     fetchTopMovers();
     fetchFearAndGreed();
     setLoading(false);
+    return () => clearInterval(intervalId);
   }, []);
+
+  const handleRefresh = () => {
+    setLoading(true);
+    fetchPortfolios();
+    fetchNews();
+    fetchTopMovers();
+    fetchFearAndGreed();
+    setLoading(false);
+  };
 
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8">
-      <Header />
+      <Header date={date} refresh={refresh} onRefresh={handleRefresh} />
       <div className="mt-4">
         <HeroCard portfolios={portfolios} />
-        <TopMovers topMovers={topMovers} />
-        <FearAndGreed fearAndGreed={fearAndGreed} />
-        <NewsFeed news={news} />
-        <QuickActions />
+        <div className="flex justify-between mb-4">
+          <div className="w-full md:w-1/2 lg:w-1/3">
+            <TopMovers topMovers={topMovers} />
+          </div>
+          <div className="w-full md:w-1/2 lg:w-1/3">
+            <FearAndGreed fearAndGreed={fearAndGreed} />
+          </div>
+        </div>
+        <div className="flex justify-between mb-4">
+          <div className="w-full md:w-1/2 lg:w-1/3">
+            <NewsFeed news={news} />
+          </div>
+          <div className="w-full md:w-1/2 lg:w-1/3">
+            <QuickActions />
+          </div>
+        </div>
       </div>
     </div>
   );
