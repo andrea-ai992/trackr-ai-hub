@@ -3,6 +3,7 @@ import { X, CheckCircle, Clock, Calendar, Tag, AlertCircle, Copy, Check } from '
 
 const TaskDetailPanel = ({ task, onClose }) => {
   const [isCopied, setIsCopied] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (isCopied) {
@@ -10,6 +11,11 @@ const TaskDetailPanel = ({ task, onClose }) => {
       return () => clearTimeout(timer);
     }
   }, [isCopied]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 300);
+    return () => clearTimeout(timer);
+  }, []);
 
   const copyToClipboard = () => {
     if (!task) return;
@@ -42,11 +48,13 @@ const TaskDetailPanel = ({ task, onClose }) => {
   const StatusIcon = statusConfig[task.status]?.icon || Clock;
   const statusStyle = statusConfig[task.status] || statusConfig.pending;
 
+  const fadeUpClasses = "animate-fade-up animate-once animate-duration-300 animate-ease-in-out";
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-surface w-full max-w-md rounded-lg border border-border overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <h3 className="text-text-primary font-medium flex items-center gap-2">
+          <h3 className={`text-text-primary font-medium flex items-center gap-2 ${fadeUpClasses}`}>
             <StatusIcon size={18} color={statusStyle.color} />
             Task Details
           </h3>
@@ -60,7 +68,7 @@ const TaskDetailPanel = ({ task, onClose }) => {
         </div>
 
         <div className="p-4 space-y-4">
-          <div className="flex items-start gap-3">
+          <div className={`flex items-start gap-3 ${fadeUpClasses}`}>
             <div className="flex-shrink-0 mt-1">
               <StatusIcon size={16} color={statusStyle.color} />
             </div>
@@ -71,7 +79,7 @@ const TaskDetailPanel = ({ task, onClose }) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-1">
+            <div className={`space-y-1 ${fadeUpClasses}`} style={{ animationDelay: '50ms' }}>
               <p className="text-text-muted text-xs uppercase tracking-wider font-mono">Status</p>
               <div className="flex items-center gap-2">
                 <span className="text-text-primary text-sm" style={{ color: statusStyle.color }}>
@@ -81,14 +89,14 @@ const TaskDetailPanel = ({ task, onClose }) => {
             </div>
 
             {task.priority && (
-              <div className="space-y-1">
+              <div className={`space-y-1 ${fadeUpClasses}`} style={{ animationDelay: '100ms' }}>
                 <p className="text-text-muted text-xs uppercase tracking-wider font-mono">Priority</p>
                 <span className="text-text-primary text-sm font-mono">{task.priority}</span>
               </div>
             )}
 
             {task.dueDate && (
-              <div className="space-y-1">
+              <div className={`space-y-1 ${fadeUpClasses}`} style={{ animationDelay: '150ms' }}>
                 <p className="text-text-muted text-xs uppercase tracking-wider font-mono">Due Date</p>
                 <div className="flex items-center gap-2">
                   <Calendar size={14} className="text-text-secondary" />
@@ -98,7 +106,7 @@ const TaskDetailPanel = ({ task, onClose }) => {
             )}
 
             {task.tags && task.tags.length > 0 && (
-              <div className="space-y-1">
+              <div className={`space-y-1 ${fadeUpClasses}`} style={{ animationDelay: '200ms' }}>
                 <p className="text-text-muted text-xs uppercase tracking-wider font-mono">Tags</p>
                 <div className="flex flex-wrap gap-1">
                   {task.tags.map((tag, index) => (
@@ -115,14 +123,14 @@ const TaskDetailPanel = ({ task, onClose }) => {
           </div>
 
           {task.assignee && (
-            <div className="space-y-1">
+            <div className={`space-y-1 ${fadeUpClasses}`} style={{ animationDelay: '250ms' }}>
               <p className="text-text-muted text-xs uppercase tracking-wider font-mono">Assignee</p>
               <span className="text-text-primary text-sm font-mono">{task.assignee}</span>
             </div>
           )}
 
           {task.createdAt && (
-            <div className="space-y-1">
+            <div className={`space-y-1 ${fadeUpClasses}`} style={{ animationDelay: '300ms' }}>
               <p className="text-text-muted text-xs uppercase tracking-wider font-mono">Created</p>
               <span className="text-text-secondary text-xs font-mono">
                 {new Date(task.createdAt).toLocaleString()}
@@ -131,7 +139,7 @@ const TaskDetailPanel = ({ task, onClose }) => {
           )}
         </div>
 
-        <div className="p-4 border-t border-border flex items-center justify-between">
+        <div className={`p-4 border-t border-border flex items-center justify-between ${fadeUpClasses}`} style={{ animationDelay: '350ms' }}>
           <div className="flex items-center gap-2">
             <Tag size={14} className="text-text-secondary" />
             <span className="text-text-muted text-xs uppercase tracking-wider font-mono">ID</span>
