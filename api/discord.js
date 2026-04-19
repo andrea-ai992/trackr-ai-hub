@@ -234,8 +234,55 @@ async function anthropicComplete(prompt, timeoutMs = 4000, maxTimeoutMs = 30000)
       throw new Error(`Anthropic API error: ${response.status}`)
     }
 
-    const data = await response.json()
-    return data.content[0].text
+    const stream = response.body
+    if (!stream) {
+      throw new Error('No response body from Anthropic')
+    }
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+    })
+
+    const reader = stream.getReader()
+    const decoder = new TextDecoder()
+
+    function pump() {
+      reader.read().then(({ done, value }) => {
+        if (done) {
+          res.end()
+          return
+        }
+
+        const text = decoder.decode(value, { stream: true })
+        const lines = text.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6)
+            if (data === '[DONE]') {
+              res.end()
+              return
+            }
+            try {
+              const parsed = JSON.parse(data)
+              res.write(`data: ${JSON.stringify(parsed)}\n\n`)
+            } catch (e) {
+              res.write(`data: ${JSON.stringify({ error: 'Failed to parse event data' })}\n\n`)
+            }
+          }
+        }
+
+        pump()
+      }).catch(err => {
+        console.error('Anthropic SSE stream error:', err)
+        res.end()
+      })
+    }
+
+    pump()
   } catch (error) {
     console.error('Anthropic API error:', error)
     throw error
