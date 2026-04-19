@@ -251,215 +251,177 @@ function PatternSVG({ pattern, isHovered }) {
 export default function Patterns() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [hoveredId, setHoveredId] = useState(null)
-  const [error, setError] = useState(null)
+  const [filters, setFilters] = useState({
+    type: searchParams.get('type') || 'All',
+    pattern: searchParams.get('pattern') || '',
+    sort: searchParams.get('sort') || 'name',
+    order: searchParams.get('order') || 'asc'
+  })
+  const [selectedPattern, setSelectedPattern] = useState(null)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
-  // Parse and validate search params
-  const parseParams = () => {
-    try {
-      const params = Object.fromEntries(searchParams.entries())
-      const validated = searchSchema.parse(params)
-      return validated
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        const firstError = err.errors[0]
-        setError(`Invalid parameter: ${firstError.path.join('.')} - ${firstError.message}`)
-      } else {
-        setError('Invalid URL parameters')
-      }
-      return null
+  // ─── Validation des paramètres avec Zod ───────────────────────────────────────
+  useEffect(() => {
+    const result = searchSchema.safeParse(Object.fromEntries(searchParams.entries()))
+    if (!result.success) {
+      const defaultParams = searchSchema.parse({})
+      setSearchParams(defaultParams)
+      setFilters(defaultParams)
     }
-  }
+  }, [searchParams, setSearchParams])
 
-  const validatedParams = parseParams()
-
-  const types = ['All', 'Reversal', 'Continuation', 'Bilateral']
-
-  const filteredPatterns = validatedParams
-    ? validatedParams.type === 'All'
-      ? PATTERNS
-      : PATTERNS.filter(p => p.type.includes(validatedParams.type))
-    : []
-
-  const sortPatterns = (patterns) => {
-    if (!validatedParams) return patterns
-
-    return [...patterns].sort((a, b) => {
-      const aValue = validatedParams.sort === 'name' ? a.name : a.type
-      const bValue = validatedParams.sort === 'name' ? b.name : b.type
-
-      if (validatedParams.order === 'asc') {
-        return aValue.localeCompare(bValue)
-      }
-      return bValue.localeCompare(aValue)
-    })
-  }
-
-  const sortedPatterns = sortPatterns(filteredPatterns)
-
-  const handleTypeChange = (type) => {
+  // ─── Gestion des filtres ───────────────────────────────────────────────────────
+  useEffect(() => {
     const params = new URLSearchParams()
-    params.set('type', type)
-    params.set('sort', 'name')
-    params.set('order', 'asc')
+    if (filters.type !== 'All') params.set('type', filters.type)
+    if (filters.pattern) params.set('pattern', filters.pattern)
+    if (filters.sort !== 'name') params.set('sort', filters.sort)
+    if (filters.order !== 'asc') params.set('order', filters.order)
     setSearchParams(params)
-    setError(null)
+  }, [filters, setSearchParams])
+
+  // ─── Filtrage et tri des patterns ─────────────────────────────────────────────
+  const filteredPatterns = PATTERNS
+    .filter(p => filters.type === 'All' || p.type.includes(filters.type))
+    .filter(p => !filters.pattern || p.name.toLowerCase().includes(filters.pattern.toLowerCase()))
+    .sort((a, b) => {
+      const keyA = a[filters.sort]
+      const keyB = b[filters.sort]
+      return filters.order === 'asc'
+        ? keyA.localeCompare(keyB)
+        : keyB.localeCompare(keyA)
+    })
+
+  // ─── Gestion des clics sur les patterns ───────────────────────────────────────
+  const handlePatternClick = (pattern) => {
+    setSelectedPattern(pattern)
+    setIsMobileMenuOpen(false)
   }
 
-  const handlePatternClick = (id) => {
-    navigate(`/patterns/${id}`)
+  const handleBackClick = () => {
+    setSelectedPattern(null)
+  }
+
+  // ─── Rendu ────────────────────────────────────────────────────────────────────
+  if (selectedPattern) {
+    return (
+      <div className="min-h-screen w-full bg-[var(--bg)] text-[var(--text-primary)] font-[JetBrains_Mono] p-4">
+        <div className="flex items-center gap-2 mb-6">
+          <button
+            onClick={handleBackClick}
+            className="p-2 rounded hover:bg-[var(--surface-low)] transition-colors"
+            aria-label="Retour"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <h1 className="text-xl font-bold text-[var(--neon)]">{selectedPattern.name}</h1>
+        </div>
+
+        <div className="bg-[var(--surface)] rounded-lg p-4 mb-6">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-[var(--text-secondary)]">Type:</span>
+              <span className="text-sm font-mono text-[var(--neon)]">{selectedPattern.type}</span>
+            </div>
+            <p className="text-sm leading-relaxed">{selectedPattern.desc}</p>
+          </div>
+        </div>
+
+        <div className="bg-[var(--surface)] rounded-lg p-4">
+          <PatternSVG pattern={selectedPattern} isHovered={true} />
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: 'var(--bg)',
-      color: 'var(--text-primary)',
-      fontFamily: 'JetBrains Mono, monospace',
-      padding: '1rem',
-      position: 'relative'
-    }}>
-      <header style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.5rem',
-        marginBottom: '1.5rem',
-        paddingBottom: '1rem',
-        borderBottom: '1px solid var(--border)'
-      }}>
+    <div className="min-h-screen w-full bg-[var(--bg)] text-[var(--text-primary)] font-[JetBrains_Mono] p-4">
+      <div className="flex items-center justify-between mb-6">
         <button
           onClick={() => navigate(-1)}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--neon)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            fontFamily: 'JetBrains Mono, monospace'
-          }}
+          className="p-2 rounded hover:bg-[var(--surface-low)] transition-colors"
+          aria-label="Retour"
         >
           <ArrowLeft size={20} />
-          Back
         </button>
-      </header>
+        <h1 className="text-xl font-bold text-[var(--neon)]">Patterns</h1>
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="p-2 rounded hover:bg-[var(--surface-low)] transition-colors md:hidden"
+          aria-label="Menu"
+        >
+          <Zap size={20} />
+        </button>
+      </div>
 
-      {error && (
-        <div style={{
-          backgroundColor: 'rgba(239, 68, 68, 0.2)',
-          border: '1px solid var(--neon)',
-          color: 'var(--neon)',
-          padding: '0.75rem',
-          marginBottom: '1rem',
-          borderRadius: '0.25rem',
-          fontFamily: 'JetBrains Mono, monospace',
-          fontSize: '0.875rem'
-        }}>
-          {error}
+      {/* Filtres Mobile */}
+      {isMobileMenuOpen && (
+        <div className="bg-[var(--surface)] rounded-lg p-4 mb-4 md:hidden">
+          <div className="flex flex-col gap-4">
+            <div>
+              <label className="block text-xs mb-1 text-[var(--text-secondary)]">Type</label>
+              <select
+                value={filters.type}
+                onChange={(e) => setFilters({...filters, type: e.target.value})}
+                className="w-full p-2 bg-[var(--surface-high)] border border-[var(--border)] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[var(--neon)]"
+              >
+                <option value="All">All</option>
+                <option value="Reversal">Reversal</option>
+                <option value="Continuation">Continuation</option>
+                <option value="Bilateral">Bilateral</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs mb-1 text-[var(--text-secondary)]">Pattern</label>
+              <input
+                type="text"
+                value={filters.pattern}
+                onChange={(e) => setFilters({...filters, pattern: e.target.value})}
+                placeholder="Rechercher..."
+                className="w-full p-2 bg-[var(--surface-high)] border border-[var(--border)] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[var(--neon)]"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs mb-1 text-[var(--text-secondary)]">Sort by</label>
+                <select
+                  value={filters.sort}
+                  onChange={(e) => setFilters({...filters, sort: e.target.value})}
+                  className="w-full p-2 bg-[var(--surface-high)] border border-[var(--border)] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[var(--neon)]"
+                >
+                  <option value="name">Name</option>
+                  <option value="type">Type</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs mb-1 text-[var(--text-secondary)]">Order</label>
+                <select
+                  value={filters.order}
+                  onChange={(e) => setFilters({...filters, order: e.target.value})}
+                  className="w-full p-2 bg-[var(--surface-high)] border border-[var(--border)] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[var(--neon)]"
+                >
+                  <option value="asc">Ascending</option>
+                  <option value="desc">Descending</option>
+                </select>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1.5rem'
-      }}>
-        <section>
-          <h1 style={{
-            fontSize: '1.25rem',
-            marginBottom: '1rem',
-            color: 'var(--neon)'
-          }}>
-            Chart Patterns
-          </h1>
-
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '0.5rem',
-            marginBottom: '1.5rem'
-          }}>
-            {types.map(type => (
-              <button
-                key={type}
-                onClick={() => handleTypeChange(type)}
-                style={{
-                  padding: '0.5rem 1rem',
-                  backgroundColor: validatedParams?.type === type
-                    ? 'var(--neon)'
-                    : 'var(--surface)',
-                  color: validatedParams?.type === type
-                    ? 'var(--bg)'
-                    : 'var(--text-primary)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '0.25rem',
-                  cursor: 'pointer',
-                  fontFamily: 'JetBrains Mono, monospace',
-                  fontSize: '0.875rem',
-                  transition: 'all 200ms'
-                }}
-              >
-                {type}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        <section>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-            gap: '1rem'
-          }}>
-            {sortedPatterns.map(pattern => (
-              <div
-                key={pattern.id}
-                onClick={() => handlePatternClick(pattern.id)}
-                onMouseEnter={() => setHoveredId(pattern.id)}
-                onMouseLeave={() => setHoveredId(null)}
-                style={{
-                  backgroundColor: 'var(--surface)',
-                  borderRadius: '0.5rem',
-                  padding: '0.75rem',
-                  cursor: 'pointer',
-                  border: `1px solid ${hoveredId === pattern.id ? 'var(--neon)' : 'var(--border)'}`,
-                  transition: 'all 200ms'
-                }}
-              >
-                <div style={{
-                  height: '100px',
-                  marginBottom: '0.5rem',
-                  position: 'relative'
-                }}>
-                  <PatternSVG pattern={pattern} isHovered={hoveredId === pattern.id} />
-                </div>
-
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.25rem'
-                }}>
-                  <h3 style={{
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                    color: 'var(--text-primary)'
-                  }}>
-                    {pattern.name}
-                  </h3>
-                  <p style={{
-                    fontSize: '0.75rem',
-                    color: 'var(--text-secondary)',
-                    lineHeight: '1.2'
-                  }}>
-                    {pattern.type}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
-    </div>
-  )
-}
+      {/* Filtres Desktop */}
+      <div className="hidden md:flex gap-4 mb-6">
+        <div className="flex-1">
+          <label className="block text-xs mb-1 text-[var(--text-secondary)]">Type</label>
+          <select
+            value={filters.type}
+            onChange={(e) => setFilters({...filters, type: e.target.value})}
+            className="w-full p-2 bg-[var(--surface-high)] border border-[var(--border)] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[var(--neon)]"
+          >
+            <option value="All">All</option>
+            <option value="Reversal">Reversal</option>
+            <option value="Continuation">Continuation</option>
+            <option value="Bilateral">B
