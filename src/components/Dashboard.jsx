@@ -1,392 +1,659 @@
-Je vais implémenter le composant `FearGreedGauge.jsx` avec une approche sécurisée et intégrée au design system existant.
+// src/components/TaskDetailPanel.jsx
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Calendar, Clock, Tag, User, CheckCircle, AlertCircle, Repeat, Flag, Bookmark, Edit2, Trash2 } from 'lucide-react';
 
-```jsx
-// src/components/FearGreedGauge.jsx
-import React, { useEffect, useState } from 'react';
-import { sanitizeInput } from '../utils/sanitize';
-
-const FearGreedGauge = ({ value = 50, size = '100%', showLabel = true }) => {
-  const [safeValue, setSafeValue] = useState(50);
-  const [safeLabel, setSafeLabel] = useState('Neutral');
+const TaskDetailPanel = ({ task, onClose, onUpdate, onDelete }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editedTask, setEditedTask] = useState({});
+  const panelRef = useRef(null);
 
   useEffect(() => {
-    const sanitizedValue = Math.max(0, Math.min(100, Math.round(Number(value))));
-    setSafeValue(sanitizedValue);
+    if (task) {
+      setEditedTask({
+        id: task.id,
+        title: task.title || '',
+        description: task.description || '',
+        status: task.status || 'pending',
+        priority: task.priority || 'medium',
+        dueDate: task.dueDate || '',
+        createdAt: task.createdAt || new Date().toISOString(),
+        tags: task.tags || [],
+        assignee: task.assignee || '',
+        recurrence: task.recurrence || 'none',
+        notes: task.notes || '',
+      });
+      setIsOpen(true);
+    } else {
+      setIsOpen(false);
+    }
+  }, [task]);
 
-    let label = 'Neutral';
-    if (sanitizedValue < 25) label = 'Extreme Fear';
-    else if (sanitizedValue < 40) label = 'Fear';
-    else if (sanitizedValue > 75) label = 'Extreme Greed';
-    else if (sanitizedValue > 60) label = 'Greed';
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (panelRef.current && !panelRef.current.contains(event.target)) {
+        onClose();
+      }
+    };
 
-    setSafeLabel(sanitizeInput(label));
-  }, [value]);
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
 
-  const getColor = () => {
-    if (safeValue < 25) return 'var(--fear)';
-    if (safeValue < 40) return 'var(--fear-medium)';
-    if (safeValue > 75) return 'var(--greed)';
-    if (safeValue > 60) return 'var(--greed-medium)';
-    return 'var(--neutral)';
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditedTask(prev => ({ ...prev, [name]: value }));
   };
 
-  const getPosition = () => {
-    return `calc(${safeValue}% - 12px)`;
+  const handleTagChange = (e) => {
+    const { value } = e.target;
+    setEditedTask(prev => ({
+      ...prev,
+      tags: value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
+    }));
   };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onUpdate(editedTask);
+    setEditMode(false);
+  };
+
+  const statusColors = {
+    pending: 'var(--text-muted)',
+    in_progress: 'var(--neon)',
+    completed: 'var(--text-secondary)',
+    archived: 'var(--text-secondary)',
+  };
+
+  const priorityColors = {
+    low: 'var(--text-muted)',
+    medium: 'var(--neon)',
+    high: '#ff6b6b',
+    critical: '#ff4757',
+  };
+
+  const statusIcons = {
+    pending: <AlertCircle size={16} />,
+    in_progress: <Clock size={16} />,
+    completed: <CheckCircle size={16} />,
+    archived: <Bookmark size={16} />,
+  };
+
+  const priorityIcons = {
+    low: '🟢',
+    medium: '🟡',
+    high: '🟠',
+    critical: '🔴',
+  };
+
+  const recurrenceIcons = {
+    none: '➖',
+    daily: '🔄',
+    weekly: '📅',
+    monthly: '🗓️',
+    yearly: '📆',
+  };
+
+  if (!isOpen || !task) return null;
 
   return (
-    <div
-      className="fear-greed-gauge-container"
-      style={{
-        width: size,
-        maxWidth: '300px',
-        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
-        color: 'var(--t1)',
-      }}
-    >
-      {showLabel && (
-        <div
-          className="gauge-label"
-          style={{
-            textAlign: 'center',
-            marginBottom: '8px',
-            fontSize: '14px',
-            fontWeight: 500,
-            color: getColor(),
-          }}
-        >
-          {safeLabel}
-        </div>
-      )}
-
-      <div
-        className="gauge-background"
-        style={{
-          height: '24px',
-          background: 'linear-gradient(90deg, var(--fear) 0%, var(--fear-medium) 25%, var(--neutral) 40%, var(--green) 60%, var(--greed-medium) 75%, var(--greed) 100%)',
-          borderRadius: '12px',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          className="gauge-fill"
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            height: '100%',
-            width: `${safeValue}%`,
-            background: 'var(--green)',
-            transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
-            borderRadius: '12px',
-          }}
-        />
-
-        <div
-          className="gauge-pointer"
-          style={{
-            position: 'absolute',
-            left: getPosition(),
-            top: '50%',
-            transform: 'translateY(-50%) translateX(-50%)',
-            width: '24px',
-            height: '24px',
-            background: 'var(--bg)',
-            border: '2px solid var(--green)',
-            borderRadius: '50%',
-            boxShadow: '0 2px 8px rgba(0, 255, 136, 0.3)',
-            zIndex: 2,
-          }}
-        />
-
-        <div
-          className="gauge-ticks"
-          style={{
-            position: 'absolute',
-            top: '50%',
-            left: 0,
-            right: 0,
-            height: '100%',
-            display: 'flex',
-            justifyContent: 'space-between',
-            transform: 'translateY(-50%)',
-          }}
-        >
-          {[0, 25, 50, 75, 100].map((tick) => (
-            <div
-              key={tick}
-              className="gauge-tick"
-              style={{
-                position: 'absolute',
-                left: `${tick}%`,
-                top: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: '1px',
-                height: tick === safeValue ? '16px' : '8px',
-                background: 'rgba(255, 255, 255, 0.3)',
-                transition: 'height 0.3s ease',
-              }}
-            />
-          ))}
-        </div>
-      </div>
-
-      <div
-        className="gauge-scale"
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          marginTop: '4px',
-          fontSize: '10px',
-          color: 'var(--t3)',
-        }}
-      >
-        <span>0</span>
-        <span>25</span>
-        <span>50</span>
-        <span>75</span>
-        <span>100</span>
-      </div>
-    </div>
-  );
-};
-
-export default FearGreedGauge;
-```
-
-```css
-/* src/styles/components/FearGreedGauge.css */
-:root {
-  --fear: #ff4d4d;
-  --fear-medium: #ff8c42;
-  --neutral: #888888;
-  --greed-medium: #4caf50;
-  --greed: #00e676;
-}
-
-.fear-greed-gauge-container {
-  --green: #00ff88;
-  --bg: #080808;
-  --bg2: #111;
-  --t1: #f0f0f0;
-  --t2: #888;
-  --t3: #444;
-  --border: rgba(255, 255, 255, 0.07);
-}
-```
-
-```jsx
-// src/components/Dashboard.jsx (modification pour intégrer le composant)
-import React, { useState, useCallback, useMemo } from 'react';
-import { sanitizeInput, sanitizeUsername, validateEmail, containsXSS } from '../utils/sanitize';
-import FearGreedGauge from './FearGreedGauge';
-
-const MOCK_STATS = {
-  totalTracked: 1247,
-  activeToday: 89,
-  completedTasks: 342,
-  pendingReview: 23,
-};
-
-const MOCK_ACTIVITIES = [
-  { id: 1, type: 'tracking', message: 'New tracking entry added', timestamp: '2 min ago', user: 'alice_user' },
-  { id: 2, type: 'note', message: 'Note updated on Project Alpha', timestamp: '15 min ago', user: 'bob_dev' },
-  { id: 3, type: 'review', message: 'Review completed for Task #442', timestamp: '1 hour ago', user: 'carol_pm' },
-  { id: 4, type: 'tracking', message: 'Weekly report generated', timestamp: '3 hours ago', user: 'dave_ops' },
-];
-
-function StatCard({ title, value, icon, color }) {
-  const safeTitle = sanitizeInput(title);
-  const safeValue = String(parseInt(value, 10) || 0);
-
-  return (
-    <div className="stat-card" style={{
-      background: '#fff',
-      borderRadius: '12px',
-      padding: '20px',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-      borderLeft: `4px solid ${color}`,
-      flex: '1 1 200px',
-      minWidth: '180px',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <p style={{ margin: 0, fontSize: '14px', color: '#666', fontWeight: '500' }}>{safeTitle}</p>
-          <h2 style={{ margin: '4px 0 0', fontSize: '32px', fontWeight: '700', color: '#1a1a2e' }}>{safeValue}</h2>
-        </div>
-        <span style={{ fontSize: '36px', opacity: 0.7 }} role="img" aria-label={safeTitle}>{icon}</span>
-      </div>
-    </div>
-  );
-}
-
-function ActivityItem({ activity }) {
-  const safeMessage = sanitizeInput(activity.message);
-  const safeUser = sanitizeUsername(activity.user);
-  const safeTimestamp = sanitizeInput(activity.timestamp);
-
-  const typeColors = {
-    tracking: '#3b82f6',
-    note: '#10b981',
-    review: '#f59e0b',
-    default: '#6366f1',
-  };
-
-  const typeIcons = {
-    tracking: '📍',
-    note: '📝',
-    review: '✅',
-    default: '🔔',
-  };
-
-  const color = typeColors[activity.type] || typeColors.default;
-  const icon = typeIcons[activity.type] || typeIcons.default;
-
-  return (
-    <div style={{
+    <div className="task-detail-panel-overlay" style={{
+      position: 'fixed',
+      top: 0,
+      right: 0,
+      bottom: 0,
+      width: '100%',
+      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+      zIndex: 1000,
       display: 'flex',
-      alignItems: 'flex-start',
-      padding: '12px 0',
-      borderBottom: '1px solid #f0f0f0',
-      gap: '12px',
+      justifyContent: 'flex-end',
     }}>
-      <span style={{
-        width: '36px',
-        height: '36px',
-        borderRadius: '50%',
-        background: color + '20',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '18px',
-      }}>{icon}</span>
-      <div style={{ flex: 1 }}>
-        <p style={{ margin: '0 0 4px', fontSize: '14px', color: '#333' }}>{safeMessage}</p>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '12px', color: '#888' }}>{safeTimestamp}</span>
-          <span style={{ fontSize: '12px', color: '#666', fontWeight: 500 }}>{safeUser}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Dashboard() {
-  const [marketData, setMarketData] = useState({
-    fearGreedIndex: 65,
-    lastUpdated: 'Just now'
-  });
-
-  return (
-    <div style={{
-      padding: '20px',
-      background: 'var(--bg)',
-      minHeight: '100vh',
-      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
-    }}>
-      <h1 style={{
-        color: 'var(--t1)',
-        marginBottom: '24px',
-        fontSize: '24px',
-        fontWeight: 600
-      }}>
-        Market Dashboard
-      </h1>
-
-      <div style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: '16px',
-        marginBottom: '32px'
-      }}>
-        <StatCard
-          title="Total Tracked"
-          value={MOCK_STATS.totalTracked}
-          icon="📊"
-          color="#3b82f6"
-        />
-        <StatCard
-          title="Active Today"
-          value={MOCK_STATS.activeToday}
-          icon="🔥"
-          color="#10b981"
-        />
-        <StatCard
-          title="Completed"
-          value={MOCK_STATS.completedTasks}
-          icon="✅"
-          color="#f59e0b"
-        />
-        <StatCard
-          title="Pending"
-          value={MOCK_STATS.pendingReview}
-          icon="⏳"
-          color="#ef4444"
-        />
-      </div>
-
-      <div style={{
-        background: 'var(--bg2)',
-        borderRadius: '16px',
-        padding: '24px',
-        marginBottom: '32px',
-      }}>
-        <h2 style={{
-          color: 'var(--t1)',
-          marginBottom: '20px',
-          fontSize: '18px',
-          fontWeight: 500
-        }}>
-          Market Sentiment
-        </h2>
-
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '16px'
-        }}>
-          <FearGreedGauge value={marketData.fearGreedIndex} size="100%" showLabel={true} />
-
-          <div style={{
+      <div
+        ref={panelRef}
+        className="task-detail-panel"
+        style={{
+          width: 'min(400px, 90vw)',
+          backgroundColor: 'var(--surface)',
+          borderLeft: '1px solid var(--border)',
+          padding: '24px',
+          position: 'relative',
+          fontFamily: 'JetBrains Mono, monospace',
+          color: 'var(--text-primary)',
+        }}
+      >
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '16px',
+            right: '16px',
+            background: 'none',
+            border: 'none',
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            padding: '8px',
             display: 'flex',
-            justifyContent: 'space-between',
-            width: '100%',
-            maxWidth: '400px',
-            marginTop: '16px'
-          }}>
-            <span style={{ fontSize: '12px', color: 'var(--t3)' }}>Extreme Fear</span>
-            <span style={{ fontSize: '12px', color: 'var(--t3)' }}>Extreme Greed</span>
-          </div>
-        </div>
-      </div>
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          aria-label="Close panel"
+        >
+          <X size={20} />
+        </button>
 
-      <div style={{
-        background: 'var(--bg2)',
-        borderRadius: '16px',
-        padding: '24px',
-      }}>
-        <h2 style={{
-          color: 'var(--t1)',
-          marginBottom: '20px',
-          fontSize: '18px',
-          fontWeight: 500
-        }}>
-          Recent Activity
-        </h2>
+        {editMode ? (
+          <form onSubmit={handleSubmit}>
+            <div style={{
+              marginBottom: '24px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+            }}>
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '4px',
+                  fontSize: '12px',
+                  color: 'var(--text-secondary)',
+                }}>Title</label>
+                <input
+                  type="text"
+                  name="title"
+                  value={editedTask.title}
+                  onChange={handleInputChange}
+                  style={{
+                    width: '100%',
+                    backgroundColor: 'var(--surface-low)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '4px',
+                    padding: '8px 12px',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'JetBrains Mono, monospace',
+                  }}
+                />
+              </div>
 
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-        }}>
-          {MOCK_ACTIVITIES.map(activity => (
-            <ActivityItem key={activity.id} activity={activity} />
-          ))}
-        </div>
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '4px',
+                  fontSize: '12px',
+                  color: 'var(--text-secondary)',
+                }}>Description</label>
+                <textarea
+                  name="description"
+                  value={editedTask.description}
+                  onChange={handleInputChange}
+                  rows={4}
+                  style={{
+                    width: '100%',
+                    backgroundColor: 'var(--surface-low)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '4px',
+                    padding: '8px 12px',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'JetBrains Mono, monospace',
+                    resize: 'vertical',
+                  }}
+                />
+              </div>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '12px',
+              }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '4px',
+                    fontSize: '12px',
+                    color: 'var(--text-secondary)',
+                  }}>Status</label>
+                  <select
+                    name="status"
+                    value={editedTask.status}
+                    onChange={handleInputChange}
+                    style={{
+                      width: '100%',
+                      backgroundColor: 'var(--surface-low)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '4px',
+                      padding: '8px 12px',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'JetBrains Mono, monospace',
+                    }}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '4px',
+                    fontSize: '12px',
+                    color: 'var(--text-secondary)',
+                  }}>Priority</label>
+                  <select
+                    name="priority"
+                    value={editedTask.priority}
+                    onChange={handleInputChange}
+                    style={{
+                      width: '100%',
+                      backgroundColor: 'var(--surface-low)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '4px',
+                      padding: '8px 12px',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'JetBrains Mono, monospace',
+                    }}
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '12px',
+              }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '4px',
+                    fontSize: '12px',
+                    color: 'var(--text-secondary)',
+                  }}>Due Date</label>
+                  <input
+                    type="date"
+                    name="dueDate"
+                    value={editedTask.dueDate}
+                    onChange={handleInputChange}
+                    style={{
+                      width: '100%',
+                      backgroundColor: 'var(--surface-low)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '4px',
+                      padding: '8px 12px',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'JetBrains Mono, monospace',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '4px',
+                    fontSize: '12px',
+                    color: 'var(--text-secondary)',
+                  }}>Assignee</label>
+                  <input
+                    type="text"
+                    name="assignee"
+                    value={editedTask.assignee}
+                    onChange={handleInputChange}
+                    style={{
+                      width: '100%',
+                      backgroundColor: 'var(--surface-low)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '4px',
+                      padding: '8px 12px',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'JetBrains Mono, monospace',
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '4px',
+                  fontSize: '12px',
+                  color: 'var(--text-secondary)',
+                }}>Tags (comma separated)</label>
+                <input
+                  type="text"
+                  value={editedTask.tags.join(', ')}
+                  onChange={handleTagChange}
+                  style={{
+                    width: '100%',
+                    backgroundColor: 'var(--surface-low)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '4px',
+                    padding: '8px 12px',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'JetBrains Mono, monospace',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '4px',
+                  fontSize: '12px',
+                  color: 'var(--text-secondary)',
+                }}>Recurrence</label>
+                <select
+                  name="recurrence"
+                  value={editedTask.recurrence}
+                  onChange={handleInputChange}
+                  style={{
+                    width: '100%',
+                    backgroundColor: 'var(--surface-low)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '4px',
+                    padding: '8px 12px',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'JetBrains Mono, monospace',
+                  }}
+                >
+                  <option value="none">None</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '4px',
+                  fontSize: '12px',
+                  color: 'var(--text-secondary)',
+                }}>Notes</label>
+                <textarea
+                  name="notes"
+                  value={editedTask.notes}
+                  onChange={handleInputChange}
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    backgroundColor: 'var(--surface-low)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '4px',
+                    padding: '8px 12px',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'JetBrains Mono, monospace',
+                    resize: 'vertical',
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              gap: '8px',
+              marginTop: '24px',
+            }}>
+              <button
+                type="submit"
+                style={{
+                  flex: 1,
+                  backgroundColor: 'var(--neon)',
+                  color: 'var(--bg)',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '12px',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                }}
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditMode(false)}
+                style={{
+                  flex: 1,
+                  backgroundColor: 'var(--surface-low)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '4px',
+                  padding: '12px',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        ) : (
+          <>
+            <div style={{
+              marginBottom: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}>
+              <h2 style={{
+                margin: 0,
+                fontSize: '18px',
+                fontWeight: 'bold',
+                color: 'var(--text-primary)',
+                flex: 1,
+              }}>
+                {task.title}
+              </h2>
+              <div style={{
+                display: 'flex',
+                gap: '4px',
+              }}>
+                <button
+                  onClick={() => setEditMode(true)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    padding: '4px',
+                  }}
+                  aria-label="Edit task"
+                >
+                  <Edit2 size={16} />
+                </button>
+                <button
+                  onClick={() => onDelete(task.id)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    padding: '4px',
+                  }}
+                  aria-label="Delete task"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </div>
+
+            {task.description && (
+              <div style={{
+                marginBottom: '16px',
+                padding: '12px',
+                backgroundColor: 'var(--surface-low)',
+                borderRadius: '4px',
+                borderLeft: '2px solid var(--neon)',
+              }}>
+                <p style={{
+                  margin: 0,
+                  whiteSpace: 'pre-wrap',
+                  fontSize: '14px',
+                  color: 'var(--text-primary)',
+                }}>
+                  {task.description}
+                </p>
+              </div>
+            )}
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '12px',
+              marginBottom: '16px',
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}>
+                <span style={{
+                  color: statusColors[task.status] || 'var(--text-secondary)',
+                }}>
+                  {statusIcons[task.status]}
+                </span>
+                <span style={{
+                  fontSize: '12px',
+                  color: 'var(--text-secondary)',
+                }}>
+                  {task.status.replace('_', ' ')}
+                </span>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}>
+                <span style={{
+                  color: priorityColors[task.priority] || 'var(--text-secondary)',
+                }}>
+                  {priorityIcons[task.priority]}
+                </span>
+                <span style={{
+                  fontSize: '12px',
+                  color: 'var(--text-secondary)',
+                }}>
+                  {task.priority}
+                </span>
+              </div>
+
+              {task.dueDate && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}>
+                  <Calendar size={14} color="var(--text-secondary)" />
+                  <span style={{
+                    fontSize: '12px',
+                    color: 'var(--text-secondary)',
+                  }}>
+                    {new Date(task.dueDate).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+
+              {task.assignee && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}>
+                  <User size={14} color="var(--text-secondary)" />
+                  <span style={{
+                    fontSize: '12px',
+                    color: 'var(--text-secondary)',
+                  }}>
+                    {task.assignee}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {task.tags && task.tags.length > 0 && (
+              <div style={{
+                marginBottom: '16px',
+              }}>
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '6px',
+                }}>
+                  {task.tags.map((tag, index) => (
+                    <span key={index} style={{
+                      backgroundColor: 'var(--surface-low)',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      color: 'var(--text-primary)',
+                      border: '1px solid var(--border)',
+                    }}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {task.recurrence !== 'none' && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginBottom: '16px',
+                padding: '8px',
+                backgroundColor: 'var(--surface-low)',
+                borderRadius: '4px',
+              }}>
+                <Repeat size={14} color="var(--text-secondary)" />
+                <span style={{
+                  fontSize: '12px',
+                  color: 'var(--text-secondary)',
+                }}>
+                  Recurs {task.recurrence}
+                </span>
+              </div>
+            )}
+
+            {task.notes && (
+              <div style={{
+                padding: '12px',
+                backgroundColor: 'var(--surface-low)',
+                borderRadius: '4px',
+                borderLeft: '2px solid var(--neon)',
+              }}>
+                <h3 style={{
+                  margin: '0 0 8px',
+                  fontSize: '12px',
+                  color: 'var(--text-secondary)',
+                }}>
+                  Notes
+                </h3>
+                <p style={{
+                  margin: 0,
+                  whiteSpace: 'pre-wrap',
+                  fontSize: '13px',
+                  color: 'var(--text-primary)',
+                }}>
+                  {task.notes}
+                </p>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
-}
+};
 
-export default Dashboard;
+export default TaskDetailPanel;
