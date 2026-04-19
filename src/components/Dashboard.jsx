@@ -1,4 +1,4 @@
-// src/components/TaskDetailPanel.jsx
+// src/components/Dashboard.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Calendar, Clock, Tag, User, CheckCircle, AlertCircle, Repeat, Flag, Bookmark, Edit2, Trash2 } from 'lucide-react';
 
@@ -7,6 +7,12 @@ const TaskDetailPanel = ({ task, onClose, onUpdate, onDelete }) => {
   const [editMode, setEditMode] = useState(false);
   const [editedTask, setEditedTask] = useState({});
   const panelRef = useRef(null);
+
+  const escapeHTML = (str) => {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  };
 
   useEffect(() => {
     if (task) {
@@ -46,14 +52,14 @@ const TaskDetailPanel = ({ task, onClose, onUpdate, onDelete }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setEditedTask(prev => ({ ...prev, [name]: value }));
+    setEditedTask(prev => ({ ...prev, [name]: escapeHTML(value) }));
   };
 
   const handleTagChange = (e) => {
     const { value } = e.target;
     setEditedTask(prev => ({
       ...prev,
-      tags: value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
+      tags: value.split(',').map(tag => escapeHTML(tag.trim())).filter(tag => tag.length > 0)
     }));
   };
 
@@ -325,29 +331,6 @@ const TaskDetailPanel = ({ task, onClose, onUpdate, onDelete }) => {
                   marginBottom: '4px',
                   fontSize: '12px',
                   color: 'var(--text-secondary)',
-                }}>Tags (comma separated)</label>
-                <input
-                  type="text"
-                  value={editedTask.tags.join(', ')}
-                  onChange={handleTagChange}
-                  style={{
-                    width: '100%',
-                    backgroundColor: 'var(--surface-low)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '4px',
-                    padding: '8px 12px',
-                    color: 'var(--text-primary)',
-                    fontFamily: 'JetBrains Mono, monospace',
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '4px',
-                  fontSize: '12px',
-                  color: 'var(--text-secondary)',
                 }}>Recurrence</label>
                 <select
                   name="recurrence"
@@ -377,6 +360,29 @@ const TaskDetailPanel = ({ task, onClose, onUpdate, onDelete }) => {
                   marginBottom: '4px',
                   fontSize: '12px',
                   color: 'var(--text-secondary)',
+                }}>Tags (comma separated)</label>
+                <input
+                  type="text"
+                  value={editedTask.tags.join(', ')}
+                  onChange={handleTagChange}
+                  style={{
+                    width: '100%',
+                    backgroundColor: 'var(--surface-low)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '4px',
+                    padding: '8px 12px',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'JetBrains Mono, monospace',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '4px',
+                  fontSize: '12px',
+                  color: 'var(--text-secondary)',
                 }}>Notes</label>
                 <textarea
                   name="notes"
@@ -395,74 +401,75 @@ const TaskDetailPanel = ({ task, onClose, onUpdate, onDelete }) => {
                   }}
                 />
               </div>
-            </div>
 
-            <div style={{
-              display: 'flex',
-              gap: '8px',
-              marginTop: '24px',
-            }}>
-              <button
-                type="submit"
-                style={{
-                  flex: 1,
-                  backgroundColor: 'var(--neon)',
-                  color: 'var(--bg)',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '12px',
-                  fontFamily: 'JetBrains Mono, monospace',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                }}
-              >
-                Save
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditMode(false)}
-                style={{
-                  flex: 1,
-                  backgroundColor: 'var(--surface-low)',
-                  color: 'var(--text-primary)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '4px',
-                  padding: '12px',
-                  fontFamily: 'JetBrains Mono, monospace',
-                  cursor: 'pointer',
-                }}
-              >
-                Cancel
-              </button>
+              <div style={{
+                display: 'flex',
+                gap: '12px',
+                marginTop: '20px',
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setEditMode(false)}
+                  style={{
+                    flex: 1,
+                    backgroundColor: 'var(--surface-high)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '4px',
+                    padding: '10px',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'JetBrains Mono, monospace',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    flex: 1,
+                    backgroundColor: 'var(--neon)',
+                    border: '1px solid var(--neon)',
+                    borderRadius: '4px',
+                    padding: '10px',
+                    color: 'var(--bg)',
+                    fontFamily: 'JetBrains Mono, monospace',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Save
+                </button>
+              </div>
             </div>
           </form>
         ) : (
-          <>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+          }}>
             <div style={{
-              marginBottom: '24px',
               display: 'flex',
+              justifyContent: 'space-between',
               alignItems: 'center',
-              gap: '8px',
             }}>
-              <h2 style={{
-                margin: 0,
+              <h3 style={{
                 fontSize: '18px',
-                fontWeight: 'bold',
+                margin: 0,
                 color: 'var(--text-primary)',
-                flex: 1,
+                fontFamily: 'JetBrains Mono, monospace',
               }}>
                 {task.title}
-              </h2>
+              </h3>
               <div style={{
                 display: 'flex',
-                gap: '4px',
+                gap: '8px',
               }}>
                 <button
                   onClick={() => setEditMode(true)}
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: 'var(--text-secondary)',
+                    color: 'var(--neon)',
                     cursor: 'pointer',
                     padding: '4px',
                   }}
@@ -475,7 +482,7 @@ const TaskDetailPanel = ({ task, onClose, onUpdate, onDelete }) => {
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: 'var(--text-secondary)',
+                    color: '#ff4757',
                     cursor: 'pointer',
                     padding: '4px',
                   }}
@@ -487,79 +494,53 @@ const TaskDetailPanel = ({ task, onClose, onUpdate, onDelete }) => {
             </div>
 
             {task.description && (
-              <div style={{
-                marginBottom: '16px',
-                padding: '12px',
-                backgroundColor: 'var(--surface-low)',
-                borderRadius: '4px',
-                borderLeft: '2px solid var(--neon)',
+              <p style={{
+                margin: 0,
+                color: 'var(--text-secondary)',
+                fontSize: '14px',
+                lineHeight: '1.4',
               }}>
-                <p style={{
-                  margin: 0,
-                  whiteSpace: 'pre-wrap',
-                  fontSize: '14px',
-                  color: 'var(--text-primary)',
-                }}>
-                  {task.description}
-                </p>
-              </div>
+                {task.description}
+              </p>
             )}
 
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '12px',
-              marginBottom: '16px',
+              display: 'flex',
+              gap: '16px',
+              flexWrap: 'wrap',
             }}>
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '4px',
+                fontSize: '12px',
+                color: statusColors[task.status] || 'var(--text-muted)',
               }}>
-                <span style={{
-                  color: statusColors[task.status] || 'var(--text-secondary)',
-                }}>
-                  {statusIcons[task.status]}
-                </span>
-                <span style={{
-                  fontSize: '12px',
-                  color: 'var(--text-secondary)',
-                }}>
-                  {task.status.replace('_', ' ')}
-                </span>
+                {statusIcons[task.status] || <AlertCircle size={16} />}
+                <span>{task.status?.replace('_', ' ') || 'pending'}</span>
               </div>
 
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '4px',
+                fontSize: '12px',
+                color: priorityColors[task.priority] || 'var(--text-muted)',
               }}>
-                <span style={{
-                  color: priorityColors[task.priority] || 'var(--text-secondary)',
-                }}>
-                  {priorityIcons[task.priority]}
-                </span>
-                <span style={{
-                  fontSize: '12px',
-                  color: 'var(--text-secondary)',
-                }}>
-                  {task.priority}
-                </span>
+                {priorityIcons[task.priority] || '🟡'}
+                <span>{task.priority || 'medium'}</span>
               </div>
 
               {task.dueDate && (
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
+                  gap: '4px',
+                  fontSize: '12px',
+                  color: 'var(--text-secondary)',
                 }}>
-                  <Calendar size={14} color="var(--text-secondary)" />
-                  <span style={{
-                    fontSize: '12px',
-                    color: 'var(--text-secondary)',
-                  }}>
-                    {new Date(task.dueDate).toLocaleDateString()}
-                  </span>
+                  <Calendar size={16} />
+                  <span>{new Date(task.dueDate).toLocaleDateString()}</span>
                 </div>
               )}
 
@@ -567,89 +548,73 @@ const TaskDetailPanel = ({ task, onClose, onUpdate, onDelete }) => {
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
+                  gap: '4px',
+                  fontSize: '12px',
+                  color: 'var(--text-secondary)',
                 }}>
-                  <User size={14} color="var(--text-secondary)" />
-                  <span style={{
-                    fontSize: '12px',
-                    color: 'var(--text-secondary)',
-                  }}>
-                    {task.assignee}
-                  </span>
+                  <User size={16} />
+                  <span>{task.assignee}</span>
+                </div>
+              )}
+
+              {task.recurrence !== 'none' && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '12px',
+                  color: 'var(--text-secondary)',
+                }}>
+                  {recurrenceIcons[task.recurrence] || '➖'}
+                  <span>{task.recurrence}</span>
                 </div>
               )}
             </div>
 
             {task.tags && task.tags.length > 0 && (
               <div style={{
-                marginBottom: '16px',
-              }}>
-                <div style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '6px',
-                }}>
-                  {task.tags.map((tag, index) => (
-                    <span key={index} style={{
-                      backgroundColor: 'var(--surface-low)',
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      fontSize: '11px',
-                      color: 'var(--text-primary)',
-                      border: '1px solid var(--border)',
-                    }}>
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {task.recurrence !== 'none' && (
-              <div style={{
                 display: 'flex',
-                alignItems: 'center',
+                flexWrap: 'wrap',
                 gap: '6px',
-                marginBottom: '16px',
-                padding: '8px',
-                backgroundColor: 'var(--surface-low)',
-                borderRadius: '4px',
               }}>
-                <Repeat size={14} color="var(--text-secondary)" />
-                <span style={{
-                  fontSize: '12px',
-                  color: 'var(--text-secondary)',
-                }}>
-                  Recurs {task.recurrence}
-                </span>
+                {task.tags.map((tag, index) => (
+                  <span key={index} style={{
+                    backgroundColor: 'var(--surface-high)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '4px',
+                    padding: '4px 8px',
+                    fontSize: '11px',
+                    color: 'var(--neon)',
+                    fontFamily: 'JetBrains Mono, monospace',
+                  }}>
+                    {tag}
+                  </span>
+                ))}
               </div>
             )}
 
             {task.notes && (
               <div style={{
-                padding: '12px',
-                backgroundColor: 'var(--surface-low)',
-                borderRadius: '4px',
-                borderLeft: '2px solid var(--neon)',
+                marginTop: '12px',
+                paddingTop: '12px',
+                borderTop: '1px solid var(--border)',
               }}>
-                <h3 style={{
-                  margin: '0 0 8px',
+                <h4 style={{
                   fontSize: '12px',
+                  margin: '0 0 8px 0',
                   color: 'var(--text-secondary)',
-                }}>
-                  Notes
-                </h3>
+                }}>Notes</h4>
                 <p style={{
                   margin: 0,
-                  whiteSpace: 'pre-wrap',
                   fontSize: '13px',
+                  lineHeight: '1.4',
                   color: 'var(--text-primary)',
                 }}>
                   {task.notes}
                 </p>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>
