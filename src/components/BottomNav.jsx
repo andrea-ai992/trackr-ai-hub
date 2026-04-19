@@ -4,7 +4,7 @@ import { Home, Trophy, TrendingUp, Newspaper, MoreHorizontal, Activity } from 'l
 
 const TABS = [
   { to: '/', icon: Home, label: 'Home' },
-  { to: '/sports', icon: Activity, label: 'Sports' },
+  { to: '/sports', icon: Trophy, label: 'Sports' },
   { to: '/markets', icon: TrendingUp, label: 'Markets' },
   { to: '/news', icon: Newspaper, label: 'News' },
   { to: '/more', icon: MoreHorizontal, label: 'More' },
@@ -85,30 +85,28 @@ export default function BottomNav() {
           width: '100%',
           maxWidth: 380,
           background: 'var(--surface-low)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
           borderTop: '1px solid var(--border)',
-          borderRadius: 0,
-          padding: '5px 6px',
+          borderRadius: 999,
+          padding: '4px',
           boxShadow: '0 -8px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--border-bright) inset',
           position: 'relative',
           height: 56,
-          pointerEvents: 'auto',
-          WebkitTapHighlightColor: 'transparent',
         }}
       >
         <div
           aria-hidden
           style={{
             position: 'absolute',
-            top: 0,
-            bottom: 0,
+            top: 4,
+            bottom: 4,
             left: pillStyle.left,
             width: pillStyle.width,
             backgroundColor: 'var(--surface-high)',
             border: '1px solid var(--neon)',
             borderRadius: 999,
-            transition: 'left 250ms cubic-bezier(0.4, 0, 0.2, 1), width 250ms cubic-bezier(0.4, 0, 0.2, 1)',
+            transition: 'left 0.25s cubic-bezier(0.25, 0, 0.2, 1), width 0.25s cubic-bezier(0.25, 0, 0.2, 1)',
             pointerEvents: 'none',
             zIndex: 0,
             boxShadow: '0 0 12px var(--neon), 0 0 20px var(--neon)',
@@ -145,6 +143,10 @@ export default function BottomNav() {
                 cursor: 'pointer',
                 WebkitTapHighlightColor: 'transparent',
                 zIndex: 1,
+                transition: 'background-color 0.15s',
+                ':active': {
+                  backgroundColor: 'rgba(0, 255, 136, 0.08)',
+                },
               }}
             >
               <div
@@ -153,10 +155,11 @@ export default function BottomNav() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  padding: active ? '6px 16px' : '6px',
+                  padding: active ? '6px 12px' : '6px',
                   borderRadius: 999,
-                  transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   backgroundColor: active ? 'rgba(0, 255, 136, 0.12)' : 'transparent',
+                  transform: active ? 'scale(1.1)' : 'scale(1)',
                 }}
               >
                 <Icon
@@ -164,7 +167,7 @@ export default function BottomNav() {
                   strokeWidth={active ? 2.2 : 1.6}
                   style={{
                     color: active ? 'var(--neon)' : 'var(--text-secondary)',
-                    transition: 'color 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+                    transition: 'color 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   }}
                 />
                 {badge > 0 && (
@@ -198,10 +201,11 @@ export default function BottomNav() {
                   fontSize: 8,
                   fontWeight: active ? 700 : 500,
                   color: active ? 'var(--neon)' : 'var(--text-secondary)',
-                  transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                   fontFamily: 'JetBrains Mono, monospace',
+                  opacity: active ? 1 : 0,
                 }}
               >
                 {tab.label}
