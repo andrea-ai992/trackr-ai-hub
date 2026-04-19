@@ -1,178 +1,48 @@
-// src/pages/Markets.jsx
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Search } from 'lucide-react';
-import MarketCard from '../components/MarketCard';
+// src/components/MarketCard.jsx
+import { useState, useEffect } from 'react';
+import { ChevronDown } from 'lucide-react';
 
-const TABS = [
-  { id: 'stocks', label: 'Stocks' },
-  { id: 'crypto', label: 'Crypto' },
-];
-
-const fetchStocks = async () => {
-  try {
-    const response = await fetch('https://trackr-app-nu.vercel.app/api/stocks');
-    if (!response.ok) throw new Error('Failed to fetch stocks');
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching stocks:', error);
-    return [];
-  }
-};
-
-const fetchCryptoPrices = async () => {
-  try {
-    const response = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=true&price_change_percentage=24h');
-    if (!response.ok) throw new Error('Failed to fetch crypto prices');
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching crypto prices:', error);
-    return [];
-  }
-};
-
-const fetchYahooFinance = async (symbol) => {
-  try {
-    const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=7d`);
-    if (!response.ok) throw new Error('Failed to fetch Yahoo data');
-    const data = await response.json();
-    const prices = data.chart.result?.[0]?.indicators?.quote?.[0]?.close?.filter(p => p !== null) || [];
-    return prices.slice(-7);
-  } catch (error) {
-    console.error('Error fetching Yahoo data:', error);
-    return Array(7).fill(null);
-  }
-};
-
-export default function Markets() {
-  const [activeTab, setActiveTab] = useState('stocks');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [data, setData] = useState({ stocks: [], crypto: [] });
-  const [loading, setLoading] = useState(true);
-  const [yfData, setYfData] = useState({});
-  const [cryptoData, setCryptoData] = useState([]);
-  const [cryptoLoading, setCryptoLoading] = useState(true);
-
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      const [stocks] = await Promise.all([
-        fetchStocks(),
-      ]);
-      setData({ stocks, crypto: [] });
-      setLoading(false);
-    };
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    if (activeTab === 'crypto') {
-      const loadCrypto = async () => {
-        setCryptoLoading(true);
-        const crypto = await fetchCryptoPrices();
-        setCryptoData(crypto);
-        setCryptoLoading(false);
-      };
-      loadCrypto();
-    }
-  }, [activeTab]);
-
-  useEffect(() => {
-    if (activeTab === 'stocks' && data.stocks.length) {
-      const fetchYf = async () => {
-        const symbols = data.stocks.slice(0, 10).map(s => s.symbol);
-        const results = await Promise.all(
-          symbols.map(symbol => fetchYahooFinance(symbol))
-        );
-        setYfData(prev => ({ ...prev, [activeTab]: results }));
-      };
-      fetchYf();
-    }
-  }, [activeTab, data.stocks]);
-
-  const filteredData = useMemo(() => {
-    if (activeTab === 'stocks') {
-      return data.stocks.filter(stock =>
-        stock.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        stock.symbol.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    return cryptoData.filter(crypto =>
-      crypto.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      crypto.symbol.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [activeTab, searchTerm, data.stocks, cryptoData]);
-
-  const sortedData = useMemo(() => {
-    if (activeTab === 'stocks') {
-      return [...filteredData].sort((a, b) => {
-        const changeA = a.price_change_percentage_24h || 0;
-        const changeB = b.price_change_percentage_24h || 0;
-        return changeB - changeA;
-      });
-    }
-    return [...filteredData].sort((a, b) => {
-      const changeA = a.price_change_percentage_24h || 0;
-      const changeB = b.price_change_percentage_24h || 0;
-      return changeB - changeA;
-    });
-  }, [filteredData, activeTab]);
+const MarketCard = ({ symbol, name, price, change, changePercent, logoUrl, sparklineData }) => {
+  const isPositive = changePercent >= 0;
+  const neonColor = isPositive ? 'var(--neon)' : '#ff4444';
+  const bgColor = isPositive ? 'rgba(0, 255, 136, 0.1)' : 'rgba(255, 68, 68, 0.1)';
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--text-primary)] font-[JetBrains_Mono] p-4">
-      <h1 className="text-2xl font-bold mb-6 text-[var(--neon)]">Markets</h1>
-
-      <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-        {TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap relative ${
-              activeTab === tab.id
-                ? 'bg-[var(--surface-high)] text-[var(--neon)] border border-[var(--border-bright)]'
-                : 'bg-[var(--surface-low)] text-[var(--text-secondary)] border border-[var(--border)] hover:bg-[var(--surface)]'
-            }`}
-          >
-            {tab.label}
-            {activeTab === tab.id && (
-              <span className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-[var(--neon)] rounded-full"></span>
-            )}
-          </button>
-        ))}
+    <div
+      className="w-full p-3 border-b border-border flex items-center gap-3 hover:bg-surface-low transition-colors"
+      style={{ borderBottomColor: 'var(--border)' }}
+    >
+      <div className="w-10 h-10 bg-surface rounded-lg flex items-center justify-center">
+        <img src={logoUrl} alt={name} className="w-8 h-8 object-contain" />
       </div>
-
-      <div className="sticky top-0 bg-[var(--bg)] z-10 py-2">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-[var(--surface-low)] rounded-lg border border-[var(--border)] text-sm focus:outline-none focus:border-[var(--border-bright)]"
-          />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-text-primary font-medium text-sm">{symbol}</span>
+          <span className="text-text-secondary text-xs">{name}</span>
+        </div>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-text-primary font-bold text-base">${price.toFixed(2)}</span>
+          <span
+            className="text-sm"
+            style={{ color: isPositive ? 'var(--neon)' : '#ff4444' }}
+          >
+            {isPositive ? '+' : ''}{changePercent.toFixed(2)}%
+          </span>
         </div>
       </div>
-
-      <div className="mt-4 space-y-3">
-        {loading || cryptoLoading ? (
-          Array(10).fill(0).map((_, i) => (
-            <div key={i} className="h-16 bg-[var(--surface-low)] rounded-lg animate-pulse"></div>
-          ))
-        ) : (
-          sortedData.map((item, i) => (
-            <MarketCard
-              key={item.id || item.symbol}
-              item={item}
-              type={activeTab}
-              sparklineData={
-                activeTab === 'stocks'
-                  ? yfData[activeTab]?.[i] || Array(7).fill(null)
-                  : item.sparkline_in_7d?.price || Array(7).fill(null)
-              }
-            />
-          ))
-        )}
+      <div className="w-20 h-10 flex items-end">
+        <svg viewBox="0 0 50 20" className="w-full h-full">
+          <polyline
+            fill="none"
+            stroke={neonColor}
+            strokeWidth="1.5"
+            points={sparklineData.map((val, i) => `${i * 5},${20 - val * 10}`).join(' ')}
+          />
+        </svg>
       </div>
+      <ChevronDown size={16} className="text-text-muted" />
     </div>
   );
-}
+};
+
+export default MarketCard;
