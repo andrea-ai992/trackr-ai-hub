@@ -34,54 +34,40 @@ const NewsCard = ({ article }) => {
 
   const getBadgeColor = (badge) => {
     if (badge === 'BREAKING') return '#ff4444';
-    if (badge === 'NEW') return '#00ff88';
+    if (badge === 'NEW') return 'var(--neon)';
     return 'transparent';
   };
 
   const getTimeColor = (badge) => {
     if (badge === 'BREAKING') return '#ff4444';
-    if (badge === 'NEW') return '#00ff88';
+    if (badge === 'NEW') return 'var(--neon)';
     return 'var(--text-secondary)';
   };
 
   const sourceColor = SOURCE_COLORS[article.source] || SOURCE_COLORS.default;
 
   return (
-    <article className="news-card">
-      <div className="news-card-accent" style={{ backgroundColor: sourceColor }} />
-      <div className="news-card-content">
-        <div className="news-card-header">
-          <h3
-            className="news-card-title"
-            dangerouslySetInnerHTML={{ __html: sanitizeHTML(article.title) }}
-          />
-          {article.thumbnail && (
-            <img
-              src={article.thumbnail}
-              alt={sanitizeHTML(article.title)}
-              className="news-card-thumbnail"
-            />
+    <article
+      className="news-card"
+      style={{
+        '--source-color': sourceColor,
+        '--badge-color': getBadgeColor(article.timeBadge),
+        '--time-color': getTimeColor(article.timeBadge)
+      }}
+    >
+      <div className="news-card-header">
+        <div className="news-card-meta">
+          <span className="news-card-source">{sanitizeHTML(article.source)}</span>
+          {article.timeBadge && (
+            <span className="news-card-time-badge">{sanitizeHTML(article.timeBadge)}</span>
           )}
         </div>
-        <div className="news-card-footer">
-          <div className="news-card-meta">
-            <span className="news-card-source" style={{ color: sourceColor }}>
-              {sanitizeHTML(article.source)}
-            </span>
-            {article.timeBadge && (
-              <span
-                className="news-card-time-badge"
-                style={{ backgroundColor: getBadgeColor(article.timeBadge) }}
-              >
-                {sanitizeHTML(article.timeBadge)}
-              </span>
-            )}
-          </div>
-          <span className="news-card-time" style={{ color: getTimeColor(article.timeBadge) }}>
-            {article.timeBadge && article.timeBadge !== 'BREAKING' && article.timeBadge !== 'NEW' ? sanitizeHTML(article.timeBadge) : formatTime(article.publishedAt)}
-          </span>
-        </div>
+        <span className="news-card-time">
+          {article.timeBadge && article.timeBadge !== 'BREAKING' && article.timeBadge !== 'NEW' ? sanitizeHTML(article.timeBadge) : formatTime(article.publishedAt)}
+        </span>
       </div>
+      <h3 className="news-card-title" dangerouslySetInnerHTML={{ __html: sanitizeHTML(article.title) }} />
+      {article.description && <p className="news-card-description">{sanitizeHTML(article.description)}</p>}
     </article>
   );
 };
