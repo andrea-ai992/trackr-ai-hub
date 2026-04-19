@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, TrendingUp, Info, Zap, ChevronRight, BarChart3, LineChart, Target, HelpCircle } from 'lucide-react'
+import { z } from 'zod'
+
+// ─── Zod Schemas ────────────────────────────────────────────────────────────
+const searchSchema = z.object({
+  type: z.enum(['All', 'Reversal', 'Continuation', 'Bilateral']).default('All'),
+  pattern: z.string().optional(),
+  sort: z.enum(['name', 'type']).default('name'),
+  order: z.enum(['asc', 'desc']).default('asc')
+})
 
 // ─── Pattern Data ─────────────────────────────────────────────────────────────
 const PATTERNS = [
@@ -172,9 +181,9 @@ const PATTERNS = [
 // ─── Pattern SVG Component ────────────────────────────────────────────────────
 function PatternSVG({ pattern, isHovered }) {
   const { points, support, resistance, neckline, pole, color } = pattern
-  
+
   const toPoints = (pts) => pts.map(p => `${p[0]},${p[1]}`).join(' ')
-  
+
   return (
     <svg viewBox="0 0 160 120" style={{ width: '100%', height: 'auto', overflow: 'visible' }}>
       <defs>
@@ -241,147 +250,216 @@ function PatternSVG({ pattern, isHovered }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Patterns() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [hoveredId, setHoveredId] = useState(null)
-  const [selectedType, setSelectedType] = useState('All')
+  const [error, setError] = useState(null)
+
+  // Parse and validate search params
+  const parseParams = () => {
+    try {
+      const params = Object.fromEntries(searchParams.entries())
+      const validated = searchSchema.parse(params)
+      return validated
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        const firstError = err.errors[0]
+        setError(`Invalid parameter: ${firstError.path.join('.')} - ${firstError.message}`)
+      } else {
+        setError('Invalid URL parameters')
+      }
+      return null
+    }
+  }
+
+  const validatedParams = parseParams()
 
   const types = ['All', 'Reversal', 'Continuation', 'Bilateral']
-  
-  const filteredPatterns = selectedType === 'All' 
-    ? PATTERNS 
-    : PATTERNS.filter(p => p.type.includes(selectedType))
+
+  const filteredPatterns = validatedParams
+    ? validatedParams.type === 'All'
+      ? PATTERNS
+      : PATTERNS.filter(p => p.type.includes(validatedParams.type))
+    : []
+
+  const sortPatterns = (patterns) => {
+    if (!validatedParams) return patterns
+
+    return [...patterns].sort((a, b) => {
+      const aValue = validatedParams.sort === 'name' ? a.name : a.type
+      const bValue = validatedParams.sort === 'name' ? b.name : b.type
+
+      if (validatedParams.order === 'asc') {
+        return aValue.localeCompare(bValue)
+      }
+      return bValue.localeCompare(aValue)
+    })
+  }
+
+  const sortedPatterns = sortPatterns(filteredPatterns)
+
+  const handleTypeChange = (type) => {
+    const params = new URLSearchParams()
+    params.set('type', type)
+    params.set('sort', 'name')
+    params.set('order', 'asc')
+    setSearchParams(params)
+    setError(null)
+  }
+
+  const handlePatternClick = (id) => {
+    navigate(`/patterns/${id}`)
+  }
 
   return (
-    <div style={{ 
-      maxWidth: 600, 
-      margin: '0 auto', 
-      paddingBottom: 40,
-      minHeight: '100dvh',
-      background: '#0b1323',
-      color: '#dbe2f8'
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text-primary)',
+      fontFamily: 'JetBrains Mono, monospace',
+      padding: '1rem',
+      position: 'relative'
     }}>
-      {/* Header */}
-      <div style={{ 
-        position: 'sticky', 
-        top: 0, 
-        zIndex: 100, 
-        background: 'rgba(11,19,35,0.85)', 
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        padding: 'max(52px, env(safe-area-inset-top, 0px)) 16px 16px',
-        borderBottom: '1px solid rgba(255,255,255,0.06)'
+      <header style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        marginBottom: '1.5rem',
+        paddingBottom: '1rem',
+        borderBottom: '1px solid var(--border)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button 
-            onClick={() => navigate(-1)}
-            className="press-scale"
-            style={{ 
-              width: 40, height: 40, borderRadius: 12, 
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', cursor: 'pointer'
-            }}
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <div style={{ flex: 1 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 900, color: 'white', letterSpacing: '-0.02em' }}>Patterns Academy</h1>
-            <p style={{ fontSize: 13, color: '#64748b' }}>Apprenez les signaux du marché</p>
-          </div>
-          <div style={{ 
-            width: 42, height: 42, borderRadius: 14, 
-            background: 'linear-gradient(135deg, #00daf3, #00a3ff)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', 
-            boxShadow: '0 0 20px rgba(0,218,243,0.3)' 
+        <button
+          onClick={() => navigate(-1)}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--neon)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            fontFamily: 'JetBrains Mono, monospace'
+          }}
+        >
+          <ArrowLeft size={20} />
+          Back
+        </button>
+      </header>
+
+      {error && (
+        <div style={{
+          backgroundColor: 'rgba(239, 68, 68, 0.2)',
+          border: '1px solid var(--neon)',
+          color: 'var(--neon)',
+          padding: '0.75rem',
+          marginBottom: '1rem',
+          borderRadius: '0.25rem',
+          fontFamily: 'JetBrains Mono, monospace',
+          fontSize: '0.875rem'
+        }}>
+          {error}
+        </div>
+      )}
+
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1.5rem'
+      }}>
+        <section>
+          <h1 style={{
+            fontSize: '1.25rem',
+            marginBottom: '1rem',
+            color: 'var(--neon)'
           }}>
-            <LineChart size={22} color="white" />
+            Chart Patterns
+          </h1>
+
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '0.5rem',
+            marginBottom: '1.5rem'
+          }}>
+            {types.map(type => (
+              <button
+                key={type}
+                onClick={() => handleTypeChange(type)}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: validatedParams?.type === type
+                    ? 'var(--neon)'
+                    : 'var(--surface)',
+                  color: validatedParams?.type === type
+                    ? 'var(--bg)'
+                    : 'var(--text-primary)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '0.25rem',
+                  cursor: 'pointer',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '0.875rem',
+                  transition: 'all 200ms'
+                }}
+              >
+                {type}
+              </button>
+            ))}
           </div>
-        </div>
+        </section>
 
-        {/* Filter Tabs */}
-        <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
-          {types.map(t => (
-            <button
-              key={t}
-              onClick={() => setSelectedType(t)}
-              style={{
-                padding: '8px 16px',
-                borderRadius: 12,
-                fontSize: 13,
-                fontWeight: 700,
-                border: 'none',
-                cursor: 'pointer',
-                background: selectedType === t ? 'rgba(0,218,243,0.15)' : 'rgba(255,255,255,0.05)',
-                color: selectedType === t ? '#00daf3' : '#64748b',
-                transition: 'all 200ms'
-              }}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </div>
+        <section>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+            gap: '1rem'
+          }}>
+            {sortedPatterns.map(pattern => (
+              <div
+                key={pattern.id}
+                onClick={() => handlePatternClick(pattern.id)}
+                onMouseEnter={() => setHoveredId(pattern.id)}
+                onMouseLeave={() => setHoveredId(null)}
+                style={{
+                  backgroundColor: 'var(--surface)',
+                  borderRadius: '0.5rem',
+                  padding: '0.75rem',
+                  cursor: 'pointer',
+                  border: `1px solid ${hoveredId === pattern.id ? 'var(--neon)' : 'var(--border)'}`,
+                  transition: 'all 200ms'
+                }}
+              >
+                <div style={{
+                  height: '100px',
+                  marginBottom: '0.5rem',
+                  position: 'relative'
+                }}>
+                  <PatternSVG pattern={pattern} isHovered={hoveredId === pattern.id} />
+                </div>
 
-      {/* Grid */}
-      <div style={{ padding: '24px 16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        {filteredPatterns.map(pattern => (
-          <div 
-            key={pattern.id}
-            onMouseEnter={() => setHoveredId(pattern.id)}
-            onMouseLeave={() => setHoveredId(null)}
-            onTouchStart={() => setHoveredId(pattern.id)}
-            style={{
-              padding: '16px',
-              borderRadius: 24,
-              background: 'rgba(255,255,255,0.02)',
-              border: `1px solid ${hoveredId === pattern.id ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)'}`,
-              transition: 'all 300ms cubic-bezier(0.22, 1, 0.36, 1)',
-              transform: hoveredId === pattern.id ? 'translateY(-4px)' : 'none',
-              boxShadow: hoveredId === pattern.id ? '0 12px 30px rgba(0,0,0,0.3)' : 'none'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-              <p style={{ 
-                fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em',
-                color: pattern.type.includes('Bullish') ? '#10b981' : pattern.type.includes('Bearish') ? '#ef4444' : '#3b82f6'
-              }}>
-                {pattern.type}
-              </p>
-              {hoveredId === pattern.id && <Zap size={10} color={pattern.color} fill={pattern.color} />}
-            </div>
-            
-            <div style={{ position: 'relative', marginBottom: 14, padding: '10px 0' }}>
-               <PatternSVG pattern={pattern} isHovered={hoveredId === pattern.id} />
-            </div>
-
-            <h3 style={{ fontSize: 16, fontWeight: 800, color: 'white', marginBottom: 4 }}>{pattern.name}</h3>
-            <p style={{ fontSize: 12, color: '#4b5563', lineHeight: 1.4, minHeight: 48 }}>{pattern.desc}</p>
-            
-            <button style={{ 
-              marginTop: 12, width: '100%', padding: '10px', borderRadius: 12,
-              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-              color: 'white', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
-            }}>
-              Détails <ChevronRight size={14} />
-            </button>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.25rem'
+                }}>
+                  <h3 style={{
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    color: 'var(--text-primary)'
+                  }}>
+                    {pattern.name}
+                  </h3>
+                  <p style={{
+                    fontSize: '0.75rem',
+                    color: 'var(--text-secondary)',
+                    lineHeight: '1.2'
+                  }}>
+                    {pattern.type}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        </section>
       </div>
-
-      {/* Info Card */}
-      <div style={{ margin: '0 16px', padding: 20, borderRadius: 24, background: 'rgba(0,218,243,0.05)', border: '1px solid rgba(0,218,243,0.15)', display: 'flex', gap: 14 }}>
-        <div style={{ width: 44, height: 44, borderRadius: 14, background: 'rgba(0,218,243,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Info size={20} color="#00daf3" />
-        </div>
-        <div>
-          <h4 style={{ fontSize: 15, fontWeight: 800, color: '#00daf3', marginBottom: 4 }}>Conseil de pro</h4>
-          <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>
-            Les patterns sont plus fiables lorsqu'ils sont confirmés par le <strong>volume</strong> et surviennent sur des unités de temps élevées (D1, H4).
-          </p>
-        </div>
-      </div>
-
-      <style>{`
-        .press-scale:active { transform: scale(0.95); }
-      `}</style>
     </div>
   )
 }
