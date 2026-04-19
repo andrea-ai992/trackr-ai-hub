@@ -111,6 +111,8 @@ export default function BottomNav() {
             transition: 'left 250ms ease, width 250ms ease',
             pointerEvents: 'none',
             zIndex: 0,
+            boxShadow: '0 0 12px var(--neon), 0 0 20px var(--neon)',
+            opacity: 0.7,
           }}
         />
 
@@ -153,13 +155,14 @@ export default function BottomNav() {
                   justifyContent: 'center',
                   padding: active ? '6px 16px' : '0',
                   borderRadius: 999,
+                  transition: 'all 300ms ease',
                 }}
               >
                 <Icon
                   size={22}
                   strokeWidth={active ? 2.2 : 1.6}
                   style={{
-                    color: active ? 'var(--neon)' : 'var(--text-muted)',
+                    color: active ? 'var(--neon)' : 'var(--text-secondary)',
                     transition: 'color 300ms ease',
                   }}
                 />
@@ -193,7 +196,7 @@ export default function BottomNav() {
                 style={{
                   fontSize: 8,
                   fontWeight: active ? 700 : 500,
-                  color: active ? 'var(--neon)' : 'var(--text-muted)',
+                  color: active ? 'var(--neon)' : 'var(--text-secondary)',
                   transition: 'all 300ms ease',
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
