@@ -7,9 +7,9 @@ const SkeletonPage = () => {
       style={{
         height: '60vh',
         backgroundColor: 'var(--surface-low)',
-        borderRadius: 'var(--radius)',
         position: 'relative',
         overflow: 'hidden',
+        borderRadius: 'var(--radius)',
       }}
     >
       <div
@@ -19,7 +19,7 @@ const SkeletonPage = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'linear-gradient(90deg, transparent, var(--surface-high), transparent)',
+          background: 'linear-gradient(90deg, transparent, rgba(0, 255, 136, 0.1), transparent)',
           animation: 'shimmer 1.5s infinite',
         }}
       />
