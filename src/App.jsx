@@ -18,6 +18,7 @@ import Portfolio from './pages/Portfolio'
 import Widget from './pages/Widget'
 import Agents from './pages/Agents'
 import BrainStatus from './pages/BrainStatus'
+import AIControl from './pages/AIControl'
 import Login from './pages/Login'
 import SkeletonPage from './components/SkeletonPage'
 import { useAlerts } from './hooks/useAlerts'
@@ -45,21 +46,17 @@ function AlertWatcher() {
 }
 
 function getTabIndex(path) {
-  if (path === '/') return 0
-  if (path.startsWith('/sports')) return 1
-  if (path.startsWith('/markets')) return 2
-  if (path.startsWith('/news')) return 3
-  if (
-    path.startsWith('/more') || path.startsWith('/translator') ||
-    path.startsWith('/settings') || path.startsWith('/sneakers') || path.startsWith('/watches') ||
-    path.startsWith('/real-estate') || path.startsWith('/business') ||
-    path.startsWith('/portfolio') || path.startsWith('/category') ||
-    path.startsWith('/flights') || path.startsWith('/patterns')
-  ) return 4
+  if (path === '/' || path === '/dashboard') return 0
+  if (path.startsWith('/markets') || path.startsWith('/stocks/') || path.startsWith('/crypto/') || path.startsWith('/news')) return 1
+  if (path.startsWith('/ai') || path.startsWith('/brain') || path.startsWith('/agents') || path.startsWith('/andy')) return 2
+  if (path.startsWith('/more') || path.startsWith('/sports') || path.startsWith('/flights') || path.startsWith('/portfolio') ||
+    path.startsWith('/translator') || path.startsWith('/sneakers') || path.startsWith('/watches') ||
+    path.startsWith('/real-estate') || path.startsWith('/business') || path.startsWith('/patterns')
+  ) return 3
   return -1
 }
 
-const DETAIL_PREFIXES = ['/stocks/', '/crypto/', '/translator', '/settings', '/sneakers', '/watches', '/real-estate', '/business', '/portfolio', '/category/', '/flights', '/andy', '/agents', '/brain', '/admin', '/patterns']
+const DETAIL_PREFIXES = ['/stocks/', '/crypto/', '/translator', '/settings', '/sneakers', '/watches', '/real-estate', '/business', '/portfolio', '/category/', '/flights', '/admin', '/patterns']
 
 let _prevPath = '/'
 let _prevTabIdx = 0
@@ -176,6 +173,7 @@ function AppInner() {
                 <Route path="/widget" element={<ProtectedRoute><Widget /></ProtectedRoute>} />
                 <Route path="/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
                 <Route path="/brain" element={<ProtectedRoute><BrainStatus /></ProtectedRoute>} />
+                <Route path="/ai" element={<ProtectedRoute><AIControl /></ProtectedRoute>} />
 
                 <Route path="/flights" element={<ProtectedRoute><Suspense fallback={<SkeletonPage />}><FlightTracker /></Suspense></ProtectedRoute>} />
                 <Route path="/charts" element={<ProtectedRoute><Suspense fallback={<SkeletonPage />}><ChartAnalysis /></Suspense></ProtectedRoute>} />
