@@ -1,169 +1,99 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 const FearGreedGauge = () => {
-  const [index, setIndex] = useState(50);
+  const [score, setScore] = useState(50);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchFearGreedIndex = async () => {
       try {
+        setIsLoading(true);
         const response = await fetch('https://api.alternative.me/fng/?limit=1');
+        if (!response.ok) throw new Error('Failed to fetch Fear & Greed Index');
+
         const data = await response.json();
-        if (data.data && data.data.length > 0) {
-          const value = parseInt(data.data[0].value, 10);
-          setIndex(value);
-        }
-      } catch (error) {
-        console.error('Failed to fetch Fear & Greed Index:', error);
+        const currentScore = parseInt(data.data[0].value, 10);
+        setScore(currentScore);
+        setError(null);
+      } catch (err) {
+        setError(err.message);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchFearGreedIndex();
-
     const interval = setInterval(fetchFearGreedIndex, 300000);
     return () => clearInterval(interval);
   }, []);
 
-  const gaugeValue = Math.min(Math.max(index, 0), 100);
-  const rotation = (gaugeValue / 100) * 180 - 90;
+  const getGaugeColor = (score) => {
+    if (score < 20) return 'bg-red-500';
+    if (score < 40) return 'bg-orange-500';
+    if (score < 60) return 'bg-yellow-500';
+    if (score < 80) return 'bg-lime-500';
+    return 'bg-green-500';
+  };
+
+  const getLabel = (score) => {
+    if (score < 20) return 'Extreme Fear';
+    if (score < 40) return 'Fear';
+    if (score < 60) return 'Neutral';
+    if (score < 80) return 'Greed';
+    return 'Extreme Greed';
+  };
+
+  const normalizedScore = Math.min(Math.max(score, 0), 100);
 
   return (
-    <div className="fear-greed-gauge">
-      <div className="gauge-container">
-        <div className="gauge-needle" style={{ transform: `rotate(${rotation}deg)` }} />
-        <div className="gauge-track">
-          <div className="gauge-fill" style={{ width: `${gaugeValue}%` }} />
+    <div className="w-full p-4 bg-surface rounded-lg border border-border">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-text-primary font-medium text-sm">Fear & Greed Index</h3>
+        {error && (
+          <div className="flex items-center gap-1 text-red-500 text-xs">
+            <AlertTriangle size={14} />
+            <span>Error</span>
+          </div>
+        )}
+      </div>
+
+      <div className="relative w-full h-24 flex items-end justify-center">
+        <div className="absolute bottom-0 left-0 w-full h-2 bg-surface-low rounded-full overflow-hidden">
+          <div
+            className={`absolute bottom-0 left-0 h-full ${getGaugeColor(normalizedScore)} transition-all duration-500 ease-out`}
+            style={{ width: `${normalizedScore}%` }}
+          />
+          <div
+            className="absolute top-0 left-0 w-full h-px bg-border-bright"
+            style={{ left: `${normalizedScore}%`, width: '1px' }}
+          />
         </div>
-        <div className="gauge-labels">
-          <span className="label extreme-fear">0</span>
-          <span className="label fear">25</span>
-          <span className="label neutral">50</span>
-          <span className="label greed">75</span>
-          <span className="label extreme-greed">100</span>
-        </div>
-        <div className="gauge-value">
-          <span className="value-number">{isLoading ? '...' : gaugeValue}</span>
-          <span className="value-text">{isLoading ? 'Loading...' : 'Fear & Greed Index'}</span>
+
+        <div
+          className={`absolute bottom-6 w-16 h-16 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${getGaugeColor(normalizedScore)}`}
+          style={{
+            left: `calc(${normalizedScore}% - 4rem)`,
+            transform: `translateX(-50%) translateY(50%)`,
+          }}
+        >
+          <span className="text-text-primary font-bold text-sm">{score}</span>
         </div>
       </div>
-      <style jsx>{`
-        .fear-greed-gauge {
-          width: 100%;
-          max-width: 300px;
-          padding: 1rem;
-          background: var(--surface);
-          border-radius: 0.5rem;
-          border: 1px solid var(--border);
-        }
 
-        .gauge-container {
-          position: relative;
-          width: 100%;
-          height: 150px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-        }
+      <div className="mt-3 flex justify-between text-xs text-text-secondary">
+        <span>0</span>
+        <span>100</span>
+      </div>
 
-        .gauge-track {
-          position: relative;
-          width: 100%;
-          height: 12px;
-          background: var(--surface-low);
-          border-radius: 6px;
-          overflow: hidden;
-          margin-bottom: 1rem;
-        }
+      <div className="mt-2 text-center">
+        <p className="text-text-primary font-mono text-sm">{getLabel(normalizedScore)}</p>
+      </div>
 
-        .gauge-fill {
-          position: absolute;
-          height: 100%;
-          background: linear-gradient(90deg, #ff4444, #ffbb33, #00C851);
-          transition: width 0.5s ease;
-        }
-
-        .gauge-needle {
-          position: absolute;
-          top: -8px;
-          left: 50%;
-          width: 2px;
-          height: 20px;
-          background: var(--neon);
-          transform-origin: center bottom;
-          transition: transform 0.5s ease;
-          z-index: 10;
-        }
-
-        .gauge-labels {
-          display: flex;
-          justify-content: space-between;
-          width: 100%;
-          font-family: 'JetBrains Mono', monospace;
-          font-size: 0.7rem;
-          color: var(--text-secondary);
-          margin-bottom: 0.5rem;
-        }
-
-        .label {
-          position: relative;
-          padding: 0 0.25rem;
-        }
-
-        .label::after {
-          content: '';
-          position: absolute;
-          top: -2px;
-          left: 50%;
-          width: 1px;
-          height: 4px;
-          background: var(--text-secondary);
-          transform: translateX(-50%);
-        }
-
-        .extreme-fear::after {
-          background: #ff4444;
-        }
-
-        .fear::after {
-          background: #ff8800;
-        }
-
-        .neutral::after {
-          background: var(--text-secondary);
-        }
-
-        .greed::after {
-          background: #aaff00;
-        }
-
-        .extreme-greed::after {
-          background: #00ff88;
-        }
-
-        .gauge-value {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          font-family: 'JetBrains Mono', monospace;
-        }
-
-        .value-number {
-          font-size: 2rem;
-          font-weight: bold;
-          color: var(--neon);
-          line-height: 1;
-        }
-
-        .value-text {
-          font-size: 0.7rem;
-          color: var(--text-secondary);
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-        }
-      `}</style>
+      {isLoading && !error && (
+        <div className="mt-2 text-text-muted text-xs text-center">Updating...</div>
+      )}
     </div>
   );
 };
