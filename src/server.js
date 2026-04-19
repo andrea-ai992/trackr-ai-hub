@@ -17,14 +17,20 @@ app.use(express.urlencoded({ extended: true }));
 
 // Rate limiting for /api/auth
 const authLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 5, // limit each IP to 5 requests per windowMs
+  windowMs: 60 * 1000,
+  max: 5,
   message: JSON.stringify({
     error: 'Too many requests',
     message: 'You have exceeded the 5 requests per minute limit for auth endpoints'
   }),
   headers: true,
   standardHeaders: 'draft-7',
+  keyGenerator: (req) => {
+    return req.ip;
+  },
+  skip: (req) => {
+    return req.path === '/api/auth/status';
+  }
 });
 
 app.use('/api/auth', authLimiter);
