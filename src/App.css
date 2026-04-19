@@ -33,9 +33,9 @@ export const BottomNav = () => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 px-2 pb-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 safe-area-bottom">
       <div className="relative w-full max-w-[520px] mx-auto">
-        <div className="flex items-center justify-between bg-surface-low border border-border rounded-full px-2 py-2">
+        <div className="flex items-center justify-between bg-surface-low border border-border rounded-full px-2 py-2 backdrop-blur-md">
           {navItems.map((item) => {
             const isActive = activePath === item.path || (activePath.startsWith(item.path) && item.path !== '/');
             const Icon = item.icon;
@@ -47,14 +47,15 @@ export const BottomNav = () => {
                 className={`flex flex-col items-center justify-center flex-1 py-1 px-2 rounded-full transition-all duration-200 ease-in-out relative z-10 ${
                   isActive ? 'text-neon' : 'text-text-secondary hover:text-text-primary'
                 }`}
+                aria-label={item.label}
               >
                 <div className="relative flex items-center justify-center w-6 h-6">
-                  <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                  <Icon size={20} strokeWidth={isActive ? 2.5 : 2} absoluteStrokeWidth />
                   {isActive && (
-                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-neon rounded-full animate-ping" />
+                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-neon rounded-full animate-pulse" />
                   )}
                 </div>
-                <span className={`text-xs mt-1 font-medium ${isActive ? 'text-neon' : 'text-text-muted'}`}>
+                <span className={`text-[10px] mt-1 font-medium tracking-tight ${isActive ? 'text-neon' : 'text-text-muted'}`}>
                   {item.label}
                 </span>
               </button>
