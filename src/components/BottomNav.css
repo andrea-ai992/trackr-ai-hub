@@ -1,168 +1,87 @@
-**src/components/BottomNav.css**
-```css
-/* Bottom Nav Styles */
-
 .bottom-nav {
   position: fixed;
   bottom: 0;
   left: 0;
   width: 100%;
-  padding: 0 16px;
+  height: 60px;
   background-color: var(--bg);
   backdrop-filter: blur(24px);
   border-top: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 0 16px;
   box-sizing: border-box;
-  height: 60px;
-  transition: height 0.3s ease;
 }
 
 .bottom-nav-safe-area {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-.bottom-nav-item {
+.bottom-nav-tabs {
+  display: flex;
+  gap: 16px;
+}
+
+.bottom-nav-tab {
   position: relative;
   display: flex;
   align-items: center;
-  padding: 0 16px;
-  font-family: Inter, sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1;
-  color: var(--t2);
-  cursor: pointer;
+  padding: 0 8px;
+  border-radius: 12px;
+  background-color: var(--surface-low);
+  transition: transform 300ms ease;
 }
 
-.bottom-nav-item.active {
-  color: var(--green);
+.bottom-nav-tab-active {
+  background-color: var(--surface);
+  transform: scale(1.08);
 }
 
-.bottom-nav-item.active .icon {
-  color: var(--green);
+.bottom-nav-tab-icon {
+  font-size: 22px;
+  margin-right: 4px;
 }
 
-.bottom-nav-item.active .pill {
+.bottom-nav-tab-icon-active {
+  color: var(--neon);
+}
+
+.bottom-nav-tab-label {
+  font-size: 9px;
+  color: var(--text-primary);
+}
+
+.bottom-nav-tab-pill {
+  position: absolute;
+  top: 0;
+  right: 0;
   background-color: rgba(0, 255, 136, 0.12);
   border-radius: 12px;
   padding: 6px 16px;
+  color: var(--text-primary);
 }
 
-.bottom-nav-item .icon {
-  margin-right: 8px;
-  font-size: 22px;
-}
-
-.bottom-nav-item .label {
-  font-size: 9px;
-  line-height: 1;
-}
-
-.bottom-nav-item .pill {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  right: -8px;
+.bottom-nav-tab-pill-active {
+  background-color: rgba(0, 255, 136, 0.18);
   border-radius: 12px;
   padding: 6px 16px;
-  transition: transform 0.3s ease;
+  color: var(--text-primary);
 }
 
-.bottom-nav-item .pill.animate {
-  transform: translateY(-50%) translateX(8px);
-}
-
-.bottom-nav-item .badge {
+.bottom-nav-tab-badge {
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  right: -8px;
-  background-color: #f00;
-  color: #fff;
+  top: 0;
+  right: 0;
+  background-color: #ff3737;
+  border-radius: 50%;
   padding: 4px 8px;
-  border-radius: 12px;
+  color: var(--text-primary);
 }
-```
 
-**src/components/BottomNav.jsx**
-```jsx
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Icon } from 'lucide-react';
-import './BottomNav.css';
-
-const BottomNav = () => {
-  const [activeTab, setActiveTab] = useState('home');
-  const [unreadNews, setUnreadNews] = useState(0);
-
-  useEffect(() => {
-    // Simuler la lecture des news
-    const interval = setInterval(() => {
-      setUnreadNews(Math.max(0, unreadNews - 1));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [unreadNews]);
-
-  const handleTabClick = (tab) => {
-    setActiveTab(tab);
-  };
-
-  return (
-    <div className="bottom-nav">
-      <div className="bottom-nav-safe-area">
-        <div className="bottom-nav-item">
-          <Link to="/dashboard" onClick={() => handleTabClick('home')}>
-            <Icon name="home" className="icon" />
-            <span className="label">Home</span>
-            {activeTab === 'home' && (
-              <div className="pill animate" />
-            )}
-          </Link>
-        </div>
-        <div className="bottom-nav-item">
-          <Link to="/sports" onClick={() => handleTabClick('sports')}>
-            <Icon name="football" className="icon" />
-            <span className="label">Sports</span>
-            {activeTab === 'sports' && (
-              <div className="pill animate" />
-            )}
-          </Link>
-        </div>
-        <div className="bottom-nav-item">
-          <Link to="/markets" onClick={() => handleTabClick('markets')}>
-            <Icon name="chart" className="icon" />
-            <span className="label">Markets</span>
-            {activeTab === 'markets' && (
-              <div className="pill animate" />
-            )}
-          </Link>
-        </div>
-        <div className="bottom-nav-item">
-          <Link to="/news" onClick={() => handleTabClick('news')}>
-            <Icon name="newspaper" className="icon" />
-            <span className="label">News</span>
-            {unreadNews > 0 && (
-              <div className="badge">{unreadNews}</div>
-            )}
-            {activeTab === 'news' && (
-              <div className="pill animate" />
-            )}
-          </Link>
-        </div>
-        <div className="bottom-nav-item">
-          <Link to="/more" onClick={() => handleTabClick('more')}>
-            <Icon name="more" className="icon" />
-            <span className="label">More</span>
-            {activeTab === 'more' && (
-              <div className="pill animate" />
-            )}
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default BottomNav;
+.bottom-nav-tab-badge-unread {
+  background-color: #ff3737;
+  border-radius: 50%;
+  padding: 4px 8px;
+  color: var(--text-primary);
+}
