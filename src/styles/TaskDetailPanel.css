@@ -1,0 +1,74 @@
+// src/components/TaskDetailPanel.jsx
+import { useState } from 'react';
+import { ChevronDown, ChevronUp, Check, Circle, AlertCircle } from 'lucide-react';
+import '../styles/TaskDetailPanel.css';
+
+export function TaskDetailPanel({ task, onClose }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  if (!task) return null;
+
+  return (
+    <div className="task-detail-panel">
+      <div className="task-detail-header">
+        <button className="close-button" onClick={onClose}>
+          <ChevronDown size={24} />
+        </button>
+        <h3 className="task-title">{task.title}</h3>
+        <button
+          className="expand-button"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+        </button>
+      </div>
+
+      <div className={`task-detail-content ${isExpanded ? 'expanded' : ''}`}>
+        <div className="task-meta">
+          <span className="task-status">
+            {task.completed ? (
+              <Check size={16} className="status-icon completed" />
+            ) : (
+              <Circle size={16} className="status-icon pending" />
+            )}
+            {task.completed ? 'Completed' : 'Pending'}
+          </span>
+          <span className="task-priority">
+            Priority: <span className={`priority-${task.priority.toLowerCase()}`}>{task.priority}</span>
+          </span>
+        </div>
+
+        <div className="task-description">
+          <p>{task.description || 'No description provided.'}</p>
+        </div>
+
+        {task.subtasks?.length > 0 && (
+          <div className="task-subtasks">
+            <h4 className="subtasks-title">Subtasks</h4>
+            <ul className="subtasks-list">
+              {task.subtasks.map((subtask, index) => (
+                <li key={subtask.id} className="subtask-item">
+                  <span className="subtask-checkbox">
+                    {subtask.completed ? (
+                      <Check size={16} className="subtask-icon completed" />
+                    ) : (
+                      <Circle size={16} className="subtask-icon pending" />
+                    )}
+                  </span>
+                  <span className="subtask-text">{subtask.title}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {task.dueDate && (
+          <div className="task-due">
+            <AlertCircle size={16} className="due-icon" />
+            <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
