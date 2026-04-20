@@ -1,35 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1776649724225",
-      "timestamp": "2026-04-20T01:48:44.225Z",
-      "type": "pattern_scan",
-      "focus": "security",
-      "findings": [
-        {
-          "id": "sse_json_parse",
-          "file": "api/discord.js",
-          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
-          "severity": "critical"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/andy.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/brain.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        }
-      ],
-      "count": 3,
-      "applied": false,
-      "note": "Patterns detected before Claude analysis — guiding fix priority"
-    },
-    {
       "id": "mem_1776649724957",
       "timestamp": "2026-04-20T01:48:44.957Z",
       "type": "error",
@@ -2558,6 +2529,35 @@
       "errors": 0,
       "appHealthy": true,
       "duration": 1
+    },
+    {
+      "id": "mem_1776654526133",
+      "timestamp": "2026-04-20T03:08:46.133Z",
+      "type": "pattern_scan",
+      "focus": "bugs",
+      "findings": [
+        {
+          "id": "sse_json_parse",
+          "file": "api/discord.js",
+          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
+          "severity": "critical"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/andy.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/brain.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        }
+      ],
+      "count": 3,
+      "applied": false,
+      "note": "Patterns detected before Claude analysis — guiding fix priority"
     }
   ]
 }
