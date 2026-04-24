@@ -1,20 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1777015494368",
-      "timestamp": "2026-04-24T07:24:54.368Z",
-      "type": "brain_cycle",
-      "hour": 7,
-      "successRate": 0,
-      "agentsRan": 0,
-      "improved": false,
-      "improvedFile": null,
-      "focus": null,
-      "errors": 0,
-      "appHealthy": true,
-      "duration": 1
-    },
-    {
       "id": "mem_1777015495469",
       "timestamp": "2026-04-24T07:24:55.469Z",
       "type": "pattern_scan",
@@ -2549,6 +2535,14 @@
       "count": 3,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1777022697034",
+      "timestamp": "2026-04-24T09:24:57.034Z",
+      "type": "error",
+      "focus": "bugs",
+      "error": "Anthropic API → 400",
+      "applied": false
     }
   ]
 }
