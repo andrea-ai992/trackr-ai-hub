@@ -1,20 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1777075795166",
-      "timestamp": "2026-04-25T00:09:55.166Z",
-      "type": "brain_cycle",
-      "hour": 0,
-      "successRate": 0,
-      "agentsRan": 0,
-      "improved": false,
-      "improvedFile": null,
-      "focus": null,
-      "errors": 0,
-      "appHealthy": true,
-      "duration": 2
-    },
-    {
       "id": "mem_1777075796074",
       "timestamp": "2026-04-25T00:09:56.074Z",
       "type": "pattern_scan",
@@ -2541,6 +2527,14 @@
       "timestamp": "2026-04-25T02:28:21.441Z",
       "type": "error",
       "focus": "bugs",
+      "error": "Anthropic API → 400",
+      "applied": false
+    },
+    {
+      "id": "mem_1777084193677",
+      "timestamp": "2026-04-25T02:29:53.677Z",
+      "type": "error",
+      "focus": "frontend",
       "error": "Anthropic API → 400",
       "applied": false
     }
