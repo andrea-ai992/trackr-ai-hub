@@ -1,14 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1777196394378",
-      "timestamp": "2026-04-26T09:39:54.378Z",
-      "type": "error",
-      "focus": "security",
-      "error": "Anthropic API → 400",
-      "applied": false
-    },
-    {
       "id": "mem_1777196395123",
       "timestamp": "2026-04-26T09:39:55.123Z",
       "type": "brain_cycle",
@@ -2514,6 +2506,14 @@
       "timestamp": "2026-04-26T11:56:51.703Z",
       "type": "error",
       "focus": "realestate",
+      "error": "Anthropic API → 400",
+      "applied": false
+    },
+    {
+      "id": "mem_1777204793807",
+      "timestamp": "2026-04-26T11:59:53.807Z",
+      "type": "error",
+      "focus": "features",
       "error": "Anthropic API → 400",
       "applied": false
     }
