@@ -1,14 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1777169696472",
-      "timestamp": "2026-04-26T02:14:56.472Z",
-      "type": "error",
-      "focus": "bugs",
-      "error": "Anthropic API → 400",
-      "applied": false
-    },
-    {
       "id": "mem_1777169815561",
       "timestamp": "2026-04-26T02:16:55.561Z",
       "type": "pattern_scan",
@@ -2516,6 +2508,23 @@
       "focus": "bugs",
       "error": "Anthropic API → 400",
       "applied": false
+    },
+    {
+      "id": "mem_1777175591758",
+      "timestamp": "2026-04-26T03:53:11.758Z",
+      "type": "pattern_scan",
+      "focus": "autonomous",
+      "findings": [
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/brain.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        }
+      ],
+      "count": 1,
+      "applied": false,
+      "note": "Patterns detected before Claude analysis — guiding fix priority"
     }
   ]
 }
