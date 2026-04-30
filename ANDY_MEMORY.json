@@ -1,14 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1777550211740",
-      "timestamp": "2026-04-30T11:56:51.740Z",
-      "type": "error",
-      "focus": "realestate",
-      "error": "Anthropic API → 400",
-      "applied": false
-    },
-    {
       "id": "mem_1777550394277",
       "timestamp": "2026-04-30T11:59:54.277Z",
       "type": "pattern_scan",
@@ -2528,6 +2520,14 @@
       "count": 3,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1777557133478",
+      "timestamp": "2026-04-30T13:52:13.478Z",
+      "type": "error",
+      "focus": "bugs",
+      "error": "Anthropic API → 400",
+      "applied": false
     }
   ]
 }
