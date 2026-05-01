@@ -1,14 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1777624497724",
-      "timestamp": "2026-05-01T08:34:57.724Z",
-      "type": "error",
-      "focus": "bugs",
-      "error": "Anthropic API → 400",
-      "applied": false
-    },
-    {
       "id": "mem_1777624794302",
       "timestamp": "2026-05-01T08:39:54.302Z",
       "type": "pattern_scan",
@@ -2537,6 +2529,14 @@
       "count": 3,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1777631698598",
+      "timestamp": "2026-05-01T10:34:58.598Z",
+      "type": "error",
+      "focus": "bugs",
+      "error": "Anthropic API → 400",
+      "applied": false
     }
   ]
 }
