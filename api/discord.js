@@ -107,6 +107,8 @@ async function handleDiscordStream(res, streamUrl, timeoutMs = 10000) {
     })
 
     if (!response.ok) {
+      // Cancel the body to avoid connection leaks, then respond with error
+      await response.body?.cancel().catch(() => {})
       res.writeHead(response.status, {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache',
@@ -121,6 +123,24 @@ async function handleDiscordStream(res, streamUrl, timeoutMs = 10000) {
         'Cache-Control': 'no-cache',
       })
       res.end(JSON.stringify({ error: 'No response body from Discord' }))
+      return
+    }
+
+    // Guard: ensure response is actually SSE before streaming
+    const ct = response.headers.get('content-type') || ''
+    if (!ct.includes('text/event-stream')) {
+      console.warn(`handleDiscordStream: expected text/event-stream, got "${ct}" — cannot call .json() on SSE`)
+      // If it looks like JSON, try to read it as error detail
+      if (ct.includes('application/json')) {
+        let detail = ''
+        try { const errBody = await response.json(); detail = JSON.stringify(errBody) } catch (_) {}
+        res.writeHead(502, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' })
+        res.end(JSON.stringify({ error: 'Discord did not return an SSE stream', detail }))
+      } else {
+        await response.body?.cancel().catch(() => {})
+        res.writeHead(502, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' })
+        res.end(JSON.stringify({ error: 'Discord did not return an SSE stream', contentType: ct }))
+      }
       return
     }
 
