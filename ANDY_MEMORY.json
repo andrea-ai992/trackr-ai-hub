@@ -1,20 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1777992940943",
-      "timestamp": "2026-05-05T14:55:40.943Z",
-      "type": "brain_cycle",
-      "hour": 14,
-      "successRate": 0,
-      "agentsRan": 0,
-      "improved": false,
-      "improvedFile": null,
-      "focus": null,
-      "errors": 0,
-      "appHealthy": true,
-      "duration": 3
-    },
-    {
       "id": "mem_1777992942033",
       "timestamp": "2026-05-05T14:55:42.033Z",
       "type": "error",
@@ -2464,6 +2450,20 @@
       "learned": "Les réponses SSE (text/event-stream) ne peuvent jamais être lues avec .json() — il faut toujours vérifier le content-type AVANT de choisir entre stream-reading et json-parsing, et toujours cancel() le body en cas d'erreur pour éviter les fuites de connexion.",
       "applied": true,
       "fromAdminTask": null
+    },
+    {
+      "id": "mem_1778006662134",
+      "timestamp": "2026-05-05T18:44:22.134Z",
+      "type": "brain_cycle",
+      "hour": 18,
+      "successRate": 0,
+      "agentsRan": 4,
+      "improved": false,
+      "improvedFile": null,
+      "focus": "bugs",
+      "errors": 0,
+      "appHealthy": true,
+      "duration": 37
     }
   ]
 }
