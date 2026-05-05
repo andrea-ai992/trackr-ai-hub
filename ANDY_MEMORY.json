@@ -1,14 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1777992940091",
-      "timestamp": "2026-05-05T14:55:40.091Z",
-      "type": "error",
-      "focus": "security",
-      "error": "Anthropic API → 400",
-      "applied": false
-    },
-    {
       "id": "mem_1777992940943",
       "timestamp": "2026-05-05T14:55:40.943Z",
       "type": "brain_cycle",
@@ -2459,6 +2451,19 @@
       "count": 3,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1778006651229",
+      "timestamp": "2026-05-05T18:44:11.229Z",
+      "type": "improvement",
+      "focus": "bugs",
+      "file": "api/discord.js",
+      "problem": "api/discord.js: handleDiscordStream appelle .json() sur une réponse SSE (text/event-stream) dans le gestionnaire d'erreur au lieu de lire le stream",
+      "severity": "critical",
+      "commit": "fix(discord): guard against calling .json() on SSE response in handleDiscordStream — cancel body on error, check content-type before streaming",
+      "learned": "Les réponses SSE (text/event-stream) ne peuvent jamais être lues avec .json() — il faut toujours vérifier le content-type AVANT de choisir entre stream-reading et json-parsing, et toujours cancel() le body en cas d'erreur pour éviter les fuites de connexion.",
+      "applied": true,
+      "fromAdminTask": null
     }
   ]
 }
