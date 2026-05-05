@@ -1,20 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1777918123560",
-      "timestamp": "2026-05-04T18:08:43.560Z",
-      "type": "brain_cycle",
-      "hour": 18,
-      "successRate": 0,
-      "agentsRan": 0,
-      "improved": false,
-      "improvedFile": null,
-      "focus": null,
-      "errors": 0,
-      "appHealthy": true,
-      "duration": 3
-    },
-    {
       "id": "mem_1777918124509",
       "timestamp": "2026-05-04T18:08:44.509Z",
       "type": "error",
@@ -2336,6 +2322,35 @@
       "focus": "bugs",
       "error": "Anthropic API → 400",
       "applied": false
+    },
+    {
+      "id": "mem_1777950566164",
+      "timestamp": "2026-05-05T03:09:26.164Z",
+      "type": "pattern_scan",
+      "focus": "security",
+      "findings": [
+        {
+          "id": "sse_json_parse",
+          "file": "api/discord.js",
+          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
+          "severity": "critical"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/andy.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/brain.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        }
+      ],
+      "count": 3,
+      "applied": false,
+      "note": "Patterns detected before Claude analysis — guiding fix priority"
     }
   ]
 }
