@@ -143,11 +143,11 @@ export default function Dashboard() {
         </div>
 
         {/* ── Prices ticker ── */}
-        <div style={{ padding: '12px 0 0', overflowX: 'auto', scrollbarWidth: 'none' }}>
+        <div style={{ padding: '12px 0 0', overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
           <div style={{ display: 'flex', gap: 6, padding: '0 16px', width: 'max-content' }}>
-            {PRICES.map(p => (
-              <G key={p.s} style={{ padding: '8px 12px', minWidth: 84, borderLeft: `2px solid ${p.c >= 0 ? '#00ff88' : '#ff3b3b'}` }}>
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.04em' }}>{p.s}</div>
+            {PRICES.map((p, i) => (
+              <G key={p.s} className="stagger-item press-scale" style={{ padding: '8px 12px', minWidth: 84, borderLeft: `2px solid ${p.c >= 0 ? '#00ff88' : '#ff3b3b'}`, animationDelay: `${40 + i * 40}ms`, cursor: 'pointer' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.04em', color: p.color }}>{p.s}</div>
                 <div style={{ fontSize: 11, color: '#888', marginTop: 1 }}>${$(p.p)}</div>
                 <div style={{ fontSize: 10, fontWeight: 600, color: p.c >= 0 ? '#00ff88' : '#ff3b3b', marginTop: 2 }}>{p.c >= 0 ? '+' : ''}{p.c}%</div>
               </G>
