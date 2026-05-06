@@ -1,35 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1778003928657",
-      "timestamp": "2026-05-05T17:58:48.657Z",
-      "type": "pattern_scan",
-      "focus": "bugs",
-      "findings": [
-        {
-          "id": "sse_json_parse",
-          "file": "api/discord.js",
-          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
-          "severity": "critical"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/andy.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/brain.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        }
-      ],
-      "count": 3,
-      "applied": false,
-      "note": "Patterns detected before Claude analysis — guiding fix priority"
-    },
-    {
       "id": "mem_1778003929415",
       "timestamp": "2026-05-05T17:58:49.415Z",
       "type": "error",
@@ -2575,6 +2546,20 @@
       "focus": "security",
       "error": "Anthropic API → 400",
       "applied": false
+    },
+    {
+      "id": "mem_1778027054946",
+      "timestamp": "2026-05-06T00:24:14.946Z",
+      "type": "brain_cycle",
+      "hour": 0,
+      "successRate": 0,
+      "agentsRan": 0,
+      "improved": false,
+      "improvedFile": null,
+      "focus": null,
+      "errors": 0,
+      "appHealthy": true,
+      "duration": 4
     }
   ]
 }
