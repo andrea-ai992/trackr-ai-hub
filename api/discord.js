@@ -153,29 +153,40 @@ async function handleDiscordStream(res, streamUrl, timeoutMs = 10000) {
 
     const reader = response.body.getReader()
 
-    function pump() {
-      reader.read().then(({ done, value }) => {
-        if (done) {
-          res.end()
-          return
-        }
-        const text = decoder.decode(value, { stream: true })
-        const lines = text.split('\n')
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6)
-            if (data === '[DONE]') {
-              res.end()
-              return
+    // Cancel reader and end response cleanly
+    function cleanup(reason) {
+      reader.cancel(reason).catch(() => {})
+      if (!res.writableEnded) res.end()
+    }
+
+    // If client disconnects, cancel the upstream reader
+    res.on('close', () => cleanup('client disconnected'))
+
+    async function pump() {
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) {
+            if (!res.writableEnded) res.end()
+            return
+          }
+          const text = decoder.decode(value, { stream: true })
+          const lines = text.split('\n')
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6)
+              if (data === '[DONE]') {
+                if (!res.writableEnded) res.end()
+                return
+              }
+              if (!res.writableEnded) res.write(`data: ${data}\n\n`)
             }
-            res.write(`data: ${data}\n\n`)
           }
         }
-        pump()
-      }).catch(err => {
+      } catch (err) {
         console.error('Discord SSE stream error:', err)
-        res.end()
-      })
+        cleanup(err.message)
+      }
     }
 
     pump()
