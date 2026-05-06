@@ -1,14 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1778076042425",
-      "timestamp": "2026-05-06T14:00:42.425Z",
-      "type": "error",
-      "focus": "bugs",
-      "error": "Anthropic API → 400",
-      "applied": false
-    },
-    {
       "id": "mem_1778076337832",
       "timestamp": "2026-05-06T14:05:37.832Z",
       "type": "pattern_scan",
@@ -2919,6 +2911,19 @@
       "count": 4,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1778085662236",
+      "timestamp": "2026-05-06T16:41:02.236Z",
+      "type": "improvement",
+      "focus": "frontend",
+      "file": "src/pages/Dashboard.jsx",
+      "problem": "Les cartes de prix du Dashboard n'ont pas d'animations stagger ni de micro-interactions au toucher, et la hiérarchie visuelle est faible",
+      "severity": "medium",
+      "commit": "fix: add stagger-item and press-scale micro-interactions to Dashboard price ticker cards",
+      "learned": "Les classes CSS stagger-item et press-scale sont déjà définies dans index.css avec des animations spring physics et peuvent être appliquées directement sur les éléments React via className sans aucun JS supplémentaire.",
+      "applied": true,
+      "fromAdminTask": null
     }
   ]
 }
