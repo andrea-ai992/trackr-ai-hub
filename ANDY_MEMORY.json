@@ -1,14 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1778075439058",
-      "timestamp": "2026-05-06T13:50:39.058Z",
-      "type": "error",
-      "focus": "performance",
-      "error": "Anthropic API → 400",
-      "applied": false
-    },
-    {
       "id": "mem_1778075439979",
       "timestamp": "2026-05-06T13:50:39.979Z",
       "type": "brain_cycle",
@@ -2876,6 +2868,19 @@
       "count": 4,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1778084757202",
+      "timestamp": "2026-05-06T16:25:57.202Z",
+      "type": "improvement",
+      "focus": "bugs",
+      "file": "api/discord.js",
+      "problem": "Dans api/discord.js, la fonction pump() utilise des Promises chaînées récursivement sans gérer correctement la fermeture du reader lors d'une erreur réseau, et le catch du pump() ne cancel pas le reader — entraînant une fuite de ressources",
+      "severity": "critical",
+      "commit": "fix(discord): cancel SSE reader on error/client-disconnect to prevent resource leak",
+      "learned": "Les ReadableStreamReader doivent toujours être annulés explicitement via reader.cancel() en cas d'erreur ou de déconnexion client, sinon la connexion upstream reste ouverte indéfiniment.",
+      "applied": true,
+      "fromAdminTask": null
     }
   ]
 }
