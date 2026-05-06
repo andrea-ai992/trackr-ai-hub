@@ -192,9 +192,22 @@ async function handleDiscordStream(res, streamUrl, timeoutMs = 10000) {
     pump()
   } catch (error) {
     console.error('Discord SSE stream setup error:', error)
-    res.writeHead(500, {
-      'Content-Type': 'application/json',
-      'Cache-Control': 'no-cache',
+    if (!res.headersSent) {
+      res.writeHead(500, {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+      })
+      res.end(JSON.stringify({
+        error: error.name === 'TimeoutError' || error.name === 'AbortError'
+          ? 'Discord stream request timed out'
+          : 'Internal error setting up Discord stream',
+        detail: error.message,
+      }))
+    } else if (!res.writableEnded) {
+      res.end()
+    }
+  }
+}trol': 'no-cache',
     })
     res.end(JSON.stringify({ error: 'Failed to establish Discord SSE stream' }))
   }
