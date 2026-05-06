@@ -95,12 +95,34 @@ async function fetchMarkets() {
 
 // ─── Alpha Vantage (primary — reliable, real-time) ───────────────────────────
 async function fetchStockQuoteAV(symbol) {
-  const r = await fetch(
-    `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_KEY}`,
-    { signal: AbortSignal.timeout(8000) }
-  )
-  if (!r.ok) return null
-  const data = await r.json()
+  let r
+  try {
+    r = await fetch(
+      `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_KEY}`,
+      { signal: AbortSignal.timeout(8000) }
+    )
+  } catch (e) {
+    console.warn(`fetchStockQuoteAV ${symbol}: fetch error:`, e.message)
+    return null
+  }
+  if (!r.ok) {
+    console.warn(`fetchStockQuoteAV ${symbol}: HTTP ${r.status}`)
+    await r.body?.cancel().catch(() => {})
+    return null
+  }
+  const ct = r.headers.get('content-type') || ''
+  if (!ct.includes('application/json') && !ct.includes('text/json') && !ct.includes('text/plain')) {
+    console.warn(`fetchStockQuoteAV ${symbol}: unexpected content-type "${ct}", skipping .json()`)
+    await r.body?.cancel().catch(() => {})
+    return null
+  }
+  let data
+  try {
+    data = await r.json()
+  } catch (e) {
+    console.warn(`fetchStockQuoteAV ${symbol}: JSON parse error:`, e.message)
+    return null
+  }
   const q = data['Global Quote']
   if (!q || !q['05. price']) return null
   return {
