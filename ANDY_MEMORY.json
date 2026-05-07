@@ -1,20 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1778135130477",
-      "timestamp": "2026-05-07T06:25:30.477Z",
-      "type": "brain_cycle",
-      "hour": 6,
-      "successRate": 5,
-      "agentsRan": 3,
-      "improved": false,
-      "improvedFile": null,
-      "focus": "bugs",
-      "errors": 0,
-      "appHealthy": true,
-      "duration": 19
-    },
-    {
       "id": "mem_1778135423624",
       "timestamp": "2026-05-07T06:30:23.624Z",
       "type": "pattern_scan",
@@ -4048,6 +4034,19 @@
       "errors": 0,
       "appHealthy": true,
       "duration": 30
+    },
+    {
+      "id": "mem_1778163898360",
+      "timestamp": "2026-05-07T14:24:58.360Z",
+      "type": "improvement",
+      "focus": "frontend",
+      "file": "src/index.css",
+      "problem": "Animations stagger-item manquantes sur les listes Dashboard et Markets — aucune animation d'entrée sur les éléments de liste principaux",
+      "severity": "medium",
+      "commit": "feat: spring physics stagger animation, pill & section-label components, press-scale hover lift",
+      "learned": "Les keyframes stagger existants utilisaient un cubic-bezier plat — en ajoutant un overshoot à 70% avec le bezier spring (0.34,1.56,0.64,1) on simule une vraie physique de ressort sans JS, et les classes utilitaires pill/section-label manquaient de définition CSS malgré leur usage dans le code.",
+      "applied": true,
+      "fromAdminTask": null
     }
   ]
 }
