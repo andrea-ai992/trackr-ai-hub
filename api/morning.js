@@ -26,9 +26,23 @@ async function discordPost(channelId, payload) {
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(8000),
     })
-    return r.ok ? r.json() : null
+    if (!r.ok) {
+      console.warn(`discordPost channel=${channelId}: HTTP ${r.status}`)
+      await r.body?.cancel().catch(() => {})
+      return null
+    }
+    const ct = r.headers.get('content-type') || ''
+    if (!ct.includes('application/json') && !ct.includes('text/json')) {
+      console.warn(`discordPost channel=${channelId}: unexpected content-type "${ct}", skipping .json()`)
+      await r.body?.cancel().catch(() => {})
+      return null
+    }
+    return r.json().catch(e => {
+      console.warn(`discordPost channel=${channelId}: JSON parse error:`, e.message)
+      return null
+    })
   } catch (e) {
-    console.warn('discordPost error:', e.message)
+    console.warn(`discordPost channel=${channelId} error:`, e.message)
     return null
   }
 }
