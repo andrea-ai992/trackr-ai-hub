@@ -138,17 +138,34 @@ async function fetchStockQuoteAV(symbol) {
 
 // ─── Yahoo Finance (fallback — no key needed) ─────────────────────────────────
 async function fetchStockQuoteYahoo(symbol) {
-  const r = await fetch(
-    `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=2d`,
-    { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(6000) }
-  )
-  if (!r.ok) return null
+  let r
+  try {
+    r = await fetch(
+      `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=2d`,
+      { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(6000) }
+    )
+  } catch (e) {
+    console.warn(`Yahoo Finance ${symbol}: fetch error:`, e.message)
+    return null
+  }
+  if (!r.ok) {
+    console.warn(`Yahoo Finance ${symbol}: HTTP ${r.status}`)
+    await r.body?.cancel().catch(() => {})
+    return null
+  }
   const ct = r.headers.get('content-type') || ''
   if (!ct.includes('application/json') && !ct.includes('text/json')) {
     console.warn(`Yahoo Finance ${symbol}: unexpected content-type "${ct}", skipping .json()`)
+    await r.body?.cancel().catch(() => {})
     return null
   }
-  const data = await r.json()
+  let data
+  try {
+    data = await r.json()
+  } catch (e) {
+    console.warn(`Yahoo Finance ${symbol}: JSON parse error:`, e.message)
+    return null
+  }
   const meta = data?.chart?.result?.[0]?.meta
   if (!meta?.regularMarketPrice) return null
   return {
