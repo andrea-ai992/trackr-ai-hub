@@ -197,6 +197,14 @@ async function handleDiscordStream(res, streamUrl, timeoutMs = 10000) {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache',
       })
+      res.end(JSON.stringify({ error: 'Internal server error during SSE stream setup', message: error.message }))
+    } else if (!res.writableEnded) {
+      res.end()
+    }
+  }
+}lication/json',
+        'Cache-Control': 'no-cache',
+      })
       res.end(JSON.stringify({
         error: error.name === 'TimeoutError' || error.name === 'AbortError'
           ? 'Discord stream request timed out'
