@@ -118,11 +118,32 @@ function PropertyCard({ prop, onEdit, onDelete }) {
   async function getAIAnalysis() {
     setLoadingAI(true)
     try {
-      const r = await fetch(`/api/real-estate?action=analyze&city=${encodeURIComponent(prop.city)}&price=${prop.buyPrice}&surface=${prop.surface}&rent=${prop.rent}&charges=${prop.charges}&taxeFonciere=${prop.taxeFonciere}&loanAmount=${prop.loanAmount}&loanRate=${prop.loanRate}&loanDuration=${prop.loanDuration}&type=${prop.type}&description=${encodeURIComponent(prop.notes || '')}`, { method: 'POST' })
+      const r = await fetch('/api/real-estate?action=analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          city: prop.city,
+          price: prop.buyPrice,
+          surface: prop.surface,
+          rent: prop.rent,
+          charges: prop.charges,
+          taxeFonciere: prop.taxeFonciere,
+          loanAmount: prop.loanAmount,
+          loanRate: prop.loanRate,
+          loanDuration: prop.loanDuration,
+          type: prop.type,
+          description: prop.notes || '',
+        }),
+      })
+      if (!r.ok) throw new Error(`HTTP ${r.status}`)
       const d = await r.json()
       setAiAnalysis(d.aiAnalysis || null)
-    } catch {}
-    setLoadingAI(false)
+    } catch (e) {
+      console.error('[RealEstate] AI analysis failed:', e)
+      setAiAnalysis(null)
+    } finally {
+      setLoadingAI(false)
+    }
   }
 
   const gain = m.latentGain
