@@ -178,6 +178,11 @@ Format JSON array avec les clés: name, concept, investment, monthlyRevenue, bre
       signal: AbortSignal.timeout(20000),
     })
 
+    if (!r.ok) {
+      const errBody = await r.text()
+      return res.status(502).json({ error: `Anthropic API error ${r.status}: ${errBody.slice(0, 200)}`, ideas: [] })
+    }
+
     const d = await r.json()
     const text = d.content?.[0]?.text || '[]'
 
