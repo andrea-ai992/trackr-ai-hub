@@ -1,19 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1778149243659",
-      "timestamp": "2026-05-07T10:20:43.659Z",
-      "type": "improvement",
-      "focus": "performance",
-      "file": "src/pages/Markets.jsx",
-      "problem": "src/pages/Markets.jsx monte/démonte Stocks, Crypto et News à chaque changement d'onglet, causant des re-renders et re-fetches inutiles",
-      "severity": "high",
-      "commit": "perf: keep Markets tab components mounted to avoid redundant API re-fetches on tab switch",
-      "learned": "Markets utilise un rendu conditionnel destructif (&&) qui détruit et recrée les composants enfants à chaque switch d'onglet, déclenchant inutilement tous leurs useEffect et appels API.",
-      "applied": true,
-      "fromAdminTask": null
-    },
-    {
       "id": "mem_1778149652054",
       "timestamp": "2026-05-07T10:27:32.054Z",
       "type": "pattern_scan",
@@ -3601,6 +3588,14 @@
       "count": 2,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1778174479676",
+      "timestamp": "2026-05-07T17:21:19.676Z",
+      "type": "error",
+      "focus": "performance",
+      "error": "Anthropic API → 400",
+      "applied": false
     }
   ]
 }
