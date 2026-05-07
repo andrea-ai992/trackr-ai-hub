@@ -1,19 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1778156834216",
-      "timestamp": "2026-05-07T12:27:14.216Z",
-      "type": "improvement",
-      "focus": "bugs",
-      "file": "api/discord.js",
-      "problem": "handleDiscordStream appelle .json() sur une réponse SSE (text/event-stream) dans le catch d'erreur, causant une exception silencieuse",
-      "severity": "critical",
-      "commit": "fix: complete truncated catch block in handleDiscordStream to prevent silent error swallowing and malformed Content-Type header",
-      "learned": "Le fichier api/discord.js avait un bloc catch tronqué avec un Content-Type 'application/app' incomplet, ce qui aurait généré une réponse HTTP malformée pour toutes les erreurs de setup SSE.",
-      "applied": true,
-      "fromAdminTask": null
-    },
-    {
       "id": "mem_1778156854025",
       "timestamp": "2026-05-07T12:27:34.025Z",
       "type": "brain_cycle",
@@ -3366,6 +3353,20 @@
       "focus": "security",
       "error": "Anthropic API → 400",
       "applied": false
+    },
+    {
+      "id": "mem_1778181411356",
+      "timestamp": "2026-05-07T19:16:51.356Z",
+      "type": "brain_cycle",
+      "hour": 19,
+      "successRate": 0,
+      "agentsRan": 0,
+      "improved": false,
+      "improvedFile": null,
+      "focus": null,
+      "errors": 0,
+      "appHealthy": true,
+      "duration": 4
     }
   ]
 }
