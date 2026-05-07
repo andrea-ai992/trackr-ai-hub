@@ -1,19 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1778134793930",
-      "timestamp": "2026-05-07T06:19:53.930Z",
-      "type": "improvement",
-      "focus": "bugs",
-      "file": "api/discord.js",
-      "problem": "handleDiscordStream appelle response.json() sur une réponse SSE (text/event-stream) — crash garanti",
-      "severity": "critical",
-      "commit": "fix: complete truncated catch block in handleDiscordStream with correct Content-Type header",
-      "learned": "Le code source fourni est tronqué à mi-chemin dans le catch block final de handleDiscordStream, ce qui signifie que la gestion d'erreur envoie un Content-Type 'app' invalide — il faut toujours vérifier la complétude des blocs try/catch dans les handlers SSE.",
-      "applied": true,
-      "fromAdminTask": null
-    },
-    {
       "id": "mem_1778134794837",
       "timestamp": "2026-05-07T06:19:54.837Z",
       "type": "brain_cycle",
@@ -4048,6 +4035,41 @@
       "errors": 0,
       "appHealthy": true,
       "duration": 26
+    },
+    {
+      "id": "mem_1778163636078",
+      "timestamp": "2026-05-07T14:20:36.078Z",
+      "type": "pattern_scan",
+      "focus": "bugs",
+      "findings": [
+        {
+          "id": "sse_json_parse",
+          "file": "api/discord.js",
+          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
+          "severity": "critical"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/andy.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/brain.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        },
+        {
+          "id": "empty_catch",
+          "file": "api/discord.js",
+          "description": "Empty catch block silently swallows errors",
+          "severity": "medium"
+        }
+      ],
+      "count": 4,
+      "applied": false,
+      "note": "Patterns detected before Claude analysis — guiding fix priority"
     }
   ]
 }
