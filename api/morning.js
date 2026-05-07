@@ -218,7 +218,7 @@ async function loadMemorySummary() {
     const errors      = recent.filter(e => e.type === 'error')
     const brainCycles = recent.filter(e => e.type === 'brain_cycle')
     return { improvements: improvements.length, errors: errors.length, brainCycles: brainCycles.length, total: recent.length }
-  } catch { return null }
+  } catch (e) { console.warn('loadMemorySummary error:', e.message); return null }eturn null }
 }
 
 async function loadAgentsRegistry() {
