@@ -256,17 +256,65 @@ router.post('/fetch', timeoutMiddleware, validateRequest, async (req, res, next)
   }
 });
 
+// Domaines autorisés pour les requêtes externes (liste blanche)
+const ALLOWED_EXTERNAL_DOMAINS = new Set([
+  'api.coingecko.com',
+  'api.example.com',
+  'query1.finance.yahoo.com',
+]);
+
+// Validation anti-SSRF : vérifie que l'URL est sûre avant de fetch
+function validateExternalUrl(urlString) {
+  let parsed;
+  try {
+    parsed = new URL(urlString);
+  } catch {
+    throw Object.assign(new Error('URL invalide'), { statusCode: 400 });
+  }
+
+  // HTTPS uniquement
+  if (parsed.protocol !== 'https:') {
+    throw Object.assign(new Error('Seul le protocole HTTPS est autorisé'), { statusCode: 400 });
+  }
+
+  // Blocage des IPs privées / locales / metadata cloud
+  const hostname = parsed.hostname.toLowerCase();
+  const blockedPatterns = [
+    /^localhost$/,
+    /^127\./,
+    /^10\./,
+    /^172\.(1[6-9]|2[0-9]|3[01])\./,
+    /^192\.168\./,
+    /^169\.254\./,   // AWS metadata
+    /^::1$/,
+    /^0\.0\.0\.0$/,
+    /\.internal$/,
+    /\.local$/,
+  ];
+  if (blockedPatterns.some(p => p.test(hostname))) {
+    throw Object.assign(new Error('Adresse non autorisée'), { statusCode: 403 });
+  }
+
+  // Liste blanche de domaines
+  if (!ALLOWED_EXTERNAL_DOMAINS.has(hostname)) {
+    throw Object.assign(new Error(`Domaine non autorisé : ${hostname}`), { statusCode: 403 });
+  }
+
+  return parsed.toString();
+}
+
 // API pour récupérer les données de l'IA avec timeout externe
 router.get('/external', timeoutMiddleware, validateRequest, async (req, res, next) => {
   try {
     const externalUrl = req.query.url;
     if (!externalUrl) {
-      throw new Error('URL manquante dans les paramètres de la requête');
+      throw Object.assign(new Error('URL manquante dans les paramètres de la requête'), { statusCode: 400 });
     }
 
-    const response = await fetchWithTimeout(externalUrl, {}, 8000);
+    const safeUrl = validateExternalUrl(externalUrl);
+    const response = await fetchWithTimeout(safeUrl, {}, 8000);
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw Object.assign(new Error(`HTTP error! status: ${response.status}`), { statusCode: response.status });
     }
     const data = await response.json();
     res.json(data);
