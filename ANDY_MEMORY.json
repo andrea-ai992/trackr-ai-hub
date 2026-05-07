@@ -1,20 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1778097655197",
-      "timestamp": "2026-05-06T20:00:55.197Z",
-      "type": "brain_cycle",
-      "hour": 20,
-      "successRate": 0,
-      "agentsRan": 3,
-      "improved": false,
-      "improvedFile": null,
-      "focus": "bugs",
-      "errors": 0,
-      "appHealthy": true,
-      "duration": 24
-    },
-    {
       "id": "mem_1778098029005",
       "timestamp": "2026-05-06T20:07:09.005Z",
       "type": "pattern_scan",
@@ -4108,6 +4094,20 @@
       "hour": 6,
       "successRate": 5,
       "agentsRan": 4,
+      "improved": false,
+      "improvedFile": null,
+      "focus": "bugs",
+      "errors": 0,
+      "appHealthy": true,
+      "duration": 21
+    },
+    {
+      "id": "mem_1778135440632",
+      "timestamp": "2026-05-07T06:30:40.632Z",
+      "type": "brain_cycle",
+      "hour": 6,
+      "successRate": 5,
+      "agentsRan": 3,
       "improved": false,
       "improvedFile": null,
       "focus": "bugs",
