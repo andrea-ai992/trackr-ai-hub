@@ -1,19 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1778127581168",
-      "timestamp": "2026-05-07T04:19:41.168Z",
-      "type": "improvement",
-      "focus": "security",
-      "file": "api/andy.js",
-      "problem": "SSRF critique dans /external : l'URL fournie par l'utilisateur est utilisée directement sans validation",
-      "severity": "critical",
-      "commit": "fix: block SSRF in /external endpoint with URL allowlist and private IP validation",
-      "learned": "Les endpoints qui proxyfient des URLs fournies par l'utilisateur doivent toujours valider le protocole, bloquer les IPs privées/metadata et utiliser une liste blanche de domaines pour prévenir les attaques SSRF.",
-      "applied": true,
-      "fromAdminTask": null
-    },
-    {
       "id": "mem_1778127766918",
       "timestamp": "2026-05-07T04:22:46.918Z",
       "type": "pattern_scan",
@@ -4096,6 +4083,20 @@
       "count": 4,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1778160109490",
+      "timestamp": "2026-05-07T13:21:49.490Z",
+      "type": "brain_cycle",
+      "hour": 13,
+      "successRate": 8,
+      "agentsRan": 4,
+      "improved": false,
+      "improvedFile": null,
+      "focus": "bugs",
+      "errors": 0,
+      "appHealthy": true,
+      "duration": 32
     }
   ]
 }
