@@ -40,9 +40,9 @@ export default function Markets() {
           ))}
         </div>
       </div>
-      {tab === 'stocks' && <Stocks inMarkets />}
-      {tab === 'crypto' && <Crypto />}
-      {tab === 'news'   && <News   />}
+      <div style={{ display: tab === 'stocks' ? 'block' : 'none' }}><Stocks inMarkets /></div>
+      <div style={{ display: tab === 'crypto' ? 'block' : 'none' }}><Crypto /></div>
+      <div style={{ display: tab === 'news'   ? 'block' : 'none' }}><News   /></div>
     </div>
   )
 }
