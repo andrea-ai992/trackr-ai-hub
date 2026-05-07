@@ -1,41 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1778120777930",
-      "timestamp": "2026-05-07T02:26:17.930Z",
-      "type": "pattern_scan",
-      "focus": "bugs",
-      "findings": [
-        {
-          "id": "sse_json_parse",
-          "file": "api/discord.js",
-          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
-          "severity": "critical"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/andy.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/brain.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "empty_catch",
-          "file": "api/discord.js",
-          "description": "Empty catch block silently swallows errors",
-          "severity": "medium"
-        }
-      ],
-      "count": 4,
-      "applied": false,
-      "note": "Patterns detected before Claude analysis — guiding fix priority"
-    },
-    {
       "id": "mem_1778120785886",
       "timestamp": "2026-05-07T02:26:25.886Z",
       "type": "pattern_scan",
@@ -4123,6 +4088,19 @@
       "errors": 0,
       "appHealthy": true,
       "duration": 26
+    },
+    {
+      "id": "mem_1778155025646",
+      "timestamp": "2026-05-07T11:57:05.646Z",
+      "type": "improvement",
+      "focus": "realestate",
+      "file": "src/pages/RealEstate.jsx",
+      "problem": "getAIAnalysis dans PropertyCard avale silencieusement toutes les erreurs fetch sans retour utilisateur, et envoie une requête POST mais avec des paramètres query (pas de body), ce qui peut échouer selon la logique serveur",
+      "severity": "high",
+      "commit": "fix: send AI analysis data as POST body instead of query string, fix infinite loading on error",
+      "learned": "Les fonctions async avec setLoading doivent toujours utiliser finally pour garantir la remise à false, et les données volumineuses d'un POST doivent être dans le body, pas la query string.",
+      "applied": true,
+      "fromAdminTask": null
     }
   ]
 }
