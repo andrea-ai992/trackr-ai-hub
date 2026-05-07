@@ -1,19 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1778085662236",
-      "timestamp": "2026-05-06T16:41:02.236Z",
-      "type": "improvement",
-      "focus": "frontend",
-      "file": "src/pages/Dashboard.jsx",
-      "problem": "Les cartes de prix du Dashboard n'ont pas d'animations stagger ni de micro-interactions au toucher, et la hiérarchie visuelle est faible",
-      "severity": "medium",
-      "commit": "fix: add stagger-item and press-scale micro-interactions to Dashboard price ticker cards",
-      "learned": "Les classes CSS stagger-item et press-scale sont déjà définies dans index.css avec des animations spring physics et peuvent être appliquées directement sur les éléments React via className sans aucun JS supplémentaire.",
-      "applied": true,
-      "fromAdminTask": null
-    },
-    {
       "id": "mem_1778085663267",
       "timestamp": "2026-05-06T16:41:03.267Z",
       "type": "brain_cycle",
@@ -4155,6 +4142,41 @@
       "errors": 0,
       "appHealthy": true,
       "duration": 22
+    },
+    {
+      "id": "mem_1778112411920",
+      "timestamp": "2026-05-07T00:06:51.920Z",
+      "type": "pattern_scan",
+      "focus": "bugs",
+      "findings": [
+        {
+          "id": "sse_json_parse",
+          "file": "api/discord.js",
+          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
+          "severity": "critical"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/andy.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        },
+        {
+          "id": "fetch_no_timeout",
+          "file": "api/brain.js",
+          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
+          "severity": "medium"
+        },
+        {
+          "id": "empty_catch",
+          "file": "api/discord.js",
+          "description": "Empty catch block silently swallows errors",
+          "severity": "medium"
+        }
+      ],
+      "count": 4,
+      "applied": false,
+      "note": "Patterns detected before Claude analysis — guiding fix priority"
     }
   ]
 }
