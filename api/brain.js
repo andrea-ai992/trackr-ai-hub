@@ -1,10 +1,87 @@
-Je vais implémenter `AbortSignal.timeout()` pour tous les `fetch()` dans les fichiers API mentionnés. Voici les modifications pour chaque fichier :
-
-```javascript
 // api/brain.js
-const fetchBrainData = async (endpoint, options = {}) => {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
+// ─── Brain API — memory, context, agent state ─────────────────────────────────
+import express from 'express'
+import { PrismaClient } from '@prisma/client'
+
+const prisma = new PrismaClient()
+const router = express.Router()
+
+router.use(express.json({ limit: '10kb' }))
+
+// Utility: fetch with AbortSignal.timeout
+async function safeFetch(url, options = {}, timeoutMs = 8000) {
+  const response = await fetch(url, {
+    ...options,
+    signal: AbortSignal.timeout(timeoutMs),
+  })
+  if (!response.ok) {
+    await response.body?.cancel().catch(() => {})
+    throw Object.assign(new Error(`HTTP ${response.status}`), { statusCode: response.status })
+  }
+  const ct = response.headers.get('content-type') || ''
+  if (!ct.includes('application/json') && !ct.includes('text/json') && !ct.includes('text/plain')) {
+    await response.body?.cancel().catch(() => {})
+    throw Object.assign(new Error(`Unexpected content-type: ${ct}`), { statusCode: 502 })
+  }
+  return response.json()
+}
+
+// GET /api/brain — retrieve latest brain memory entries
+router.get('/', async (req, res, next) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200)
+    const type = req.query.type || undefined
+
+    const entries = await prisma.memory.findMany({
+      where: type ? { type } : undefined,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+    })
+
+    res.json({
+      success: true,
+      count: entries.length,
+      entries,
+      timestamp: new Date().toISOString(),
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// POST /api/brain — store a new memory entry
+router.post('/', async (req, res, next) => {
+  try {
+    const { type, content, metadata } = req.body || {}
+    if (!type || !content) {
+      return res.status(400).json({ error: 'Missing required fields: type, content' })
+    }
+
+    const entry = await prisma.memory.create({
+      data: {
+        type,
+        content: typeof content === 'string' ? content : JSON.stringify(content),
+        metadata: metadata ? JSON.stringify(metadata) : null,
+        createdAt: new Date(),
+      },
+    })
+
+    res.status(201).json({ success: true, entry })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Error handler
+router.use((err, req, res, _next) => {
+  console.error('[brain.js] Error:', err.message)
+  res.status(err.statusCode || 500).json({
+    error: err.message || 'Internal server error',
+    timestamp: new Date().toISOString(),
+  })
+})
+
+export default router
 
   try {
     const response = await fetch(`/api/brain/${endpoint}`, {
