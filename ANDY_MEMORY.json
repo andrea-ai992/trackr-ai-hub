@@ -1,19 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1778160457836",
-      "timestamp": "2026-05-07T13:27:37.836Z",
-      "type": "improvement",
-      "focus": "business",
-      "file": "api/business-plan.js",
-      "problem": "generateIdeas appelle r.json() sans vérifier r.ok, avalant silencieusement les erreurs API Anthropic (429, 500, etc.) et tentant de parser une réponse d'erreur comme du JSON valide",
-      "severity": "high",
-      "commit": "fix: check r.ok before parsing JSON in generateIdeas to surface Anthropic API errors",
-      "learned": "Les fonctions non-streaming de ce codebase appellent systématiquement r.json() sans vérifier r.ok, masquant les erreurs HTTP de l'API Anthropic derrière des tableaux vides.",
-      "applied": true,
-      "fromAdminTask": null
-    },
-    {
       "id": "mem_1778161065912",
       "timestamp": "2026-05-07T13:37:45.912Z",
       "type": "pattern_scan",
@@ -3197,6 +3184,20 @@
       "focus": "security",
       "error": "Anthropic API → 400",
       "applied": false
+    },
+    {
+      "id": "mem_1778185210770",
+      "timestamp": "2026-05-07T20:20:10.770Z",
+      "type": "brain_cycle",
+      "hour": 20,
+      "successRate": 0,
+      "agentsRan": 0,
+      "improved": false,
+      "improvedFile": null,
+      "focus": null,
+      "errors": 0,
+      "appHealthy": true,
+      "duration": 4
     }
   ]
 }
