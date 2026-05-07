@@ -197,6 +197,13 @@ async function handleDiscordStream(res, streamUrl, timeoutMs = 10000) {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache',
       })
+      res.end(JSON.stringify({ error: 'Internal server error during SSE stream setup', detail: error.message }))
+    } else if (!res.writableEnded) {
+      res.end()
+    }
+  }lication/json',
+        'Cache-Control': 'no-cache',
+      })
       res.end(JSON.stringify({ error: 'Internal server error during SSE stream setup', message: error.message }))
     } else if (!res.writableEnded) {
       res.end()
