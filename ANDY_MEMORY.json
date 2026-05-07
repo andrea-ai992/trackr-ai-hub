@@ -1,41 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1778134268169",
-      "timestamp": "2026-05-07T06:11:08.169Z",
-      "type": "pattern_scan",
-      "focus": "bugs",
-      "findings": [
-        {
-          "id": "sse_json_parse",
-          "file": "api/discord.js",
-          "description": "Calling .json() on an SSE (text/event-stream) response — must read stream instead",
-          "severity": "critical"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/andy.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "fetch_no_timeout",
-          "file": "api/brain.js",
-          "description": "fetch() call without AbortSignal.timeout() — can hang indefinitely",
-          "severity": "medium"
-        },
-        {
-          "id": "empty_catch",
-          "file": "api/discord.js",
-          "description": "Empty catch block silently swallows errors",
-          "severity": "medium"
-        }
-      ],
-      "count": 4,
-      "applied": false,
-      "note": "Patterns detected before Claude analysis — guiding fix priority"
-    },
-    {
       "id": "mem_1778134275078",
       "timestamp": "2026-05-07T06:11:15.078Z",
       "type": "pattern_scan",
@@ -4096,6 +4061,14 @@
       "count": 4,
       "applied": false,
       "note": "Patterns detected before Claude analysis — guiding fix priority"
+    },
+    {
+      "id": "mem_1778163056413",
+      "timestamp": "2026-05-07T14:10:56.413Z",
+      "type": "no_change",
+      "focus": "bugs",
+      "reason": "En relisant attentivement le code de api/discord.js, handleDiscordStream utilise déjà AbortSignal.timeout(timeoutMs) sur le fetch initial. Le pattern détecté automatiquement est un faux positif. Les autres patterns critiques (calling .json() on SSE, empty catch) ont été traités dans le code existant (guard sur content-type, catch avec console.error). Aucune amélioration non dupliquée et significative n'est identifiable dans les fichiers fournis sans risquer de casser du code déjà correct.",
+      "applied": false
     }
   ]
 }
