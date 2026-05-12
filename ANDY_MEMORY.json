@@ -1,14 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1778571389165",
-      "timestamp": "2026-05-12T07:36:29.165Z",
-      "type": "error",
-      "focus": "security",
-      "error": "Anthropic API → 400",
-      "applied": false
-    },
-    {
       "id": "mem_1778571389987",
       "timestamp": "2026-05-12T07:36:29.987Z",
       "type": "brain_cycle",
@@ -2706,6 +2698,14 @@
       "timestamp": "2026-05-12T17:45:13.164Z",
       "type": "error",
       "focus": "bugs",
+      "error": "Anthropic API → 400",
+      "applied": false
+    },
+    {
+      "id": "mem_1778608286402",
+      "timestamp": "2026-05-12T17:51:26.402Z",
+      "type": "error",
+      "focus": "frontend",
       "error": "Anthropic API → 400",
       "applied": false
     }
