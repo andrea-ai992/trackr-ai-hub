@@ -1,14 +1,6 @@
 {
   "entries": [
     {
-      "id": "mem_1778555581264",
-      "timestamp": "2026-05-12T03:13:01.264Z",
-      "type": "error",
-      "focus": "bugs",
-      "error": "Anthropic API → 400",
-      "applied": false
-    },
-    {
       "id": "mem_1778556517768",
       "timestamp": "2026-05-12T03:28:37.768Z",
       "type": "pattern_scan",
@@ -2670,6 +2662,14 @@
       "timestamp": "2026-05-12T11:56:52.302Z",
       "type": "error",
       "focus": "realestate",
+      "error": "Anthropic API → 400",
+      "applied": false
+    },
+    {
+      "id": "mem_1778587774165",
+      "timestamp": "2026-05-12T12:09:34.165Z",
+      "type": "error",
+      "focus": "features",
       "error": "Anthropic API → 400",
       "applied": false
     }
